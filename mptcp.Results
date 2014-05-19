@@ -1,0 +1,9 @@
+TCP: Flow 1 (10.1.1.1 -> 10.1.1.2)
+  Tx Bytes:   11055080
+  Rx Bytes:   11045016
+  Packet Lost 17
+  lastPacketSeen 0.93186
+  Rx Packets 18662
+  Tx Packets 18679
+  Throughput: 95.026 Mbps
+  Flow Completion Time: 0.929852 s
