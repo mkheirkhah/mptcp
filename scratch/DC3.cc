@@ -1,10 +1,10 @@
 #define NS_LOG_APPEND_CONTEXT \
   { std::clog << Simulator::Now ().GetSeconds ()<< "  ";}
 
-//#include <iostream>
-//#include <vector>
+#include <iostream>
 #include <sstream>
 #include <string>
+#include <vector>
 #include "ns3/core-module.h"
 #include "ns3/internet-module.h"
 #include "ns3/applications-module.h"
@@ -16,32 +16,27 @@
 #include "ns3/config-store.h"
 #include "ns3/file-config.h"
 #include "ns3/gtk-config-store.h"
+
 #include "ns3/flow-classifier.h"
 #include "ns3/flow-monitor-module.h"
-//#include "ns3/Gnuplot.h"
-
-//       10.1.1.0
-//   n1 ------------ n2
 
 using namespace ns3;
 NS_LOG_COMPONENT_DEFINE("MpTcpNewReno");
 
-uint32_t LinkRate = 100000000; // 10Mbps
-uint32_t Delay = 1; // RTT: 2ms
+uint32_t LinkRate = 100000000;
+uint32_t Delay = 0.5;
 Time cDelay = MilliSeconds(Delay);
 double LossRate = 0.0;
-double dtq = 65;
-uint32_t segSize = 536;
-static const uint32_t totalTxBytes = 10000000; // 10MB
-//static const uint32_t sendBufSize = 53600;
+double dtq = 100;
+static const uint32_t totalTxBytes = 10000000;
+static const uint32_t sendBufSize = 53600;
 static uint32_t currentTxBytes = 0;
 static const double simDuration = 1000.0;
-bool mptcp = true;
 
 Ptr<Node> client;
 Ptr<Node> server;
 
-static const uint32_t writeSize = 1040;
+static const uint32_t writeSize = sendBufSize;
 uint8_t data[totalTxBytes];
 Ptr<MpTcpSocketBase> lSocket = 0;
 
@@ -90,104 +85,133 @@ printIterator(std::map<FlowId, FlowMonitor::FlowStats>::const_iterator iter, Ptr
       << (iter->second.timeLastRxPacket.GetSeconds() - iter->second.timeFirstTxPacket.GetSeconds()) << " s\n";
 }
 
-//static void
-//CwndTracer(uint32_t oldval, uint32_t newval)
-//{
-//  NS_LOG_INFO ("Moving cwnd from " << oldval << " to " << newval);
-//}
-
-//static MpTcpHeader header;
-//static TcpHeader header;
-
 int
 main(int argc, char *argv[])
 {
+  /* Uncoupled_TCPs, Linked_Increases, RTT_Compensator, Fully_Coupled */
+  Config::SetDefault("ns3::MpTcpSocketBase::CongestionControl", StringValue("Uncoupled_TCPs"));
   Config::SetDefault("ns3::DropTailQueue::MaxPackets", UintegerValue(dtq));
-  Config::SetDefault("ns3::DropTailQueue::Mode", StringValue("QUEUE_MODE_PACKETS"));
-  Config::SetDefault("ns3::TcpSocket::SegmentSize", UintegerValue(segSize));
-  Config::SetDefault("ns3::TcpSocket::DelAckCount", UintegerValue(0));
-
-  Config::SetDefault("ns3::MpTcpSocketBase::CongestionControl", StringValue("RTT_Compensator"));
+  //Config::SetDefault("ns3::TcpSocket::SegmentSize", UintegerValue(536));
 
   LogComponentEnable("MpTcpNewReno", LOG_LEVEL_ALL);
   LogComponentEnable("MpTcpSocketBase", LOG_INFO);
-//  LogComponentEnable("MpTcpSocketBase", LOG_ERROR);
-//  LogComponentEnable("TcpL4Protocol", LOG_DEBUG);
+//  LogComponentEnable("MpTcpSocketBase", LOG_WARN);
+//  LogComponentEnable("MpTcpSocketBase", LOG_ALL);
+//  LogComponentEnable("TcpL4Protocol", LOG_WARN);
 //  LogComponentEnable("TcpHeader", LOG_ALL);
 //  LogComponentEnable("Packet", LOG_ALL);
-//  LogComponentEnable("MpTcpTypeDefs", LOG_ERROR);
+//  LogComponentEnable("MpTcpTypeDefs", LOG_WARN);
 
-// Creation of the hosts
-  NodeContainer nodes;
-  nodes.Create(2);
+  /* Configuration. */
 
-  client = nodes.Get(0);
-  server = nodes.Get(1);
+   /* Build nodes. */
+   NodeContainer term_0;
+   term_0.Create (1);
+   NodeContainer term_1;
+   term_1.Create (1);
+   NodeContainer router_0;
+   router_0.Create (1);
+   NodeContainer router_1;
+   router_1.Create (1);
 
-  InternetStackHelper stack;
-  stack.Install(nodes);
+   /* Build link. */
+   PointToPointHelper p2p_p2p_0;
+   p2p_p2p_0.SetDeviceAttribute ("DataRate", DataRateValue (100000000));
+   p2p_p2p_0.SetChannelAttribute ("Delay", TimeValue (MilliSeconds (0.5)));
+   PointToPointHelper p2p_p2p_1;
+   p2p_p2p_1.SetDeviceAttribute ("DataRate", DataRateValue (100000000));
+   p2p_p2p_1.SetChannelAttribute ("Delay", TimeValue (MilliSeconds (0.5)));
+   PointToPointHelper p2p_p2p_2;
+   p2p_p2p_2.SetDeviceAttribute ("DataRate", DataRateValue (100000000));
+   p2p_p2p_2.SetChannelAttribute ("Delay", TimeValue (MilliSeconds (0.5)));
+   PointToPointHelper p2p_p2p_3;
+   p2p_p2p_3.SetDeviceAttribute ("DataRate", DataRateValue (100000000));
+   p2p_p2p_3.SetChannelAttribute ("Delay", TimeValue (MilliSeconds (0.5)));
 
-  PointToPointHelper p2plink;
-  p2plink.SetDeviceAttribute("DataRate", DataRateValue(DataRate(LinkRate)));
-  p2plink.SetChannelAttribute("Delay", TimeValue(cDelay));
+   /* Build link net device container. */
+   NodeContainer all_p2p_0;
+   all_p2p_0.Add (router_0);
+   all_p2p_0.Add (term_0);
+   NetDeviceContainer ndc_p2p_0 = p2p_p2p_0.Install (all_p2p_0);
+   NodeContainer all_p2p_1;
+   all_p2p_1.Add (router_0);
+   all_p2p_1.Add (term_1);
+   NetDeviceContainer ndc_p2p_1 = p2p_p2p_1.Install (all_p2p_1);
+   NodeContainer all_p2p_2;
+   all_p2p_2.Add (router_1);
+   all_p2p_2.Add (term_0);
+   NetDeviceContainer ndc_p2p_2 = p2p_p2p_2.Install (all_p2p_2);
+   NodeContainer all_p2p_3;
+   all_p2p_3.Add (router_1);
+   all_p2p_3.Add (term_1);
+   NetDeviceContainer ndc_p2p_3 = p2p_p2p_3.Install (all_p2p_3);
 
-  NetDeviceContainer netDevices;
-  netDevices = p2plink.Install(nodes);
+   /* Install the IP stack. */
+   InternetStackHelper internetStackH;
+   internetStackH.Install (term_0);
+   internetStackH.Install (term_1);
+   internetStackH.Install (router_0);
+   internetStackH.Install (router_1);
 
-// Attribution of the IP addresses
-  Ipv4AddressHelper ipv4addr;
-  ipv4addr.SetBase("10.1.1.0", "255.255.255.0");
-  Ipv4InterfaceContainer interface = ipv4addr.Assign(netDevices);
+   /* IP assign. */
+   Ipv4AddressHelper ipv4;
+   ipv4.SetBase ("10.0.0.0", "255.255.255.0");
+   Ipv4InterfaceContainer iface_ndc_p2p_0 = ipv4.Assign (ndc_p2p_0);
+   ipv4.SetBase ("10.0.1.0", "255.255.255.0");
+   Ipv4InterfaceContainer iface_ndc_p2p_1 = ipv4.Assign (ndc_p2p_1);
+   ipv4.SetBase ("10.0.2.0", "255.255.255.0");
+   Ipv4InterfaceContainer iface_ndc_p2p_2 = ipv4.Assign (ndc_p2p_2);
+   ipv4.SetBase ("10.0.3.0", "255.255.255.0");
+   Ipv4InterfaceContainer iface_ndc_p2p_3 = ipv4.Assign (ndc_p2p_3);
 
-  vector<Ipv4InterfaceContainer> ipv4Ints;
-  ipv4Ints.insert(ipv4Ints.end(), interface);
+   Ptr<Ipv4> ipv4_router0 = (router_0.Get(0))->GetObject<Ipv4> ();
+   Ptr<Ipv4> ipv4_router1 = (router_1.Get(0))->GetObject<Ipv4> ();
+   Ptr<Ipv4> ipv4_term0 = (term_0.Get(0))->GetObject<Ipv4> ();
+   Ptr<Ipv4> ipv4_term1 = (term_1.Get(0))->GetObject<Ipv4> ();
 
-  /*  Application */
-  if (!mptcp)
-    {
-      // TCP packet sink
-      PacketSinkHelper h_mysink("ns3::TcpSocketFactory", Address(InetSocketAddress(Ipv4Address::GetAny(), 3000)));
-      ApplicationContainer mysinkApps = h_mysink.Install(server);
-      mysinkApps.Start(Seconds(0.0));
+   Ipv4StaticRoutingHelper ipv4RoutingHelper;
 
-      //  TCP Bulk
-      BulkSendHelper source("ns3::TcpSocketFactory", Address(InetSocketAddress(ipv4Ints[0].GetAddress(1), 3000)));
-      source.SetAttribute("MaxBytes", UintegerValue(totalTxBytes)); // Set the amount of data to send in bytes.  Zero is unlimited.
-      source.SetAttribute("SendSize", UintegerValue(segSize));    // Set Tcp segment size
-      ApplicationContainer sourceApps = source.Install(client);
-      sourceApps.Start(Seconds(0.0)); // Source Start time
-      sourceApps.Stop(Seconds(10.0));
-    }
-  else
-    { // MPTCP SINK (Receiver Side)
-      uint32_t servPort = 5000;
-      Ptr<MpTcpPacketSink> sinkSocket = CreateObject<MpTcpPacketSink>();
-      sinkSocket->SetAttribute("Local", AddressValue(InetSocketAddress(Ipv4Address::GetAny(), servPort)));
-      server->AddApplication(sinkSocket);
-      ApplicationContainer Apps;
-      Apps.Add(sinkSocket);
-      Apps.Start(Seconds(0.0));
-      Apps.Stop(Seconds(simDuration));
-      // MPTCP Source
-      lSocket = CreateObject<MpTcpSocketBase>(client); //lSocket = new MpTcpSocketBase(client);
-      lSocket->Bind(); //  lSocket->Bind();
-      SetupSocketParam(lSocket);
-      SetupDropPacket(lSocket);
-      Simulator::ScheduleNow(&StartFlow, lSocket, ipv4Ints[0].GetAddress(1), servPort);
-    }
-  /* ALTERNATIVE */
-//  uint32_t servPort = 5000;
-//  ObjectFactory m_sf;
-//  m_sf.SetTypeId("ns3::MpTcpPacketSink");
-//  m_sf.Set("Local", AddressValue(InetSocketAddress(Ipv4Address::GetAny(), servPort)));
-//  Ptr<Application> sapp = m_sf.Create<Application>();
-//  server->AddApplication(sapp);
-//  ApplicationContainer Apps;
-//  Apps.Add(sapp);
-//
-//  Apps.Start(Seconds(0.0));
-//  Apps.Stop(Seconds(simDuration - 10));
-//
+  Ptr<Ipv4StaticRouting> term0 = ipv4RoutingHelper.GetStaticRouting(ipv4_term0);
+  term0->AddHostRouteTo(Ipv4Address("10.0.1.2"), Ipv4Address("10.0.0.1") , 1);
+  term0->AddHostRouteTo("10.0.3.2", Ipv4Address("10.0.2.1"), 2);
+
+  Ptr<Ipv4StaticRouting> router0 = ipv4RoutingHelper.GetStaticRouting(ipv4_router0);
+  router0->AddHostRouteTo(Ipv4Address("10.0.1.2"), Ipv4Address("10.0.1.2") , 2);
+  router0->AddHostRouteTo(Ipv4Address("10.0.0.2"), Ipv4Address("10.0.0.2"), 1);
+
+  Ptr<Ipv4StaticRouting> term1 = ipv4RoutingHelper.GetStaticRouting(ipv4_term1);
+  term1->AddHostRouteTo(Ipv4Address("10.0.0.2"),Ipv4Address("10.0.1.1"), 1);
+  term1->AddHostRouteTo(Ipv4Address("10.0.2.2"), Ipv4Address("10.0.3.1"), 2);
+
+  Ptr<Ipv4StaticRouting> router1 = ipv4RoutingHelper.GetStaticRouting(ipv4_router1);
+  router1->AddHostRouteTo(Ipv4Address("10.0.2.2"),Ipv4Address("10.0.2.2"), 1);
+  router1->AddHostRouteTo(Ipv4Address("10.0.3.2"),Ipv4Address("10.0.3.2"), 2);
+
+   /* Generate Route. */
+   //Ipv4GlobalRoutingHelper::PopulateRoutingTables ();
+
+  client = term_0.Get(0);
+  server = term_1.Get(0);
+
+  // Server
+  uint32_t servPort = 5000;
+  Ptr<MpTcpPacketSink> sinkSocket = CreateObject<MpTcpPacketSink>();
+  sinkSocket->SetAttribute("Local", AddressValue(InetSocketAddress(Ipv4Address::GetAny(), servPort)));
+  server->AddApplication(sinkSocket);
+  ApplicationContainer Apps;
+  Apps.Add(sinkSocket);
+  Apps.Start(Seconds(0.0));
+  Apps.Stop(Seconds(simDuration));
+
+  // Client
+  lSocket = CreateObject<MpTcpSocketBase>(client);
+  lSocket->Bind();
+  lSocket->SetSourceAddress("10.0.2.2");
+  SetupSocketParam(lSocket);
+  SetupDropPacket(lSocket);
+
+  Simulator::ScheduleNow(&StartFlow, lSocket, "10.0.3.2", servPort);
+
   /* Output ConfigStore to Xml format */
   Config::SetDefault("ns3::ConfigStore::Filename", StringValue("MPTCP-attributes.xml"));
   Config::SetDefault("ns3::ConfigStore::FileFormat", StringValue("Xml"));
@@ -196,43 +220,16 @@ main(int argc, char *argv[])
   outputConfig2.ConfigureDefaults();
   outputConfig2.ConfigureAttributes();
 
-//  Ptr<ReceiveListErrorModel> em = CreateObject<ReceiveListErrorModel>();
-//  std::list < uint32_t > sl;
-//  sl.push_back(22);
-//  em->SetList(sl);
-//  netDevices.Get(1)->SetAttribute("ReceiveErrorModel", PointerValue(em));
-
-//  PointerValue pv;
-//  netDevices.Get(0)->GetAttribute("TxQueue", pv);
-//  Ptr<Queue> dtq = pv.Get<Queue>();
-//  dtq->TraceConnectWithoutContext("Drop", MakeCallback(&DropQueue));
-//
-//  Ptr<NetDevice> netDev = netDevices.Get(0);
-//  UintegerValue Uv;
-//  netDev->GetAttribute("Mtu", Uv);
-//  NS_LOG_ERROR("MTU: " << Uv.Get());
-
-//ErroModel
-//  Ptr<RateErrorModel> em = CreateObject<RateErrorModel>();
-//  em->SetUnit(RateErrorModel::ERROR_UNIT_PACKET);
-//  em->SetRate(0.1); //Subflow1
-//  netDevices.Get(1)->SetAttribute("ReceiveErrorModel", PointerValue(em));
-
-// ListErrorModel
-//  std::list< uint32_t> list;
-//  list.push_back(50);
-//  Ptr<ListErrorModel> em = CreateObject<ListErrorModel>();
-//  em->SetList(list);
-//  Ptr<NetDevice> _server = server->GetDevice(1);
-//  _server->SetAttribute("ReceiveErrorModel", PointerValue(em));
   AsciiTraceHelper h_ascii;
   /* Flow Monitor Configuration */
   FlowMonitorHelper flowmon;
   Ptr<FlowMonitor> monitor = flowmon.InstallAll();
+
   Simulator::Stop(Seconds(simDuration + 10.0));
   Simulator::Run();
 
   monitor->CheckForLostPackets();
+
   Ptr<Ipv4FlowClassifier> classifier = DynamicCast<Ipv4FlowClassifier>(flowmon.GetClassifier());
   std::map<FlowId, FlowMonitor::FlowStats> stats = monitor->GetFlowStats();
   std::map<FlowId, FlowMonitor::FlowStats>::const_iterator iter;
@@ -240,7 +237,11 @@ main(int argc, char *argv[])
   for (iter = stats.begin(); iter != stats.end(); ++iter)
     {
       Ipv4FlowClassifier::FiveTuple t = classifier->FindFlow(iter->first);
-      if ((t.sourceAddress == "10.1.1.1" && t.destinationAddress == "10.1.1.2"))
+      if ((t.sourceAddress == "10.0.0.2" && t.destinationAddress == "10.0.1.2"))
+        {
+          printIterator(iter, output, t);
+        }
+      if ((t.sourceAddress == "10.0.2.2" && t.destinationAddress == "10.0.3.2"))
         {
           printIterator(iter, output, t);
         }
@@ -261,9 +262,7 @@ StartFlow(Ptr<MpTcpSocketBase> localSocket, Ipv4Address servAddress, uint16_t se
       lSocket->SetConnectCallback(MakeCallback(&connectionSucceeded), MakeCallback(&connectionFailed));
       lSocket->SetDataSentCallback(MakeCallback(&WriteUntilBufferFull));
       lSocket->SetCloseCallbacks(MakeCallback(&HandlePeerClose), MakeCallback(&HandlePeerError));
-//      lSocket->ConnectWithoutContext("Subflows/*" , MakeCallback(&CwndTracer));
-      //Config::Connect("/NodeList/*/$ns3::MpTcpSocketBase/subflows/0/cWindow", MakeCallback(&CwndTracer));
-      //Config::ConnectWithoutContext ("/NodeList/*/$ns3::TcpL4Protocol/SocketList/*/Subflows/*/cWindow", MakeCallback (&CwndTracer));
+      //Config::ConnectWithoutContext("/NodeList/0/$ns3::MpTcpSocketBase/subflows[0]/CongestionWindow", MakeCallback(&CwndTracer));
     }
   else
     {
@@ -276,16 +275,16 @@ SetupSocketParam(Ptr<MpTcpSocketBase> lSocket)
 {
 //  lSocket->SetCongestionCtrlAlgo(Uncoupled_TCPs);
   //lSocket->SetDataDistribAlgo(Round_Robin);
-  lSocket->SetMaxSubFlowNumber(11);
   //lSocket->SetSourceAddress(Ipv4Address("10.1.1.1"));
-  //lSocket->allocateSendingBuffer(sendBufSize);
+  lSocket->SetMaxSubFlowNumber(11);
+  lSocket->allocateSendingBuffer(sendBufSize);
   lSocket->mod = 60;
   lSocket->totalBytes = totalTxBytes;
   lSocket->lostRate = dtq;
   lSocket->LinkCapacity = LinkRate;
   lSocket->RTT = Delay * 2;
   lSocket->TimeScale = -5.0;
-  //lSocket->MSS = 536; // Just for plot's info
+  lSocket->MSS = 536; // Just for plot's info
 }
 
 void
@@ -307,7 +306,7 @@ connectionSucceeded(Ptr<Socket> localSocket)
 {
   NS_LOG_FUNCTION_NOARGS();  //
   NS_LOG_LOGIC("MpTcpNewReno:: MPTCP Flow will start after all subflows complete their 3WHSs @ " << Simulator::Now ().GetSeconds () + 1.0);
-  Simulator::ScheduleNow(&WriteUntilBufferFull, lSocket, 0);
+  Simulator::Schedule(Seconds(0.0), &WriteUntilBufferFull, lSocket, 0);
   Simulator::Schedule(Seconds(simDuration), &CloseConnection, lSocket);
 }
 
@@ -341,7 +340,6 @@ CloseConnection(Ptr<Socket> localSocket)
   NS_LOG_FUNCTION_NOARGS();  //
   NS_LOG_LOGIC("MpTcpNewReno::currentTxBytes = " << currentTxBytes);  //
   NS_LOG_LOGIC("MpTcpNewReno::totalTxBytes   = " << totalTxBytes);  //
-
 }
 
 void

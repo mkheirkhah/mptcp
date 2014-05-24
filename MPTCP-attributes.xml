@@ -39,7 +39,7 @@
  <default name="ns3::Application::StartTime" value="+0.0ns"/>
  <default name="ns3::Application::StopTime" value="+0.0ns"/>
  <default name="ns3::DropTailQueue::Mode" value="QUEUE_MODE_PACKETS"/>
- <default name="ns3::DropTailQueue::MaxPackets" value="65"/>
+ <default name="ns3::DropTailQueue::MaxPackets" value="100"/>
  <default name="ns3::DropTailQueue::MaxBytes" value="6553500"/>
  <default name="ns3::ErrorModel::IsEnabled" value="true"/>
  <default name="ns3::RateErrorModel::ErrorUnit" value="ERROR_UNIT_BYTE"/>
@@ -89,7 +89,7 @@
  <default name="ns3::TcpSocket::ConnTimeout" value="+3000000000.0ns"/>
  <default name="ns3::TcpSocket::ConnCount" value="6"/>
  <default name="ns3::TcpSocket::DelAckTimeout" value="+200000000.0ns"/>
- <default name="ns3::TcpSocket::DelAckCount" value="0"/>
+ <default name="ns3::TcpSocket::DelAckCount" value="2"/>
  <default name="ns3::TcpSocket::TcpNoDelay" value="true"/>
  <default name="ns3::TcpSocket::PersistTimeout" value="+6000000000.0ns"/>
  <default name="ns3::RttMeanDeviation::Gain" value="0.1"/>
@@ -129,7 +129,7 @@
  <default name="ns3::Ipv4GlobalRouting::RandomEcmpRouting" value="false"/>
  <default name="ns3::Ipv4GlobalRouting::RespondToInterfaceEvents" value="false"/>
  <default name="ns3::Ipv6PmtuCache::CacheExpiryTime" value="+600000000000.0ns"/>
- <default name="ns3::MpTcpSocketBase::CongestionControl" value="RTT_Compensator"/>
+ <default name="ns3::MpTcpSocketBase::CongestionControl" value="Uncoupled_TCPs"/>
  <default name="ns3::MpTcpSocketBase::SchedulingAlgorithm" value="Round_Robin"/>
  <default name="ns3::MpTcpSocketBase::MaxSubflows" value="255"/>
  <default name="ns3::ConfigStore::Mode" value="Save"/>
@@ -827,11 +827,17 @@
  <global name="RngSeed" value="1"/>
  <global name="RngRun" value="1"/>
  <global name="ChecksumEnabled" value="false"/>
+ <value path="/$ns3::NodeListPriv/NodeList/0/$ns3::Node/DeviceList/0/$ns3::PointToPointNetDevice/Mtu" value="1500"/>
+ <value path="/$ns3::NodeListPriv/NodeList/0/$ns3::Node/DeviceList/0/$ns3::PointToPointNetDevice/Address" value="00:00:00:00:00:02"/>
+ <value path="/$ns3::NodeListPriv/NodeList/0/$ns3::Node/DeviceList/0/$ns3::PointToPointNetDevice/DataRate" value="100000000bps"/>
+ <value path="/$ns3::NodeListPriv/NodeList/0/$ns3::Node/DeviceList/0/$ns3::PointToPointNetDevice/InterframeGap" value="+0.0ns"/>
+ <value path="/$ns3::NodeListPriv/NodeList/0/$ns3::Node/DeviceList/0/$ns3::PointToPointNetDevice/TxQueue/$ns3::DropTailQueue/MaxPackets" value="100"/>
+ <value path="/$ns3::NodeListPriv/NodeList/0/$ns3::Node/DeviceList/0/$ns3::PointToPointNetDevice/TxQueue/$ns3::DropTailQueue/MaxBytes" value="6553500"/>
  <value path="/$ns3::NodeListPriv/NodeList/0/$ns3::Node/DeviceList/1/$ns3::PointToPointNetDevice/Mtu" value="1500"/>
- <value path="/$ns3::NodeListPriv/NodeList/0/$ns3::Node/DeviceList/1/$ns3::PointToPointNetDevice/Address" value="00:00:00:00:00:01"/>
+ <value path="/$ns3::NodeListPriv/NodeList/0/$ns3::Node/DeviceList/1/$ns3::PointToPointNetDevice/Address" value="00:00:00:00:00:06"/>
  <value path="/$ns3::NodeListPriv/NodeList/0/$ns3::Node/DeviceList/1/$ns3::PointToPointNetDevice/DataRate" value="100000000bps"/>
  <value path="/$ns3::NodeListPriv/NodeList/0/$ns3::Node/DeviceList/1/$ns3::PointToPointNetDevice/InterframeGap" value="+0.0ns"/>
- <value path="/$ns3::NodeListPriv/NodeList/0/$ns3::Node/DeviceList/1/$ns3::PointToPointNetDevice/TxQueue/$ns3::DropTailQueue/MaxPackets" value="65"/>
+ <value path="/$ns3::NodeListPriv/NodeList/0/$ns3::Node/DeviceList/1/$ns3::PointToPointNetDevice/TxQueue/$ns3::DropTailQueue/MaxPackets" value="100"/>
  <value path="/$ns3::NodeListPriv/NodeList/0/$ns3::Node/DeviceList/1/$ns3::PointToPointNetDevice/TxQueue/$ns3::DropTailQueue/MaxBytes" value="6553500"/>
  <value path="/$ns3::NodeListPriv/NodeList/0/$ns3::Node/SystemId" value="0"/>
  <value path="/$ns3::NodeListPriv/NodeList/0/$ns3::Node/$ns3::Ipv4L3Protocol/DefaultTos" value="0"/>
@@ -855,11 +861,17 @@
  <value path="/$ns3::NodeListPriv/NodeList/0/$ns3::Node/$ns3::Icmpv6L4Protocol/SolicitationJitter/$ns3::UniformRandomVariable/Max" value="10"/>
  <value path="/$ns3::NodeListPriv/NodeList/0/$ns3::Node/$ns3::Icmpv6L4Protocol/SolicitationJitter/$ns3::UniformRandomVariable/Stream" value="-1"/>
  <value path="/$ns3::NodeListPriv/NodeList/0/$ns3::Node/$ns3::Icmpv6L4Protocol/SolicitationJitter/$ns3::UniformRandomVariable/Antithetic" value="false"/>
+ <value path="/$ns3::NodeListPriv/NodeList/1/$ns3::Node/DeviceList/0/$ns3::PointToPointNetDevice/Mtu" value="1500"/>
+ <value path="/$ns3::NodeListPriv/NodeList/1/$ns3::Node/DeviceList/0/$ns3::PointToPointNetDevice/Address" value="00:00:00:00:00:04"/>
+ <value path="/$ns3::NodeListPriv/NodeList/1/$ns3::Node/DeviceList/0/$ns3::PointToPointNetDevice/DataRate" value="100000000bps"/>
+ <value path="/$ns3::NodeListPriv/NodeList/1/$ns3::Node/DeviceList/0/$ns3::PointToPointNetDevice/InterframeGap" value="+0.0ns"/>
+ <value path="/$ns3::NodeListPriv/NodeList/1/$ns3::Node/DeviceList/0/$ns3::PointToPointNetDevice/TxQueue/$ns3::DropTailQueue/MaxPackets" value="100"/>
+ <value path="/$ns3::NodeListPriv/NodeList/1/$ns3::Node/DeviceList/0/$ns3::PointToPointNetDevice/TxQueue/$ns3::DropTailQueue/MaxBytes" value="6553500"/>
  <value path="/$ns3::NodeListPriv/NodeList/1/$ns3::Node/DeviceList/1/$ns3::PointToPointNetDevice/Mtu" value="1500"/>
- <value path="/$ns3::NodeListPriv/NodeList/1/$ns3::Node/DeviceList/1/$ns3::PointToPointNetDevice/Address" value="00:00:00:00:00:02"/>
+ <value path="/$ns3::NodeListPriv/NodeList/1/$ns3::Node/DeviceList/1/$ns3::PointToPointNetDevice/Address" value="00:00:00:00:00:08"/>
  <value path="/$ns3::NodeListPriv/NodeList/1/$ns3::Node/DeviceList/1/$ns3::PointToPointNetDevice/DataRate" value="100000000bps"/>
  <value path="/$ns3::NodeListPriv/NodeList/1/$ns3::Node/DeviceList/1/$ns3::PointToPointNetDevice/InterframeGap" value="+0.0ns"/>
- <value path="/$ns3::NodeListPriv/NodeList/1/$ns3::Node/DeviceList/1/$ns3::PointToPointNetDevice/TxQueue/$ns3::DropTailQueue/MaxPackets" value="65"/>
+ <value path="/$ns3::NodeListPriv/NodeList/1/$ns3::Node/DeviceList/1/$ns3::PointToPointNetDevice/TxQueue/$ns3::DropTailQueue/MaxPackets" value="100"/>
  <value path="/$ns3::NodeListPriv/NodeList/1/$ns3::Node/DeviceList/1/$ns3::PointToPointNetDevice/TxQueue/$ns3::DropTailQueue/MaxBytes" value="6553500"/>
  <value path="/$ns3::NodeListPriv/NodeList/1/$ns3::Node/ApplicationList/0/$ns3::MpTcpPacketSink/Local" value="03-06-00:00:00:00:88:13"/>
  <value path="/$ns3::NodeListPriv/NodeList/1/$ns3::Node/ApplicationList/0/$ns3::MpTcpPacketSink/StartTime" value="+0.0ns"/>
@@ -886,5 +898,76 @@
  <value path="/$ns3::NodeListPriv/NodeList/1/$ns3::Node/$ns3::Icmpv6L4Protocol/SolicitationJitter/$ns3::UniformRandomVariable/Antithetic" value="false"/>
  <value path="/$ns3::NodeListPriv/NodeList/1/$ns3::Node/$ns3::TcpL4Protocol/RttEstimatorType" value="ns3::RttMeanDeviation"/>
  <value path="/$ns3::NodeListPriv/NodeList/1/$ns3::Node/$ns3::TcpL4Protocol/SocketType" value="ns3::TcpNewReno"/>
- <value path="/$ns3::ChannelListPriv/ChannelList/0/$ns3::PointToPointChannel/Delay" value="+1000000.0ns"/>
+ <value path="/$ns3::NodeListPriv/NodeList/2/$ns3::Node/DeviceList/0/$ns3::PointToPointNetDevice/Mtu" value="1500"/>
+ <value path="/$ns3::NodeListPriv/NodeList/2/$ns3::Node/DeviceList/0/$ns3::PointToPointNetDevice/Address" value="00:00:00:00:00:01"/>
+ <value path="/$ns3::NodeListPriv/NodeList/2/$ns3::Node/DeviceList/0/$ns3::PointToPointNetDevice/DataRate" value="100000000bps"/>
+ <value path="/$ns3::NodeListPriv/NodeList/2/$ns3::Node/DeviceList/0/$ns3::PointToPointNetDevice/InterframeGap" value="+0.0ns"/>
+ <value path="/$ns3::NodeListPriv/NodeList/2/$ns3::Node/DeviceList/0/$ns3::PointToPointNetDevice/TxQueue/$ns3::DropTailQueue/MaxPackets" value="100"/>
+ <value path="/$ns3::NodeListPriv/NodeList/2/$ns3::Node/DeviceList/0/$ns3::PointToPointNetDevice/TxQueue/$ns3::DropTailQueue/MaxBytes" value="6553500"/>
+ <value path="/$ns3::NodeListPriv/NodeList/2/$ns3::Node/DeviceList/1/$ns3::PointToPointNetDevice/Mtu" value="1500"/>
+ <value path="/$ns3::NodeListPriv/NodeList/2/$ns3::Node/DeviceList/1/$ns3::PointToPointNetDevice/Address" value="00:00:00:00:00:03"/>
+ <value path="/$ns3::NodeListPriv/NodeList/2/$ns3::Node/DeviceList/1/$ns3::PointToPointNetDevice/DataRate" value="100000000bps"/>
+ <value path="/$ns3::NodeListPriv/NodeList/2/$ns3::Node/DeviceList/1/$ns3::PointToPointNetDevice/InterframeGap" value="+0.0ns"/>
+ <value path="/$ns3::NodeListPriv/NodeList/2/$ns3::Node/DeviceList/1/$ns3::PointToPointNetDevice/TxQueue/$ns3::DropTailQueue/MaxPackets" value="100"/>
+ <value path="/$ns3::NodeListPriv/NodeList/2/$ns3::Node/DeviceList/1/$ns3::PointToPointNetDevice/TxQueue/$ns3::DropTailQueue/MaxBytes" value="6553500"/>
+ <value path="/$ns3::NodeListPriv/NodeList/2/$ns3::Node/SystemId" value="0"/>
+ <value path="/$ns3::NodeListPriv/NodeList/2/$ns3::Node/$ns3::Ipv4L3Protocol/DefaultTos" value="0"/>
+ <value path="/$ns3::NodeListPriv/NodeList/2/$ns3::Node/$ns3::Ipv4L3Protocol/DefaultTtl" value="64"/>
+ <value path="/$ns3::NodeListPriv/NodeList/2/$ns3::Node/$ns3::Ipv4L3Protocol/FragmentExpirationTimeout" value="+30000000000.0ns"/>
+ <value path="/$ns3::NodeListPriv/NodeList/2/$ns3::Node/$ns3::Ipv4L3Protocol/IpForward" value="true"/>
+ <value path="/$ns3::NodeListPriv/NodeList/2/$ns3::Node/$ns3::Ipv4L3Protocol/WeakEsModel" value="true"/>
+ <value path="/$ns3::NodeListPriv/NodeList/2/$ns3::Node/$ns3::Ipv6L3Protocol/DefaultTtl" value="64"/>
+ <value path="/$ns3::NodeListPriv/NodeList/2/$ns3::Node/$ns3::Ipv6L3Protocol/DefaultTclass" value="0"/>
+ <value path="/$ns3::NodeListPriv/NodeList/2/$ns3::Node/$ns3::Ipv6L3Protocol/SendIcmpv6Redirect" value="true"/>
+ <value path="/$ns3::NodeListPriv/NodeList/2/$ns3::Node/$ns3::Ipv6L3Protocol/IpForward" value="false"/>
+ <value path="/$ns3::NodeListPriv/NodeList/2/$ns3::Node/$ns3::Ipv6L3Protocol/MtuDiscover" value="true"/>
+ <value path="/$ns3::NodeListPriv/NodeList/2/$ns3::Node/$ns3::ArpL3Protocol/RequestJitter/$ns3::UniformRandomVariable/Min" value="0"/>
+ <value path="/$ns3::NodeListPriv/NodeList/2/$ns3::Node/$ns3::ArpL3Protocol/RequestJitter/$ns3::UniformRandomVariable/Max" value="10"/>
+ <value path="/$ns3::NodeListPriv/NodeList/2/$ns3::Node/$ns3::ArpL3Protocol/RequestJitter/$ns3::UniformRandomVariable/Stream" value="-1"/>
+ <value path="/$ns3::NodeListPriv/NodeList/2/$ns3::Node/$ns3::ArpL3Protocol/RequestJitter/$ns3::UniformRandomVariable/Antithetic" value="false"/>
+ <value path="/$ns3::NodeListPriv/NodeList/2/$ns3::Node/$ns3::Icmpv6L4Protocol/DAD" value="true"/>
+ <value path="/$ns3::NodeListPriv/NodeList/2/$ns3::Node/$ns3::Icmpv6L4Protocol/SolicitationJitter/$ns3::UniformRandomVariable/Min" value="0"/>
+ <value path="/$ns3::NodeListPriv/NodeList/2/$ns3::Node/$ns3::Icmpv6L4Protocol/SolicitationJitter/$ns3::UniformRandomVariable/Max" value="10"/>
+ <value path="/$ns3::NodeListPriv/NodeList/2/$ns3::Node/$ns3::Icmpv6L4Protocol/SolicitationJitter/$ns3::UniformRandomVariable/Stream" value="-1"/>
+ <value path="/$ns3::NodeListPriv/NodeList/2/$ns3::Node/$ns3::Icmpv6L4Protocol/SolicitationJitter/$ns3::UniformRandomVariable/Antithetic" value="false"/>
+ <value path="/$ns3::NodeListPriv/NodeList/2/$ns3::Node/$ns3::TcpL4Protocol/RttEstimatorType" value="ns3::RttMeanDeviation"/>
+ <value path="/$ns3::NodeListPriv/NodeList/2/$ns3::Node/$ns3::TcpL4Protocol/SocketType" value="ns3::TcpNewReno"/>
+ <value path="/$ns3::NodeListPriv/NodeList/3/$ns3::Node/DeviceList/0/$ns3::PointToPointNetDevice/Mtu" value="1500"/>
+ <value path="/$ns3::NodeListPriv/NodeList/3/$ns3::Node/DeviceList/0/$ns3::PointToPointNetDevice/Address" value="00:00:00:00:00:05"/>
+ <value path="/$ns3::NodeListPriv/NodeList/3/$ns3::Node/DeviceList/0/$ns3::PointToPointNetDevice/DataRate" value="100000000bps"/>
+ <value path="/$ns3::NodeListPriv/NodeList/3/$ns3::Node/DeviceList/0/$ns3::PointToPointNetDevice/InterframeGap" value="+0.0ns"/>
+ <value path="/$ns3::NodeListPriv/NodeList/3/$ns3::Node/DeviceList/0/$ns3::PointToPointNetDevice/TxQueue/$ns3::DropTailQueue/MaxPackets" value="100"/>
+ <value path="/$ns3::NodeListPriv/NodeList/3/$ns3::Node/DeviceList/0/$ns3::PointToPointNetDevice/TxQueue/$ns3::DropTailQueue/MaxBytes" value="6553500"/>
+ <value path="/$ns3::NodeListPriv/NodeList/3/$ns3::Node/DeviceList/1/$ns3::PointToPointNetDevice/Mtu" value="1500"/>
+ <value path="/$ns3::NodeListPriv/NodeList/3/$ns3::Node/DeviceList/1/$ns3::PointToPointNetDevice/Address" value="00:00:00:00:00:07"/>
+ <value path="/$ns3::NodeListPriv/NodeList/3/$ns3::Node/DeviceList/1/$ns3::PointToPointNetDevice/DataRate" value="100000000bps"/>
+ <value path="/$ns3::NodeListPriv/NodeList/3/$ns3::Node/DeviceList/1/$ns3::PointToPointNetDevice/InterframeGap" value="+0.0ns"/>
+ <value path="/$ns3::NodeListPriv/NodeList/3/$ns3::Node/DeviceList/1/$ns3::PointToPointNetDevice/TxQueue/$ns3::DropTailQueue/MaxPackets" value="100"/>
+ <value path="/$ns3::NodeListPriv/NodeList/3/$ns3::Node/DeviceList/1/$ns3::PointToPointNetDevice/TxQueue/$ns3::DropTailQueue/MaxBytes" value="6553500"/>
+ <value path="/$ns3::NodeListPriv/NodeList/3/$ns3::Node/SystemId" value="0"/>
+ <value path="/$ns3::NodeListPriv/NodeList/3/$ns3::Node/$ns3::Ipv4L3Protocol/DefaultTos" value="0"/>
+ <value path="/$ns3::NodeListPriv/NodeList/3/$ns3::Node/$ns3::Ipv4L3Protocol/DefaultTtl" value="64"/>
+ <value path="/$ns3::NodeListPriv/NodeList/3/$ns3::Node/$ns3::Ipv4L3Protocol/FragmentExpirationTimeout" value="+30000000000.0ns"/>
+ <value path="/$ns3::NodeListPriv/NodeList/3/$ns3::Node/$ns3::Ipv4L3Protocol/IpForward" value="true"/>
+ <value path="/$ns3::NodeListPriv/NodeList/3/$ns3::Node/$ns3::Ipv4L3Protocol/WeakEsModel" value="true"/>
+ <value path="/$ns3::NodeListPriv/NodeList/3/$ns3::Node/$ns3::Ipv6L3Protocol/DefaultTtl" value="64"/>
+ <value path="/$ns3::NodeListPriv/NodeList/3/$ns3::Node/$ns3::Ipv6L3Protocol/DefaultTclass" value="0"/>
+ <value path="/$ns3::NodeListPriv/NodeList/3/$ns3::Node/$ns3::Ipv6L3Protocol/SendIcmpv6Redirect" value="true"/>
+ <value path="/$ns3::NodeListPriv/NodeList/3/$ns3::Node/$ns3::Ipv6L3Protocol/IpForward" value="false"/>
+ <value path="/$ns3::NodeListPriv/NodeList/3/$ns3::Node/$ns3::Ipv6L3Protocol/MtuDiscover" value="true"/>
+ <value path="/$ns3::NodeListPriv/NodeList/3/$ns3::Node/$ns3::ArpL3Protocol/RequestJitter/$ns3::UniformRandomVariable/Min" value="0"/>
+ <value path="/$ns3::NodeListPriv/NodeList/3/$ns3::Node/$ns3::ArpL3Protocol/RequestJitter/$ns3::UniformRandomVariable/Max" value="10"/>
+ <value path="/$ns3::NodeListPriv/NodeList/3/$ns3::Node/$ns3::ArpL3Protocol/RequestJitter/$ns3::UniformRandomVariable/Stream" value="-1"/>
+ <value path="/$ns3::NodeListPriv/NodeList/3/$ns3::Node/$ns3::ArpL3Protocol/RequestJitter/$ns3::UniformRandomVariable/Antithetic" value="false"/>
+ <value path="/$ns3::NodeListPriv/NodeList/3/$ns3::Node/$ns3::Icmpv6L4Protocol/DAD" value="true"/>
+ <value path="/$ns3::NodeListPriv/NodeList/3/$ns3::Node/$ns3::Icmpv6L4Protocol/SolicitationJitter/$ns3::UniformRandomVariable/Min" value="0"/>
+ <value path="/$ns3::NodeListPriv/NodeList/3/$ns3::Node/$ns3::Icmpv6L4Protocol/SolicitationJitter/$ns3::UniformRandomVariable/Max" value="10"/>
+ <value path="/$ns3::NodeListPriv/NodeList/3/$ns3::Node/$ns3::Icmpv6L4Protocol/SolicitationJitter/$ns3::UniformRandomVariable/Stream" value="-1"/>
+ <value path="/$ns3::NodeListPriv/NodeList/3/$ns3::Node/$ns3::Icmpv6L4Protocol/SolicitationJitter/$ns3::UniformRandomVariable/Antithetic" value="false"/>
+ <value path="/$ns3::NodeListPriv/NodeList/3/$ns3::Node/$ns3::TcpL4Protocol/RttEstimatorType" value="ns3::RttMeanDeviation"/>
+ <value path="/$ns3::NodeListPriv/NodeList/3/$ns3::Node/$ns3::TcpL4Protocol/SocketType" value="ns3::TcpNewReno"/>
+ <value path="/$ns3::ChannelListPriv/ChannelList/0/$ns3::PointToPointChannel/Delay" value="+0.0ns"/>
+ <value path="/$ns3::ChannelListPriv/ChannelList/1/$ns3::PointToPointChannel/Delay" value="+0.0ns"/>
+ <value path="/$ns3::ChannelListPriv/ChannelList/2/$ns3::PointToPointChannel/Delay" value="+0.0ns"/>
+ <value path="/$ns3::ChannelListPriv/ChannelList/3/$ns3::PointToPointChannel/Delay" value="+0.0ns"/>
 </ns3>
