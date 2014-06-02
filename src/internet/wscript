@@ -194,6 +194,7 @@ def build(bld):
         'model/ipv6-pmtu-cache.cc',
         'model/mp-tcp-socket-base.cc',           
         'model/mp-tcp-typedefs.cc',
+        'model/tcp-options.cc',
         ]
 
     internet_test = bld.create_ns3_module_test_library('internet')
@@ -311,6 +312,7 @@ def build(bld):
         'model/tcp-socket-factory-impl.h',  # Morteza Kheirkhah
         'model/mp-tcp-socket-base.h',  
         'model/mp-tcp-typedefs.h',
+        'model/tcp-options.h',
        ]
 
     if bld.env['NSC_ENABLED']:
