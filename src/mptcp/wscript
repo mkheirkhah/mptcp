@@ -10,11 +10,7 @@ def build(bld):
     module = bld.create_ns3_module('mptcp', ['core', 'internet', 'stats'])
     module.source = [
         'model/mptcp.cc',
-        'helper/mptcp-helper.cc',
-        'model/mp-tcp-header.cc',                
-        'model/mp-tcp-l4-protocol.cc',           
-        #'model/mp-tcp-socket-base.cc',           
-        #'model/mp-tcp-typedefs.cc',              
+        'helper/mptcp-helper.cc',            
         ]
 
     module_test = bld.create_ns3_module_test_library('mptcp')
@@ -26,11 +22,7 @@ def build(bld):
     headers.module = 'mptcp'
     headers.source = [
         'model/mptcp.h',
-        'helper/mptcp-helper.h',
-        'model/mp-tcp-header.h',
-        'model/mp-tcp-l4-protocol.h',  
-        #'model/mp-tcp-socket-base.h',  
-        #'model/mp-tcp-typedefs.h',     
+        'helper/mptcp-helper.h',   
         ]
 
     if bld.env.ENABLE_EXAMPLES:
