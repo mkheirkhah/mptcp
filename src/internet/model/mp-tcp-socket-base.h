@@ -10,6 +10,7 @@
 #include "ns3/mp-tcp-typedefs.h"
 #include "ns3/tcp-socket-base.h"
 #include "ns3/Gnuplot.h"
+#include "mp-tcp-subflow.h"
 //#include "ns3/traced-value.h"     // Derived from mp-tcp-typedefs.h
 //#include "ns3/ipv4-address.h"     // Derived from mp-tcp-typedefs.h
 //#include "ns3/event-id.h"         // Derived from mp-tcp-typedefs.h
