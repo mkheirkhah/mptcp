@@ -48,7 +48,7 @@ public:
 
   uint16_t routeId;
   bool connected;
-  TcpStates_t state;     // Morteza Kheirkhah
+  TcpStates_t state;
   Phase_t phase;
   Ipv4Address sAddr;
   uint16_t sPort;

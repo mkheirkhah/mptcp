@@ -37,7 +37,6 @@ TcpHeader::TcpHeader() :
     m_sourcePort(0), m_destinationPort(0), m_sequenceNumber(0), m_ackNumber(0), m_length(5), m_flags(0), m_windowSize(0xffff), m_urgentPointer(
         0), m_calcChecksum(false), m_goodChecksum(true), m_option(0), oLen(0), pLen(0), original(true)
 {
-
 }
 
 /*
@@ -620,10 +619,6 @@ TcpHeader::Deserialize(Buffer::Iterator start)
 
   return GetSerializedSize();
 }
-
-//----------------------------------------
-//----------------------------------------
-//----------------------------------------
 //----------------------------------------
 
 void
@@ -690,13 +685,6 @@ TcpHeader::GetPaddingLength() const
 {
   return pLen;
 }
-
-//uint32_t
-//TcpHeader::GetSerializedSize(void) const
-//{
-////  NS_LOG_FUNCTION_NOARGS();
-//  return 4 * GetLength()/* + GetOptionsLength()*/;
-//}
 
 uint8_t
 TcpHeader::TcpOptionToUint(TcpOption_t opt) const

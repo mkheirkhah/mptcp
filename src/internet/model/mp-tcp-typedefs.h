@@ -47,31 +47,18 @@ typedef enum
 {
   Slow_Start,                   // 0
   Congestion_Avoidance,         // 1
-//  DSACK_SS,                     // 2 DSACK Slow Start: a temporary slow start triggered after detecting spurious retransmission based on DSACK information
-//  RTO_Recovery                  // 3 Reconvery algorithm after RTO expiration
 } Phase_t;
 
 typedef enum
 {
   Round_Robin        // 0
-//Collision_Avoidance         // 1
 } DataDistribAlgo_t;
 
 typedef enum
 {
   NoPR_Algo,    // 0
-//  Eifel,        // 1
-//  TCP_DOOR,     // 2 Detection of Out-of-Order and Response
-//  D_SACK,       // 3 Duplicate SACK (Selective ACKnowledgement)
-//  F_RTO         // 4 Forward RTO-Recovery: Algorithm for detecting spurious retransmission timeouts
 } PacketReorder_t;
 
-//typedef enum {
-//  Step_1,       // 0
-//  Step_2,       // 1
-//  Step_3,       // 2
-//  Step_4        // 3 In this step of F-RTO do a standard Fast Recovery algorithm
-//  } FRtoStep_t;
 
 class DSNMapping
 {

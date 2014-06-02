@@ -53,8 +53,7 @@ public:
   virtual
   ~TcpHeader();
 
-  // MPTCP
-  // Multipath capable Option
+  // MultiPath TCP related methods
   bool
   AddOptMPC(TcpOption_t optName, uint32_t TxToken);
   // Join Connection Option
@@ -75,7 +74,6 @@ public:
   // DSACK Option
   bool
   AddOptDSACK(TcpOption_t optName, OptDSACK *opt);
-
   void
   SetOptionsLength(uint8_t length);
   void
@@ -93,7 +91,6 @@ public:
   GetOptions(void) const;
   void
   SetOptions(vector<TcpOptions*> opt);
-
   //--------------------------------------------
   /**
    * \brief Enable checksum calculation for TCP
@@ -293,6 +290,7 @@ private:
   bool m_calcChecksum;    //!< Flag to calculate checksum
   bool m_goodChecksum;    //!< Flag to indicate that checksum is correct
 
+  // MPTCP related variables
   vector<TcpOptions*> m_option;
   uint8_t oLen;
   uint8_t pLen;

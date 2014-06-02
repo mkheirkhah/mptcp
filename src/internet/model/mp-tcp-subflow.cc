@@ -126,7 +126,7 @@ void
 MpTcpSubFlow::updateRTT(uint32_t ack, Time current)
 {
   NS_LOG_FUNCTION( this << ack << current );
-  rtt->AckSeq(SequenceNumber32(ack));    // Morteza Kheirkhah
+  rtt->AckSeq(SequenceNumber32(ack));
   NS_LOG_INFO ("MpTcpSubFlow::updateRTT -> time from last RTT measure = " << (current - lastMeasuredRtt).GetSeconds() );
   /*
    rtt->Measurement ( current - lastMeasuredRtt );
@@ -134,8 +134,8 @@ MpTcpSubFlow::updateRTT(uint32_t ack, Time current)
    measuredRTT.insert(measuredRTT.end(), rtt->Estimate().GetSeconds ());
    */
 //    measuredRTT.insert(measuredRTT.end(), rtt->est.GetSeconds ());
-  measuredRTT.insert(measuredRTT.end(), rtt->GetCurrentEstimate().GetSeconds());      // Morteza Kheirkhah
-  NS_LOG_INFO ("MpTcpSubFlow::updateRTT -> estimated RTT = " << rtt->GetCurrentEstimate().GetSeconds ()); // Morteza Kheirkhah
+  measuredRTT.insert(measuredRTT.end(), rtt->GetCurrentEstimate().GetSeconds());
+  NS_LOG_INFO ("MpTcpSubFlow::updateRTT -> estimated RTT = " << rtt->GetCurrentEstimate().GetSeconds ());
 }
 
 void
@@ -157,7 +157,7 @@ MpTcpSubFlow::GetunAckPkt()
     {
       DSNMapping * ptr = *it;
       NS_LOG_ERROR ("Subflow ("<<(int) routeId<<") Subflow Seq N° = " << ptr->subflowSeqNumber);
-      if ((ptr->subflowSeqNumber == highestAck + 1) /*|| (ptr->subflowSeqNumber == highestAck + 2) */) // Morteza Uncomented!!
+      if ((ptr->subflowSeqNumber == highestAck + 1) /*|| (ptr->subflowSeqNumber == highestAck + 2) */)
         {
           // we added 2, for the case in wich the fst pkt of a subsequent subflow is lost, because the highest ack is the one included in 'SYN | ACK' which is 2 less than the current TxSeq
           NS_LOG_INFO ("MpTcpSubFlow::GetunAckPkt -> packet to retransmit found: sFlowSeqNum = " << ptr->subflowSeqNumber);

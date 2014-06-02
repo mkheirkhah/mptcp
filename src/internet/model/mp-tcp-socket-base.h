@@ -11,22 +11,6 @@
 #include "ns3/tcp-socket-base.h"
 #include "ns3/Gnuplot.h"
 #include "mp-tcp-subflow.h"
-//#include "ns3/traced-value.h"     // Derived from mp-tcp-typedefs.h
-//#include "ns3/ipv4-address.h"     // Derived from mp-tcp-typedefs.h
-//#include "ns3/event-id.h"         // Derived from mp-tcp-typedefs.h
-//#include "ns3/sequence-number.h"  // Derived from mp-tcp-typedefs.h
-//#include "ns3/rtt-estimator.h"    // Derived from tcp-socket-based.h
-//#include "ns3/tcp-socket.h"       // Derived from tcp-socket-based.h
-//#include "ns3/ptr.h"              // Derived from tcp-socket-based.h
-//#include "ns3/callback.h"         // Derived from tcp-socket-based.h
-//#include <stdint.h>               // Derived from tcp-socket-based.h
-//#include <queue>                  // Derived from tcp-socket-based.h
-//#include <vector>                 // Derived from tcp-socket-based.h
-//#include <list>                   // Derived from tcp-socket-based.h
-//#include <map>                    // Derived from tcp-socket-based.h
-//#include "ns3/tcp-typedefs.h"     // obsolete
-//#include "ns3/pending-data.h"     // obsolete
-//#include "mp-tcp-l4-protocol.h"   // obsolete
 
 
 using namespace std;
@@ -37,7 +21,6 @@ namespace ns3
 class Ipv4EndPoint;
 class Node;
 class Packet;
-//class MpTcpL4Protocol;
 class TcpL4Protocol;
 
 
@@ -143,7 +126,7 @@ public:
   std::string
   GeneratePlotDetail();
   void GeneratePktCount();
-  //Morteza Kheirkhah - Some pure virtual protected functions from TcpSocketBase
+  // Some pure virtual protected functions from TcpSocketBase
   //.........................................................................
   virtual void SetSSThresh(uint32_t threshold);
   virtual uint32_t GetSSThresh(void) const;
@@ -215,7 +198,7 @@ protected:
   void reduceCWND(uint8_t sFlowIdx, DSNMapping* ptrDSN);
   DSNMapping* getAckedSegment(uint8_t sFlowIdx, uint32_t ack);
   DSNMapping* getAckedSegment(uint64_t lEdge, uint64_t rEdge);
-  DSNMapping* getSegmentOfACK(uint8_t sFlowIdx, uint32_t ack); // Morteza
+  DSNMapping* getSegmentOfACK(uint8_t sFlowIdx, uint32_t ack);
   double getGlobalThroughput();
   uint8_t getSubflowToUse();
 
@@ -271,8 +254,6 @@ protected:
   // note that these two are not the same: rxAvailbale is the number of
   // contiguous sequenced bytes that can be read, rxBufSize is the TOTAL size
   // including out of sequence data, such that m_rxAvailable <= m_rxBufSize
-
-
   //.........................................................................
 
 //private:
@@ -336,8 +317,6 @@ protected:
 }   //namespace ns3
 
 #endif /* MP_TCP_SOCKET_BASE_H */
-
-
 
 // TotalWindow
 //    {
