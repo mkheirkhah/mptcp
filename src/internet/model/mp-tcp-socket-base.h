@@ -135,6 +135,11 @@ public:
   virtual Ptr<TcpSocketBase> Fork(void);
   virtual void DupAck(const TcpHeader& t, uint32_t count); // Received dupack
   //..........................................................................
+
+  // Some Extra Helper functions
+  void PrintIpv4AddressFromIpv4Interface(Ptr<Ipv4Interface>, int32_t);
+  //..........................................................................
+
   // Lost modelling
   double LossProbablity;
   uint32_t counter;

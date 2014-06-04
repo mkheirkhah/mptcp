@@ -55,16 +55,13 @@ NS_OBJECT_ENSURE_REGISTERED(MpTcpSocketBase);
 TypeId
 MpTcpSocketBase::GetTypeId(void)
 {
-  static TypeId tid = TypeId("ns3::MpTcpSocketBase").SetParent<TcpSocketBase>().AddConstructor<MpTcpSocketBase>().AddAttribute(
-      "CongestionControl", "Congestion control algorithm", EnumValue(Uncoupled_TCPs),
-      MakeEnumAccessor(&MpTcpSocketBase::SetCongestionCtrlAlgo),
-      MakeEnumChecker(Uncoupled_TCPs, "Uncoupled_TCPs", Fully_Coupled, "Fully_Coupled", RTT_Compensator, "RTT_Compensator",
-          Linked_Increases, "Linked_Increases")).AddAttribute("SchedulingAlgorithm",
-      "Algorithm for data distribution between subflows", EnumValue(Round_Robin),
-      MakeEnumAccessor(&MpTcpSocketBase::SetDataDistribAlgo), MakeEnumChecker(Round_Robin, "Round_Robin")).AddAttribute(
-      "MaxSubflows", "Maximum number of subflows per each mptcp connection", UintegerValue(255),
-      MakeUintegerAccessor(&MpTcpSocketBase::maxSubflows), MakeUintegerChecker<uint8_t>()).AddAttribute("Subflows",
-      "The list of subflows associated to this protocol.", ObjectVectorValue(),
+  static TypeId tid = TypeId("ns3::MpTcpSocketBase").SetParent<TcpSocketBase>().AddConstructor<MpTcpSocketBase>().AddAttribute("CongestionControl",
+      "Congestion control algorithm", EnumValue(Uncoupled_TCPs), MakeEnumAccessor(&MpTcpSocketBase::SetCongestionCtrlAlgo),
+      MakeEnumChecker(Uncoupled_TCPs, "Uncoupled_TCPs", Fully_Coupled, "Fully_Coupled", RTT_Compensator, "RTT_Compensator", Linked_Increases,
+          "Linked_Increases")).AddAttribute("SchedulingAlgorithm", "Algorithm for data distribution between subflows", EnumValue(Round_Robin),
+      MakeEnumAccessor(&MpTcpSocketBase::SetDataDistribAlgo), MakeEnumChecker(Round_Robin, "Round_Robin")).AddAttribute("MaxSubflows",
+      "Maximum number of subflows per each mptcp connection", UintegerValue(255), MakeUintegerAccessor(&MpTcpSocketBase::maxSubflows),
+      MakeUintegerChecker<uint8_t>()).AddAttribute("Subflows", "The list of subflows associated to this protocol.", ObjectVectorValue(),
       MakeObjectVectorAccessor(&MpTcpSocketBase::subflows), MakeObjectVectorChecker<MpTcpSocketBase>());
   return tid;
 }
@@ -102,10 +99,9 @@ MpTcpSocketBase::MpTcpSocketBase()
 }
 
 MpTcpSocketBase::MpTcpSocketBase(Ptr<Node> node) :
-    m_node(node), m_mptcp(node->GetObject<TcpL4Protocol>()), mpState(MP_NONE), mpSendState(MP_NONE), mpRecvState(MP_NONE), mpEnabled(
-        false), addrAdvertised(false), mpTokenRegister(false), subflows(0), localAddrs(0), remoteAddrs(0), lastUsedsFlowIdx(0), totalCwnd(
-        0), localToken(0), remoteToken(0), m_rxBufSize(0), client(false), server(false), remoteRecvWnd(1), segmentSize(0), nextTxSequence(
-        1), nextRxSequence(1)
+    m_node(node), m_mptcp(node->GetObject<TcpL4Protocol>()), mpState(MP_NONE), mpSendState(MP_NONE), mpRecvState(MP_NONE), mpEnabled(false), addrAdvertised(
+        false), mpTokenRegister(false), subflows(0), localAddrs(0), remoteAddrs(0), lastUsedsFlowIdx(0), totalCwnd(0), localToken(0), remoteToken(0), m_rxBufSize(
+        0), client(false), server(false), remoteRecvWnd(1), segmentSize(0), nextTxSequence(1), nextRxSequence(1)
 {
   NS_LOG_FUNCTION(this);
   gnu.SetOutFile("allPlots.pdf");
@@ -382,8 +378,7 @@ MpTcpSocketBase::ProcessEstablished(uint8_t sFlowIdx, Ptr<Packet> packet, const 
 }
 
 void
-MpTcpSocketBase::ProcessListen(Ptr<Packet> packet, const TcpHeader& mptcpHeader, const Address& fromAddress,
-    const Address& toAddress)
+MpTcpSocketBase::ProcessListen(Ptr<Packet> packet, const TcpHeader& mptcpHeader, const Address& fromAddress, const Address& toAddress)
 {
   NS_LOG_FUNCTION (this << mptcpHeader);
 
@@ -418,9 +413,8 @@ MpTcpSocketBase::CompleteFork(Ptr<Packet> p, const TcpHeader& mptcpHeader, const
   // Get port and address from peer (connecting host)
   if (InetSocketAddress::IsMatchingType(toAddress))
     {
-      m_endPoint = m_mptcp->Allocate(InetSocketAddress::ConvertFrom(toAddress).GetIpv4(),
-          InetSocketAddress::ConvertFrom(toAddress).GetPort(), InetSocketAddress::ConvertFrom(fromAddress).GetIpv4(),
-          InetSocketAddress::ConvertFrom(fromAddress).GetPort());
+      m_endPoint = m_mptcp->Allocate(InetSocketAddress::ConvertFrom(toAddress).GetIpv4(), InetSocketAddress::ConvertFrom(toAddress).GetPort(),
+          InetSocketAddress::ConvertFrom(fromAddress).GetIpv4(), InetSocketAddress::ConvertFrom(fromAddress).GetPort());
     }
   NS_ASSERT(InetSocketAddress::ConvertFrom(toAddress).GetIpv4() == m_localAddress);
   NS_ASSERT(InetSocketAddress::ConvertFrom(toAddress).GetPort() == m_localPort);
@@ -692,8 +686,7 @@ MpTcpSocketBase::ProcessWait(uint8_t sFlowIdx, Ptr<Packet> packet, const TcpHead
           NS_LOG_INFO ("("<< (int) sFlowIdx <<") FIN_WAIT_1 -> CLOSING {ProcessWait}");
           sFlow->state = CLOSING;
           //if (m_txBuffer.Size() == 0 && tcpHeader.GetAckNumber() == m_highTxMark + SequenceNumber32(1))
-          if (sendingBuffer->Empty() && sFlow->mapDSN.size() == 0
-              && mptcpHeader.GetAckNumber().GetValue() == sFlow->highestAck + 1)
+          if (sendingBuffer->Empty() && sFlow->mapDSN.size() == 0 && mptcpHeader.GetAckNumber().GetValue() == sFlow->highestAck + 1)
             { // This ACK corresponds to the FIN sent
               TimeWait(sFlowIdx);
             }
@@ -1119,8 +1112,7 @@ MpTcpSocketBase::SendDataPacket(uint8_t sFlowIdx, uint32_t size, bool withAck)
         }
     }
   else
-    NS_ASSERT_MSG(sFlow->maxSeqNb == sFlow->TxSeqNumber -1,
-        " maxSN: " << sFlow->maxSeqNb << " TxSeqNb-1" << sFlow->TxSeqNumber -1);
+    NS_ASSERT_MSG(sFlow->maxSeqNb == sFlow->TxSeqNumber -1, " maxSN: " << sFlow->maxSeqNb << " TxSeqNb-1" << sFlow->TxSeqNumber -1);
 
   /*
    * If no packet has made yet and maxSeqNb is equal to TxSeqNumber -1,
@@ -1339,7 +1331,7 @@ MpTcpSocketBase::DoRetransmit(uint8_t sFlowIdx)
   DSNMapping* ptrDSN = sFlow->GetunAckPkt();
   if (ptrDSN == 0)
     {
-      NS_LOG_INFO ("Retransmit -> no Unacked data !! mapDSN size is "<< sFlow->mapDSN.size() << " max Ack seq n° "<< sFlow->highestAck << " (" << (int)sFlowIdx<< ")");
+      NS_LOG_INFO ("Retransmit -> no Unacked data !! mapDSN size is "<< sFlow->mapDSN.size() << " max Ack seq n�� "<< sFlow->highestAck << " (" << (int)sFlowIdx<< ")");
       NS_ASSERT(3!=3);
       return;
     }
@@ -1567,8 +1559,7 @@ MpTcpSocketBase::GetSSThresh(void) const
 void
 MpTcpSocketBase::SetInitialCwnd(uint32_t cwnd)
 {
-  NS_ABORT_MSG_UNLESS(m_state == CLOSED,
-      "MpTcpsocketBase::SetInitialCwnd() cannot change initial cwnd after connection started.");
+  NS_ABORT_MSG_UNLESS(m_state == CLOSED, "MpTcpsocketBase::SetInitialCwnd() cannot change initial cwnd after connection started.");
   m_initialCWnd = cwnd;
 }
 
@@ -2976,7 +2967,7 @@ MpTcpSocketBase::calculateTotalCWND()
  Ptr<Packet> packet = pkt;
  uint32_t pktLen = *dataLen;
 
- NS_LOG_LOGIC("Multipath Seq N° dataSeqNumber (" << optDSN->dataSeqNumber <<") Seq N° nextRxSequence (" << nextRxSequence<<")   /   Subflow Seq N° RxSeqNumber (" << sFlow->RxSeqNumber << ") Seq N° subflowSeqNumber (" << optDSN->subflowSeqNumber<< ")");
+ NS_LOG_LOGIC("Multipath Seq N�� dataSeqNumber (" << optDSN->dataSeqNumber <<") Seq N�� nextRxSequence (" << nextRxSequence<<")   /   Subflow Seq N�� RxSeqNumber (" << sFlow->RxSeqNumber << ") Seq N�� subflowSeqNumber (" << optDSN->subflowSeqNumber<< ")");
 
  if (optDSN->subflowSeqNumber == sFlow->RxSeqNumber)
  {
@@ -3156,7 +3147,7 @@ MpTcpSocketBase::ProcessOption(TcpOptions * opt)
 //          ++next;
 //          DSNMapping *ptrDSN = *current;
 //
-//          NS_LOG_LOGIC ("IsDupAck -> subflow seq n° ("<< ptrDSN->subflowSeqNumber <<") data length " << ptrDSN->dataLevelLength);
+//          NS_LOG_LOGIC ("IsDupAck -> subflow seq n�� ("<< ptrDSN->subflowSeqNumber <<") data length " << ptrDSN->dataLevelLength);
 //          if (ptrDSN->subflowSeqNumber + ptrDSN->dataLevelLength <= ack)
 //            {
 //              /**
@@ -3293,8 +3284,8 @@ MpTcpSocketBase::GeneratePlotDetail(void)
 {
 
   std::stringstream detail;
-  detail << "CC:" << PrintCC(AlgoCC) << "  sF:" << subflows.size() << " C:" << LinkCapacity / 1000 << "Kbps  RTT:" << RTT
-      << "Ms  D:" << totalBytes / 1000 << "Kb  dtQ(" << lostRate << ")  MSS:" << segmentSize << "B";
+  detail << "CC:" << PrintCC(AlgoCC) << "  sF:" << subflows.size() << " C:" << LinkCapacity / 1000 << "Kbps  RTT:" << RTT << "Ms  D:"
+      << totalBytes / 1000 << "Kb  dtQ(" << lostRate << ")  MSS:" << segmentSize << "B";
   return detail.str();
 }
 
@@ -4129,8 +4120,7 @@ MpTcpSocketBase::DoPeerClose(uint8_t sFlowIdx)
   if (sFlow->state == LAST_ACK)
     {
       NS_LOG_LOGIC ("MpTcpSocketBase " << this << " scheduling LATO1");
-      sFlow->m_lastAckEvent = Simulator::Schedule(sFlow->rtt->RetransmitTimeout(), &MpTcpSocketBase::LastAckTimeout, this,
-          sFlowIdx);
+      sFlow->m_lastAckEvent = Simulator::Schedule(sFlow->rtt->RetransmitTimeout(), &MpTcpSocketBase::LastAckTimeout, this, sFlowIdx);
     }
 
   /*
@@ -4507,7 +4497,8 @@ MpTcpSocketBase::IsThereRoute(Ipv4Address src, Ipv4Address dst)
   NS_LOG_FUNCTION(this << src << dst);
   bool found = false;
   // Look up the source address
-  Ptr<Ipv4> ipv4 = m_node->GetObject<Ipv4>();
+//  Ptr<Ipv4> ipv4 = m_node->GetObject<Ipv4>();
+  Ptr<Ipv4L3Protocol> ipv4 = m_node->GetObject<Ipv4L3Protocol>();
   if (ipv4->GetRoutingProtocol() != 0)
     {
       Ipv4Header l3Header;
@@ -4517,11 +4508,20 @@ MpTcpSocketBase::IsThereRoute(Ipv4Address src, Ipv4Address dst)
       //.....................................................................................
       // Morteza Kheirkhah
       //.....................................................................................
+      NS_LOG_INFO("----------------------------------------------------");
+      NS_LOG_INFO("IsThereRoute() -> src: " << src << " dst: " << dst);
+
       // Get interface number from IPv4Address via ns3::Ipv4::GetInterfaceForAddress(Ipv4Address address);
-      int32_t interface = ipv4->GetInterfaceForAddress(src);        // Morteza uses sign integer
+      int32_t interface = ipv4->GetInterfaceForAddress(src);        // Morteza uses sign integers
+      Ptr<Ipv4Interface> v4Interface = ipv4->GetRealInterfaceForAddress(src);
+      Ptr<NetDevice> v4NetDevice = v4Interface->GetDevice();
+      PrintIpv4AddressFromIpv4Interface(v4Interface, interface);
       NS_ASSERT_MSG(interface != -1, "There is no interface object for the the src address");
+
       // Get NetDevice from Interface via ns3::Ipv4::GetNetDevice(uint32_t interface);
       Ptr<NetDevice> oif = ipv4->GetNetDevice(interface);
+      NS_ASSERT(oif == v4NetDevice);
+
       //.....................................................................................
       l3Header.SetSource(src);
       l3Header.SetDestination(dst);
@@ -4529,13 +4529,26 @@ MpTcpSocketBase::IsThereRoute(Ipv4Address src, Ipv4Address dst)
 
       if ((route != 0) && (src == route->GetSource()))
         {
-          NS_LOG_LOGIC ("IsThereRoute -> Route from src "<< src << " to dst " << dst << " oit ["<< oif->GetIfIndex()<<"], exist !");
+          NS_LOG_INFO ("IsThereRoute -> Route from src "<< src << " to dst " << dst << " oit ["<< oif->GetIfIndex()<<"], exist  Gateway: " << route->GetGateway());
           found = true;
         }
       else
-        NS_LOG_LOGIC ("IsThereRoute -> No Route from srcAddr "<< src << " to dstAddr " << dst << " oit ["<<oif->GetIfIndex()<<"], exist !");
+        NS_LOG_INFO ("IsThereRoute -> No Route from srcAddr "<< src << " to dstAddr " << dst << " oit ["<<oif->GetIfIndex()<<"], exist Gateway: " << route->GetGateway());
     }
+  NS_LOG_INFO("----------------------------------------------------");
   return found;
+}
+
+void
+MpTcpSocketBase::PrintIpv4AddressFromIpv4Interface(Ptr<Ipv4Interface> interface, int32_t indexOfInterface)
+{
+  NS_LOG_FUNCTION_NOARGS();
+
+  for (uint32_t i = 0; i < interface->GetNAddresses(); i++){
+
+      NS_LOG_INFO("Node(" << interface->GetDevice()->GetNode()->GetId() << ") Interface(" << indexOfInterface << ") Ipv4Index(" << i << ")" << " Ipv4Address(" << interface->GetAddress(i).GetLocal()<< ")");
+
+  }
 }
 
 bool

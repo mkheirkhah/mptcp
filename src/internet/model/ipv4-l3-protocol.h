@@ -198,6 +198,7 @@ public:
   Ptr<Ipv4Interface> GetInterface (uint32_t i) const;
   uint32_t GetNInterfaces (void) const;
 
+  Ptr<Ipv4Interface> GetRealInterfaceForAddress (Ipv4Address addr) const; //MKS
   int32_t GetInterfaceForAddress (Ipv4Address addr) const;
   int32_t GetInterfaceForPrefix (Ipv4Address addr, Ipv4Mask mask) const;
   int32_t GetInterfaceForDevice (Ptr<const NetDevice> device) const;

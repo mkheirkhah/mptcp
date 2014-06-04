@@ -23,7 +23,7 @@
 using namespace ns3;
 NS_LOG_COMPONENT_DEFINE("MpTcpNewReno");
 
-uint32_t LinkRate = 100000000;
+uint32_t LinkRate = 10000000;
 uint32_t Delay = 0.5;
 Time cDelay = MilliSeconds(Delay);
 double LossRate = 0.0;
@@ -89,7 +89,7 @@ int
 main(int argc, char *argv[])
 {
   /* Uncoupled_TCPs, Linked_Increases, RTT_Compensator, Fully_Coupled */
-  Config::SetDefault("ns3::MpTcpSocketBase::CongestionControl", StringValue("Uncoupled_TCPs"));
+  Config::SetDefault("ns3::MpTcpSocketBase::CongestionControl", StringValue("RTT_Compensator"));
   Config::SetDefault("ns3::DropTailQueue::MaxPackets", UintegerValue(dtq));
   //Config::SetDefault("ns3::TcpSocket::SegmentSize", UintegerValue(536));
 
@@ -117,16 +117,16 @@ main(int argc, char *argv[])
    /* Build link. */
    PointToPointHelper p2p_p2p_0;
    p2p_p2p_0.SetDeviceAttribute ("DataRate", DataRateValue (100000000));
-   p2p_p2p_0.SetChannelAttribute ("Delay", TimeValue (MilliSeconds (0.5)));
+   p2p_p2p_0.SetChannelAttribute ("Delay", TimeValue (MilliSeconds (1)));
    PointToPointHelper p2p_p2p_1;
    p2p_p2p_1.SetDeviceAttribute ("DataRate", DataRateValue (100000000));
-   p2p_p2p_1.SetChannelAttribute ("Delay", TimeValue (MilliSeconds (0.5)));
+   p2p_p2p_1.SetChannelAttribute ("Delay", TimeValue (MilliSeconds (1)));
    PointToPointHelper p2p_p2p_2;
    p2p_p2p_2.SetDeviceAttribute ("DataRate", DataRateValue (100000000));
-   p2p_p2p_2.SetChannelAttribute ("Delay", TimeValue (MilliSeconds (0.5)));
+   p2p_p2p_2.SetChannelAttribute ("Delay", TimeValue (MilliSeconds (1)));
    PointToPointHelper p2p_p2p_3;
    p2p_p2p_3.SetDeviceAttribute ("DataRate", DataRateValue (100000000));
-   p2p_p2p_3.SetChannelAttribute ("Delay", TimeValue (MilliSeconds (0.5)));
+   p2p_p2p_3.SetChannelAttribute ("Delay", TimeValue (MilliSeconds (1)));
 
    /* Build link net device container. */
    NodeContainer all_p2p_0;
@@ -163,7 +163,7 @@ main(int argc, char *argv[])
    Ipv4InterfaceContainer iface_ndc_p2p_2 = ipv4.Assign (ndc_p2p_2);
    ipv4.SetBase ("10.0.3.0", "255.255.255.0");
    Ipv4InterfaceContainer iface_ndc_p2p_3 = ipv4.Assign (ndc_p2p_3);
-
+/*
    Ptr<Ipv4> ipv4_router0 = (router_0.Get(0))->GetObject<Ipv4> ();
    Ptr<Ipv4> ipv4_router1 = (router_1.Get(0))->GetObject<Ipv4> ();
    Ptr<Ipv4> ipv4_term0 = (term_0.Get(0))->GetObject<Ipv4> ();
@@ -186,9 +186,9 @@ main(int argc, char *argv[])
   Ptr<Ipv4StaticRouting> router1 = ipv4RoutingHelper.GetStaticRouting(ipv4_router1);
   router1->AddHostRouteTo(Ipv4Address("10.0.2.2"),Ipv4Address("10.0.2.2"), 1);
   router1->AddHostRouteTo(Ipv4Address("10.0.3.2"),Ipv4Address("10.0.3.2"), 2);
-
+*/
    /* Generate Route. */
-   //Ipv4GlobalRoutingHelper::PopulateRoutingTables ();
+   Ipv4GlobalRoutingHelper::PopulateRoutingTables ();
 
   client = term_0.Get(0);
   server = term_1.Get(0);
