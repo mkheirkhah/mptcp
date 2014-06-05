@@ -23,7 +23,7 @@
 using namespace ns3;
 NS_LOG_COMPONENT_DEFINE("MpTcpNewReno");
 
-uint32_t LinkRate = 10000000;
+uint32_t LinkRate = 100000000;
 uint32_t Delay = 0.5;
 Time cDelay = MilliSeconds(Delay);
 double LossRate = 0.0;
@@ -89,12 +89,12 @@ int
 main(int argc, char *argv[])
 {
   /* Uncoupled_TCPs, Linked_Increases, RTT_Compensator, Fully_Coupled */
-  Config::SetDefault("ns3::MpTcpSocketBase::CongestionControl", StringValue("RTT_Compensator"));
+  Config::SetDefault("ns3::MpTcpSocketBase::CongestionControl", StringValue("Uncoupled_TCPs"));
   Config::SetDefault("ns3::DropTailQueue::MaxPackets", UintegerValue(dtq));
   //Config::SetDefault("ns3::TcpSocket::SegmentSize", UintegerValue(536));
 
   LogComponentEnable("MpTcpNewReno", LOG_LEVEL_ALL);
-  LogComponentEnable("MpTcpSocketBase", LOG_INFO);
+//  LogComponentEnable("MpTcpSocketBase", LOG_INFO);
 //  LogComponentEnable("MpTcpSocketBase", LOG_WARN);
 //  LogComponentEnable("MpTcpSocketBase", LOG_ALL);
 //  LogComponentEnable("TcpL4Protocol", LOG_WARN);
@@ -117,16 +117,16 @@ main(int argc, char *argv[])
    /* Build link. */
    PointToPointHelper p2p_p2p_0;
    p2p_p2p_0.SetDeviceAttribute ("DataRate", DataRateValue (100000000));
-   p2p_p2p_0.SetChannelAttribute ("Delay", TimeValue (MilliSeconds (1)));
+   p2p_p2p_0.SetChannelAttribute ("Delay", TimeValue (MilliSeconds (0.5)));
    PointToPointHelper p2p_p2p_1;
    p2p_p2p_1.SetDeviceAttribute ("DataRate", DataRateValue (100000000));
-   p2p_p2p_1.SetChannelAttribute ("Delay", TimeValue (MilliSeconds (1)));
+   p2p_p2p_1.SetChannelAttribute ("Delay", TimeValue (MilliSeconds (0.5)));
    PointToPointHelper p2p_p2p_2;
    p2p_p2p_2.SetDeviceAttribute ("DataRate", DataRateValue (100000000));
-   p2p_p2p_2.SetChannelAttribute ("Delay", TimeValue (MilliSeconds (1)));
+   p2p_p2p_2.SetChannelAttribute ("Delay", TimeValue (MilliSeconds (0.5)));
    PointToPointHelper p2p_p2p_3;
    p2p_p2p_3.SetDeviceAttribute ("DataRate", DataRateValue (100000000));
-   p2p_p2p_3.SetChannelAttribute ("Delay", TimeValue (MilliSeconds (1)));
+   p2p_p2p_3.SetChannelAttribute ("Delay", TimeValue (MilliSeconds (0.5)));
 
    /* Build link net device container. */
    NodeContainer all_p2p_0;
@@ -221,6 +221,9 @@ main(int argc, char *argv[])
   outputConfig2.ConfigureAttributes();
 
   AsciiTraceHelper h_ascii;
+  p2p_p2p_0.EnableAsciiAll (h_ascii.CreateFileStream ("DC3.tr"));
+  p2p_p2p_0.EnablePcapAll ("DC3", false);
+
   /* Flow Monitor Configuration */
   FlowMonitorHelper flowmon;
   Ptr<FlowMonitor> monitor = flowmon.InstallAll();

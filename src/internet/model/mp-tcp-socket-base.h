@@ -138,6 +138,7 @@ public:
 
   // Some Extra Helper functions
   void PrintIpv4AddressFromIpv4Interface(Ptr<Ipv4Interface>, int32_t);
+  Ptr<NetDevice> FindOutputNetDevice(Ipv4Address);
   //..........................................................................
 
   // Lost modelling

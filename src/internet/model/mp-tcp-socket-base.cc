@@ -1251,7 +1251,8 @@ MpTcpSocketBase::SendDataPacket(uint8_t sFlowIdx, uint32_t size, bool withAck)
     }
   else
     {
-      m_mptcp->SendPacket(p, header, sFlow->sAddr, sFlow->dAddr);
+      Ptr<NetDevice> netDevice = FindOutputNetDevice(sFlow->sAddr);
+      m_mptcp->SendPacket(p, header, sFlow->sAddr, sFlow->dAddr, netDevice);
       if (!guard)
         sFlow->PktCount++;
       uint32_t tmp = (((sFlow->TxSeqNumber + packetSize) - sFlow->initialSequnceNumber) / sFlow->MSS) % mod;
@@ -1359,7 +1360,8 @@ MpTcpSocketBase::DoRetransmit(uint8_t sFlowIdx)
   header.SetLength(hlen);
   header.SetOptionsLength(olen);
   header.SetPaddingLength(plen);
-  m_mptcp->SendPacket(pkt, header, sFlow->sAddr, sFlow->dAddr);
+
+  m_mptcp->SendPacket(pkt, header, sFlow->sAddr, sFlow->dAddr, FindOutputNetDevice(sFlow->sAddr));
 
   //reset RTO
   SetReTxTimeout(sFlowIdx);
@@ -1434,7 +1436,7 @@ MpTcpSocketBase::DoRetransmit(uint8_t sFlowIdx, DSNMapping* ptrDSN)
   header.SetPaddingLength(plen);
 
   // Send Segment to lower layer
-  m_mptcp->SendPacket(pkt, header, sFlow->sAddr, sFlow->dAddr);
+  m_mptcp->SendPacket(pkt, header, sFlow->sAddr, sFlow->dAddr, FindOutputNetDevice(sFlow->sAddr));
   uint32_t tmp = (((ptrDSN->subflowSeqNumber + ptrDSN->dataLevelLength) - sFlow->initialSequnceNumber) / sFlow->MSS) % mod;
   sFlow->RETRANSMIT.push_back(make_pair(Simulator::Now().GetSeconds(), tmp));
 
@@ -2561,7 +2563,7 @@ MpTcpSocketBase::SendEmptyPacket(uint8_t sFlowIdx, uint8_t flags)
   header.SetOptionsLength(olen);
   header.SetPaddingLength(plen);
 
-  m_mptcp->SendPacket(p, header, sFlow->sAddr, sFlow->dAddr);
+  m_mptcp->SendPacket(p, header, sFlow->sAddr, sFlow->dAddr, FindOutputNetDevice(sFlow->sAddr));
   //sFlow->rtt->SentSeq (sFlow->TxSeqNumber, 1);           // notify the RTT
 
   if (sFlow->retxEvent.IsExpired() && (hasFin || hasSyn) && !isAck)
@@ -2747,7 +2749,7 @@ MpTcpSocketBase::ForwardUp(Ptr<Packet> p, Ipv4Header header, uint16_t port, Ptr<
         h.SetSourcePort(sFlow->sPort);
         h.SetDestinationPort(sFlow->dPort);
         h.SetWindowSize(AdvertisedWindowSize());
-        m_mptcp->SendPacket(Create<Packet>(), h, header.GetDestination(), header.GetSource());
+        m_mptcp->SendPacket(Create<Packet>(), h, header.GetDestination(), header.GetSource(), FindOutputNetDevice(header.GetDestination()));
       }
     break;
   case SYN_SENT:
@@ -2859,7 +2861,7 @@ MpTcpSocketBase::InitiateSubflows()
         header.SetPaddingLength(plen);
         NS_LOG_ERROR("InitiateSubflow-> hLen: " << (int) hlen);
         //SetReTxTimeout (sFlowIdx);
-        m_mptcp->SendPacket(pkt, header, local, remote);
+        m_mptcp->SendPacket(pkt, header, local, remote, FindOutputNetDevice(local));
         //sFlow->TxSeqNumber++;
         //sFlow->maxSeqNb++;
         NS_LOG_INFO("InitiateSubflows -> (" << local << " -> " << remote << ") | "<< header);
@@ -4461,7 +4463,7 @@ MpTcpSocketBase::AdvertiseAvailableAddresses()
 
       //SetReTxTimeout (0);
       //m_mptcp->SendPacket(pkt, header, m_endPoint->GetLocalAddress(), m_remoteAddress);
-      m_mptcp->SendPacket(pkt, header, m_localAddress, m_remoteAddress);
+      m_mptcp->SendPacket(pkt, header, m_localAddress, m_remoteAddress, FindOutputNetDevice(m_localAddress));
       //sFlow->TxSeqNumber++;
       //sFlow->maxSeqNb++;
       NS_LOG_INFO("AdvertiseAvailableAddresses-> "<< header);//
@@ -4508,8 +4510,7 @@ MpTcpSocketBase::IsThereRoute(Ipv4Address src, Ipv4Address dst)
       //.....................................................................................
       // Morteza Kheirkhah
       //.....................................................................................
-      NS_LOG_INFO("----------------------------------------------------");
-      NS_LOG_INFO("IsThereRoute() -> src: " << src << " dst: " << dst);
+      NS_LOG_INFO("----------------------------------------------------"); NS_LOG_INFO("IsThereRoute() -> src: " << src << " dst: " << dst);
 
       // Get interface number from IPv4Address via ns3::Ipv4::GetInterfaceForAddress(Ipv4Address address);
       int32_t interface = ipv4->GetInterfaceForAddress(src);        // Morteza uses sign integers
@@ -4534,8 +4535,7 @@ MpTcpSocketBase::IsThereRoute(Ipv4Address src, Ipv4Address dst)
         }
       else
         NS_LOG_INFO ("IsThereRoute -> No Route from srcAddr "<< src << " to dstAddr " << dst << " oit ["<<oif->GetIfIndex()<<"], exist Gateway: " << route->GetGateway());
-    }
-  NS_LOG_INFO("----------------------------------------------------");
+    } NS_LOG_INFO("----------------------------------------------------");
   return found;
 }
 
@@ -4544,11 +4544,27 @@ MpTcpSocketBase::PrintIpv4AddressFromIpv4Interface(Ptr<Ipv4Interface> interface,
 {
   NS_LOG_FUNCTION_NOARGS();
 
-  for (uint32_t i = 0; i < interface->GetNAddresses(); i++){
+  for (uint32_t i = 0; i < interface->GetNAddresses(); i++)
+    {
 
       NS_LOG_INFO("Node(" << interface->GetDevice()->GetNode()->GetId() << ") Interface(" << indexOfInterface << ") Ipv4Index(" << i << ")" << " Ipv4Address(" << interface->GetAddress(i).GetLocal()<< ")");
 
-  }
+    }
+}
+
+Ptr<NetDevice>
+MpTcpSocketBase::FindOutputNetDevice(Ipv4Address src)
+{
+  NS_LOG_INFO("FindOutputNetDevice");
+  Ptr<Ipv4L3Protocol> ipv4 = m_node->GetObject<Ipv4L3Protocol>();
+  uint32_t oInterface = ipv4->GetInterfaceForAddress(src);
+  Ptr<NetDevice> oNetDevice = ipv4->GetNetDevice(oInterface);
+
+  Ptr<Ipv4Interface> interface = ipv4->GetRealInterfaceForAddress(src);
+  Ptr<NetDevice> netDevice = interface->GetDevice();
+  NS_ASSERT(netDevice == oNetDevice);
+  NS_LOG_INFO("FindNetDevice -> Src: " << src << " NIC: " << netDevice->GetAddress());
+  return oNetDevice;
 }
 
 bool
