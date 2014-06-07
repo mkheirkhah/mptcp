@@ -16,6 +16,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  * Author: Raj Bhattacharjea <raj.b@gatech.edu>
+ * Modified: Morteza Kheirkhah <m.kheirkhah@sussex.ac.uk>, University of Sussex, UK.
  */
 
 #ifndef TCP_L4_PROTOCOL_H
@@ -63,7 +64,7 @@ public:
    */
   static TypeId GetTypeId (void);
   static const uint8_t PROT_NUMBER; //!< protocol number (0x6)
-  typedef std::map<uint32_t, Ipv4EndPoint*> TokenMaps; // Morteza Kheirkhah
+  typedef std::map<uint32_t, Ipv4EndPoint*> TokenMaps; // MPTCP related modification
 
   TcpL4Protocol ();
   virtual ~TcpL4Protocol ();
@@ -240,7 +241,7 @@ private:
 //  Ipv6EndPointDemux *m_endPoints6; //!< A list of IPv6 end points.
   TypeId m_rttTypeId; //!< The RTT Estimator TypeId
   TypeId m_socketTypeId; //!< The socket TypeId
-  //std::map<uint32_t, Ipv4EndPoint* > m_TokenMap;  // Morteza Kheirkhah
+  //std::map<uint32_t, Ipv4EndPoint* > m_TokenMap;  // MPTCP related modification
 private:
   friend class TcpSocketBase;
   friend class MpTcpSocketBase;

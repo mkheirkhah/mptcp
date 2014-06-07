@@ -16,7 +16,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  * Author: Raj Bhattacharjea <raj.b@gatech.edu>
- * Modified: Morteza Kheirkhah <m.kheirkhah@sussex.ac.uk>
+ * Modified: Morteza Kheirkhah <m.kheirkhah@sussex.ac.uk>, University of Sussex, UK.
  */
 
 #include "ns3/assert.h"
@@ -56,7 +56,6 @@ namespace ns3
 NS_OBJECT_ENSURE_REGISTERED (TcpL4Protocol)
 ;
 
-//TcpL4Protocol stuff----------------------------------------------------------
 
 #undef NS_LOG_APPEND_CONTEXT
 #define NS_LOG_APPEND_CONTEXT                                   \
@@ -350,13 +349,15 @@ TcpL4Protocol::Receive(Ptr<Packet> packet, Ipv4Header const &ipHeader, Ptr<Ipv4I
   NS_LOG_INFO("BEFORE PEEKHEADER " << packet->GetSize());
   packet->PeekHeader(tcpHeader);
   NS_LOG_INFO("AFTER PEEKHEADER " << packet->GetSize());
-  //---------------------------------------------------------
-  Ipv4Address source = ipHeader.GetSource(); // IP addrs of sender
-  Ipv4Address destination = ipHeader.GetDestination(); // IP addrs of receiver
-  uint16_t srcPort = tcpHeader.GetSourcePort(); // MKS
-  //uint16_t dstPort = tcpHeader.GetDestinationPort(); // MKS
-  NS_LOG_INFO(this << " MpTcpL4Protocol:Receive    -> "<< tcpHeader);  //MKS
-  //NS_LOG_INFO(this << " MpTcpL4Protocol:Receive -> srcPort: "<< srcPort << " dstPort: " << dstPort); //MKS
+
+  Ipv4Address source = ipHeader.GetSource();
+  Ipv4Address destination = ipHeader.GetDestination();
+  uint16_t srcPort = tcpHeader.GetSourcePort();
+  //uint16_t dstPort = tcpHeader.GetDestinationPort();
+  NS_LOG_INFO(this << "TcpL4Protocol:Receive    -> "<< tcpHeader);
+  //NS_LOG_INFO(this << "TcpL4Protocol:Receive -> srcPort: "<< srcPort << " dstPort: " << dstPort);
+  //
+  // MPTCP related modification----------------------------
   // Extract MPTCP options if there is any
   vector<TcpOptions*> options = tcpHeader.GetOptions();
   uint8_t flags = tcpHeader.GetFlags();
@@ -367,7 +368,7 @@ TcpL4Protocol::Receive(Ptr<Packet> packet, Ipv4Header const &ipHeader, Ptr<Ipv4I
     {
       opt = options[j];
       if ((opt->optName == OPT_MPC) && hasSyn)
-        { // In this case the endpoint with destonation port and token value of zero need to be find.
+        { // In this case the endpoint with destination port and token value of zero need to be find.
           NS_LOG_INFO("TcpL4Protocol::Receive -> OPT_MPC -> Do NOTTING");
         }
       else if ((opt->optName == OPT_JOIN) && hasSyn)
@@ -613,30 +614,6 @@ TcpL4Protocol::Send(Ptr<Packet> packet, Ipv6Address saddr, Ipv6Address daddr, ui
     }
 }
 
-//MpTcpL4Protocol::SendPacket(Ptr<Packet> p, TcpHeader l4Header, Ipv4Address src, Ipv4Address dst)
-//{
-//  //Ptr<TcpHeader> ptrHeader = CopyObject<TcpHeader>(l4Header);
-//  p->AddHeader(l4Header);
-//  Ptr<Ipv4L3Protocol> ipv4 = m_node->GetObject<Ipv4L3Protocol>();
-//  if (ipv4 != 0)
-//    {
-//      // XXX We've already performed the route lookup in TcpSocketImpl
-//      // should be cached.
-//      Ipv4Header l3Header;
-//      l3Header.SetDestination(dst);
-//      Socket::SocketErrno errno_;
-//      Ptr<Ipv4Route> route;
-////      uint32_t oif = 0; //specify non-zero if bound to a source address
-//      Ptr<NetDevice> oif(0);
-//      // use oif to specify the interface output (see Ipv4RoutingProtocol class)
-//      route = ipv4->GetRoutingProtocol()->RouteOutput(p, l3Header, oif, errno_);
-//      //NS_LOG_INFO ("MpTcpL4Protocol::SendPacket -> packet size:" << p->GetSize() <<" sAddr " << src<<" dstAddr " << dst);NS_LOG_INFO ("MpTcpL4Protocol::SendPacket -> Protocol n°:" << (int)PROT_NUMBER);NS_LOG_INFO ("MpTcpL4Protocol::SendPacket -> route      :" << route);
-//      ipv4->Send(p, src, dst, PROT_NUMBER, route);
-//      //NS_LOG_INFO ("MpTcpL4Protocol::SendPacket -> leaving !");
-//    }
-//  else
-//    NS_FATAL_ERROR("Trying to use MpTcp on a node without an Ipv4 interface");
-//}
 void
 TcpL4Protocol::SendPacket(Ptr<Packet> packet, const TcpHeader &outgoing, Ipv4Address saddr, Ipv4Address daddr, Ptr<NetDevice> oif)
 {
@@ -647,7 +624,7 @@ TcpL4Protocol::SendPacket(Ptr<Packet> packet, const TcpHeader &outgoing, Ipv4Add
       << " data size " << packet->GetSize ());//
   NS_LOG_FUNCTION (this << packet << saddr << daddr << oif);
   // XXX outgoingHeader cannot be logged
-  NS_LOG_INFO(this << " MpTcpL4Protocol:SendPacket -> "<< outgoing);  //MKS
+  NS_LOG_INFO(this << " TcpL4Protocol:SendPacket -> "<< outgoing);
   TcpHeader outgoingHeader = outgoing;
   //outgoingHeader.SetLength(5); //header length in units of 32bit words
   /** \todo UrgentPointer */
