@@ -23,23 +23,26 @@ MpTcpSubFlow::GetTypeId(void)
 }
 
 MpTcpSubFlow::MpTcpSubFlow() :
-    routeId(0), state(CLOSED), phase(Slow_Start), sAddr(Ipv4Address::GetZero()), sPort(0), dAddr(Ipv4Address::GetZero()), dPort(
-        0), oif(0), mapDSN(0), lastMeasuredRtt(Seconds(0.0))
+    routeId(0),
+    state(CLOSED),
+    sAddr(Ipv4Address::GetZero()),
+    sPort(0),
+    dAddr(Ipv4Address::GetZero()),
+    dPort(0),
+    oif(0),
+    mapDSN(0),
+    lastMeasuredRtt(Seconds(0.0))
 {
   connected = false;
   TxSeqNumber = rand() % 1000;
   RxSeqNumber = 0;
   bandwidth = 0;
-  cwnd = 0;                  // congestion window is initialized to one segment
-  scwnd = 0;
-  ssthresh = 65535;              // initial value for a TCP connexion
-  maxSeqNb = TxSeqNumber - 1;    // thus we suppose that SYN & ACK segments has been acked correctly, for subflow n° 0
+  cwnd = 0;
+  ssthresh = 65535;
+  maxSeqNb = TxSeqNumber - 1;
   highestAck = 0;
-  //rtt = new RttMeanDeviation();
   rtt = CreateObject<RttMeanDeviation>();
-//    rtt->gain   = 0.1; // 1.0
   rtt->Gain(0.1);
-
   Time estimate;
   estimate = Seconds(1.5);
   rtt->SetCurrentEstimate(estimate);
@@ -47,36 +50,18 @@ MpTcpSubFlow::MpTcpSubFlow() :
   Time est = MilliSeconds(200);
   cnTimeout = est;
   initialSequnceNumber = 0;
-
-  // Congestion control variable
-  m_retxThresh = 3;   //< Fast Retransmit threshold
-  m_inFastRec = false;    //< currently in fast recovery
-  m_limitedTx = false;    //< perform limited transmit
-  m_dupAckCount = 0;     //< Dupack counter
-
-  // variables used for simulating drops
-  LostThreshold = 0.0;
-  CanDrop = true;
+  m_retxThresh = 3;
+  m_inFastRec = false;
+  m_limitedTx = false;
+  m_dupAckCount = 0;
   PktCount = 0;
-  MaxPktCount = rand() % 100 + 50;
-  DropedPktCount = 0;
-  MaxDropedPktCount = 1;
-
-  // variables used for reordering simulation
-  savedCWND = 0.0;
-  savedSSThresh = 0;
-  SpuriousRecovery = false;
-  recover = 0;
   m_recover = SequenceNumber32(0);
-  ackCount = 0;
-  ReTxSeqNumber = 0;
-  nbRecvAck = -1;
   m_gotFin = false;
 }
 
 MpTcpSubFlow::~MpTcpSubFlow()
 {
-  m_endPoint = 0; // deAllocate the endPoint
+  m_endPoint = 0;
   routeId = 0;
   sAddr = Ipv4Address::GetZero();
   oif = 0;
@@ -92,7 +77,6 @@ MpTcpSubFlow::~MpTcpSubFlow()
     }
   mapDSN.clear();
 }
-
 
 bool
 MpTcpSubFlow::Finished(void)
@@ -127,15 +111,7 @@ MpTcpSubFlow::updateRTT(uint32_t ack, Time current)
 {
   NS_LOG_FUNCTION( this << ack << current );
   rtt->AckSeq(SequenceNumber32(ack));
-  NS_LOG_INFO ("MpTcpSubFlow::updateRTT -> time from last RTT measure = " << (current - lastMeasuredRtt).GetSeconds() );
-  /*
-   rtt->Measurement ( current - lastMeasuredRtt );
-   lastMeasuredRtt = current;
-   measuredRTT.insert(measuredRTT.end(), rtt->Estimate().GetSeconds ());
-   */
-//    measuredRTT.insert(measuredRTT.end(), rtt->est.GetSeconds ());
   measuredRTT.insert(measuredRTT.end(), rtt->GetCurrentEstimate().GetSeconds());
-  NS_LOG_INFO ("MpTcpSubFlow::updateRTT -> estimated RTT = " << rtt->GetCurrentEstimate().GetSeconds ());
 }
 
 void
@@ -156,11 +132,8 @@ MpTcpSubFlow::GetunAckPkt()
   for (list<DSNMapping *>::iterator it = mapDSN.begin(); it != mapDSN.end(); ++it)
     {
       DSNMapping * ptr = *it;
-      NS_LOG_ERROR ("Subflow ("<<(int) routeId<<") Subflow Seq N° = " << ptr->subflowSeqNumber);
-      if ((ptr->subflowSeqNumber == highestAck + 1) /*|| (ptr->subflowSeqNumber == highestAck + 2) */)
+      if (ptr->subflowSeqNumber == highestAck + 1)
         {
-          // we added 2, for the case in wich the fst pkt of a subsequent subflow is lost, because the highest ack is the one included in 'SYN | ACK' which is 2 less than the current TxSeq
-          NS_LOG_INFO ("MpTcpSubFlow::GetunAckPkt -> packet to retransmit found: sFlowSeqNum = " << ptr->subflowSeqNumber);
           ptrDSN = ptr;
           break;
         }

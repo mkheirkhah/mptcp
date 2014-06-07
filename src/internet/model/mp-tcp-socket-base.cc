@@ -3628,11 +3628,11 @@ MpTcpSocketBase::calculate_alpha()
 void
 MpTcpSocketBase::calculateSmoothedCWND(uint8_t sFlowIdx)
 {
-  Ptr<MpTcpSubFlow> sFlow = subflows[sFlowIdx];
-  if (sFlow->scwnd < sFlow->MSS)
-    sFlow->scwnd = sFlow->cwnd;
-  else
-    sFlow->scwnd = sFlow->scwnd * 0.875 + sFlow->cwnd * 0.125;
+//  Ptr<MpTcpSubFlow> sFlow = subflows[sFlowIdx];
+//  if (sFlow->scwnd < sFlow->MSS)
+//    sFlow->scwnd = sFlow->cwnd;
+//  else
+//    sFlow->scwnd = sFlow->scwnd * 0.875 + sFlow->cwnd * 0.125;
 }
 
 void
