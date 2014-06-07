@@ -1,3 +1,8 @@
+/*
+ * Multipath-TCP (MPTCP) implementation.
+ * Author: Morteza Kheirhah <m.kheirkhah@uclmail.net>, University of Sussex, United Kingdom.
+ * Some codes here are retrieved from NS3::TCPNewReno implementation and old version of MPTCP implementation in NS3.6.
+ */
 #ifndef MP_TCP_SUBFLOW_H
 #define MP_TCP_SUBFLOW_H
 
