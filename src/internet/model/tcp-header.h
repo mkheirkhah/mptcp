@@ -53,49 +53,27 @@ public:
   virtual
   ~TcpHeader();
 
-  // MultiPath TCP related methods
-  bool
-  AddOptMPC(TcpOption_t optName, uint32_t TxToken);
-  // Join Connection Option
-  bool
-  AddOptJOIN(TcpOption_t optName, uint32_t RxToken, uint8_t addrID);
-  // Add address Option
-  bool
-  AddOptADDR(TcpOption_t optName, uint8_t addrID, Ipv4Address addr);
-  // Remove address Option
-  bool
-  AddOptREMADR(TcpOption_t optName, uint8_t addrID);
-  // Data Sequence Mapping Option
-  bool
-  AddOptDSN(TcpOption_t optName, uint64_t dSeqNum, uint16_t dLevelLength, uint32_t sfSeqNum);
-  // TCP TimesTamp Option
-  bool
-  AddOptTT(TcpOption_t optName, uint64_t tsval, uint64_t tsecr);
-  // DSACK Option
-  bool
-  AddOptDSACK(TcpOption_t optName, OptDSACK *opt);
-  void
-  SetOptionsLength(uint8_t length);
-  void
-  SetPaddingLength(uint8_t length);
-  uint8_t
-  GetOptionsLength() const;
-  uint8_t
-  GetPaddingLength() const;
-  uint8_t
-  TcpOptionToUint(TcpOption_t opt) const;
-  TcpOption_t
-  UintToTcpOption(uint8_t kind) const;
-
-  vector<TcpOptions*>
-  GetOptions(void) const;
-  void
-  SetOptions(vector<TcpOptions*> opt);
+  // MultiPath related options-----------------
+  bool AddOptMPC(TcpOption_t optName, uint32_t TxToken); // MultiPath TCP related methods
+  bool AddOptJOIN(TcpOption_t optName, uint32_t RxToken, uint8_t addrID);   // Join Connection Option
+  bool AddOptADDR(TcpOption_t optName, uint8_t addrID, Ipv4Address addr);// Add address Option
+  bool AddOptDSN(TcpOption_t optName, uint64_t dSeqNum, uint16_t dLevelLength, uint32_t sfSeqNum); // Data Sequence Mapping Option
+  bool AddOptREMADR(TcpOption_t optName, uint8_t addrID);   // Remove address Option
+  bool AddOptTT(TcpOption_t optName, uint64_t tsval, uint64_t tsecr); // TCP TimesTamp Option
+  bool AddOptDSACK(TcpOption_t optName, OptDSACK *opt); // DSACK Option
+  void SetOptionsLength(uint8_t length);
+  void SetPaddingLength(uint8_t length);
+  uint8_t GetOptionsLength() const;
+  uint8_t GetPaddingLength() const;
+  uint8_t TcpOptionToUint(TcpOption_t opt) const;
+  TcpOption_t UintToTcpOption(uint8_t kind) const;
+  vector<TcpOptions*> GetOptions(void) const;
+  void SetOptions(vector<TcpOptions*> opt);
   //--------------------------------------------
   /**
    * \brief Enable checksum calculation for TCP
    *
-   * \todo currently has no effect
+   * \to do currently has no effect
    */
   void
   EnableChecksums(void);
@@ -290,11 +268,12 @@ private:
   bool m_calcChecksum;    //!< Flag to calculate checksum
   bool m_goodChecksum;    //!< Flag to indicate that checksum is correct
 
-  // MPTCP related variables
+  // MPTCP related variables------------
   vector<TcpOptions*> m_option;
   uint8_t oLen;
   uint8_t pLen;
   bool original;
+  //------------------------------------
 };
 
 } // namespace ns3

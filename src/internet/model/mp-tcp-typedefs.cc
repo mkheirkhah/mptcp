@@ -17,9 +17,6 @@ DSNMapping::DSNMapping()
   subflowSeqNumber = 0;
   dupAckCount = 0;
   packet = 0;
-  //original         = true;
-  retransmited = false;
-  tsval = Simulator::Now().GetMilliSeconds(); // set the current time as a TimesTamp
 }
 
 DSNMapping::DSNMapping(uint8_t sFlowIdx, uint64_t dSeqNum, uint16_t dLvlLen, uint32_t sflowSeqNum, uint32_t ack, Ptr<Packet> pkt)
@@ -32,10 +29,6 @@ DSNMapping::DSNMapping(uint8_t sFlowIdx, uint64_t dSeqNum, uint16_t dLvlLen, uin
   dupAckCount = 0;
   packet = new uint8_t[dLvlLen];
   pkt->CopyData(packet, dLvlLen);
-
-  retransmited = false;
-  tsval = Simulator::Now().GetMilliSeconds(); // set the current time as a TimesTamp
-  //original         = true;
 }
 /*
  DSNMapping::DSNMapping (const DSNMapping &res)
@@ -52,10 +45,6 @@ DSNMapping::DSNMapping(uint8_t sFlowIdx, uint64_t dSeqNum, uint16_t dLvlLen, uin
  */
 DSNMapping::~DSNMapping()
 {
-  /*
-   if ( original == false )
-   return;
-   */
   dataSeqNumber = 0;
   dataLevelLength = 0;
   subflowSeqNumber = 0;

@@ -486,8 +486,8 @@ TcpHeader::Serialize(Buffer::Iterator start) const
     }
   for (int j = 0; j < (int) pLen; j++)
     i.WriteU8(255);
-  NS_LOG_INFO("MpTcpHeader::Serialize options length  olen = " << (int) oLen);
-  NS_LOG_INFO("MpTcpHeader::Serialize padding length  plen = " << (int) pLen);
+  NS_LOG_INFO("TcpHeader::Serialize options length  olen = " << (int) oLen);
+  NS_LOG_INFO("TcpHeader::Serialize padding length  plen = " << (int) pLen);
 }
 
 /*
@@ -527,8 +527,8 @@ TcpHeader::Deserialize(Buffer::Iterator start)
   Buffer::Iterator i = start;
   SetSourcePort(i.ReadNtohU16());
   SetDestinationPort(i.ReadNtohU16());
-  SetSequenceNumber(SequenceNumber32(i.ReadNtohU32()));   // Morteza Kheirkhah
-  SetAckNumber(SequenceNumber32(i.ReadNtohU32()));        // Morteza Kheirkhah
+  SetSequenceNumber(SequenceNumber32(i.ReadNtohU32()));
+  SetAckNumber(SequenceNumber32(i.ReadNtohU32()));
   uint16_t field = i.ReadNtohU16();
   SetFlags(field & 0x3F);
   hlen = (field >> 12);
@@ -548,12 +548,10 @@ TcpHeader::Deserialize(Buffer::Iterator start)
     }
 
   // handle options field
-//  NS_LOG_INFO("MpTcpHeader::Deserialize looking for options");
   while (!i.IsEnd() && hlen > 0)
     {
       TcpOptions *opt;
-      TcpOption_t kind = (TcpOption_t) i.ReadU8();
-      //TcpOption_t kind = UintToTcpOption(i.ReadU8());
+      TcpOption_t kind = (TcpOption_t) i.ReadU8(); //TcpOption_t kind = UintToTcpOption(i.ReadU8());
       if (kind == OPT_MPC)
         {
           opt = new OptMultipathCapable(kind, i.ReadNtohU32());
@@ -597,9 +595,6 @@ TcpHeader::Deserialize(Buffer::Iterator start)
           uint64_t sndLeft = i.ReadU64(), sndRight = i.ReadU64();
           dsak->AddfstBlock(fstLeft, fstRight);
           dsak->AddBlock(sndLeft, sndRight);
-//          NS_LOG_LOGIC(
-//              "Deserialize -> fstLeft (" << dsak->blocks[0] << ") fstRight (" << dsak->blocks[1] << ") sndLeft ("
-//                  << dsak->blocks[2] << ") sndRight (" << dsak->blocks[3] << ")");
           opt = dsak;
           plen = (plen + 33) % 4;
           hlen -= 33;
@@ -615,12 +610,12 @@ TcpHeader::Deserialize(Buffer::Iterator start)
 
     }
   //i.Next(plen);
-  NS_LOG_INFO("MpTcpHeader::Deserialize leaving this method plen" << plen);
+  NS_LOG_INFO("TcpHeader::Deserialize leaving this method plen" << plen);
 
   return GetSerializedSize();
 }
-//----------------------------------------
 
+//----------------------------------------
 void
 TcpHeader::SetOptionsLength(uint8_t length)
 {

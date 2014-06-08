@@ -101,7 +101,6 @@ public:
   ~OptDSACK();
   std::vector<uint64_t> blocks;     // a vector of 4-bytes fields, representing the DSACK block's edge
   // the size of the vector is a multiple of 2 (a block has to limits, upper and lower) representing the length of the table
-
   OptDSACK(TcpOption_t oName);
   void
   AddBlock(uint64_t leftEdge, uint64_t rightEdge);

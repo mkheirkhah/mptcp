@@ -12,7 +12,7 @@ namespace ns3{
 TcpOptions::TcpOptions(void) :
     optName(OPT_NONE)
 {
-  //NS_LOG_FUNCTION_NOARGS();
+  NS_LOG_FUNCTION_NOARGS();
 }
 
 TcpOptions::~TcpOptions(void)
@@ -142,7 +142,7 @@ OptDSACK::AddBlock(uint64_t leftEdge, uint64_t rightEdge)
 void
 OptDSACK::AddfstBlock(uint64_t leftEdge, uint64_t rightEdge)
 {
-  // we first insert the right edge in the begining then the left edge to keep the order
+  // We first insert the right edge in the beginning then the left edge to keep the order
   blocks.insert(blocks.begin(), rightEdge);
   blocks.insert(blocks.begin(), leftEdge);
 }

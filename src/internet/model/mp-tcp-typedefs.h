@@ -31,9 +31,7 @@ typedef enum
   MP_ADDR,        // 2
   MP_JOIN
 } MpStates_t;
-// Multipath actions
 
-// congestion control algorithm
 typedef enum
 {
   Uncoupled_TCPs,       // 0
@@ -42,23 +40,28 @@ typedef enum
   Fully_Coupled         // 3
 } CongestionCtrl_t;
 
-// connection phase
 typedef enum
 {
-  Slow_Start,                   // 0
-  Congestion_Avoidance,         // 1
-} Phase_t;
-
-typedef enum
-{
-  Round_Robin        // 0
+  Round_Robin
 } DataDistribAlgo_t;
 
 typedef enum
 {
-  NoPR_Algo,    // 0
+  NoPR_Algo,
 } PacketReorder_t;
 
+typedef enum
+{
+  Slow_Start,
+  Congestion_Avoidance,
+} Phase_t;
+
+typedef enum
+{
+  NO_ACTION,
+  ADDR_TX,
+  INIT_SUBFLOWS
+} MpActions_t;
 
 class DSNMapping
 {
@@ -66,8 +69,8 @@ public:
   DSNMapping();
   DSNMapping(uint8_t sFlowIdx, uint64_t dSeqNum, uint16_t dLvlLen, uint32_t sflowSeqNum, uint32_t ack, Ptr<Packet> pkt);
   //DSNMapping (const DSNMapping &res);
-  virtual
-  ~DSNMapping();
+  virtual ~DSNMapping();
+  bool operator <(const DSNMapping& rhs) const;
   uint64_t dataSeqNumber;
   uint16_t dataLevelLength;
   uint32_t subflowSeqNumber;
@@ -75,34 +78,13 @@ public:
   uint32_t dupAckCount;
   uint8_t subflowIndex;
   uint8_t *packet;
-
-  bool
-  operator <(const DSNMapping& rhs) const;
-
-  // variables for reordering simulation
-  // Eifel Algorithm
-  bool retransmited;
-  uint64_t tsval; // TimesTamp value
-
-  /*
-   private:/
-   bool original;
-   */
 };
-
-typedef enum
-{
-  NO_ACTION,       // 0
-  ADDR_TX,
-  INIT_SUBFLOWS
-} MpActions_t;
 
 class MpTcpAddressInfo
 {
 public:
   MpTcpAddressInfo();
   ~MpTcpAddressInfo();
-
   uint8_t addrID;
   Ipv4Address ipv4Addr;
   Ipv4Mask mask;
@@ -114,26 +96,16 @@ public:
   DataBuffer();
   DataBuffer(uint32_t size);
   ~DataBuffer();
-
   queue<uint8_t> buffer;
   uint32_t bufMaxSize;
-
-  uint32_t
-  Add(uint8_t* buf, uint32_t size);
-  uint32_t
-  Retrieve(uint8_t* buf, uint32_t size);
-  Ptr<Packet>
-  CreatePacket(uint32_t size);
-  uint32_t
-  ReadPacket(Ptr<Packet> pkt, uint32_t dataLen);
-  bool
-  Empty();
-  bool
-  Full();
-  uint32_t
-  PendingData();
-  uint32_t
-  FreeSpaceSize();
+  uint32_t Add(uint8_t* buf, uint32_t size);
+  uint32_t Retrieve(uint8_t* buf, uint32_t size);
+  Ptr<Packet> CreatePacket(uint32_t size);
+  uint32_t ReadPacket(Ptr<Packet> pkt, uint32_t dataLen);
+  bool Empty();
+  bool Full();
+  uint32_t PendingData();
+  uint32_t FreeSpaceSize();
 };
 
 } //namespace ns3
