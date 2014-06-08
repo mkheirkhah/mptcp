@@ -1,7 +1,8 @@
 /*
- * Multipath-TCP (MPTCP) implementation.
- * Author: Morteza Kheirhah <m.kheirkhah@uclmail.net>, University of Sussex, United Kingdom.
- * Some codes here are retrieved from NS3::TCPNewReno implementation and old version of MPTCP implementation in NS3.6.
+ * MultiPath-TCP (MPTCP) implementation.
+ * Programmed by Morteza Kheirkhah from University of Sussex.
+ * Some codes here are modeled from ns3::TCPNewReno implementation.
+ * Email: m.kheirkhah@sussex.ac.uk
  */
 #ifndef MP_TCP_SUBFLOW_H
 #define MP_TCP_SUBFLOW_H
@@ -37,10 +38,9 @@ public:
   MpTcpSubFlow();
   ~MpTcpSubFlow();
 
+  void AddDSNMapping(uint8_t sFlowIdx, uint64_t dSeqNum, uint16_t dLvlLen, uint32_t sflowSeqNum, uint32_t ack, Ptr<Packet> pkt);
   void StartTracing(string traced);
   void CwndTracer(uint32_t oldval, uint32_t newval);
-  void AddDSNMapping(uint8_t sFlowIdx, uint64_t dSeqNum, uint16_t dLvlLen, uint32_t sflowSeqNum, uint32_t ack, Ptr<Packet> pkt);
-  void updateRTT(uint32_t ack, Time current);
   void SetFinSequence(const SequenceNumber32& s);
   bool Finished();
   DSNMapping *GetunAckPkt();

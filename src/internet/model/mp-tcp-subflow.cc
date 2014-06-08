@@ -1,7 +1,8 @@
 /*
- * Multipath-TCP (MPTCP) implementation.
- * Author: Morteza Kheirhah <m.kheirkhah@uclmail.net>, University of Sussex, United Kingdom.
- * Some codes here are retrieved from NS3::TCPNewReno implementation and old version of MPTCP implementation in NS3.6.
+ * MultiPath-TCP (MPTCP) implementation.
+ * Programmed by Morteza Kheirkhah from University of Sussex.
+ * Some codes here are modeled from ns3::TCPNewReno implementation.
+ * Email: m.kheirkhah@sussex.ac.uk
  */
 #include <iostream>
 #include "ns3/mp-tcp-typedefs.h"
@@ -109,14 +110,6 @@ MpTcpSubFlow::AddDSNMapping(uint8_t sFlowIdx, uint64_t dSeqNum, uint16_t dLvlLen
 {
   NS_LOG_FUNCTION_NOARGS();
   mapDSN.push_back(new DSNMapping(sFlowIdx, dSeqNum, dLvlLen, sflowSeqNum, ack, pkt));
-}
-
-void
-MpTcpSubFlow::updateRTT(uint32_t ack, Time current)
-{
-  NS_LOG_FUNCTION( this << ack << current );
-  rtt->AckSeq(SequenceNumber32(ack));
-  measuredRTT.insert(measuredRTT.end(), rtt->GetCurrentEstimate().GetSeconds());
 }
 
 void

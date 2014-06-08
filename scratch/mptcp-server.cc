@@ -197,8 +197,8 @@ StartFlow(Ptr<MpTcpSocketBase> localSocket, Ipv4Address servAddress, uint16_t se
   lSocket->SetSourceAddress(Ipv4Address("10.1.1.1"));
   lSocket->allocateSendingBuffer(sendBufSize);
   lSocket->allocateRecvingBuffer(recvBufSize);
-  lSocket->SetunOrdBufMaxSize(50);
-  lSocket->LossProbablity = 20;
+//  lSocket->SetunOrdBufMaxSize(50);
+  //lSocket->LossProbablity = 20;
   lSocket->mod = 150;
   lSocket->totalBytes = totalTxBytes;
   lSocket->lostRate = 0.09;

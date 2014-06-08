@@ -89,7 +89,7 @@ int
 main(int argc, char *argv[])
 {
   /* Uncoupled_TCPs, Linked_Increases, RTT_Compensator, Fully_Coupled */
-  Config::SetDefault("ns3::MpTcpSocketBase::CongestionControl", StringValue("Uncoupled_TCPs"));
+  Config::SetDefault("ns3::MpTcpSocketBase::CongestionControl", StringValue("RTT_Compensator"));
   Config::SetDefault("ns3::DropTailQueue::MaxPackets", UintegerValue(dtq));
   //Config::SetDefault("ns3::TcpSocket::SegmentSize", UintegerValue(536));
 
