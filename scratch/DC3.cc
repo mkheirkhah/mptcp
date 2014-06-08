@@ -25,11 +25,10 @@
  *  - Subflow[0] is established between 10.0.2.2 and 10.0.3.2 (Connection opener)
  *  - Subflow[1] is established between 10.0.0.2 and 10.0.1.2
  *
- *  - 'allPlots.plt' shows all graph in this simulation, result is in .pdf
+ *  - 'allPlots.plt' shows all graph in this simulation (RTT, RTO, Queue, CWND), result is in single .pdf
  *  - 'mptcp.results' shows detail of each subflow via FlowMonitor.
  *  - 'DC3.tr'
  *  - 'DC3-x-x.pcap'
-
  */
 
 #define NS_LOG_APPEND_CONTEXT \
@@ -50,7 +49,6 @@
 #include "ns3/config-store.h"
 #include "ns3/file-config.h"
 #include "ns3/gtk-config-store.h"
-
 #include "ns3/flow-classifier.h"
 #include "ns3/flow-monitor-module.h"
 
