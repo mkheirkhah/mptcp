@@ -1,3 +1,37 @@
+/*
+ * MultiPath TCP example
+ * Author: Morteza Kheirkhah (m.kheirkhah@sussex.ac.uk)
+ *
+ * Network Topology
+
+ *      Router
+ *        n2
+ *      /   \
+ *L0.1 /     \ L1.1
+ *    /       \
+ *   n0       n1
+ *    \       /
+ *L0.2 \     / L1.2
+ *      \   /
+ *        n3
+ *      Router
+ *
+ *  - End host (n0 & n1); Router (n2 & n3)
+ *  - All links are point to point [Capacity: 100Mbps, Delay: 0.5 ms, RTT: 2 ms]
+ *  - Link L0.1 subnet is 10.0.0.0 - Gateway: 10.0.0.1 on n2
+ *  - Link L0.2 subnet is 10.0.2.0 - Gateway: 10.0.2.1 on n3
+ *  - Link L1.1 subnet is 10.0.1.0 - Gateway: 10.0.1.1 on n2
+ *  - Link L1.2 subnet is 10.3.2.0 - Gateway: 10.0.3.1 on n3
+ *  - Subflow[0] is established between 10.0.2.2 and 10.0.3.2 (Connection opener)
+ *  - Subflow[1] is established between 10.0.0.2 and 10.0.1.2
+ *
+ *  - 'allPlots.plt' shows all graph in this simulation, result is in .pdf
+ *  - 'mptcp.results' shows detail of each subflow via FlowMonitor.
+ *  - 'DC3.tr'
+ *  - 'DC3-x-x.pcap'
+
+ */
+
 #define NS_LOG_APPEND_CONTEXT \
   { std::clog << Simulator::Now ().GetSeconds ()<< "  ";}
 
