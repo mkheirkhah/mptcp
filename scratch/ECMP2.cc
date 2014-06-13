@@ -92,6 +92,21 @@ main(int argc, char *argv[])
 
   NS_LOG_INFO("Create Applications");
 
+  Config::SetDefault("ns3::TcpSocket::SegmentSize", UintegerValue(536));
+  Config::SetDefault("ns3::TcpSocket::DelAckCount", UintegerValue(0));
+
+  // TCP Receiver
+  PacketSinkHelper sinkTCP("ns3::TcpSocketFactory", Address(InetSocketAddress(Ipv4Address::GetAny(), 10)));
+  sinkTCP.Install(c.Get(6));
+
+  //  TCP Sender
+  BulkSendHelper source("ns3::TcpSocketFactory", Address(InetSocketAddress(Ipv4Address("10.5.6.2"), 10)));
+  source.SetAttribute("MaxBytes", UintegerValue(10000000));
+  source.SetAttribute("SendSize", UintegerValue(500));
+  ApplicationContainer sourceApps = source.Install(c.Get(0));
+  sourceApps.Start(Seconds(1.1));
+  sourceApps.Stop(Seconds(5.1));
+
   // UDP packet sink
   PacketSinkHelper sink("ns3::UdpSocketFactory", Address(InetSocketAddress(Ipv4Address::GetAny(), 9)));
   sink.Install(c.Get(6));
