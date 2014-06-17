@@ -642,6 +642,7 @@ TcpL4Protocol::SendPacket(Ptr<Packet> packet, const TcpHeader &outgoing, Ipv4Add
     {
       Ipv4Header header;
       header.SetDestination(daddr);
+      header.SetSource(saddr);
       header.SetProtocol(PROT_NUMBER);
       Socket::SocketErrno errno_;
       Ptr<Ipv4Route> route;
