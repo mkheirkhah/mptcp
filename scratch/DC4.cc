@@ -1,4 +1,6 @@
+/*
 // Network topology:
+
 //           n2
 //          /  \
 //         /    \
@@ -12,7 +14,7 @@
 // - all links are point-to-point
 // - multiple TCP flows from n0 to n6 (At most 4 flows in each separate paths)
 // - we want to see how load splits as only source port is different in each flow!
-
+*/
 #define NS_LOG_APPEND_CONTEXT \
   { std::clog << Simulator::Now ().GetSeconds ()<< "  ";}
 
@@ -42,7 +44,7 @@ uint32_t Delay = 0.5;
 Time cDelay = MilliSeconds(Delay);
 double LossRate = 0.0;
 double dtq = 100;
-static const uint32_t totalTxBytes = 10000000;
+static const uint32_t totalTxBytes = 1000000;
 static const uint32_t sendBufSize = 53600;
 static uint32_t currentTxBytes = 0;
 static const double simDuration = 1000.0;
@@ -318,8 +320,8 @@ SetupSocketParam(Ptr<MpTcpSocketBase> lSocket)
 //  lSocket->SetCongestionCtrlAlgo(Uncoupled_TCPs);
   //lSocket->SetDataDistribAlgo(Round_Robin);
   //lSocket->SetSourceAddress(Ipv4Address("10.1.1.1"));
-  lSocket->SetMaxSubFlowNumber(11);
-  lSocket->allocateSendingBuffer(sendBufSize);
+  //lSocket->SetMaxSubFlowNumber(11);
+  //lSocket->allocateSendingBuffer(sendBufSize);
   lSocket->mod = 60;
   lSocket->totalBytes = totalTxBytes;
   lSocket->lostRate = dtq;
@@ -381,7 +383,7 @@ CloseConnection(Ptr<Socket> localSocket)
 {
   NS_LOG_FUNCTION_NOARGS();  //
   NS_LOG_LOGIC("MpTcpNewReno::currentTxBytes = " << currentTxBytes);  //
-  NS_LOG_LOGIC("MpTcpNewReno::totalTxBytes   = " << totalTxBytes);  //
+  NS_LOG_LOGIC("MpTcpNewReno::totalTxBytes   = " << totalTxBytes);   //
 }
 
 void
