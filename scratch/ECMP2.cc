@@ -10,7 +10,6 @@
 //
 // - multiple TCP flows from n0 to n6 (At most 3 flows)
 // - we want to see how load splits as only source port is different in each flow!
-
 #include <stdint.h>
 #include <iostream>
 #include <fstream>
@@ -32,7 +31,10 @@ main(int argc, char *argv[])
 {
   // Add some logging
   LogComponentEnable("ECMP2", LOG_ALL);
-  LogComponentEnable("Ipv4GlobalRouting", LOG_DEBUG);
+  //LogComponentEnable("Ipv4GlobalRouting", LOG_DEBUG);
+//  LogComponentEnable("MpTcpSocketBase", LOG_INFO);
+  LogComponentEnable("MpTcpBulkSendApplication", LOG_ALL);
+//  LogComponentEnable("MpTcpSocketBase", LOG_FUNCTION);
 
   // Activate the ECMP per flow
   Config::SetDefault("ns3::Ipv4GlobalRouting::FlowEcmpRouting", BooleanValue(true));
@@ -57,8 +59,8 @@ main(int argc, char *argv[])
 
   NS_LOG_INFO("Create channel");
   PointToPointHelper p2p;
-  p2p.SetDeviceAttribute("DataRate", StringValue("10Mbps"));
-  p2p.SetChannelAttribute("Delay", StringValue("1ms"));
+  p2p.SetDeviceAttribute("DataRate", StringValue("100Mbps"));
+  p2p.SetChannelAttribute("Delay", StringValue("0.5ms"));
   NetDeviceContainer d0d1 = p2p.Install(n0n1);
   NetDeviceContainer d1d2 = p2p.Install(n1n2);
   NetDeviceContainer d1d3 = p2p.Install(n1n3);
@@ -92,41 +94,63 @@ main(int argc, char *argv[])
 
   NS_LOG_INFO("Create Applications");
 
-  Config::SetDefault("ns3::TcpSocket::SegmentSize", UintegerValue(536));
-  Config::SetDefault("ns3::TcpSocket::DelAckCount", UintegerValue(0));
+  //Config::SetDefault("ns3::TcpSocket::SegmentSize", UintegerValue(536));
+  //Config::SetDefault("ns3::TcpSocket::DelAckCount", UintegerValue(0));
 
-  // TCP Receiver
-  PacketSinkHelper sinkTCP("ns3::TcpSocketFactory", Address(InetSocketAddress(Ipv4Address::GetAny(), 10)));
-  sinkTCP.Install(c.Get(6));
+//  // TCP Receiver
+//  PacketSinkHelper sinkTCP("ns3::TcpSocketFactory", Address(InetSocketAddress(Ipv4Address::GetAny(), 10)));
+//  sinkTCP.Install(c.Get(6));
+//
+//  //  TCP Sender
+//  BulkSendHelper source("ns3::TcpSocketFactory", Address(InetSocketAddress(Ipv4Address("10.5.6.2"), 10)));
+//  source.SetAttribute("MaxBytes", UintegerValue(10000000));
+//  source.SetAttribute("SendSize", UintegerValue(500));
+//  ApplicationContainer sourceApps = source.Install(c.Get(0));
+//  sourceApps.Start(Seconds(1.1));
+//  sourceApps.Stop(Seconds(5.1));
 
-  //  TCP Sender
-  BulkSendHelper source("ns3::TcpSocketFactory", Address(InetSocketAddress(Ipv4Address("10.5.6.2"), 10)));
-  source.SetAttribute("MaxBytes", UintegerValue(10000000));
-  source.SetAttribute("SendSize", UintegerValue(500));
-  ApplicationContainer sourceApps = source.Install(c.Get(0));
-  sourceApps.Start(Seconds(1.1));
-  sourceApps.Stop(Seconds(5.1));
+  // MPTCP SINK
+  uint32_t servPort = 5000;
+  Ptr<MpTcpPacketSink> sinkSocket = CreateObject<MpTcpPacketSink>();
+  sinkSocket->SetAttribute("Local", AddressValue(InetSocketAddress(Ipv4Address::GetAny(), servPort)));
+  Ptr<Node> server = c.Get(6);
+  server->AddApplication(sinkSocket);
+  ApplicationContainer Apps;
+  Apps.Add(sinkSocket);
+  Apps.Start(Seconds(0.0));
+  //Apps.Stop(Seconds(100));
 
-  // UDP packet sink
-  PacketSinkHelper sink("ns3::UdpSocketFactory", Address(InetSocketAddress(Ipv4Address::GetAny(), 9)));
-  sink.Install(c.Get(6));
+  //  MPTCP SOURCE
+  Ptr<MpTcpBulkSendApplication> src = CreateObject<MpTcpBulkSendApplication>();
+  src->SetAttribute("Remote", AddressValue(Address(InetSocketAddress(Ipv4Address("10.5.6.2"), servPort))));
+  //BulkSendHelper source("ns3::TcpSocketFactory", Address(InetSocketAddress(Ipv4Address("10.5.6.2"), 10)));
+  src->SetAttribute("MaxBytes", UintegerValue(10000000));
+  src->SetAttribute("SendSize", UintegerValue(5000));
+  src->Printer();
+  Ptr<Node> client = c.Get(0);
+  client->AddApplication(src);
+  Apps.Add(src);
+  Apps.Start(Seconds(1.1));
+  Apps.Stop(Seconds(100));
 
-  // UDP packet source
-  OnOffHelper onoff("ns3::UdpSocketFactory", InetSocketAddress(Ipv4Address("10.5.6.2"), 9));
-  onoff.SetConstantRate(DataRate("100Kbps"));
-  onoff.SetAttribute("PacketSize", UintegerValue(500));
-  ApplicationContainer apps;
-  for (uint32_t i = 0; i < 1; i++)
-    {
-      apps.Add(onoff.Install(c.Get(0)));
-    }
-  apps.Start(Seconds(1.0));
-  apps.Stop(Seconds(5.0));
+//  // UDP packet sink
+//  PacketSinkHelper sink("ns3::UdpSocketFactory", Address(InetSocketAddress(Ipv4Address::GetAny(), 9)));
+//  sink.Install(c.Get(6));
+//
+//  // UDP packet source
+//  OnOffHelper onoff("ns3::UdpSocketFactory", InetSocketAddress(Ipv4Address("10.5.6.2"), 9));
+//  onoff.SetConstantRate(DataRate("100Kbps"));
+//  onoff.SetAttribute("PacketSize", UintegerValue(500));
+//  ApplicationContainer apps;
+//  for (uint32_t i = 0; i < 1; i++)
+//    {
+//      apps.Add(onoff.Install(c.Get(0)));
+//    }
+//  apps.Start(Seconds(1.0));
+//  apps.Stop(Seconds(5.0));
 
   NS_LOG_INFO("Simulation run");
   Simulator::Run();
   Simulator::Destroy();
   NS_LOG_INFO("Simulation End");
-
 }
-
