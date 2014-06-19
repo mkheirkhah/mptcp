@@ -31,6 +31,7 @@
 #include "global-route-manager.h"
 #include "udp-header.h"
 #include "tcp-header.h"
+#include "ns3/Node.h"
 
 NS_LOG_COMPONENT_DEFINE ("Ipv4GlobalRouting");
 
@@ -147,7 +148,7 @@ Ipv4GlobalRouting::AddASExternalRouteTo (Ipv4Address network,
 uint32_t
 Ipv4GlobalRouting::GetTupleValue(const Ipv4Header &header, Ptr<const Packet> ipPayload)
 {
-
+  NS_LOG_FUNCTION(header);
   uint32_t fiveTuple = header.GetSource().Get()
                      + header.GetDestination().Get()
                      + header.GetProtocol();
@@ -158,12 +159,12 @@ Ipv4GlobalRouting::GetTupleValue(const Ipv4Header &header, Ptr<const Packet> ipP
     {
       UdpHeader udpHeader;
       ipPayload->PeekHeader(udpHeader);
-      NS_LOG_DEBUG ("FiveTuple() -> UDP: (src, dst, protNb, sPort, dPort) "
-          << header.GetSource() << ","
-          << header.GetDestination() << ","
-          << header.GetProtocol() << ","
-          << udpHeader.GetSourcePort () << ","
-          << udpHeader.GetDestinationPort ());
+      NS_LOG_DEBUG ("FiveTuple() -> UDP: (src, dst, protNb, sPort, dPort) - "
+          << header.GetSource() << " , "
+          << header.GetDestination() << " , "
+          << (int)header.GetProtocol() << " , "
+          << (int)udpHeader.GetSourcePort () << " , "
+          << (int)udpHeader.GetDestinationPort ());
       fiveTuple += udpHeader.GetSourcePort();
       fiveTuple += udpHeader.GetDestinationPort();
       break;
@@ -172,12 +173,12 @@ Ipv4GlobalRouting::GetTupleValue(const Ipv4Header &header, Ptr<const Packet> ipP
     {
       TcpHeader tcpHeader;
       ipPayload->PeekHeader(tcpHeader);
-      NS_LOG_DEBUG ("FiveTuple() -> TCP: (src, dst, protNb, sPort, dPort) "
-          << header.GetSource() << ","
-          << header.GetDestination() << ","
-          << header.GetProtocol() << ","
-          << tcpHeader.GetSourcePort () << ","
-          << tcpHeader.GetDestinationPort ());
+      NS_LOG_DEBUG ("FiveTuple() -> TCP: (src, dst, protNb, sPort, dPort) -  "
+          << header.GetSource() << " , "
+          << header.GetDestination() << " , "
+          << (int)header.GetProtocol() << " , "
+          << (int)tcpHeader.GetSourcePort () << " , "
+          << (int)tcpHeader.GetDestinationPort ());
       fiveTuple += tcpHeader.GetSourcePort();
       fiveTuple += tcpHeader.GetDestinationPort();
       break;
@@ -188,6 +189,7 @@ Ipv4GlobalRouting::GetTupleValue(const Ipv4Header &header, Ptr<const Packet> ipP
       break;
     }
     }
+  NS_LOG_DEBUG("FiveTuple() -> HashedValue: " <<  fiveTuple);
   return fiveTuple;
 }
 
@@ -283,7 +285,11 @@ Ipv4GlobalRouting::LookupGlobal(const Ipv4Header &header, Ptr<const Packet> ipPa
         }
       else if (m_flowEcmpRouting && allRoutes.size() > 1)
         {
+
            selectIndex = GetTupleValue(header, ipPayload) % allRoutes.size();
+           Ipv4RoutingTableEntry* route = allRoutes.at (selectIndex);
+           Ptr<NetDevice> NIC = m_ipv4->GetNetDevice(route->GetInterface());
+           NS_LOG_DEBUG("Node("<< NIC->GetNode()->GetId() << ") LookupGlobal() -> selectIndex for ECMP is " << selectIndex);
         }
       else
         {
@@ -566,15 +572,15 @@ Ipv4GlobalRouting::RouteInput  (Ptr<const Packet> p, const Ipv4Header &header, P
   // destination unicast address does not match one of the iif addresses,
   // but we check our other interfaces.  This could be an option
   // (to remove the outer loop immediately below and just check iif).
-//  for (uint32_t j = 0; j < m_ipv4->GetNInterfaces (); j++)
+//  for (uint32_t j = 0; j < m_ipv4->GetNInterfaces(); j++)
 //    {
-      //for (uint32_t i = 0; i < m_ipv4->GetNAddresses (j); i++)
+//      for (uint32_t i = 0; i < m_ipv4->GetNAddresses(j); i++)
         for (uint32_t i = 0; i < m_ipv4->GetNAddresses (iif); i++)  // Added
         {
-          //Ipv4InterfaceAddress iaddr = m_ipv4->GetAddress (j, i);
+//          Ipv4InterfaceAddress iaddr = m_ipv4->GetAddress(j, i);
           Ipv4InterfaceAddress iaddr = m_ipv4->GetAddress (iif, i); // Added
-          Ipv4Address addr = iaddr.GetLocal ();
-          if (addr.IsEqual (header.GetDestination ()))
+          Ipv4Address addr = iaddr.GetLocal();
+          if (addr.IsEqual(header.GetDestination()))
             {
 //              if (j == iif)
 //                {
@@ -584,16 +590,15 @@ Ipv4GlobalRouting::RouteInput  (Ptr<const Packet> p, const Ipv4Header &header, P
 //                {
 //                  NS_LOG_LOGIC ("For me (destination " << addr << " match) on another interface " << header.GetDestination ());
 //                }
-              lcb (p, header, iif);
+              lcb(p, header, iif);
               return true;
             }
-          if (header.GetDestination ().IsEqual (iaddr.GetBroadcast ()))
+          if (header.GetDestination().IsEqual(iaddr.GetBroadcast()))
             {
               NS_LOG_LOGIC ("For me (interface broadcast address)");
-              lcb (p, header, iif);
+              lcb(p, header, iif);
               return true;
-            }
-          NS_LOG_LOGIC ("Address "<< addr << " not a match");
+            } NS_LOG_LOGIC ("Address "<< addr << " not a match");
         }
 //    }
   // Check if input device supports IP forwarding
