@@ -1268,7 +1268,8 @@ MpTcpSocketBase::Connect(Ipv4Address servAddr, uint16_t servPort)
   sFlow->sPort = m_endPoint->GetLocalPort();
   sFlow->MSS = segmentSize;
   sFlow->cwnd = sFlow->MSS;
-  NS_LOG_INFO("Connect -> SegmentSize: " << sFlow->MSS << " tcpSegmentSize: " << m_segmentSize << " segmentSize: " << segmentSize) ;NS_LOG_INFO("Connect -> SendingBufferSize: " << sendingBuffer->bufMaxSize);
+  NS_LOG_INFO("Connect -> SegmentSize: " << sFlow->MSS << " tcpSegmentSize: " << m_segmentSize << " segmentSize: " << segmentSize) ;//
+  NS_LOG_UNCOND("Connect -> SendingBufferSize: " << sendingBuffer->bufMaxSize);
 
   // This is master subsocket (master subflow) then its endpoint is the same as connection endpoint.
   sFlow->m_endPoint = m_endPoint;
@@ -3308,12 +3309,12 @@ MpTcpSocketBase::IsThereRoute(Ipv4Address src, Ipv4Address dst)
       // Get NetDevice from Interface via ns3::Ipv4::GetNetDevice(uint32_t interface);
       Ptr<NetDevice> oif = ipv4->GetNetDevice(interface);
       NS_ASSERT(oif == v4NetDevice);
+
       //.....................................................................................
       l3Header.SetSource(src);
       l3Header.SetDestination(dst);
       route = ipv4->GetRoutingProtocol()->RouteOutput(Ptr<Packet>(), l3Header, oif, errno_);
-
-      if ((route != 0) && (src == route->GetSource()))
+      if ((route != 0)/* && (src == route->GetSource())*/)
         {
           NS_LOG_INFO ("IsThereRoute -> Route from src "<< src << " to dst " << dst << " oit ["<< oif->GetIfIndex()<<"], exist  Gateway: " << route->GetGateway());
           found = true;
@@ -3340,16 +3341,18 @@ MpTcpSocketBase::PrintIpv4AddressFromIpv4Interface(Ptr<Ipv4Interface> interface,
 Ptr<NetDevice>
 MpTcpSocketBase::FindOutputNetDevice(Ipv4Address src)
 {
-  NS_LOG_INFO("FindOutputNetDevice");
-  Ptr<Ipv4L3Protocol> ipv4 = m_node->GetObject<Ipv4L3Protocol>();
-  uint32_t oInterface = ipv4->GetInterfaceForAddress(src);
-  Ptr<NetDevice> oNetDevice = ipv4->GetNetDevice(oInterface);
 
-  Ptr<Ipv4Interface> interface = ipv4->GetRealInterfaceForAddress(src);
-  Ptr<NetDevice> netDevice = interface->GetDevice();
-  NS_ASSERT(netDevice == oNetDevice);
-  NS_LOG_INFO("FindNetDevice -> Src: " << src << " NIC: " << netDevice->GetAddress());
-  return oNetDevice;
+  NS_LOG_INFO("FindOutputNetDevice");
+  return 0;
+//  Ptr<Ipv4L3Protocol> ipv4 = m_node->GetObject<Ipv4L3Protocol>();
+//  uint32_t oInterface = ipv4->GetInterfaceForAddress(src);
+//  Ptr<NetDevice> oNetDevice = ipv4->GetNetDevice(oInterface);
+
+//  Ptr<Ipv4Interface> interface = ipv4->GetRealInterfaceForAddress(src);
+//  Ptr<NetDevice> netDevice = interface->GetDevice();
+//  NS_ASSERT(netDevice == oNetDevice);
+  //NS_LOG_INFO("FindNetDevice -> Src: " << src << " NIC: " << netDevice->GetAddress());
+//  return oNetDevice;
 }
 
 bool
