@@ -30,14 +30,16 @@ int
 main(int argc, char *argv[])
 {
   // Add some logging
-  LogComponentEnable("ECMP2", LOG_ALL);
-  //LogComponentEnable("Ipv4GlobalRouting", LOG_DEBUG);
-  LogComponentEnable("MpTcpSocketBase", LOG_ALL);
-  LogComponentEnable("MpTcpBulkSendApplication", LOG_ALL);
+//  LogComponentEnable("ECMP2", LOG_ALL);
+//  LogComponentEnable("Ipv4GlobalRouting", LOG_ALL);
+//  LogComponentEnable("MpTcpSocketBase", LOG_ALL);
+//  LogComponentEnable("MpTcpBulkSendApplication", LOG_ALL);
+//  LogComponentEnable("MpTcpTypeDefs", LOG_ALL);
+//  LogComponentEnable("TcpL4Protocol", LOG_ALL);
 
   // Activate the ECMP per flow
 //  Config::SetDefault("ns3::Ipv4GlobalRouting::FlowEcmpRouting", BooleanValue(true));
-  Config::SetDefault("ns3::TcpSocket::DelAckCount", UintegerValue(0));
+//  Config::SetDefault("ns3::TcpSocket::DelAckCount", UintegerValue(0));
 
   NS_LOG_INFO("Create nodes");
   NodeContainer c;
