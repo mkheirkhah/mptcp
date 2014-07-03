@@ -86,6 +86,14 @@ MpTcpSocketBase::MpTcpSocketBase(Ptr<Node> node) :
   nextRxSequence = 1;
   gnu.SetOutFile("allPlots.pdf");
   pAck = 0;
+  mod = 60;
+  Callback<void, Ptr<Socket> > vPS = MakeNullCallback<void, Ptr<Socket> >();
+  Callback<void, Ptr<Socket>, const Address &> vPSA = MakeNullCallback<void, Ptr<Socket>, const Address &>();
+  Callback<void, Ptr<Socket>, uint32_t> vPSUI = MakeNullCallback<void, Ptr<Socket>, uint32_t>();
+  SetConnectCallback(vPS, vPS);
+  SetDataSentCallback(vPSUI);
+  SetSendCallback(vPSUI);
+  SetRecvCallback(vPS);
 }
 
 MpTcpSocketBase::~MpTcpSocketBase(void)
@@ -3299,7 +3307,7 @@ MpTcpSocketBase::IsThereRoute(Ipv4Address src, Ipv4Address dst)
       Socket::SocketErrno errno_;
       Ptr<Ipv4Route> route;
       //.....................................................................................
-      NS_LOG_INFO("----------------------------------------------------");NS_LOG_INFO("IsThereRoute() -> src: " << src << " dst: " << dst);
+      //NS_LOG_INFO("----------------------------------------------------");NS_LOG_INFO("IsThereRoute() -> src: " << src << " dst: " << dst);
       // Get interface number from IPv4Address via ns3::Ipv4::GetInterfaceForAddress(Ipv4Address address);
       int32_t interface = ipv4->GetInterfaceForAddress(src);        // Morteza uses sign integers
       Ptr<Ipv4Interface> v4Interface = ipv4->GetRealInterfaceForAddress(src);
@@ -3316,12 +3324,12 @@ MpTcpSocketBase::IsThereRoute(Ipv4Address src, Ipv4Address dst)
       route = ipv4->GetRoutingProtocol()->RouteOutput(Ptr<Packet>(), l3Header, oif, errno_);
       if ((route != 0)/* && (src == route->GetSource())*/)
         {
-          NS_LOG_INFO ("IsThereRoute -> Route from src "<< src << " to dst " << dst << " oit ["<< oif->GetIfIndex()<<"], exist  Gateway: " << route->GetGateway());
+          NS_LOG_DEBUG ("IsThereRoute -> Route from src "<< src << " to dst " << dst << " oit ["<< oif->GetIfIndex()<<"], exist  Gateway: " << route->GetGateway());
           found = true;
         }
       else
-        NS_LOG_INFO ("IsThereRoute -> No Route from srcAddr "<< src << " to dstAddr " << dst << " oit ["<<oif->GetIfIndex()<<"], exist Gateway: " << route->GetGateway());
-    }NS_LOG_INFO("----------------------------------------------------");
+        NS_LOG_DEBUG ("IsThereRoute -> No Route from srcAddr "<< src << " to dstAddr " << dst << " oit ["<<oif->GetIfIndex()<<"], exist Gateway: " << route->GetGateway());
+    }//NS_LOG_INFO("----------------------------------------------------");
   return found;
 }
 
@@ -3343,16 +3351,17 @@ MpTcpSocketBase::FindOutputNetDevice(Ipv4Address src)
 {
 
   NS_LOG_INFO("FindOutputNetDevice");
-  return 0;
-//  Ptr<Ipv4L3Protocol> ipv4 = m_node->GetObject<Ipv4L3Protocol>();
-//  uint32_t oInterface = ipv4->GetInterfaceForAddress(src);
-//  Ptr<NetDevice> oNetDevice = ipv4->GetNetDevice(oInterface);
+//  return 0;
+  Ptr<Ipv4L3Protocol> ipv4 = m_node->GetObject<Ipv4L3Protocol>();
+  uint32_t oInterface = ipv4->GetInterfaceForAddress(src);
+  Ptr<NetDevice> oNetDevice = ipv4->GetNetDevice(oInterface);
 
 //  Ptr<Ipv4Interface> interface = ipv4->GetRealInterfaceForAddress(src);
 //  Ptr<NetDevice> netDevice = interface->GetDevice();
 //  NS_ASSERT(netDevice == oNetDevice);
   //NS_LOG_INFO("FindNetDevice -> Src: " << src << " NIC: " << netDevice->GetAddress());
-//  return oNetDevice;
+  //return oNetDevice;
+  return 0;
 }
 
 bool

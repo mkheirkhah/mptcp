@@ -31,13 +31,12 @@ main(int argc, char *argv[])
 {
   // Add some logging
   LogComponentEnable("ECMP2", LOG_ALL);
-  //LogComponentEnable("Ipv4GlobalRouting", LOG_DEBUG);
-  LogComponentEnable("MpTcpSocketBase", LOG_ALL);
+  //LogComponentEnable("MpTcpSocketBase", LOG_INFO);
   LogComponentEnable("MpTcpBulkSendApplication", LOG_ALL);
+//  LogComponentEnable("Ipv4GlobalRouting", LOG_ALL);
 
   // Activate the ECMP per flow
-//  Config::SetDefault("ns3::Ipv4GlobalRouting::FlowEcmpRouting", BooleanValue(true));
-  Config::SetDefault("ns3::TcpSocket::DelAckCount", UintegerValue(0));
+  Config::SetDefault("ns3::Ipv4GlobalRouting::FlowEcmpRouting", BooleanValue(true));
 
   NS_LOG_INFO("Create nodes");
   NodeContainer c;
@@ -66,7 +65,6 @@ main(int argc, char *argv[])
   Ipv4GlobalRoutingHelper::PopulateRoutingTables();
 
   NS_LOG_INFO("Create Applications");
-
   // MPTCP SINK
   uint32_t servPort = 5000;
   Ptr<MpTcpPacketSink> sinkSocket = CreateObject<MpTcpPacketSink>();
@@ -82,8 +80,8 @@ main(int argc, char *argv[])
   Ptr<MpTcpBulkSendApplication> src = CreateObject<MpTcpBulkSendApplication>();
   src->SetAttribute("Remote", AddressValue(Address(InetSocketAddress(Ipv4Address("10.0.1.2"), servPort))));
   src->SetAttribute("MaxBytes", UintegerValue(10000000));
-  src->SetAttribute("SendSize", UintegerValue(10000000));
-  //src->Printer();
+  src->SetAttribute("SendSize", UintegerValue(100000));
+//  src->SetBuffer(10000000);
   Ptr<Node> client = c.Get(0);
   client->AddApplication(src);
   ApplicationContainer pSource;
