@@ -86,6 +86,14 @@ MpTcpSocketBase::MpTcpSocketBase(Ptr<Node> node) :
   nextRxSequence = 1;
   gnu.SetOutFile("allPlots.pdf");
   pAck = 0;
+  mod = 60;
+  Callback<void, Ptr<Socket> > vPS = MakeNullCallback<void, Ptr<Socket> >();
+  Callback<void, Ptr<Socket>, const Address &> vPSA = MakeNullCallback<void, Ptr<Socket>, const Address &>();
+  Callback<void, Ptr<Socket>, uint32_t> vPSUI = MakeNullCallback<void, Ptr<Socket>, uint32_t>();
+  SetConnectCallback(vPS, vPS);
+  SetDataSentCallback(vPSUI);
+  SetSendCallback(vPSUI);
+  SetRecvCallback(vPS);
 }
 
 MpTcpSocketBase::~MpTcpSocketBase(void)
@@ -3343,16 +3351,17 @@ MpTcpSocketBase::FindOutputNetDevice(Ipv4Address src)
 {
 
   NS_LOG_INFO("FindOutputNetDevice");
-  return 0;
-//  Ptr<Ipv4L3Protocol> ipv4 = m_node->GetObject<Ipv4L3Protocol>();
-//  uint32_t oInterface = ipv4->GetInterfaceForAddress(src);
-//  Ptr<NetDevice> oNetDevice = ipv4->GetNetDevice(oInterface);
+//  return 0;
+  Ptr<Ipv4L3Protocol> ipv4 = m_node->GetObject<Ipv4L3Protocol>();
+  uint32_t oInterface = ipv4->GetInterfaceForAddress(src);
+  Ptr<NetDevice> oNetDevice = ipv4->GetNetDevice(oInterface);
 
 //  Ptr<Ipv4Interface> interface = ipv4->GetRealInterfaceForAddress(src);
 //  Ptr<NetDevice> netDevice = interface->GetDevice();
 //  NS_ASSERT(netDevice == oNetDevice);
   //NS_LOG_INFO("FindNetDevice -> Src: " << src << " NIC: " << netDevice->GetAddress());
-//  return oNetDevice;
+  //return oNetDevice;
+  return 0;
 }
 
 bool
