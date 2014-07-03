@@ -1,6 +1,6 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 /*
- * Copyright (c) 2014 University of Sussex, UK.
+ * Copyright (c) 2014 University of Sussex, UK
  * Copyright (c) 2008 INRIA
  *
  * This program is free software; you can redistribute it and/or modify
@@ -16,45 +16,48 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
+ * Author: Geoge Riley <riley@ece.gatech.edu>
+ * Adapted from OnOffHelper by:
  * Author: Mathieu Lacage <mathieu.lacage@sophia.inria.fr>
- * Modified by Morteza Kheirkhah <M.kheirkhah@sussex.ac.uk>
+ * Author: Morteza Kheirkhah <M.kheirkhah@sussex.ac.uk>
  */
 
-#include "mp-tcp-packet-sink-helper.h"
-#include "ns3/string.h"
+#include "mp-tcp-bulk-send-helper.h"
 #include "ns3/inet-socket-address.h"
+#include "ns3/packet-socket-address.h"
+#include "ns3/string.h"
 #include "ns3/names.h"
 
 namespace ns3 {
 
-MpTcpPacketSinkHelper::MpTcpPacketSinkHelper (std::string protocol, Address address)
+MpTcpBulkSendHelper::MpTcpBulkSendHelper (std::string protocol, Address address)
 {
-  m_factory.SetTypeId ("ns3::MpTcpPacketSink");
+  m_factory.SetTypeId ("ns3::MpTcpBulkSendApplication");
   m_factory.Set ("Protocol", StringValue (protocol));
-  m_factory.Set ("Local", AddressValue (address));
+  m_factory.Set ("Remote", AddressValue (address));
 }
 
-void 
-MpTcpPacketSinkHelper::SetAttribute (std::string name, const AttributeValue &value)
+void
+MpTcpBulkSendHelper::SetAttribute (std::string name, const AttributeValue &value)
 {
   m_factory.Set (name, value);
 }
 
 ApplicationContainer
-MpTcpPacketSinkHelper::Install (Ptr<Node> node) const
+MpTcpBulkSendHelper::Install (Ptr<Node> node) const
 {
   return ApplicationContainer (InstallPriv (node));
 }
 
 ApplicationContainer
-MpTcpPacketSinkHelper::Install (std::string nodeName) const
+MpTcpBulkSendHelper::Install (std::string nodeName) const
 {
   Ptr<Node> node = Names::Find<Node> (nodeName);
   return ApplicationContainer (InstallPriv (node));
 }
 
 ApplicationContainer
-MpTcpPacketSinkHelper::Install (NodeContainer c) const
+MpTcpBulkSendHelper::Install (NodeContainer c) const
 {
   ApplicationContainer apps;
   for (NodeContainer::Iterator i = c.Begin (); i != c.End (); ++i)
@@ -66,7 +69,7 @@ MpTcpPacketSinkHelper::Install (NodeContainer c) const
 }
 
 Ptr<Application>
-MpTcpPacketSinkHelper::InstallPriv (Ptr<Node> node) const
+MpTcpBulkSendHelper::InstallPriv (Ptr<Node> node) const
 {
   Ptr<Application> app = m_factory.Create<Application> ();
   node->AddApplication (app);

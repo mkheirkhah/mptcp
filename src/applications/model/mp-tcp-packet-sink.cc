@@ -1,3 +1,25 @@
+/* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
+/*
+ * Copyright 2014 University of Sussex, UK.
+ * Copyright 2007 University of Washington
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation;
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *
+ * Author:  Tom Henderson (tomhend@u.washington.edu)
+ * Modified by Morteza Kheirkhah (m.kheirkhah@sussex.ac.uk)
+*/
+
 #include "ns3/address.h"
 #include "ns3/address-utils.h"
 #include "ns3/log.h"
@@ -14,10 +36,11 @@
 
 using namespace std;
 
+NS_LOG_COMPONENT_DEFINE("MpTcpPacketSink");
+
 namespace ns3
 {
 
-NS_LOG_COMPONENT_DEFINE("MpTcpPacketSink");
 NS_OBJECT_ENSURE_REGISTERED(MpTcpPacketSink);
 
 TypeId
@@ -30,14 +53,10 @@ MpTcpPacketSink::GetTypeId(void)
           AddressValue(),
           MakeAddressAccessor(&MpTcpPacketSink::m_local),
           MakeAddressChecker())
-//    .AddAttribute ("Protocol", "The type id of the protocol to use for the rx socket.",
-//                   TypeIdValue (TcpSocketFactory::GetTypeId ()),
-//                   MakeTypeIdAccessor (&MpTcpPacketSink::m_tid),
-//                   MakeTypeIdChecker ())
-//    .AddAttribute ("algopr", "The used algorithm to handle pakcet reordering.",
-//                   UintegerValue(0),
-//                   MakeUintegerAccessor(&MpTcpPacketSink::algopr),
-//                   MakeUintegerChecker<uint32_t>())
+      .AddAttribute ("Protocol", "The type id of the protocol to use for the rx socket.",
+                   TypeIdValue (TcpSocketFactory::GetTypeId ()),
+                   MakeTypeIdAccessor (&MpTcpPacketSink::m_tid),
+                   MakeTypeIdChecker ())
 //    .AddTraceSource ("Rx", "A packet has been received",
 //                     MakeTraceSourceAccessor (&MpTcpPacketSink::m_rxTrace))
       ;
@@ -82,16 +101,12 @@ MpTcpPacketSink::StartApplication()    // Called at time specified by Start
     {
       size = 2000;
       buf = new uint8_t[size];
-      //m_socket = new MpTcpSocketBase(GetNode());
       m_socket = CreateObject<MpTcpSocketBase>(GetNode()); //m_socket = Socket::CreateSocket (GetNode(), m_tid);
       m_socket->Bind(m_local);
       m_socket->Listen();
       NS_LOG_LOGIC("StartApplication -> MptcpPacketSink got an listening socket " << m_socket << " binded to addrs:port  " << InetSocketAddress::ConvertFrom(m_local).GetIpv4() << ":" << InetSocketAddress::ConvertFrom(m_local).GetPort());
     }
-  //We ca also allocate sendingBuffer here...
-  //m_socket->allocateRecvingBuffer(14000);
-  //m_socket->allocateSendingBuffer(14000);
-  //m_socket->SetunOrdBufMaxSize(2000); // unused function call...
+
   m_socket->SetRecvCallback(MakeCallback(&MpTcpPacketSink::HandleRead, this));
   m_socket->SetAcceptCallback(MakeNullCallback<bool, Ptr<Socket>, const Address &>(),
       MakeCallback(&MpTcpPacketSink::HandleAccept, this));
@@ -135,14 +150,12 @@ void
 MpTcpPacketSink::HandlePeerClose(Ptr<Socket> socket)
 {
   NS_LOG_FUNCTION(this << socket);
-  //NS_LOG_INFO("MpTcpPacketSink, peerClose " << socket);
 }
 
 void
 MpTcpPacketSink::HandlePeerError(Ptr<Socket> socket)
 {
   NS_LOG_FUNCTION(this << socket);
-  //NS_LOG_INFO("MpTcpPktSink, peerError");
 }
 
 void
@@ -160,53 +173,4 @@ MpTcpPacketSink::getMpTcpSocket()
   return m_socket;
 }
 
-/*
- NS_LOG_COMPONENT_DEFINE ("MpTcpPacketSource");
- NS_OBJECT_ENSURE_REGISTERED (MpTcpPacketSource);
-
- TypeId
- MpTcpPacketSource::GetTypeId (void)
- {
- static TypeId tid = TypeId("ns3::MpTcpPacketSource")
- .SetParent<Application>()
- .AddConstructor<MpTcpPacketSource>()
- .AddAttribute ("Protocol", "The type id of the protocol to use for the tx socket",
- TypeIdValue (TcpSocketFactory::GetTypeId()),
- MakeTypeIdAccessor (&MpTcpPacketSource::m_tid),
- MakeTypeIdChecker ())
- .AddAttribute ("ServerAddr", "The addres of the server",
- AddressValue(),
- MakeAddressAccessor (&MpTcpPacketSource::m_servAddr),
- MakeAddressChecker())
- ;
- return tid;
- }
- MpTcpPacketSource::MpTcpPacketSource()
- {
- NS_LOG_FUNCTION (this);
- }
- MpTcpPacketSource::~MpTcpPacketSource()
- {
- NS_LOG_FUNCTION (this);
- }
- void
- MpTcpPacketSource::SetServPort(uint32_t port)
- {
- NS_LOG_FUNCTION (this << port);
- m_servPort = port;
- }
- uint32_t
- MpTcpPacketSource::GetServPort(void)
- {
- return m_servPort;
- }
- void
- MpTcpPacketSource::StartApplication ()
- {
- NS_LOG_FUNCTION (this);
- m_socket = Socket::CreateSocket(GetNode(), TcpSocketFactory::GetTypeId());
- m_socket->Bind();
-
- }
- */
 } // Namespace ns3
