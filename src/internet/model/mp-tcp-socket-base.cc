@@ -3307,7 +3307,7 @@ MpTcpSocketBase::IsThereRoute(Ipv4Address src, Ipv4Address dst)
       Socket::SocketErrno errno_;
       Ptr<Ipv4Route> route;
       //.....................................................................................
-      NS_LOG_INFO("----------------------------------------------------");NS_LOG_INFO("IsThereRoute() -> src: " << src << " dst: " << dst);
+      //NS_LOG_INFO("----------------------------------------------------");NS_LOG_INFO("IsThereRoute() -> src: " << src << " dst: " << dst);
       // Get interface number from IPv4Address via ns3::Ipv4::GetInterfaceForAddress(Ipv4Address address);
       int32_t interface = ipv4->GetInterfaceForAddress(src);        // Morteza uses sign integers
       Ptr<Ipv4Interface> v4Interface = ipv4->GetRealInterfaceForAddress(src);
@@ -3324,12 +3324,12 @@ MpTcpSocketBase::IsThereRoute(Ipv4Address src, Ipv4Address dst)
       route = ipv4->GetRoutingProtocol()->RouteOutput(Ptr<Packet>(), l3Header, oif, errno_);
       if ((route != 0)/* && (src == route->GetSource())*/)
         {
-          NS_LOG_INFO ("IsThereRoute -> Route from src "<< src << " to dst " << dst << " oit ["<< oif->GetIfIndex()<<"], exist  Gateway: " << route->GetGateway());
+          NS_LOG_DEBUG ("IsThereRoute -> Route from src "<< src << " to dst " << dst << " oit ["<< oif->GetIfIndex()<<"], exist  Gateway: " << route->GetGateway());
           found = true;
         }
       else
-        NS_LOG_INFO ("IsThereRoute -> No Route from srcAddr "<< src << " to dstAddr " << dst << " oit ["<<oif->GetIfIndex()<<"], exist Gateway: " << route->GetGateway());
-    }NS_LOG_INFO("----------------------------------------------------");
+        NS_LOG_DEBUG ("IsThereRoute -> No Route from srcAddr "<< src << " to dstAddr " << dst << " oit ["<<oif->GetIfIndex()<<"], exist Gateway: " << route->GetGateway());
+    }//NS_LOG_INFO("----------------------------------------------------");
   return found;
 }
 
