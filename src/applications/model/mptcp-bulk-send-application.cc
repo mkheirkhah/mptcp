@@ -77,13 +77,26 @@ MpTcpBulkSendApplication::MpTcpBulkSendApplication ()
     m_totBytes (0)
 {
   NS_LOG_FUNCTION (this);
-  m_data = new uint8_t[1000000];
+  m_data = 0;
+  counter = 0;
 }
 
 MpTcpBulkSendApplication::~MpTcpBulkSendApplication ()
 {
   NS_LOG_FUNCTION (this);
   delete [] m_data;
+  m_data = 0;
+}
+
+void
+MpTcpBulkSendApplication::SetBuffer(uint32_t buffSize){
+  NS_LOG_FUNCTION_NOARGS();
+  m_data = new uint8_t[buffSize];
+//for (uint32_t i= 0; i< buffSize ; i++)
+//  {
+//    m_data[i] = 0;
+//  }
+  NS_LOG_INFO("BuffSize:" << sizeof(m_data));
 }
 
 void
@@ -118,32 +131,20 @@ void MpTcpBulkSendApplication::StartApplication (void) // Called at time specifi
   // Create the socket if not already
   if (!m_socket)
     {
-      m_socket = CreateObject<MpTcpSocketBase>(GetNode());
-      //m_socket = Socket::CreateSocket (GetNode (), m_tid);
-      // Fatal error if socket type is not NS3_SOCK_STREAM or NS3_SOCK_SEQPACKET
-//      if (m_socket->GetSocketType () != Socket::NS3_SOCK_STREAM &&
-//          m_socket->GetSocketType () != Socket::NS3_SOCK_SEQPACKET)
-//        {
-//          NS_FATAL_ERROR ("Using BulkSend with an incompatible socket type. "
-//                          "BulkSend requires SOCK_STREAM or SOCK_SEQPACKET. "
-//                          "In other words, use TCP instead of UDP.");
-//        }
-//      if (Inet6SocketAddress::IsMatchingType (m_peer))
-//        {
-//          m_socket->Bind6 ();
-//        }
-      //else if (InetSocketAddress::IsMatchingType (m_peer))
+      m_socket = CreateObject<MpTcpSocketBase>(GetNode()); //m_socket = Socket::CreateSocket (GetNode (), m_tid);
       m_socket->Bind();
-//      if (InetSocketAddress::IsMatchingType(m_peer))
-//        {
-//
-//        }
-      m_socket->Connect(m_peer);
-      //m_socket->ShutdownRecv ();
-      m_socket->SetConnectCallback(MakeCallback(&MpTcpBulkSendApplication::ConnectionSucceeded, this),
-          MakeCallback(&MpTcpBulkSendApplication::ConnectionFailed, this));
-      m_socket->SetDataSentCallback(MakeCallback(&MpTcpBulkSendApplication::DataSend, this));
-      //m_socket->SetSendCallback(MakeCallback(&MpTcpBulkSendApplication::DataSend, this));
+      int ret = m_socket->Connect(m_peer);
+      if (ret == 0)
+        {
+          m_socket->SetConnectCallback(MakeCallback(&MpTcpBulkSendApplication::ConnectionSucceeded, this),
+              MakeCallback(&MpTcpBulkSendApplication::ConnectionFailed, this));
+          m_socket->SetDataSentCallback(MakeCallback(&MpTcpBulkSendApplication::DataSend, this));
+          //m_socket->SetSendCallback(MakeCallback(&MpTcpBulkSendApplication::DataSend, this));
+        }
+      else
+        {
+          NS_LOG_UNCOND("Connection is failed");
+        }
     }
   if (m_connected)
     {
@@ -169,26 +170,26 @@ void MpTcpBulkSendApplication::StopApplication (void) // Called at time specifie
 // Private helpers
 void MpTcpBulkSendApplication::SendData (void)
 {
+  counter++;
   NS_LOG_FUNCTION (this);
-  NS_LOG_DEBUG("m_totBytes: " << m_totBytes << " maxByte: " << m_maxBytes << " GetTxAvailable: " << m_socket->GetTxAvailable() << " SendSize: " << m_sendSize);
+  NS_LOG_DEBUG("m_totBytes: " << m_totBytes << " maxByte: " << m_maxBytes << " GetTxAvailable: " << m_socket->GetTxAvailable() << " SendSize: " << m_sendSize << " Counter: " << counter);
   //while (m_maxBytes == 0 || m_totBytes < m_maxBytes)
-  while (m_totBytes < m_maxBytes && m_socket->GetTxAvailable() > 0)
+
+  while (m_totBytes < m_maxBytes &&   m_socket->GetTxAvailable())
     { // Time to send more
       uint32_t toSend = m_sendSize;
       // Make sure we don't send too many
-      if (m_maxBytes > 0)
-        {
-          toSend = std::min(m_sendSize, m_maxBytes - m_totBytes);
-          toSend = std::min(toSend, m_socket->GetTxAvailable());
-        }
-      NS_LOG_DEBUG("toSend: " << toSend);
-      int actual = m_socket->FillBuffer(&m_data[toSend], toSend);
+//      if (m_maxBytes > 0)
+//        {
+          uint32_t toSend_tmp = std::min(m_sendSize, m_maxBytes - m_totBytes);
+          toSend = std::min(toSend_tmp,  m_socket->GetTxAvailable());
+//        }
+      int actual = m_socket->FillBuffer(&m_data[m_totBytes], toSend);
       m_totBytes += actual;
-      NS_LOG_DEBUG("totalByte: " <<  m_totBytes);
+      NS_LOG_DEBUG("toSend: " << toSend << " actual: " << actual << " totalByte: " << m_totBytes);
       m_socket->SendBufferedData();
-      NS_LOG_DEBUG("SendBufferedData END");
+      NS_LOG_DEBUG("SendData is ended!");
     }
-
   if (m_totBytes == m_maxBytes && m_connected)
     {
       m_socket->Close();
@@ -214,10 +215,10 @@ void MpTcpBulkSendApplication::DataSend (Ptr<Socket>, uint32_t)
 {
   NS_LOG_FUNCTION (this);
 
-  if (m_connected)
-    { // Only send new data if the connection has completed
-      Simulator::ScheduleNow (&MpTcpBulkSendApplication::SendData, this);
-    }
+  //if (m_connected)
+  //{ // Only send new data if the connection has completed
+  Simulator::ScheduleNow(&MpTcpBulkSendApplication::SendData, this);
+  //}
 }
 
 void MpTcpBulkSendApplication::Printer(){

@@ -100,7 +100,11 @@ public:
    * \return pointer to associated socket
    */
   Ptr<Socket> GetSocket (void) const;
+
+  void SetBuffer(uint32_t buffSize);
+
   void Printer();
+  uint32_t counter;
 protected:
   virtual void DoDispose (void);
 private:
@@ -113,7 +117,6 @@ private:
    */
   void SendData ();
 
-
   //Ptr<Socket>     m_socket;       //!< Associated socket
   Ptr<MpTcpSocketBase> m_socket;
   Address         m_peer;         //!< Peer address
@@ -122,7 +125,7 @@ private:
   uint32_t        m_maxBytes;     //!< Limit total number of bytes sent
   uint32_t        m_totBytes;     //!< Total bytes sent so far
   TypeId          m_tid;          //!< The type of protocol to use.
-  //uint8_t         m_data[1000000];
+//  uint8_t         m_data[1000000];
   uint8_t         *m_data;
   /// Traced Callback: sent packets
   TracedCallback<Ptr<const Packet> > m_txTrace;
