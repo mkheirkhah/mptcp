@@ -30,10 +30,11 @@ int
 main(int argc, char *argv[])
 {
   // Add some logging
-//  LogComponentEnable("ECMP2", LOG_ALL);
-//  LogComponentEnable("Ipv4GlobalRouting", LOG_ALL);
-//  LogComponentEnable("MpTcpSocketBase", LOG_ALL);
-//  LogComponentEnable("MpTcpBulkSendApplication", LOG_ALL);
+  LogComponentEnable("ECMP2", LOG_ALL);
+  LogComponentEnable("MpTcpSocketBase", LOG_INFO);
+  LogComponentEnable("MpTcpBulkSendApplication", LOG_ALL);
+//    LogComponentEnable("Ipv4GlobalRouting", LOG_ALL);
+//  LogComponentEnable("Socket" , LOG_ALL);
 //  LogComponentEnable("MpTcpTypeDefs", LOG_ALL);
 //  LogComponentEnable("TcpL4Protocol", LOG_ALL);
 
@@ -68,7 +69,6 @@ main(int argc, char *argv[])
   Ipv4GlobalRoutingHelper::PopulateRoutingTables();
 
   NS_LOG_INFO("Create Applications");
-
   // MPTCP SINK
   uint32_t servPort = 5000;
   Ptr<MpTcpPacketSink> sinkSocket = CreateObject<MpTcpPacketSink>();
@@ -83,9 +83,9 @@ main(int argc, char *argv[])
   //  MPTCP SOURCE
   Ptr<MpTcpBulkSendApplication> src = CreateObject<MpTcpBulkSendApplication>();
   src->SetAttribute("Remote", AddressValue(Address(InetSocketAddress(Ipv4Address("10.0.1.2"), servPort))));
-  src->SetAttribute("MaxBytes", UintegerValue(10000000));
-  src->SetAttribute("SendSize", UintegerValue(10000000));
-  //src->Printer();
+  src->SetAttribute("MaxBytes", UintegerValue(1000000));
+  src->SetAttribute("SendSize", UintegerValue(100000));
+  src->SetBuffer(100000);
   Ptr<Node> client = c.Get(0);
   client->AddApplication(src);
   ApplicationContainer pSource;
