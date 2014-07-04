@@ -126,7 +126,7 @@ main(int argc, char *argv[])
   //BulkSendHelper source("ns3::TcpSocketFactory", Address(InetSocketAddress(Ipv4Address("10.5.6.2"), 10)));
   src->SetAttribute("MaxBytes", UintegerValue(10000000));
   src->SetAttribute("SendSize", UintegerValue(5000));
-  src->Printer();
+  //src->Printer();
   Ptr<Node> client = c.Get(0);
   client->AddApplication(src);
   Apps.Add(src);

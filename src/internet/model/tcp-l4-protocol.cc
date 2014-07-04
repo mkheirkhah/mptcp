@@ -59,7 +59,7 @@ NS_OBJECT_ENSURE_REGISTERED (TcpL4Protocol)
 
 #undef NS_LOG_APPEND_CONTEXT
 #define NS_LOG_APPEND_CONTEXT                                   \
-  if (m_node) { std::clog << Simulator::Now ().GetSeconds () << " [node " << m_node->GetId () << "] "; } 
+  if (m_node) { std::clog << Simulator::Now ().GetSeconds () << " [node " << m_node->GetId () << "] "; }
 
 /* see http://www.iana.org/assignments/protocol-numbers */
 const uint8_t TcpL4Protocol::PROT_NUMBER = 6;
@@ -102,9 +102,9 @@ TcpL4Protocol::SetNode(Ptr<Node> node)
   m_node = node;
 }
 
-/* 
+/*
  * This method is called by AddAgregate and completes the aggregation
- * by setting the node in the TCP stack, link it to the ipv4 stack and 
+ * by setting the node in the TCP stack, link it to the ipv4 stack and
  * adding TCP socket factory to the node.
  */
 void
@@ -350,8 +350,8 @@ TcpL4Protocol::Receive(Ptr<Packet> packet, Ipv4Header const &ipHeader, Ptr<Ipv4I
   packet->PeekHeader(tcpHeader);
   NS_LOG_INFO("AFTER PEEKHEADER " << packet->GetSize());
 
-  Ipv4Address source = ipHeader.GetSource();
-  Ipv4Address destination = ipHeader.GetDestination();
+  //Ipv4Address source = ipHeader.GetSource();
+  //Ipv4Address destination = ipHeader.GetDestination();
   uint16_t srcPort = tcpHeader.GetSourcePort();
   //uint16_t dstPort = tcpHeader.GetDestinationPort();
   NS_LOG_INFO(this << "TcpL4Protocol:Receive    -> "<< tcpHeader);

@@ -16,7 +16,12 @@
 #include "ns3/config-store.h"
 #include "ns3/file-config.h"
 #include "ns3/gtk-config-store.h"
-/* Multipath Network Topology
+/**
+
+Write until buffer is full,
+then close connection
+
+ Multipath Network Topology
  lan 10.1.1.0
  ___________
  /           \
@@ -25,7 +30,7 @@
  lan 10.1.2.0
  */
 using namespace ns3;
-NS_LOG_COMPONENT_DEFINE("FirstMultipathToplogy");
+NS_LOG_COMPONENT_DEFINE("FirstMultipathTopology");
 
 uint32_t LinkRate = 100000000;
 uint32_t Delay = 10;

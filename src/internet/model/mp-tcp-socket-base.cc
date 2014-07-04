@@ -1414,6 +1414,7 @@ bool
 MpTcpSocketBase::SendPendingData(uint8_t sFlowIdx)
 {
   NS_LOG_FUNCTION(this);
+  // ! Error here ? should be if ( !sendingBuffer->Empty())
   if (sendingBuffer->Empty())
     {
       Ptr<MpTcpSubFlow> sF = subflows[sFlowIdx];
@@ -1429,6 +1430,7 @@ MpTcpSocketBase::SendPendingData(uint8_t sFlowIdx)
               window = std::min(AvailableWindow(sFlowIdx), sF->MSS);
             }
         }
+
       else
         {
           NS_LOG_WARN ("MpTcpSocketBase::SendPendingData: SendingBuffer is empty");

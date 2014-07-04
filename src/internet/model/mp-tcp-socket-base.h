@@ -9,7 +9,7 @@
 
 #include "ns3/mp-tcp-typedefs.h"
 #include "ns3/tcp-socket-base.h"
-#include "ns3/Gnuplot.h"
+#include "ns3/gnuplot.h"
 #include "mp-tcp-subflow.h"
 
 using namespace std;
@@ -20,6 +20,10 @@ class Node;
 class Packet;
 class TcpL4Protocol;
 
+
+/**
+TODO see how we can modify this to use
+**/
 class MpTcpSocketBase : public TcpSocketBase
 {
 public: // public methods
@@ -55,12 +59,12 @@ public: // public methods
 public: // public variables
 
   // Evaluation & plotting parameters and containers
-  int mod;
-  int MSS;
-  int LinkCapacity;
-  int totalBytes;
-  double RTT;
-  double lostRate;
+  int mod;    // ?
+  int MSS;    // Maximum Segment Size
+  int LinkCapacity; // ?
+  int totalBytes; // ?
+  double RTT; //
+  double lostRate;  // rename to lossRate ?
   double TimeScale;
   uint32_t pAck;
   GnuplotCollection gnu;
@@ -194,7 +198,7 @@ protected: // protected variables
 
   // MPTCP connection parameters
   Ptr<Node>          m_node;
-  Ipv4EndPoint*      m_endPoint;
+  Ipv4EndPoint*      m_endPoint;    // ? do we need this ? compare with TCP stack
   Ptr<TcpL4Protocol> m_mptcp;
   Ipv4Address        m_localAddress;
   Ipv4Address        m_remoteAddress;
