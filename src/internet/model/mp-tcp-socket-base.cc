@@ -130,13 +130,20 @@ MpTcpSocketBase::SetupEndpoint()
       NS_FATAL_ERROR("No Ipv4RoutingProtocol in the node");
     }
 
+  // Temporary solution to solve ECMP related issue when RouteOutput() is called.
+  TcpHeader tcpHeader;
+  Ptr<Packet> pkt = Create<Packet>();
+  pkt->AddHeader(tcpHeader);
+
   // Create a dummy packet, then ask the routing function for the best output interface's address
   Ipv4Header header;
+  header.SetProtocol(6);
   header.SetDestination(m_endPoint->GetPeerAddress());
   Socket::SocketErrno errno_;
   Ptr<Ipv4Route> route;
   Ptr<NetDevice> oif = m_boundnetdevice; // m_boundnetdevice is allocated to 0 by the default constructor of ns3::Socket.
-  route = ipv4->GetRoutingProtocol()->RouteOutput(Ptr<Packet>(), header, oif, errno_);
+  route = ipv4->GetRoutingProtocol()->RouteOutput(pkt, header, oif, errno_);
+  //route = ipv4->GetRoutingProtocol()->RouteOutput(Ptr<Packet>(), header, oif, errno_);
   if (route == 0)
     {
       NS_LOG_LOGIC ("Route to " << m_endPoint->GetPeerAddress () << " does not exist");NS_LOG_ERROR (errno_);
@@ -485,7 +492,7 @@ MpTcpSocketBase::ProcessSynRcvd(uint8_t sFlowIdx, Ptr<Packet> packet, const TcpH
     { // handshake is completed nicely in the receiver.
       NS_LOG_INFO (" ("<< sFlow->routeId << ") " << TcpStateName[sFlow->state]<<" -> ESTABLISHED");
       sFlow->state = ESTABLISHED; // Subflow state is ESTABLISHED
-      m_state = ESTABLISHED; // NEED TO CONSIDER IT AGAIN....
+      m_state = ESTABLISHED;      // NEED TO CONSIDER IT AGAIN....
       sFlow->connected = true;    // This means subflow is established
       sFlow->retxEvent.Cancel();  // This would cancel ReTxTimer where it being setup when SYN is sent.
       NS_ASSERT(sFlow->RxSeqNumber == mptcpHeader.GetSequenceNumber().GetValue());
@@ -3312,7 +3319,7 @@ MpTcpSocketBase::IsThereRoute(Ipv4Address src, Ipv4Address dst)
       int32_t interface = ipv4->GetInterfaceForAddress(src);        // Morteza uses sign integers
       Ptr<Ipv4Interface> v4Interface = ipv4->GetRealInterfaceForAddress(src);
       Ptr<NetDevice> v4NetDevice = v4Interface->GetDevice();
-      PrintIpv4AddressFromIpv4Interface(v4Interface, interface);
+      //PrintIpv4AddressFromIpv4Interface(v4Interface, interface);
       NS_ASSERT_MSG(interface != -1, "There is no interface object for the the src address");
       // Get NetDevice from Interface via ns3::Ipv4::GetNetDevice(uint32_t interface);
       Ptr<NetDevice> oif = ipv4->GetNetDevice(interface);
@@ -3350,8 +3357,6 @@ Ptr<NetDevice>
 MpTcpSocketBase::FindOutputNetDevice(Ipv4Address src)
 {
 
-  NS_LOG_INFO("FindOutputNetDevice");
-//  return 0;
   Ptr<Ipv4L3Protocol> ipv4 = m_node->GetObject<Ipv4L3Protocol>();
   uint32_t oInterface = ipv4->GetInterfaceForAddress(src);
   Ptr<NetDevice> oNetDevice = ipv4->GetNetDevice(oInterface);
@@ -3360,8 +3365,7 @@ MpTcpSocketBase::FindOutputNetDevice(Ipv4Address src)
 //  Ptr<NetDevice> netDevice = interface->GetDevice();
 //  NS_ASSERT(netDevice == oNetDevice);
   //NS_LOG_INFO("FindNetDevice -> Src: " << src << " NIC: " << netDevice->GetAddress());
-  //return oNetDevice;
-  return 0;
+  return oNetDevice;
 }
 
 bool
