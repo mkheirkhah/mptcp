@@ -12,13 +12,13 @@
 
 using namespace ns3;
 
-NS_LOG_COMPONENT_DEFINE("ECMP4");
+NS_LOG_COMPONENT_DEFINE("1p2pWithHelper2");
 
 int
 main(int argc, char *argv[])
 {
   // Add some logging
-  LogComponentEnable("ECMP4", LOG_ALL);
+  LogComponentEnable("1p2pWithHelper2", LOG_ALL);
   //LogComponentEnable("MpTcpSocketBase", LOG_INFO);
   LogComponentEnable("MpTcpBulkSendApplication", LOG_ALL);
 
@@ -49,35 +49,25 @@ main(int argc, char *argv[])
   Ipv4GlobalRoutingHelper::PopulateRoutingTables();
 
   NS_LOG_INFO("Create Applications");
+
   // MPTCP SINK
-    uint32_t servPort = 5000;
-    Ptr<MpTcpPacketSink> sinkSocket = CreateObject<MpTcpPacketSink>();
-    sinkSocket->SetAttribute("Local", AddressValue(InetSocketAddress(Ipv4Address::GetAny(), servPort)));
-    Ptr<Node> server = c.Get(1);
-    server->AddApplication(sinkSocket);
-    ApplicationContainer Apps;
-    Apps.Add(sinkSocket);
-    Apps.Start(Seconds(0.0));
-    Apps.Stop(Seconds(100));
+  uint32_t servPort = 5000;
+  MpTcpPacketSinkHelper sink ("ns3::TcpSocketFactory", InetSocketAddress(Ipv4Address::GetAny(), servPort));
+  ApplicationContainer sinkApps = sink.Install (c.Get (1));
+  sinkApps.Start (Seconds (0.0));
+  sinkApps.Stop (Seconds (100.0));
 
-
-  //  MPTCP SOURCE
-  Ptr<MpTcpBulkSendApplication> src = CreateObject<MpTcpBulkSendApplication>();
-  src->SetAttribute("Remote", AddressValue(Address(InetSocketAddress(Ipv4Address("10.0.1.2"), servPort))));
-//  src->SetAttribute("MaxBytes", UintegerValue(10000000));
-//  src->SetAttribute("SendSize", UintegerValue(10000000));
-//  src->SetBuffer(10000000);
-  Ptr<Node> client = c.Get(0);
-  client->AddApplication(src);
-  ApplicationContainer pSource;
-  pSource.Add(src);
-  pSource.Start(Seconds(0.0));
-  pSource.Stop(Seconds(100));
-
+  // MPTCP SOURCE
+  MpTcpBulkSendHelper source("ns3::TcpSocketFactory", InetSocketAddress(Ipv4Address("10.0.1.2"), servPort));
+  source.SetAttribute("MaxBytes", UintegerValue(10000000));
+  source.SetAttribute("SendSize", UintegerValue(100000));
+  ApplicationContainer sourceApps = source.Install(c.Get(0));
+  sourceApps.Start(Seconds(0.0));
+  sourceApps.Stop(Seconds(90.0));
 
   NS_LOG_INFO("Simulation run");
   Simulator::Run();
-  Simulator::Stop(Seconds(1000));
+  Simulator::Stop(Seconds(100 + 10.0));
   Simulator::Destroy();
   NS_LOG_INFO("Simulation End");
 }

@@ -12,18 +12,15 @@
 
 using namespace ns3;
 
-NS_LOG_COMPONENT_DEFINE("ECMP3");
+NS_LOG_COMPONENT_DEFINE("1p2pWithHelper1");
 
 int
 main(int argc, char *argv[])
 {
   // Add some logging
-  LogComponentEnable("ECMP3", LOG_ALL);
-  //LogComponentEnable("MpTcpSocketBase", LOG_INFO);
+  LogComponentEnable("1p2pWithHelper1", LOG_ALL);
+  LogComponentEnable("MpTcpSocketBase", LOG_INFO);
   LogComponentEnable("MpTcpBulkSendApplication", LOG_ALL);
-
-  // Activate the ECMP per flow
-  Config::SetDefault("ns3::Ipv4GlobalRouting::FlowEcmpRouting", BooleanValue(true));
 
   NS_LOG_INFO("Create nodes");
   NodeContainer c;
@@ -47,30 +44,38 @@ main(int argc, char *argv[])
   ipv4.SetBase("10.0.1.0", "255.255.255.0");
   ipv4.Assign(d0d1);
 
-
   NS_LOG_INFO("Install Routing tables");
   Ipv4GlobalRoutingHelper::PopulateRoutingTables();
 
   NS_LOG_INFO("Create Applications");
 
   // MPTCP SINK
-  uint32_t servPort = 5000;
-  MpTcpPacketSinkHelper sink ("ns3::TcpSocketFactory", InetSocketAddress(Ipv4Address::GetAny(), servPort));
-  ApplicationContainer sinkApps = sink.Install (c.Get (1));
-  sinkApps.Start (Seconds (0.0));
-  sinkApps.Stop (Seconds (100.0));
+    uint32_t servPort = 5000;
+    Ptr<MpTcpPacketSink> sinkSocket = CreateObject<MpTcpPacketSink>();
+    sinkSocket->SetAttribute("Local", AddressValue(InetSocketAddress(Ipv4Address::GetAny(), servPort)));
+    Ptr<Node> server = c.Get(1);
+    server->AddApplication(sinkSocket);
+    ApplicationContainer Apps;
+    Apps.Add(sinkSocket);
+    Apps.Start(Seconds(0.0));
+    Apps.Stop(Seconds(300));
 
-  // MPTCP SOURCE
-  MpTcpBulkSendHelper source("ns3::TcpSocketFactory", InetSocketAddress(Ipv4Address("10.0.1.2"), servPort));
-  source.SetAttribute("MaxBytes", UintegerValue(10000000));
-  source.SetAttribute("SendSize", UintegerValue(100000));
-  ApplicationContainer sourceApps = source.Install(c.Get(0));
-  sourceApps.Start(Seconds(0.0));
-  sourceApps.Stop(Seconds(90.0));
+  //  MPTCP SOURCE
+  Ptr<MpTcpBulkSendApplication> src = CreateObject<MpTcpBulkSendApplication>();
+  src->SetAttribute("Remote", AddressValue(Address(InetSocketAddress(Ipv4Address("10.0.1.2"), servPort))));
+  src->SetAttribute("MaxBytes", UintegerValue(10000000));
+  src->SetAttribute("SendSize", UintegerValue(10000000));
+  src->SetBuffer(10000000);
+  Ptr<Node> client = c.Get(0);
+  client->AddApplication(src);
+  ApplicationContainer pSource;
+  pSource.Add(src);
+  pSource.Start(Seconds(0.0));
+  pSource.Stop(Seconds(300));
 
   NS_LOG_INFO("Simulation run");
   Simulator::Run();
-  Simulator::Stop(Seconds(100 + 10.0));
+  Simulator::Stop(Seconds(1000));
   Simulator::Destroy();
   NS_LOG_INFO("Simulation End");
 }
