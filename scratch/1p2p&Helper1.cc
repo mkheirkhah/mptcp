@@ -64,20 +64,20 @@ main(int argc, char *argv[])
   //  MPTCP SOURCE
   Ptr<MpTcpBulkSendApplication> src = CreateObject<MpTcpBulkSendApplication>();
   src->SetAttribute("Remote", AddressValue(Address(InetSocketAddress(Ipv4Address("10.0.1.2"), servPort))));
-  src->SetAttribute("MaxBytes", UintegerValue(10000000));
-  src->SetAttribute("SendSize", UintegerValue(100000));
+//  src->SetAttribute("MaxBytes", UintegerValue(10000000));
+//  src->SetAttribute("SendSize", UintegerValue(10000000));
 //  src->SetBuffer(10000000);
   Ptr<Node> client = c.Get(0);
   client->AddApplication(src);
   ApplicationContainer pSource;
   pSource.Add(src);
-  pSource.Start(Seconds(1.0));
-  pSource.Stop(Seconds(90));
+  pSource.Start(Seconds(0.0));
+  pSource.Stop(Seconds(100));
 
 
   NS_LOG_INFO("Simulation run");
   Simulator::Run();
-  Simulator::Stop(Seconds(100 + 10.0));
+  Simulator::Stop(Seconds(1000));
   Simulator::Destroy();
   NS_LOG_INFO("Simulation End");
 }
