@@ -93,6 +93,7 @@ private:
 
 MpTcpTestCase::MpTcpTestCase(std::string name) : TestCase(name)
 {
+  NS_LOG_LOGIC ("For me (interface broadcast address)");
   SetupDefaultSim();
 }
 
@@ -160,6 +161,7 @@ MpTcpTestCase::SetupDefaultSim (void)
 //  const char* ipaddr0 = "192.168.1.1";
 //  const char* ipaddr1 = "192.168.1.2";
   uint16_t port = 50000;
+  NS_LOG_ERROR( "Address");
 
   NodeContainer nodes;//ContainerHelper;
   PointToPointHelper pointToPointHelper;
@@ -183,20 +185,27 @@ MpTcpTestCase::SetupDefaultSim (void)
   addressHelper.Assign(devices);
 
 
+  Ipv4Address addr = m_server->GetObject<Ipv4>()->GetAddress(0,0).GetLocal();
+
   InetSocketAddress serverlocaladdr (Ipv4Address::GetAny (), port);
+  NS_LOG_INFO(this << "Address");
+  NS_LOG_INFO(this << addr);
   //AddressValue IPv4Address::ConvertFrom
-  InetSocketAddress serverremoteaddr (m_server->GetObject<Ipv4>()->GetAddress(0,0).GetLocal() , port);
+  InetSocketAddress serverremoteaddr (addr, port);
 
 //  m_server->
 //  m_client->Connect( serverremoteaddr );
 // lSocket
+
   Ptr<MpTcpSocketBase> clientSock = CreateObject<MpTcpSocketBase>(m_client);
   Ptr<MpTcpSocketBase> serverSock = CreateObject<MpTcpSocketBase>(m_server);
 
   serverSock->Bind();
   //serverremoteaddr
   //  m_server->GetObject<Ipv4>()->GetAddress(0,0).GetLocal()
-  clientSock->Connect( m_server->GetDevice(0)->GetAddress()  );
+
+  // La ca Plante
+//  clientSock->Connect( m_server->GetDevice(0)->GetAddress()  );
 }
 
 
@@ -209,7 +218,7 @@ static class MpTcpTestSuite : public TestSuite
 {
 public:
   MpTcpTestSuite ()
-    : TestSuite ("mptcp", UNIT)
+    : TestSuite ("mptcp-testsuite", UNIT)
   {
     // Arguments to these test cases are 1) totalStreamSize,
     // 2) source write size, 3) source read size
