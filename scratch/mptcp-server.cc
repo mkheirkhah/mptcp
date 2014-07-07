@@ -16,10 +16,12 @@
 #include "ns3/config-store.h"
 #include "ns3/file-config.h"
 #include "ns3/gtk-config-store.h"
+
 /**
 
 Write until buffer is full,
 then close connection
+
 
  Multipath Network Topology
  lan 10.1.1.0
@@ -28,7 +30,8 @@ then close connection
    n1             n2
  \___________/
  lan 10.1.2.0
- */
+**/
+
 using namespace ns3;
 NS_LOG_COMPONENT_DEFINE("FirstMultipathTopology");
 

@@ -219,7 +219,7 @@ MpTcpSocketBase::ReadOptions(uint8_t sFlowIdx, Ptr<Packet> pkt, const TcpHeader&
       else if ((opt->optName == OPT_JOIN) && hasSyn)
         {
           OptJoinConnection * optJoin = (OptJoinConnection *) opt;
-          if ((mpSendState == MP_ADDR) && (localToken == optJoin->receiverToken))
+          if ((mpSendState == MP_ADDADDR) && (localToken == optJoin->receiverToken))
             { // SYN+ACK would be send later on by ProcessSynRcvd(...)
               // Join option is sent over the path (couple of addresses) not already in use
             }
@@ -245,16 +245,16 @@ MpTcpSocketBase::ReadOptions(uint8_t sFlowIdx, Ptr<Packet> pkt, const TcpHeader&
     }
   if (TxAddr == true)
     {
-      mpRecvState = MP_ADDR;
+      mpRecvState = MP_ADDADDR;
       // If addresses did not send yet then advertise them...
-      if (mpSendState != MP_ADDR)
+      if (mpSendState != MP_ADDADDR)
         {
           NS_LOG_DEBUG(Simulator::Now().GetSeconds()<< "---------------------- AdvertiseAvailableAddresses By Server ---------------------");
           AdvertiseAvailableAddresses(); // this is what the receiver has to do
           return false;
         }
       // If addresses already sent then initiate subflows...
-      else if (mpSendState == MP_ADDR)
+      else if (mpSendState == MP_ADDADDR)
         {
           InitiateSubflows();  // this is what the initiator has to do
           return false;
@@ -839,7 +839,7 @@ MpTcpSocketBase::GetSegSize(void) const
 uint32_t
 MpTcpSocketBase::SendDataPacket(uint8_t sFlowIdx, uint32_t size, bool withAck)
 {
-
+  NS_ASSERT(sFlowIdx < subflows.size() );
   NS_LOG_FUNCTION (this << (uint32_t)sFlowIdx << size << withAck);
   Ptr<MpTcpSubFlow> sFlow = subflows[sFlowIdx];
   Ptr<Packet> p = 0;
@@ -873,7 +873,9 @@ MpTcpSocketBase::SendDataPacket(uint8_t sFlowIdx, uint32_t size, bool withAck)
         }
     }
   else
+  {
     NS_ASSERT_MSG(sFlow->maxSeqNb == sFlow->TxSeqNumber -1, " maxSN: " << sFlow->maxSeqNb << " TxSeqNb-1" << sFlow->TxSeqNumber -1);
+  }
   /*
    * If no packet has made yet and maxSeqNb is equal to TxSeqNumber -1,
    * then we can safely create a packet from connection buffer (sendingBuffer).
@@ -1307,7 +1309,7 @@ MpTcpSocketBase::Connect(Ipv4Address servAddr, uint16_t servPort)
 }
 
 int
-MpTcpSocketBase::Connect(Address &address)
+MpTcpSocketBase::Connect(const Address &address)
 {
   NS_LOG_FUNCTION ( this << address );
   InetSocketAddress transport = InetSocketAddress::ConvertFrom(address);
@@ -3205,6 +3207,7 @@ MpTcpSocketBase::CloseMultipathConnection()
         {
           NS_LOG_INFO("CloseMultipathConnection -> GENERATE PLOTS SUCCESSFULLY -> HoOoOrA  pAck: " << pAck);
           //GenerateRTTPlot();
+          // TODO remove, should be done on per
           GenerateCWNDPlot();
           GenerateSendvsACK();
           GenerateRTT();
@@ -3243,8 +3246,8 @@ MpTcpSocketBase::AdvertiseAvailableAddresses()
       Ptr<MpTcpSubFlow> sFlow = subflows[0];
       NS_ASSERT(sFlow!=0);
 
-      // Change the MPTCP send state to MP_ADDR
-      mpSendState = MP_ADDR;
+      // Change the MPTCP send state to MP_ADDADDR
+      mpSendState = MP_ADDADDR;
       MpTcpAddressInfo * addrInfo;
       Ptr<Packet> pkt = Create<Packet>();
 

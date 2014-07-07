@@ -36,7 +36,9 @@ public:
   GetTypeId(void);
 
   MpTcpSubFlow();
-  ~MpTcpSubFlow();
+  virtual ~MpTcpSubFlow();
+
+
 
   void AddDSNMapping(uint8_t sFlowIdx, uint64_t dSeqNum, uint16_t dLvlLen, uint32_t sflowSeqNum, uint32_t ack, Ptr<Packet> pkt);
   void StartTracing(string traced);

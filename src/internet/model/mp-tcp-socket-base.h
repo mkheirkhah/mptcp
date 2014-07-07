@@ -36,7 +36,7 @@ public: // public methods
   // Public interface for MPTCP
   virtual int Bind();                         // Bind a socket by setting up endpoint in TcpL4Protocol
   virtual int Bind(const Address &address);   // Bind a socket ... to specific add:port
-  virtual int Connect(Address &address);
+  virtual int Connect(const Address &address);
   virtual int Connect(Ipv4Address servAddr, uint16_t servPort);
   virtual int Listen(void);
   virtual int Close(void);                    // Close by app: Kill socket upon tx buffer emptied
@@ -55,6 +55,12 @@ public: // public methods
   // Setter for congestion Control and data distribution algorithm
   void SetCongestionCtrlAlgo(CongestionCtrl_t ccalgo);  // This would be used by attribute system for setting congestion control
   void SetDataDistribAlgo(DataDistribAlgo_t ddalgo);    // Round Robin is only algorithms used.
+
+
+  void
+  AdvertiseAddress(); //
+  void
+  AdvertiseAvailableAddresses(); // Advertise all addresses to the peer, including the already established address.
 
 public: // public variables
 
@@ -98,8 +104,9 @@ protected: // protected methods
   int  SetupCallback(void);  // Setup SetRxCallback & SetRxCallback call back for a host
   int  SetupEndpoint (void); // Configure local address for given remote address in a host - it query a routing protocol to find a source
   void CompleteFork(Ptr<Packet> p, const TcpHeader& h, const Address& fromAddress, const Address& toAddress);
-  void AdvertiseAvailableAddresses(); // Advertise all addresses to the peer, including the already established address.
+
   bool InitiateSubflows();            // Initiate new subflows
+
 
   // Transfer operations
   void ForwardUp(Ptr<Packet> p, Ipv4Header header, uint16_t port, Ptr<Ipv4Interface> interface);
@@ -209,22 +216,23 @@ protected: // protected variables
   // MultiPath related parameters
   MpStates_t mpSendState;
   MpStates_t mpRecvState;
-  bool mpEnabled;
-  bool mpTokenRegister;
-  bool addrAdvertised;
-  uint32_t localToken;
-  uint32_t remoteToken;
+  bool mpEnabled;   //!< True if remote host is MPTCP compliant
+  bool mpTokenRegister; //!<
+  bool addrAdvertised;  //!<
+  uint32_t localToken;  //!< Store local host token, generated during the 3-way handshake
+  uint32_t remoteToken; //!< Store remote host token
   uint32_t unOrdMaxSize;
-  uint8_t  maxSubflows;
-  uint8_t  lastUsedsFlowIdx;
+  uint8_t  maxSubflows; //!< Max number of subflows
+  uint8_t  lastUsedsFlowIdx;  //!<
 
   // MPTCP containers
   vector<Ptr<MpTcpSubFlow> > subflows;
   vector<MpTcpAddressInfo *> localAddrs;
-  vector<MpTcpAddressInfo *> remoteAddrs;
+  vector<MpTcpAddressInfo *> remoteAddrs; //!< List addresses advertised by the remote host
   list<DSNMapping *> unOrdered;  // buffer that hold the out of sequence received packet
 
   // Congestion control
+  // TODO store that in abstract class
   double alpha;
   uint32_t totalCwnd;
   CongestionCtrl_t AlgoCC;       // Algorithm for Congestion Control

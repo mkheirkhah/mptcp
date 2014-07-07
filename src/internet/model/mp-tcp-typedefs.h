@@ -24,11 +24,14 @@ using namespace std;
 namespace ns3
 {
 
+/**
+MP kinds
+**/
 typedef enum
 {
   MP_NONE,        // 0
   MP_MPC,         // 1
-  MP_ADDR,        // 2
+  MP_ADDADDR,        // 2
   MP_JOIN
 } MpStates_t;
 
