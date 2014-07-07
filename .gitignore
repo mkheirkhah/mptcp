@@ -2,3 +2,9 @@
 /.waf-1.7.13-5a064c2686fe54de4e11018d22148cfc
 /.lock-waf_darwin_build
 *.png
+*.plt
+*.xml
+*.layout
+*.cbp
+.lock*
+testpy-output/*
