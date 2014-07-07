@@ -9,7 +9,7 @@
 
 #include "ns3/mp-tcp-typedefs.h"
 #include "ns3/tcp-socket-base.h"
-#include "ns3/Gnuplot.h"
+#include "ns3/gnuplot.h"
 #include "mp-tcp-subflow.h"
 
 using namespace std;
