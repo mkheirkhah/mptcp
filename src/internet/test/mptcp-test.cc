@@ -64,6 +64,13 @@ NS_LOG_COMPONENT_DEFINE ("MpTcpTestSuite");
 
 using namespace ns3;
 
+
+/**
+To run with
+NS_LOG="MpTcpTestSuite" ./waf --run "test-runner --suite=mptcp"
+we should try not to add to internet dependancies ['bridge', 'mpi', 'network', 'core']
+**/
+
 class MpTcpTestCase : public TestCase
 {
 public:
@@ -72,6 +79,12 @@ public:
   virtual void DoRun(void);
 
 private:
+  void ServerHandleConnectionCreated (Ptr<Socket> s, const Address & addr);
+  void ServerHandleRecv (Ptr<Socket> sock);
+  void ServerHandleSend (Ptr<Socket> sock, uint32_t available);
+  void SourceHandleSend (Ptr<Socket> sock, uint32_t available);
+  void SourceHandleRecv (Ptr<Socket> sock);
+
   void
   SetupDefaultSim (void);
 
@@ -141,7 +154,10 @@ MpTcpTestCase::DoRun (void)
 //    }
 //
 //  Simulator::Run ();
-//
+  Simulator::Run();
+  Simulator::Destroy();
+  NS_LOG_LOGIC("Simulation ended");
+
 //  NS_TEST_EXPECT_MSG_EQ (m_currentSourceTxBytes, m_totalBytes, "Source sent all bytes");
 //  NS_TEST_EXPECT_MSG_EQ (m_currentServerRxBytes, m_totalBytes, "Server received all bytes");
 //  NS_TEST_EXPECT_MSG_EQ (m_currentSourceRxBytes, m_totalBytes, "Source received all bytes");
@@ -161,7 +177,7 @@ MpTcpTestCase::SetupDefaultSim (void)
 //  const char* ipaddr0 = "192.168.1.1";
 //  const char* ipaddr1 = "192.168.1.2";
   uint16_t port = 50000;
-  NS_LOG_ERROR( "Address");
+
 
   NodeContainer nodes;//ContainerHelper;
   PointToPointHelper pointToPointHelper;
@@ -184,14 +200,14 @@ MpTcpTestCase::SetupDefaultSim (void)
   addressHelper.SetBase ("10.1.1.0", "255.255.255.0");
   addressHelper.Assign(devices);
 
+  // 0,0 is localhost or so it seems
+  Ipv4Address addr = m_server->GetObject<Ipv4>()->GetAddress(1,0).GetLocal();
 
-  Ipv4Address addr = m_server->GetObject<Ipv4>()->GetAddress(0,0).GetLocal();
-
-  InetSocketAddress serverlocaladdr (Ipv4Address::GetAny (), port);
-  NS_LOG_INFO(this << "Address");
-  NS_LOG_INFO(this << addr);
+  InetSocketAddress serverLocalAddr (Ipv4Address::GetAny (), port);
+  NS_LOG_INFO("Server Address " << addr);
+//  NS_LOG_INFO( );
   //AddressValue IPv4Address::ConvertFrom
-  InetSocketAddress serverremoteaddr (addr, port);
+  InetSocketAddress serverRemoteAddr (addr, port);
 
 //  m_server->
 //  m_client->Connect( serverremoteaddr );
@@ -200,16 +216,61 @@ MpTcpTestCase::SetupDefaultSim (void)
   Ptr<MpTcpSocketBase> clientSock = CreateObject<MpTcpSocketBase>(m_client);
   Ptr<MpTcpSocketBase> serverSock = CreateObject<MpTcpSocketBase>(m_server);
 
-  serverSock->Bind();
+  serverSock->Bind(serverLocalAddr);
+  serverSock->Listen();
+  serverSock->SetAcceptCallback (MakeNullCallback<bool, Ptr< Socket >, const Address &> (),
+                             MakeCallback (&MpTcpTestCase::ServerHandleConnectionCreated,this));
+
+  clientSock->Bind(); // is that one useful ?
   //serverremoteaddr
   //  m_server->GetObject<Ipv4>()->GetAddress(0,0).GetLocal()
 
-  // La ca Plante
-//  clientSock->Connect( m_server->GetDevice(0)->GetAddress()  );
+
+
+
+  clientSock->SetRecvCallback (MakeCallback (&MpTcpTestCase::SourceHandleRecv, this));
+  clientSock->SetSendCallback (MakeCallback (&MpTcpTestCase::SourceHandleSend, this));
+
+
+  clientSock->Connect( serverRemoteAddr  );
 }
 
 
+/*
+Todo this one is important: should be called first
+*/
+void
+MpTcpTestCase::ServerHandleConnectionCreated (Ptr<Socket> s, const Address & addr)
+{
+  NS_LOG_INFO("Server ServerHandleConnectionCreated ");
+//
+//  s->SetRecvCallback (MakeCallback (&TcpTestCase::ServerHandleRecv, this));
+//  s->SetSendCallback (MakeCallback (&TcpTestCase::ServerHandleSend, this));
+}
 
+void
+MpTcpTestCase::ServerHandleRecv (Ptr<Socket> sock)
+{
+  NS_LOG_INFO("Server handle rcv ");
+}
+
+void
+MpTcpTestCase::ServerHandleSend (Ptr<Socket> sock, uint32_t available)
+{
+    NS_LOG_INFO("Server Handle send ");
+}
+
+void
+MpTcpTestCase::SourceHandleSend (Ptr<Socket> sock, uint32_t available)
+{
+  NS_LOG_INFO("Src handle send ");
+}
+
+void
+MpTcpTestCase::SourceHandleRecv (Ptr<Socket> sock)
+{
+  NS_LOG_INFO("Server handle recv");
+}
 //NS_TEST_EXPECT_MSG_EQ
 
 

@@ -1231,17 +1231,25 @@ MpTcpSocketBase::Listen(void)
   return 0;
 }
 
+
+/***
+
+***/
 int
 MpTcpSocketBase::Connect(Ipv4Address servAddr, uint16_t servPort)
 {
-  NS_LOG_FUNCTION(this << servAddr << servPort);  //
+  NS_LOG_FUNCTION(this << servAddr << servPort);
+
+  // allocates subflow
   Ptr<MpTcpSubFlow> sFlow = CreateObject<MpTcpSubFlow>();
-  sFlow->routeId = (subflows.size() == 0 ? 0 : subflows[subflows.size() - 1]->routeId + 1);
+  sFlow->routeId = (subflows.empty()  ? 0 : subflows.back()->routeId + 1);
   sFlow->dAddr = servAddr;    // Assigned subflow destination address
   sFlow->dPort = servPort;    // Assigned subflow destination port
   m_remoteAddress = servAddr; // MPTCP Connection's remote address
   m_remotePort = servPort;    // MPTCP Connection's remote port
 
+
+  // Following is a duplicate of parent's connect
   if (m_endPoint == 0)
     {
       if (Bind() == -1) // Bind(), if there is no endpoint for this socket
@@ -1255,6 +1263,7 @@ MpTcpSocketBase::Connect(Ipv4Address servAddr, uint16_t servPort)
   // Set up remote addr:port for this endpoint as we knew it from Connect's parameters
   m_endPoint->SetPeer(servAddr, servPort);
 
+  // weird compared to parent's way of doing things
   if (m_endPoint->GetLocalAddress() == "0.0.0.0")
     {
       // Find approapriate local address from the routing protocol for this endpoint.
@@ -1264,7 +1273,9 @@ MpTcpSocketBase::Connect(Ipv4Address servAddr, uint16_t servPort)
         }
     }
   else
-    { // Make sure there is an route from source to destination. Source might be set wrongly.
+    {
+    // TODO this might be removed
+    // Make sure there is an route from source to destination. Source might be set wrongly.
       if ((IsThereRoute(m_endPoint->GetLocalAddress(), servAddr)) == false)
         {
           NS_LOG_INFO("Connect -> There is no route from " << m_endPoint->GetLocalAddress() << " to " << m_endPoint->GetPeerAddress());
@@ -1308,15 +1319,20 @@ MpTcpSocketBase::Connect(Ipv4Address servAddr, uint16_t servPort)
   return 0;
 }
 
+
+
 int
 MpTcpSocketBase::Connect(const Address &address)
 {
   NS_LOG_FUNCTION ( this << address );
+  // TODO could be removed and rely on parent's m_endPoint instead
+
   InetSocketAddress transport = InetSocketAddress::ConvertFrom(address);
   m_remoteAddress = transport.GetIpv4(); // MPTCP Connection remoteAddress
   m_remotePort = transport.GetPort(); // MPTCP Connection remotePort
   return Connect(m_remoteAddress, m_remotePort);
 }
+
 
 /** Inhereted from Socket class: Bind socket to an end-point in MpTcpL4Protocol */
 int
