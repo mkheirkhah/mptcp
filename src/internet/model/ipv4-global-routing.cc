@@ -31,7 +31,7 @@
 #include "global-route-manager.h"
 #include "udp-header.h"
 #include "tcp-header.h"
-#include "ns3/Node.h"
+#include "ns3/node.h"
 
 NS_LOG_COMPONENT_DEFINE ("Ipv4GlobalRouting");
 
