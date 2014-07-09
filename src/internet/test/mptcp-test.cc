@@ -77,6 +77,7 @@ public:
   MpTcpTestCase(std::string name);
   virtual ~MpTcpTestCase ();
   virtual void DoRun(void);
+  virtual void DoTeardown (void);
 
 private:
   void ServerHandleConnectionCreated (Ptr<Socket> s, const Address & addr);
@@ -126,48 +127,27 @@ MpTcpAddressTestCase::~MpTcpAddressTestCase()
 
 }
 
+
+void
+MpTcpTestCase::DoTeardown (void)
+{
+  Simulator::Destroy();
+}
+
 void
 MpTcpTestCase::DoRun (void)
 {
-//  m_currentSourceTxBytes = 0;
-//  m_currentSourceRxBytes = 0;
-//  m_currentServerRxBytes = 0;
-//  m_currentServerTxBytes = 0;
-//  m_sourceTxPayload = new uint8_t [m_totalBytes];
-//  m_sourceRxPayload = new uint8_t [m_totalBytes];
-//  m_serverRxPayload = new uint8_t [m_totalBytes];
-//  for(uint32_t i = 0; i < m_totalBytes; ++i)
-//    {
-//      uint8_t m = (uint8_t)(97 + (i % 26));
-//      m_sourceTxPayload[i] = m;
-//    }
-//  memset (m_sourceRxPayload, 0, m_totalBytes);
-//  memset (m_serverRxPayload, 0, m_totalBytes);
-//
-//  if (m_useIpv6 == true)
-//    {
-//      SetupDefaultSim6 ();
-//    }
-//  else
-//    {
-//      SetupDefaultSim ();
-//    }
-//
-//  Simulator::Run ();
+
+
   Simulator::Run();
-  Simulator::Destroy();
+
   NS_LOG_LOGIC("Simulation ended");
 
-//  NS_TEST_EXPECT_MSG_EQ (m_currentSourceTxBytes, m_totalBytes, "Source sent all bytes");
-//  NS_TEST_EXPECT_MSG_EQ (m_currentServerRxBytes, m_totalBytes, "Server received all bytes");
-//  NS_TEST_EXPECT_MSG_EQ (m_currentSourceRxBytes, m_totalBytes, "Source received all bytes");
-//  NS_TEST_EXPECT_MSG_EQ (memcmp (m_sourceTxPayload, m_serverRxPayload, m_totalBytes), 0,
-//                         "Server received expected data buffers");
-//  NS_TEST_EXPECT_MSG_EQ (memcmp (m_sourceTxPayload, m_sourceRxPayload, m_totalBytes), 0,
-//                         "Source received back expected data buffers");
+//  NS_TEST_EXPECT_MSG_EQ (0, 1, "This test must fail (not ready)");
+
 }
 
-
+//MpTcpAddressTestCase
 void
 MpTcpTestCase::SetupDefaultSim (void)
 {
@@ -233,6 +213,7 @@ MpTcpTestCase::SetupDefaultSim (void)
 
 
   clientSock->Connect( serverRemoteAddr  );
+//  clientSock->AdvertiseAvailableAddresses();
 }
 
 
@@ -242,7 +223,7 @@ Todo this one is important: should be called first
 void
 MpTcpTestCase::ServerHandleConnectionCreated (Ptr<Socket> s, const Address & addr)
 {
-  NS_LOG_INFO("Server ServerHandleConnectionCreated ");
+  NS_LOG_UNCOND("CALLBACK CALLLED !!! Server ServerHandleConnectionCreated ");
 //
 //  s->SetRecvCallback (MakeCallback (&TcpTestCase::ServerHandleRecv, this));
 //  s->SetSendCallback (MakeCallback (&TcpTestCase::ServerHandleSend, this));

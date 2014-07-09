@@ -6,5 +6,7 @@
 *.xml
 *.layout
 *.cbp
+*.swp
+.gdbinit
 .lock*
 testpy-output/*

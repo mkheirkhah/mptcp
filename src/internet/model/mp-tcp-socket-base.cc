@@ -285,6 +285,7 @@ MpTcpSocketBase::ProcessEstablished(uint8_t sFlowIdx, Ptr<Packet> packet, const 
     }
   else if (tcpflags == (TcpHeader::SYN | TcpHeader::ACK))
     { // No action for received SYN+ACK, it is probably a duplicated packet
+//      NS_LOG_INFO("No action for received SYN+ACK (duplicated packet ?)")
     }
   else if (tcpflags == TcpHeader::FIN || tcpflags == (TcpHeader::FIN | TcpHeader::ACK))
     { // Received FIN or FIN+ACK, bring down this socket nicely
@@ -321,6 +322,7 @@ MpTcpSocketBase::ProcessListen(Ptr<Packet> packet, const TcpHeader& mptcpHeader,
   // C.f.: the LISTEN part in tcp_v4_do_rcv() in tcp_ipv4.c in Linux kernel
   if (tcpflags != TcpHeader::SYN)
     {
+      NS_LOG_LOGIC("Received TCP flags " << tcpflags << " while listening");
       return;
     }
 
@@ -353,7 +355,7 @@ MpTcpSocketBase::CompleteFork(Ptr<Packet> p, const TcpHeader& mptcpHeader, const
 
   // Create new master subflow (master subsock) and assign its endpoint to the connection endpoint
   Ptr<MpTcpSubFlow> sFlow = CreateObject<MpTcpSubFlow>();
-  sFlow->routeId = (subflows.size() == 0 ? 0 : subflows[subflows.size() - 1]->routeId + 1);
+  sFlow->routeId = (subflows.empty() ? 0 : subflows.back()->routeId + 1);
   sFlow->sAddr = m_localAddress; //m_endPoint->GetLocalAddress();
   sFlow->sPort = m_localPort;    //m_endPoint->GetLocalPort();
   sFlow->dAddr = m_remoteAddress;
@@ -362,10 +364,14 @@ MpTcpSocketBase::CompleteFork(Ptr<Packet> p, const TcpHeader& mptcpHeader, const
   sFlow->state = SYN_RCVD;
   sFlow->cnCount = sFlow->cnRetries;
   sFlow->m_endPoint = m_endPoint; // This is master subsock, its endpoint is the same as connection endpoint.
+
   NS_LOG_INFO ("("<< (int)sFlow->routeId<<") LISTEN -> SYN_RCVD");
-  subflows.insert(subflows.end(), sFlow);
+
+  subflows.push_back( sFlow ); // subflows.insert(subflows.end(), sFlow);
   sFlow->RxSeqNumber = (mptcpHeader.GetSequenceNumber()).GetValue() + 1; //Set the subflow sequence number and send SYN+ACK
+
   NS_LOG_DEBUG("CompleteFork -> RxSeqNb: " << sFlow->RxSeqNumber << " highestAck: " << sFlow->highestAck);
+
   SendEmptyPacket(sFlow->routeId, TcpHeader::SYN | TcpHeader::ACK);
 
   // Update currentSubflow in case close just after 3WHS.
@@ -396,6 +402,7 @@ MpTcpSocketBase::ProcessListen(uint8_t sFlowIdx, Ptr<Packet> packet, const TcpHe
     }
   else if (tcpflags == TcpHeader::ACK)
     {
+      // Would ignore packet & replace log level by LOGIC ?
       NS_FATAL_ERROR("Subflow state is LISTEN, how come it receives ACK flag...");
     }
 
@@ -403,6 +410,25 @@ MpTcpSocketBase::ProcessListen(uint8_t sFlowIdx, Ptr<Packet> packet, const TcpHe
     {// Slave subflows can receive SYN flag piggyback data packet.
       ReceivedData(sFlowIdx, packet, mptcpHeader);
     }
+}
+
+ // Schedule-friendly wrapper for Socket::NotifyConnectionSucceeded()
+
+void
+MpTcpSocketBase::ConnectionSucceeded(void)
+{
+  // Wrapper to protected function NotifyConnectionSucceeded() so that it can
+  // be called as a scheduled event
+//  NotifyConnectionSucceeded();
+  //NotifyNewConnectionCreated();
+  // The if-block below was moved from ProcessSynSent() to here because we need
+  // to invoke the NotifySend() only after NotifyConnectionSucceeded() to
+  // reflect the behaviour in the real world.
+//  if (GetTxAvailable() > 0)
+//    {
+//      NotifySend(GetTxAvailable());
+//    }
+
 }
 
 /** Received a packet upon SYN_SENT */
@@ -432,10 +458,13 @@ MpTcpSocketBase::ProcessSynSent(uint8_t sFlowIdx, Ptr<Packet> packet, const TcpH
     { // Handshake completed for sender... Send final ACK
       NS_LOG_WARN("---------------------- HandShake is Completed in ClientSide ----------------------" << subflows.size());
       if (!m_connected)
-        { // This function only excute for initial subflow since when it has established then MPTCP connection is already established!!
+        { // Only excute for initial subflow since when it has established then MPTCP connection is already established!!
           m_connected = true;
           m_endPoint->SetPeer(m_remoteAddress, m_remotePort);
-        }NS_LOG_INFO("(" << sFlow->routeId << ") "<< TcpStateName[sFlow->state] << " -> ESTABLISHED");
+
+        }
+
+      NS_LOG_INFO("(" << sFlow->routeId << ") "<< TcpStateName[sFlow->state] << " -> ESTABLISHED");
       sFlow->state = ESTABLISHED;
       sFlow->retxEvent.Cancel();
       sFlow->StartTracing("cWindow");
@@ -463,7 +492,7 @@ MpTcpSocketBase::ProcessSynSent(uint8_t sFlowIdx, Ptr<Packet> packet, const TcpH
       if (m_state != ESTABLISHED)
         {
           m_state = ESTABLISHED;
-          NotifyConnectionSucceeded();
+          //NotifyConnectionSucceeded();
         }NS_LOG_UNCOND("ProcessSynSent -> SubflowsSize: " << subflows.size());
     }
   else
@@ -498,6 +527,8 @@ MpTcpSocketBase::ProcessSynRcvd(uint8_t sFlowIdx, Ptr<Packet> packet, const TcpH
         {
           m_connected = true;
           NotifyNewConnectionCreated(this, m_remoteAddress);
+          Simulator::ScheduleNow(&MpTcpSocketBase::ConnectionSucceeded, this);
+
         }NS_LOG_DEBUG ("---------------------- HandShake is Completed in ServerSide ----------------------" << subflows.size());
     }
   else if (tcpflags == TcpHeader::SYN)
@@ -1294,7 +1325,7 @@ MpTcpSocketBase::Connect(Ipv4Address servAddr, uint16_t servPort)
 
   // This is master subsocket (master subflow) then its endpoint is the same as connection endpoint.
   sFlow->m_endPoint = m_endPoint;
-  subflows.insert(subflows.end(), sFlow);
+  subflows.push_back( sFlow );  //subflows.insert(subflows.end(), sFlow);
   m_mptcp->m_sockets.push_back(this);
 
   //sFlow->rtt->Reset();
@@ -1303,11 +1334,15 @@ MpTcpSocketBase::Connect(Ipv4Address servAddr, uint16_t servPort)
 //  if (sFlow->state == CLOSED || sFlow->state == LISTEN || sFlow->state == SYN_SENT || sFlow->state == LAST_ACK || sFlow->state == CLOSE_WAIT)
 //    { // send a SYN packet and change state into SYN_SENT
   NS_LOG_INFO ("("<< (int)sFlow->routeId << ") "<< TcpStateName[sFlow->state] << " -> SYN_SENT");
+
   m_state = SYN_SENT;
-  sFlow->state = SYN_SENT;  // Subflow state should be change first then SendEmptyPacket...
+  sFlow->state = SYN_SENT;  // Subflow state should be changed first then SendEmptyPacket...
+
   SendEmptyPacket(sFlow->routeId, TcpHeader::SYN);
   currentSublow = sFlow->routeId; // update currentSubflow in case close just after 3WHS.
   NS_LOG_INFO(this << "  MPTCP connection is initiated (Sender): " << sFlow->sAddr << ":" << sFlow->sPort << " -> " << sFlow->dAddr << ":" << sFlow->dPort << " m_state: " << TcpStateName[m_state]);
+
+  // TODO notify connection succeeded ?
 //    }
 //  else if (sFlow->state != TIME_WAIT)
 //    { // In states SYN_RCVD, ESTABLISHED, FIN_WAIT_1, FIN_WAIT_2, and CLOSING, an connection
@@ -1944,7 +1979,7 @@ MpTcpSocketBase::ForwardUp(Ptr<Packet> p, Ipv4Header header, uint16_t port, Ptr<
   NS_ASSERT(m_localPort == m_endPoint->GetLocalPort());
 
   // Listening socket being dealt with here......
-  if (subflows.size() == 0 && m_state == LISTEN)
+  if (subflows.empty() && m_state == LISTEN)
     {
       NS_ASSERT(server && m_state == LISTEN);
       NS_LOG_INFO("Listening socket receives SYN packet, it need to be CLONED... " << mptcpHeader);
@@ -1992,6 +2027,8 @@ MpTcpSocketBase::ForwardUp(Ptr<Packet> p, Ipv4Header header, uint16_t port, Ptr<
   case ESTABLISHED:
     ProcessEstablished(sFlowIdx, p, mptcpHeader);
     break;
+
+  // This is only valid when a master socket already exists
   case LISTEN:
     ProcessListen(sFlowIdx, p, mptcpHeader, fromAddress, toAddress);
     break;
@@ -3504,6 +3541,7 @@ MpTcpSocketBase::LookupByAddrs(Ipv4Address src, Ipv4Address dst)
   if (IsThereRoute(src, dst) == false)
     {
       NS_LOG_INFO("LookupByAddrs -> NO ROUTE between (src,dst) = (" <<src << "," << dst << ")");
+      // TODO use iterators
       for (uint32_t i = 0; i < subflows.size(); i++)
         {
           NS_LOG_INFO("LookupByAddrs -> (" << i <<") -> src: " << subflows[i]->sAddr << " dst: " << subflows[i]->dAddr);

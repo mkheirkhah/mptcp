@@ -110,6 +110,9 @@ protected: // protected methods
 
   bool InitiateSubflows();            // Initiate new subflows
 
+  void
+  ConnectionSucceeded(void); // Schedule-friendly wrapper for Socket::NotifyConnectionSucceeded()
+
 
   // Transfer operations
   void ForwardUp(Ptr<Packet> p, Ipv4Header header, uint16_t port, Ptr<Ipv4Interface> interface);
@@ -209,12 +212,12 @@ protected: // protected variables
   // MPTCP connection parameters
   Ptr<Node>          m_node;
   Ipv4EndPoint*      m_endPoint;    // ? do we need this ? compare with TCP stack
-  Ptr<TcpL4Protocol> m_mptcp;
+  Ptr<TcpL4Protocol> m_mptcp;       //? what is this ?
   Ipv4Address        m_localAddress;
   Ipv4Address        m_remoteAddress;
   uint16_t           m_localPort;
   uint16_t           m_remotePort;
-  uint8_t            currentSublow;
+  uint8_t            currentSublow; // master socket ???
 
   // MultiPath related parameters
   MpStates_t mpSendState;

@@ -634,9 +634,12 @@ TcpL4Protocol::SendPacket(Ptr<Packet> packet, const TcpHeader &outgoing, Ipv4Add
       outgoingHeader.EnableChecksums();
     }
   outgoingHeader.InitializeChecksum(saddr, daddr, PROT_NUMBER);
-  NS_LOG_ERROR("SendPacket -> PacketSize Before tcpHeader is added to the packet" << packet->GetSize());
+  NS_LOG_DEBUG("SendPacket -> PacketSize Before tcpHeader is added to the packet" << packet->GetSize());
   packet->AddHeader(outgoingHeader);
-  NS_LOG_ERROR("SendPacket -> PacketSize After tcpHeader is added to the packet" << packet->GetSize()<< " padding: " << (int)outgoingHeader.GetPaddingLength() << " option: " << (int)outgoingHeader.GetOptionsLength());
+  NS_LOG_DEBUG("SendPacket -> PacketSize After tcpHeader is added to the packet" << packet->GetSize()
+      << " padding: " << (int)outgoingHeader.GetPaddingLength()
+      << " option: " << (int)outgoingHeader.GetOptionsLength());
+
   Ptr<Ipv4> ipv4 = m_node->GetObject<Ipv4>();
   if (ipv4 != 0)
     {
