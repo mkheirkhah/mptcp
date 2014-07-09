@@ -185,12 +185,11 @@ void MpTcpBulkSendApplication::SendData (void)
       m_totBytes += actual;
       NS_LOG_DEBUG("toSend: " << toSend << " actual: " << actual << " totalByte: " << m_totBytes);
       m_socket->SendBufferedData();
-      NS_LOG_DEBUG("SendData is ended!");
     }
   if (m_totBytes == m_maxBytes && m_connected)
     {
       m_socket->Close();
-      m_connected = false;
+      //m_connected = false;
     }
 }
 

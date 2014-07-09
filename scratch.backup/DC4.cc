@@ -1,6 +1,5 @@
 /*
 // Network topology:
-
 //           n2
 //          /  \
 //         /    \
@@ -44,7 +43,7 @@ uint32_t Delay = 0.5;
 Time cDelay = MilliSeconds(Delay);
 double LossRate = 0.0;
 double dtq = 100;
-static const uint32_t totalTxBytes = 1000000;
+static const uint32_t totalTxBytes = 5000000;
 static const uint32_t sendBufSize = 53600;
 static uint32_t currentTxBytes = 0;
 static const double simDuration = 1000.0;
@@ -54,6 +53,7 @@ Ptr<Node> server;
 
 static const uint32_t writeSize = sendBufSize;
 uint8_t data[totalTxBytes];
+//uint8_t *data = new uint8_t[totalTxBytes];
 Ptr<MpTcpSocketBase> lSocket = 0;
 
 void
@@ -114,8 +114,8 @@ main(int argc, char *argv[])
   //Config::SetDefault("ns3::TcpSocket::SegmentSize", UintegerValue(536));
 
   LogComponentEnable("MpTcpNewReno", LOG_LEVEL_ALL);
-  LogComponentEnable("MpTcpSocketBase", LOG_INFO);
-//  LogComponentEnable("Ipv4GlobalRouting", LOG_DEBUG);
+//  LogComponentEnable("MpTcpSocketBase", LOG_ALL);
+  LogComponentEnable("Ipv4GlobalRouting", LOG_DEBUG);
 //  LogComponentEnable("MpTcpSocketBase", LOG_WARN);
 //  LogComponentEnable("MpTcpSocketBase", LOG_ALL);
 //  LogComponentEnable("TcpL4Protocol", LOG_WARN);
@@ -348,6 +348,7 @@ SetupDropPacket(Ptr<MpTcpSocketBase> lSocket)
 void
 connectionSucceeded(Ptr<Socket> localSocket)
 {
+  NS_LOG_INFO("buffSize: " << sizeof(data));
   NS_LOG_FUNCTION_NOARGS();  //
   NS_LOG_LOGIC("MpTcpNewReno:: MPTCP Flow will start after all subflows complete their 3WHSs @ " << Simulator::Now ().GetSeconds () + 1.0);
   Simulator::Schedule(Seconds(0.0), &WriteUntilBufferFull, lSocket, 0);

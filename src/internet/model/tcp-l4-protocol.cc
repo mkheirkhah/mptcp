@@ -645,7 +645,7 @@ TcpL4Protocol::SendPacket(Ptr<Packet> packet, const TcpHeader &outgoing, Ipv4Add
     {
       Ipv4Header header;
       header.SetDestination(daddr);
-      header.SetSource(saddr);
+      //header.SetSource(saddr);
       header.SetProtocol(PROT_NUMBER);
       Socket::SocketErrno errno_;
       Ptr<Ipv4Route> route;
@@ -659,6 +659,7 @@ TcpL4Protocol::SendPacket(Ptr<Packet> packet, const TcpHeader &outgoing, Ipv4Add
           route = 0;
         }
       m_downTarget(packet, saddr, daddr, PROT_NUMBER, route);
+      NS_LOG_INFO("Packet has been sent to lower layer!");
     }
   else
     NS_FATAL_ERROR("Trying to use Tcp on a node without an Ipv4 interface");

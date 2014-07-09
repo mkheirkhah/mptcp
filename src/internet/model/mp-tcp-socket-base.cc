@@ -130,13 +130,20 @@ MpTcpSocketBase::SetupEndpoint()
       NS_FATAL_ERROR("No Ipv4RoutingProtocol in the node");
     }
 
+  // Temporary solution to solve ECMP related issue when RouteOutput() is called.
+  TcpHeader tcpHeader;
+  Ptr<Packet> pkt = Create<Packet>();
+  pkt->AddHeader(tcpHeader);
+
   // Create a dummy packet, then ask the routing function for the best output interface's address
   Ipv4Header header;
+  header.SetProtocol(6);
   header.SetDestination(m_endPoint->GetPeerAddress());
   Socket::SocketErrno errno_;
   Ptr<Ipv4Route> route;
   Ptr<NetDevice> oif = m_boundnetdevice; // m_boundnetdevice is allocated to 0 by the default constructor of ns3::Socket.
-  route = ipv4->GetRoutingProtocol()->RouteOutput(Ptr<Packet>(), header, oif, errno_);
+  route = ipv4->GetRoutingProtocol()->RouteOutput(pkt, header, oif, errno_);
+  //route = ipv4->GetRoutingProtocol()->RouteOutput(Ptr<Packet>(), header, oif, errno_);
   if (route == 0)
     {
       NS_LOG_LOGIC ("Route to " << m_endPoint->GetPeerAddress () << " does not exist");NS_LOG_ERROR (errno_);
@@ -323,6 +330,14 @@ MpTcpSocketBase::ProcessListen(Ptr<Packet> packet, const TcpHeader& mptcpHeader,
   if (tcpflags != TcpHeader::SYN)
     {
       NS_LOG_LOGIC("Received TCP flags " << tcpflags << " while listening");
+      return;
+    }
+
+  // Call socket's notify function to let the server app know we got a SYN
+  // If the server app refuses the connection, do nothing
+  if (!NotifyConnectionRequest(fromAddress))
+    {
+      NS_LOG_ERROR("Server refuse the incoming connection!");
       return;
     }
 
@@ -514,7 +529,7 @@ MpTcpSocketBase::ProcessSynRcvd(uint8_t sFlowIdx, Ptr<Packet> packet, const TcpH
     { // handshake is completed nicely in the receiver.
       NS_LOG_INFO (" ("<< sFlow->routeId << ") " << TcpStateName[sFlow->state]<<" -> ESTABLISHED");
       sFlow->state = ESTABLISHED; // Subflow state is ESTABLISHED
-      m_state = ESTABLISHED; // NEED TO CONSIDER IT AGAIN....
+      m_state = ESTABLISHED;      // NEED TO CONSIDER IT AGAIN....
       sFlow->connected = true;    // This means subflow is established
       sFlow->retxEvent.Cancel();  // This would cancel ReTxTimer where it being setup when SYN is sent.
       NS_ASSERT(sFlow->RxSeqNumber == mptcpHeader.GetSequenceNumber().GetValue());
@@ -1467,17 +1482,23 @@ bool
 MpTcpSocketBase::SendPendingData(uint8_t sFlowIdx)
 {
   NS_LOG_FUNCTION(this);
-  // ! Error here ? should be if ( !sendingBuffer->Empty())
+
+  // This is a condition when main mptcp sendingBuffer is empty but they are some packets in a subflow's buffer
+  // and also sub-flow is recovering from time-out.
   if (sendingBuffer->Empty())
     {
       Ptr<MpTcpSubFlow> sF = subflows[sFlowIdx];
-      NS_LOG_WARN("(" << (int) sFlowIdx << ") SendingBuffer is EMPTY and SubflowBuffer: " << sF->mapDSN.size());
+      NS_LOG_WARN("(" << (int) sFlowIdx << ") main SendingBuffer is EMPTY, but SubflowBuffer is: " << sF->mapDSN.size());
+      // Sub-flow state is established, SendingBuffer is empty but subflowBuffer (mapDSN) is not empty and sub-flow is recovering from timeOut
+      // Note that the algorithm used for detecting whether sub-flow is in timeout need to be studied further.
       if (sF->state == ESTABLISHED && sF->mapDSN.size() > 0 && sF->maxSeqNb > sF->TxSeqNumber)
         {
           uint32_t window = std::min(AvailableWindow(sFlowIdx), sF->MSS);
-          NS_LOG_ERROR("SendingBuffer Empty!, Sublfow (" << (int)sFlowIdx << ") AvailableWindow" << window);
+          NS_LOG_ERROR("SendingBuffer Empty!, Sub-flow (" << (int)sFlowIdx << ") AvailableWindow" << window);
+
+          // Send all data packets in subflowBuffer (mapDSN) until subflow's available window is full.
           while (window != 0 && window >= sF->MSS)
-            {
+            { // In case case more than one packet can be sent, if subflow's window allow
               if (SendDataPacket(sF->routeId, window, false) == 0)
                 return false;
               window = std::min(AvailableWindow(sFlowIdx), sF->MSS);
@@ -1485,9 +1506,9 @@ MpTcpSocketBase::SendPendingData(uint8_t sFlowIdx)
         }
 
       else
-        {
-          NS_LOG_WARN ("MpTcpSocketBase::SendPendingData: SendingBuffer is empty");
-          return false; // Nothing to send
+        { // SendingBuffer & SubflowBuffer are EMPTY!!
+          NS_LOG_WARN ("MpTcpSocketBase::SendPendingData: SubflowBuffer is empty");
+          return false; // Nothing to re-send!!
         }
     }
 
@@ -3370,7 +3391,7 @@ MpTcpSocketBase::IsThereRoute(Ipv4Address src, Ipv4Address dst)
       int32_t interface = ipv4->GetInterfaceForAddress(src);        // Morteza uses sign integers
       Ptr<Ipv4Interface> v4Interface = ipv4->GetRealInterfaceForAddress(src);
       Ptr<NetDevice> v4NetDevice = v4Interface->GetDevice();
-      PrintIpv4AddressFromIpv4Interface(v4Interface, interface);
+      //PrintIpv4AddressFromIpv4Interface(v4Interface, interface);
       NS_ASSERT_MSG(interface != -1, "There is no interface object for the the src address");
       // Get NetDevice from Interface via ns3::Ipv4::GetNetDevice(uint32_t interface);
       Ptr<NetDevice> oif = ipv4->GetNetDevice(interface);
@@ -3408,8 +3429,6 @@ Ptr<NetDevice>
 MpTcpSocketBase::FindOutputNetDevice(Ipv4Address src)
 {
 
-  NS_LOG_INFO("FindOutputNetDevice");
-//  return 0;
   Ptr<Ipv4L3Protocol> ipv4 = m_node->GetObject<Ipv4L3Protocol>();
   uint32_t oInterface = ipv4->GetInterfaceForAddress(src);
   Ptr<NetDevice> oNetDevice = ipv4->GetNetDevice(oInterface);
@@ -3418,8 +3437,7 @@ MpTcpSocketBase::FindOutputNetDevice(Ipv4Address src)
 //  Ptr<NetDevice> netDevice = interface->GetDevice();
 //  NS_ASSERT(netDevice == oNetDevice);
   //NS_LOG_INFO("FindNetDevice -> Src: " << src << " NIC: " << netDevice->GetAddress());
-  //return oNetDevice;
-  return 0;
+  return oNetDevice;
 }
 
 bool
