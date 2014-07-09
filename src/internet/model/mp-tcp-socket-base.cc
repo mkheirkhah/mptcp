@@ -1429,25 +1429,31 @@ bool
 MpTcpSocketBase::SendPendingData(uint8_t sFlowIdx)
 {
   NS_LOG_FUNCTION(this);
+  // This is a condition when main mptcp sendingBuffer is empty but they are some packets in a subflow's buffer
+  // and also sub-flow is recovering from time-out.
   if (sendingBuffer->Empty())
     {
       Ptr<MpTcpSubFlow> sF = subflows[sFlowIdx];
-      NS_LOG_WARN("(" << (int) sFlowIdx << ") SendingBuffer is EMPTY and SubflowBuffer: " << sF->mapDSN.size());
+      NS_LOG_WARN("(" << (int) sFlowIdx << ") main SendingBuffer is EMPTY, but SubflowBuffer is: " << sF->mapDSN.size());
+      // Sub-flow state is established, SendingBuffer is empty but subflowBuffer (mapDSN) is not empty and sub-flow is recovering from timeOut
+      // Note that the algorithm used for detecting whether sub-flow is in timeout need to be studied further.
       if (sF->state == ESTABLISHED && sF->mapDSN.size() > 0 && sF->maxSeqNb > sF->TxSeqNumber)
         {
           uint32_t window = std::min(AvailableWindow(sFlowIdx), sF->MSS);
-          NS_LOG_ERROR("SendingBuffer Empty!, Sublfow (" << (int)sFlowIdx << ") AvailableWindow" << window);
+          NS_LOG_ERROR("SendingBuffer Empty!, Sub-flow (" << (int)sFlowIdx << ") AvailableWindow" << window);
+
+          // Send all data packets in subflowBuffer (mapDSN) until subflow's available window is full.
           while (window != 0 && window >= sF->MSS)
-            {
+            { // In case case more than one packet can be sent, if subflow's window allow
               if (SendDataPacket(sF->routeId, window, false) == 0)
                 return false;
               window = std::min(AvailableWindow(sFlowIdx), sF->MSS);
             }
         }
       else
-        {
-          NS_LOG_WARN ("MpTcpSocketBase::SendPendingData: SendingBuffer is empty");
-          return false; // Nothing to send
+        { // SendingBuffer & SubflowBuffer are EMPTY!!
+          NS_LOG_WARN ("MpTcpSocketBase::SendPendingData: SubflowBuffer is empty");
+          return false; // Nothing to re-send!!
         }
     }
 
