@@ -331,6 +331,14 @@ MpTcpSocketBase::ProcessListen(Ptr<Packet> packet, const TcpHeader& mptcpHeader,
       return;
     }
 
+  // Call socket's notify function to let the server app know we got a SYN
+  // If the server app refuses the connection, do nothing
+  if (!NotifyConnectionRequest(fromAddress))
+    {
+      NS_LOG_ERROR("Server refuse the incoming connection!");
+      return;
+    }
+
   // Clone the socket, simulate fork
   Ptr<MpTcpSocketBase> newSock = CopyObject<MpTcpSocketBase>(this);
   NS_LOG_DEBUG ("Clone new MpTcpSocketBase new connection. ListenerSocket " << this << " AcceptedSocket "<< newSock);
