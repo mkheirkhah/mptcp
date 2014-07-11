@@ -8,12 +8,23 @@ namespace ns3
 
 class Socket;
 
+/**
+ * \ingroup tcp
+ *
+ * \brief socket factory implementation for native ns-3 MPTCP
+ *
+ */
 class MpTcpSocketFactory : public SocketFactory
 {
 public:
+  /**
+   * Get the type ID.
+   * \brief Get the type ID.
+   * \return the object TypeId
+   */
   static TypeId GetTypeId();
 };
 
 }
 
-#endif MPTCP_SOCKET_FACTIRY_H
+#endif /* MPTCP_SOCKET_FACTORY_H */

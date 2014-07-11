@@ -53,11 +53,11 @@
 #include "ns3/internet-stack-helper.h"
 #include "ns3/applications-module.h"
 #include "ns3/network-module.h"
-#include "ns3/mptcp-module.h"
+//#include "ns3/mp-tcp-socket-factory.h"
 #include "ns3/internet-module.h"
 #include "ns3/applications-module.h"
 #include "ns3/network-module.h"
-
+#include "ns3/tcp-newreno.h"
 #include <string>
 
 NS_LOG_COMPONENT_DEFINE ("MpTcpTestSuite");
@@ -70,6 +70,13 @@ To run with
 NS_LOG="MpTcpTestSuite" ./waf --run "test-runner --suite=mptcp"
 we should try not to add to internet dependancies ['bridge', 'mpi', 'network', 'core']
 **/
+
+
+//typedef MpTcpSocketBase SocketToBeTested;
+typedef TcpNewReno SocketToBeTested;
+
+
+
 
 class MpTcpTestCase : public TestCase
 {
@@ -108,7 +115,7 @@ private:
 MpTcpTestCase::MpTcpTestCase(std::string name) : TestCase(name)
 {
   NS_LOG_LOGIC ("For me (interface broadcast address)");
-  SetupDefaultSim();
+
 }
 
 MpTcpTestCase::~MpTcpTestCase()
@@ -138,7 +145,7 @@ void
 MpTcpTestCase::DoRun (void)
 {
 
-
+  SetupDefaultSim();
   Simulator::Run();
 
   NS_LOG_LOGIC("Simulation ended");
@@ -152,7 +159,7 @@ void
 MpTcpTestCase::SetupDefaultSim (void)
 {
 
-
+ns3::PacketMetadata::Enable ();
 //  const char* netmask = "255.255.255.0";
 //  const char* ipaddr0 = "192.168.1.1";
 //  const char* ipaddr1 = "192.168.1.2";
@@ -192,9 +199,11 @@ MpTcpTestCase::SetupDefaultSim (void)
 //  m_server->
 //  m_client->Connect( serverremoteaddr );
 // lSocket
-
-  Ptr<MpTcpSocketBase> clientSock = CreateObject<MpTcpSocketBase>(m_client);
-  Ptr<MpTcpSocketBase> serverSock = CreateObject<MpTcpSocketBase>(m_server);
+  Ptr<SocketFactory> sockFactory0 = m_server->GetObject<MpTcpSocketFactory> ();
+  Ptr<SocketFactory> sockFactory1 = m_client->GetObject<MpTcpSocketFactory> ();
+  
+  Ptr<Socket> serverSock = sockFactory0->CreateSocket ();
+  Ptr<Socket> clientSock = sockFactory1->CreateSocket ();
 
   serverSock->Bind(serverLocalAddr);
   serverSock->Listen();
