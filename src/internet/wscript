@@ -319,6 +319,7 @@ def build(bld):
         'model/mp-tcp-typedefs.h',          # Morteza Kheirkhah
         'model/tcp-options.h',              # Morteza Kheirkhah
         'model/mp-tcp-subflow.h',           # Morteza Kheirkhah
+        'model/mp-tcp-socket-factory-impl.h' # matt
        ]
 
     if bld.env['NSC_ENABLED']:
