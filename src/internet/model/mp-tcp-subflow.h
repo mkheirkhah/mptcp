@@ -36,15 +36,17 @@ public:
   GetTypeId(void);
 
   MpTcpSubFlow();
+  
   virtual ~MpTcpSubFlow();
 
 
+  virtual void AdvertiseAddress(uint8_t addrId, Address , uint16_t port);
 
-  void AddDSNMapping(uint8_t sFlowIdx, uint64_t dSeqNum, uint16_t dLvlLen, uint32_t sflowSeqNum, uint32_t ack, Ptr<Packet> pkt);
-  void StartTracing(string traced);
-  void CwndTracer(uint32_t oldval, uint32_t newval);
-  void SetFinSequence(const SequenceNumber32& s);
-  bool Finished();
+  virtual void AddDSNMapping(uint8_t sFlowIdx, uint64_t dSeqNum, uint16_t dLvlLen, uint32_t sflowSeqNum, uint32_t ack, Ptr<Packet> pkt);
+  virtual void StartTracing(string traced);
+  virtual void CwndTracer(uint32_t oldval, uint32_t newval);
+  virtual void SetFinSequence(const SequenceNumber32& s);
+  virtual bool Finished();
   DSNMapping *GetunAckPkt();
 
   uint16_t routeId;           // Subflow's ID

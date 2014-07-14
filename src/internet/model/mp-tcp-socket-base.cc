@@ -45,7 +45,7 @@ MpTcpSocketBase::GetTypeId(void)
           MakeEnumChecker(Round_Robin, "Round_Robin"))
       .AddAttribute("MaxSubflows","Maximum number of subflows per each mptcp connection",
           UintegerValue(255),
-          MakeUintegerAccessor(&MpTcpSocketBase::maxSubflows),
+          MakeUintegerAccessor(&MpTcpSocketBase::m_maxSubflows),
           MakeUintegerChecker<uint8_t>())
       .AddAttribute("Subflows", "The list of subflows associated to this protocol.",
           ObjectVectorValue(),
@@ -60,10 +60,15 @@ MpTcpSocketBase::MpTcpSocketBase()
 }
 
 MpTcpSocketBase::MpTcpSocketBase(Ptr<Node> node) :
-    subflows(0), localAddrs(0), remoteAddrs(0)
+    subflows(0)
+//    , 
+//    m_localAddrs(0)
+//    , 
+//    m_remoteAddrs(0)
+//    ,m_pathManager(new MpTcpPathManager())
 //:
-//    m_node(node), m_mptcp(node->GetObject<TcpL4Protocol>()), mpState(MP_NONE), mpSendState(MP_NONE), mpRecvState(MP_NONE), mpEnabled(false), addrAdvertised(
-//        false), mpTokenRegister(false), subflows(0), localAddrs(0), remoteAddrs(0), lastUsedsFlowIdx(0), totalCwnd(0), localToken(0), remoteToken(0), client(
+//    m_node(node), m_mptcp(node->GetObject<TcpL4Protocol>()), mpState(MP_NONE), mpSendState(MP_NONE), mpRecvState(MP_NONE), mpEnabled(false), m_addrAdvertised(
+//        false), mpTokenRegister(false), subflows(0), m_localAddrs(0), m_remoteAddrs(0), lastUsedsFlowIdx(0), totalCwnd(0), localToken(0), remoteToken(0), client(
 //        false), server(false), remoteRecvWnd(1), segmentSize(0), nextTxSequence(1), nextRxSequence(1)
 {
   NS_LOG_FUNCTION(this);
@@ -72,7 +77,7 @@ MpTcpSocketBase::MpTcpSocketBase(Ptr<Node> node) :
   mpSendState = MP_NONE;
   mpRecvState = MP_NONE;
   mpEnabled = false;
-  addrAdvertised = false;
+  m_addrAdvertised = false;
   mpTokenRegister = false;
   lastUsedsFlowIdx = 0;
   totalCwnd = 0;
@@ -94,6 +99,7 @@ MpTcpSocketBase::MpTcpSocketBase(Ptr<Node> node) :
   SetDataSentCallback(vPSUI);
   SetSendCallback(vPSUI);
   SetRecvCallback(vPS);
+  
 }
 
 MpTcpSocketBase::~MpTcpSocketBase(void)
@@ -117,6 +123,28 @@ MpTcpSocketBase::~MpTcpSocketBase(void)
   CancelAllSubflowTimers();
   NS_LOG_INFO(Simulator::Now().GetSeconds() << " ["<< this << "] ~MpTcpSocketBase -> m_node: " << m_node << " m_mptcp: " << m_mptcp << " m_endPoint: " << m_endPoint);
 }
+
+void
+MpTcpSocketBase::SetAddAddrCallback(Callback<bool, Ptr<Socket>, Address, uint8_t> addAddr)
+{
+  NS_LOG_FUNCTION (this << &addAddr);
+//  if (addAddr.IsNull())
+//  {
+//    m_onAddAddr = MakeCallback (&MpTcpSocketBase::OnAddAddress, this);
+//  }
+  m_onAddAddr = addAddr;
+}
+
+void
+MpTcpSocketBase::NotifyAddAddr(MpTcpAddressInfo info)
+{
+  if (!m_onAddAddr.IsNull())
+  {
+    // TODO user should not have to deal with MpTcpAddressInfo
+    m_onAddAddr (this, info.first, info.second);
+  }
+}
+
 
 /** Configure the endpoint to a local address. Called by Connect() if Bind() didn't specify one. */
 int
@@ -208,11 +236,11 @@ MpTcpSocketBase::ReadOptions(uint8_t sFlowIdx, Ptr<Packet> pkt, const TcpHeader&
 {
   NS_LOG_FUNCTION(this << (int)sFlowIdx << mptcpHeader);
   Ptr<MpTcpSubFlow> sFlow = subflows[sFlowIdx];
-  vector<TcpOptions*> options = mptcpHeader.GetOptions();
+  std::vector<TcpOptions*> options = mptcpHeader.GetOptions();
   uint8_t flags = mptcpHeader.GetFlags();
   TcpOptions *opt;
   bool hasSyn = flags & TcpHeader::SYN;
-  bool TxAddr = false;
+//  bool TxAddr = false;
   for (uint32_t j = 0; j < options.size(); j++)
     {
       opt = options[j];
@@ -235,21 +263,39 @@ MpTcpSocketBase::ReadOptions(uint8_t sFlowIdx, Ptr<Packet> pkt, const TcpHeader&
         {
           // Receiver store sender's addresses information and send back its addresses.
           // If there are several addresses to advertise then multiple OPT_ADDR would be attached to the TCP Options.
-          MpTcpAddressInfo * addrInfo = new MpTcpAddressInfo();
-          addrInfo->addrID = ((OptAddAddress *) opt)->addrID;
-          addrInfo->ipv4Addr = ((OptAddAddress *) opt)->addr;
-          remoteAddrs.insert(remoteAddrs.end(), addrInfo);
-          TxAddr = true;
+//          MpTcpAddressInfo * addrInfo = new MpTcpAddressInfo();
+          uint8_t addrId = ((OptAddAddress *) opt)->addrID;
+//          addrInfo->ipv4Addr = ((OptAddAddress *) opt)->addr;
+          
+          if( AddAddr(true, addrId, ((OptAddAddress *) opt)->addr, 0 ) )
+          {
+//            TxAddr = true;
+//            NotifyAddAddr( );
+          }
+          // TODO take into account the port
+//          MpTcpAddressInfo addrInfo = std::make_pair(((OptAddAddress *) opt)->addr,0);
+//          std::pair<MpTcpAddressContainer::iterator,bool> ret = m_remoteAddrs.insert( std::make_pair(addrId, addrInfo ) );
+//          if(ret->second == false)
+//          {
+//            NS_LOG_WARN("Could not insert remote addr");
+//          }
+//          
+          
         }
       else if (opt->optName == OPT_REMADR)
         { // not implemented yet
           NS_LOG_WARN(this << "ReadOption-> OPT_REMADR is not implemented yet");
+          RemAddr(true, ((OptAddAddress *) opt)->addrID );
         }
       else if (opt->optName == OPT_DSN)
         { // not implemented yet
           NS_LOG_LOGIC(this << " ReadOption-> OPT_DSN -> we'll deal with it later on");
         }
     }
+    
+  
+  #if 0 
+  // if received an address move that to notifyAddAddr
   if (TxAddr == true)
     {
       mpRecvState = MP_ADDADDR;
@@ -267,9 +313,65 @@ MpTcpSocketBase::ReadOptions(uint8_t sFlowIdx, Ptr<Packet> pkt, const TcpHeader&
           return false;
         }
     }
+  #endif 
   return true;
 }
 
+
+bool 
+MpTcpSocketBase::RemAddr(bool remote, uint8_t addrId)
+{
+//  MpTcpAddressContainer& container = m_remoteAddrs[remote];
+  
+  // TODO retreive the address, check there is no subflow establish with this ID
+  // Than remove it from available addresses
+  NS_LOG_ERROR("Function not implemented ");
+  NotifyRemAddress(uint8_t addrId);
+  return false;
+}
+
+bool 
+MpTcpSocketBase::AddAddr(bool remote, uint8_t addrId, const Address& address, uint16_t port)
+{
+  MpTcpAddressContainer& container = m_remoteAddrs[remote];
+  
+  MpTcpAddressInfo addrInfo = std::make_pair(address,port);
+  
+  
+  NS_LOG_INFO("Trying to ADD_ADDR [" << addrId << "] ");
+  
+  std::pair< MpTcpAddressContainer::iterator,MpTcpAddressContainer::iterator > it = container.equal_range( addrId );
+  // if id already registered then we need to check the IPs are the same as the one advertised and that ports are different
+//  if(it != container.end() )
+//  {
+    for(MpTcpAddressContainer::iterator it2 = it.first; it2 != it.second; it2++) 
+    {
+      // id already registered to another IP
+      if (it2->second.first != address)
+      {
+        NS_LOG_WARN("Rejected ADD_ADDR because id [" << addrId << "] already registered with IP " << address);
+        return false;
+      }
+      // port already in use
+      else if(it2->second.second == port)
+      {
+        NS_LOG_WARN("Rejected ADD_ADDR because this port " << port << " was already advertised with id [" << addrId << "] " << address);
+        return false;
+      }
+    }
+    
+    
+//  }
+  
+  // assume it works
+  container.insert( std::make_pair(addrId, addrInfo ) );
+  // Should be RFC compliant to addaddr
+  NotifyAddAddr( addrInfo );
+  return true;
+}
+  
+  
+  
 /** Received a packet upon ESTABLISHED state. This function is mimicking the
  role of tcp_rcv_established() in tcp_input.c in Linux kernel. */
 void
@@ -498,11 +600,11 @@ MpTcpSocketBase::ProcessSynSent(uint8_t sFlowIdx, Ptr<Packet> packet, const TcpH
       SendEmptyPacket(sFlowIdx, TcpHeader::ACK);
 
       // Advertise available addresses...
-      if (addrAdvertised == false)
+      if (m_addrAdvertised == false)
         {
           NS_LOG_WARN("---------------------- AdvertiseAvailableAddresses By Client ---------------------");
           AdvertiseAvailableAddresses();
-          addrAdvertised = true;
+          m_addrAdvertised = true;
         }
       if (m_state != ESTABLISHED)
         {
@@ -1187,6 +1289,8 @@ MpTcpSocketBase::DoRetransmit(uint8_t sFlowIdx, DSNMapping* ptrDSN)
 
   NS_LOG_INFO("("<<(int) sFlowIdx << ") DoRetransmit -> " << header);
 }
+
+
 void
 MpTcpSocketBase::DiscardUpTo(uint8_t sFlowIdx, uint32_t ack)
 {
@@ -1211,13 +1315,13 @@ MpTcpSocketBase::DiscardUpTo(uint8_t sFlowIdx, uint32_t ack)
 uint8_t
 MpTcpSocketBase::GetMaxSubFlowNumber()
 {
-  return maxSubflows;
+  return m_maxSubflows;
 }
 
 void
 MpTcpSocketBase::SetMaxSubFlowNumber(uint8_t num)
 {
-  maxSubflows = num;
+  m_maxSubflows = num;
 }
 //...........................................................................................
 // Following implementation has derived from tcp-reno implementation
@@ -2022,7 +2126,7 @@ MpTcpSocketBase::ForwardUp(Ptr<Packet> p, Ipv4Header header, uint16_t port, Ptr<
   // Accepted sockets being dealt with from here.......
   // LookupByAddrs of src and destination.
   uint8_t sFlowIdx = LookupByAddrs(m_localAddress, m_remoteAddress); //m_endPoint->GetPeerAddress());
-  NS_ASSERT_MSG((sFlowIdx < maxSubflows), "Subflow number should be smaller than MaxNumOfSubflows");
+  NS_ASSERT_MSG((sFlowIdx < m_maxSubflows), "Subflow number should be smaller than MaxNumOfSubflows");
 
   Ptr<MpTcpSubFlow> sFlow = subflows[sFlowIdx];
 
@@ -2094,7 +2198,8 @@ MpTcpSocketBase::ForwardUp(Ptr<Packet> p, Ipv4Header header, uint16_t port, Ptr<
     }
 }
 /*
- * This function is used to initiate new subflow. At the moment when there is a connection via an IP address, then it does not open any new subflow with this address again.
+ * This function is used to initiate new subflow. At the moment when there is a connection via an IP address, 
+ * then it does not open any new subflow with this address again.
  * For example if you need four subflows, you need to have four IP addresses!
  * Note that SetDestroyCallback(), for each subflow's endpoint, is not setup since MPTCP connection only can be closed when all subflows are closed!
  * We are planning to change this, in line with RFC 6824 in near future!
@@ -2105,12 +2210,13 @@ MpTcpSocketBase::InitiateSubflows()
   NS_LOG_FUNCTION_NOARGS(); //
   NS_LOG_DEBUG("----------------------------- InitiateSubflows By Client ---------------------------");
 
-  for (uint32_t i = 0; i < localAddrs.size(); i++)
-    for (uint32_t j = i; j < remoteAddrs.size(); j++)
+    #if 0 
+  for (uint32_t i = 0; i < m_localAddrs.size(); i++)
+    for (uint32_t j = i; j < m_remoteAddrs.size(); j++)
       {
-        uint8_t addrID = localAddrs[i]->addrID;
-        Ipv4Address local = localAddrs[i]->ipv4Addr;
-        Ipv4Address remote = remoteAddrs[j]->ipv4Addr;
+        uint8_t addrID = m_localAddrs[i]->addrID;
+        Ipv4Address local = m_localAddrs[i]->ipv4Addr;
+        Ipv4Address remote = m_remoteAddrs[j]->ipv4Addr;
 
         // skip already established flows and if there is no route between a pair
         if (((local == m_localAddress) || (remote == m_remoteAddress)) || (!IsThereRoute(local, remote)))
@@ -2161,6 +2267,7 @@ MpTcpSocketBase::InitiateSubflows()
         m_mptcp->SendPacket(pkt, header, local, remote, FindOutputNetDevice(local));
         NS_LOG_INFO("InitiateSubflows -> (" << local << " -> " << remote << ") | "<< header);
       }
+    #endif
   return true;
 }
 
@@ -3313,6 +3420,7 @@ MpTcpSocketBase::CloseMultipathConnection()
 void
 MpTcpSocketBase::AdvertiseAvailableAddresses()
 {
+  #if 0
   NS_LOG_FUNCTION(m_node->GetId());
   if (mpEnabled == true)
     {
@@ -3352,7 +3460,7 @@ MpTcpSocketBase::AdvertiseAvailableAddresses()
           addrInfo->mask = interfaceAddr.GetMask();
           header.AddOptADDR(OPT_ADDR, addrInfo->addrID, addrInfo->ipv4Addr);
           olen += 6;
-          localAddrs.insert(localAddrs.end(), addrInfo);
+          m_localAddrs.insert(m_localAddrs.end(), addrInfo);
         }
       uint8_t plen = (4 - (olen % 4)) % 4;
       header.SetWindowSize(AdvertisedWindowSize());
@@ -3370,6 +3478,7 @@ MpTcpSocketBase::AdvertiseAvailableAddresses()
     {
       NS_FATAL_ERROR("Need to be Looked...");
     }
+  #endif
 }
 
 bool
@@ -3440,22 +3549,28 @@ MpTcpSocketBase::FindOutputNetDevice(Ipv4Address src)
   return oNetDevice;
 }
 
+
+// TODO we should not need this ? remove
 bool
 MpTcpSocketBase::IsLocalAddress(Ipv4Address addr)
 {
-  NS_LOG_FUNCTION(this << addr);
+  NS_LOG_ERROR(this << "might be a bug since function not implemanted" << addr);
+ 
+ #if 0
   bool found = false;
   MpTcpAddressInfo * pAddrInfo;
-  for (uint32_t i = 0; i < localAddrs.size(); i++)
+  for (uint32_t i = 0; i < m_localAddrs.size(); i++)
     {
-      pAddrInfo = localAddrs[i];
+      pAddrInfo = m_localAddrs[i];
       if (pAddrInfo->ipv4Addr == addr)
         {
           found = true;
           break;
         }
     }
-  return found;
+    return found;
+    #endif
+  return true;
 }
 
 //void
@@ -3477,7 +3592,7 @@ MpTcpSocketBase::IsLocalAddress(Ipv4Address addr)
 //      addrInfo->addrID = i;
 //      addrInfo->ipv4Addr = interfaceAddr.GetLocal();
 //      addrInfo->mask = interfaceAddr.GetMask();
-//      localAddrs.insert(localAddrs.end(), addrInfo);
+//      m_localAddrs.insert(m_localAddrs.end(), addrInfo);
 //    }
 //}
 
@@ -3489,6 +3604,7 @@ MpTcpSocketBase::BytesInFlight(uint8_t sFlowIdx)
   return sFlow->maxSeqNb - sFlow->highestAck;        //m_highTxMark - m_highestRxAck;
 }
 
+// TODO buggy ?
 uint16_t
 MpTcpSocketBase::AdvertisedWindowSize()
 {
@@ -3554,7 +3670,7 @@ MpTcpSocketBase::LookupByAddrs(Ipv4Address src, Ipv4Address dst)
 {
   NS_LOG_FUNCTION(this);
   Ptr<MpTcpSubFlow> sFlow = 0;
-  uint8_t sFlowIdx = maxSubflows;
+  uint8_t sFlowIdx = m_maxSubflows;
 
   if (IsThereRoute(src, dst) == false)
     {
@@ -3579,7 +3695,7 @@ MpTcpSocketBase::LookupByAddrs(Ipv4Address src, Ipv4Address dst)
         }
     }
   // When subflow is not find or is not exist...
-  if (!(sFlowIdx < maxSubflows))
+  if (!(sFlowIdx < m_maxSubflows))
     {
       NS_LOG_DEBUG("LookupByAddrs -> Either subflow(0) or create new one");
       if (m_connected == false && subflows.size() == 1)
@@ -3589,7 +3705,9 @@ MpTcpSocketBase::LookupByAddrs(Ipv4Address src, Ipv4Address dst)
         }
       else
         {
-          if (IsLocalAddress(m_localAddress))
+          //(IsLocalAddress(m_localAddress)
+          // TODO check address is ours ?
+          if (true)
             {
               NS_ASSERT(server);
               // Sender would create its new subflow when SYN with MP_JOIN being sent.

@@ -193,7 +193,7 @@ DataBuffer::Full()
   return (bufMaxSize == (uint32_t) buffer.size()); //( freeSpaceSize == 0 );
 }
 
-
+/*
 MpTcpAddressInfo::MpTcpAddressInfo() :
     addrID(0), ipv4Addr(Ipv4Address::GetZero()), mask(Ipv4Mask::GetZero())
 {
@@ -204,5 +204,6 @@ MpTcpAddressInfo::~MpTcpAddressInfo()
   addrID = 0;
   ipv4Addr = Ipv4Address::GetZero();
 }
+*/
 
 } // namespace ns3

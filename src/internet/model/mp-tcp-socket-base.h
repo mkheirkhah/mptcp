@@ -7,8 +7,10 @@
 #ifndef MP_TCP_SOCKET_BASE_H
 #define MP_TCP_SOCKET_BASE_H
 
+#include "ns3/callback.h"
 #include "ns3/mp-tcp-typedefs.h"
 #include "ns3/tcp-socket-base.h"
+//#include "ns3/mp-tcp-path-manager.h"
 #include "ns3/gnuplot.h"
 #include "mp-tcp-subflow.h"
 
@@ -19,6 +21,8 @@ class Ipv4EndPoint;
 class Node;
 class Packet;
 class TcpL4Protocol;
+//class MpTcpPathManager;
+class MpTcpSubFlow;
 
 
 /**
@@ -59,7 +63,9 @@ public: // public methods
   void SetCongestionCtrlAlgo(CongestionCtrl_t ccalgo);  // This would be used by attribute system for setting congestion control
   void SetDataDistribAlgo(DataDistribAlgo_t ddalgo);    // Round Robin is only algorithms used.
 
+//  void SetPathManager(Ptr<MpTcpPathManager>);
 
+  // Path management related functions
   void
   AdvertiseAddress(); //
   void
@@ -109,7 +115,12 @@ protected: // protected methods
   void CompleteFork(Ptr<Packet> p, const TcpHeader& h, const Address& fromAddress, const Address& toAddress);
 
   bool InitiateSubflows();            // Initiate new subflows
-
+  
+  void SetAddAddrCallback(Callback<bool, Ptr<Socket>, Address, uint8_t> );
+  void NotifyAddAddr(MpTcpAddressInfo);
+  void NotifyRemAddr(MpTcpAddressInfo);
+  
+  
   void
   ConnectionSucceeded(void); // Schedule-friendly wrapper for Socket::NotifyConnectionSucceeded()
 
@@ -218,24 +229,38 @@ protected: // protected variables
   uint16_t           m_localPort;
   uint16_t           m_remotePort;
   uint8_t            currentSublow; // master socket ???
-
+  //Ptr<MpTcpPathManager> m_pathManager;
+  Callback<bool, Ptr<Socket>, Address, uint8_t > m_onAddAddr;  // return true to create a subflow
+//  Callback<void, const MpTcpAddressInfo& > m_onRemAddr;
+  
+//  virtual void OnAddAddress(MpTcpAddressInfo);
+//  virtual void OnRemAddress();
+  
+  
   // MultiPath related parameters
-  MpStates_t mpSendState;
-  MpStates_t mpRecvState;
+  MpStates_t mpSendState;   //!< TODO to remove (useless)
+  MpStates_t mpRecvState;   //!< TODO to remove (useless)
   bool mpEnabled;   //!< True if remote host is MPTCP compliant
   bool mpTokenRegister; //!<
-  bool addrAdvertised;  //!<
+  bool m_addrAdvertised;  //!<
   uint32_t localToken;  //!< Store local host token, generated during the 3-way handshake
   uint32_t remoteToken; //!< Store remote host token
   uint32_t unOrdMaxSize;
-  uint8_t  maxSubflows; //!< Max number of subflows
+  uint8_t  m_maxSubflows; //!< Max number of subflows
   uint8_t  lastUsedsFlowIdx;  //!<
 
+  std::vector<Ptr<MpTcpSubFlow> > subflows;
+  
   // MPTCP containers
-  vector<Ptr<MpTcpSubFlow> > subflows;
-  vector<MpTcpAddressInfo *> localAddrs;
-  vector<MpTcpAddressInfo *> remoteAddrs; //!< List addresses advertised by the remote host
-  list<DSNMapping *> unOrdered;  // buffer that hold the out of sequence received packet
+
+  typedef std::multimap<uint8_t,MpTcpAddressInfo>  MpTcpAddressContainer;
+  
+  //! Maps an Address Id to the pair  (Ipv4/v6, port)
+  std::map<uint8_t,MpTcpAddressInfo> m_localAddrs;  
+   //! List addresses advertised by the remote host
+   //! index 0 for local, 1 for remote addr
+  MpTcpAddressContainer m_remoteAddrs[2];
+  std::list<DSNMapping *> unOrdered;  // buffer that hold the out of sequence received packet
 
   // Congestion control
   // TODO store that in abstract class
@@ -256,8 +281,15 @@ protected: // protected variables
   DataBuffer *sendingBuffer;
   DataBuffer *recvingBuffer;
 
-  bool client;
+  bool client;  // TODO make private ? check what it does
   bool server;
+  
+private:
+  bool 
+  AddAddr(bool remote, uint8_t addrId, const Address& address, uint16_t port);
+  bool 
+  RemAddr(bool remote, uint8_t addrId);
+  
 };
 
 }   //namespace ns3
