@@ -115,12 +115,12 @@ protected: // protected methods
   void CompleteFork(Ptr<Packet> p, const TcpHeader& h, const Address& fromAddress, const Address& toAddress);
 
   bool InitiateSubflows();            // Initiate new subflows
-  
+
   void SetAddAddrCallback(Callback<bool, Ptr<Socket>, Address, uint8_t> );
   void NotifyAddAddr(MpTcpAddressInfo);
-  void NotifyRemAddr(MpTcpAddressInfo);
-  
-  
+  void NotifyRemAddr(uint8_t addrId);
+
+
   void
   ConnectionSucceeded(void); // Schedule-friendly wrapper for Socket::NotifyConnectionSucceeded()
 
@@ -222,7 +222,7 @@ protected: // protected variables
 
   // MPTCP connection parameters
   Ptr<Node>          m_node;
-  Ipv4EndPoint*      m_endPoint;    // ? do we need this ? compare with TCP stack
+//  Ipv4EndPoint*      m_endPoint;    // TODO could remove since its parent already defines it
   Ptr<TcpL4Protocol> m_mptcp;       //? what is this ?
   Ipv4Address        m_localAddress;
   Ipv4Address        m_remoteAddress;
@@ -232,11 +232,11 @@ protected: // protected variables
   //Ptr<MpTcpPathManager> m_pathManager;
   Callback<bool, Ptr<Socket>, Address, uint8_t > m_onAddAddr;  // return true to create a subflow
 //  Callback<void, const MpTcpAddressInfo& > m_onRemAddr;
-  
+
 //  virtual void OnAddAddress(MpTcpAddressInfo);
 //  virtual void OnRemAddress();
-  
-  
+
+
   // MultiPath related parameters
   MpStates_t mpSendState;   //!< TODO to remove (useless)
   MpStates_t mpRecvState;   //!< TODO to remove (useless)
@@ -250,13 +250,13 @@ protected: // protected variables
   uint8_t  lastUsedsFlowIdx;  //!<
 
   std::vector<Ptr<MpTcpSubFlow> > subflows;
-  
+
   // MPTCP containers
 
   typedef std::multimap<uint8_t,MpTcpAddressInfo>  MpTcpAddressContainer;
-  
+
   //! Maps an Address Id to the pair  (Ipv4/v6, port)
-  std::map<uint8_t,MpTcpAddressInfo> m_localAddrs;  
+  std::map<uint8_t,MpTcpAddressInfo> m_localAddrs;
    //! List addresses advertised by the remote host
    //! index 0 for local, 1 for remote addr
   MpTcpAddressContainer m_remoteAddrs[2];
@@ -269,7 +269,7 @@ protected: // protected variables
   CongestionCtrl_t AlgoCC;       // Algorithm for Congestion Control
   DataDistribAlgo_t distribAlgo; // Algorithm for Data Distribution
 
-  // Window management variables
+  // Window management variables node->GetObject<TcpL4Protocol>();
   uint32_t m_ssThresh;           // Slow start threshold
   uint32_t m_initialCWnd;        // Initial congestion window value
   uint32_t remoteRecvWnd;        // Flow control window at remote side
@@ -283,13 +283,13 @@ protected: // protected variables
 
   bool client;  // TODO make private ? check what it does
   bool server;
-  
+
 private:
-  bool 
+  bool
   AddAddr(bool remote, uint8_t addrId, const Address& address, uint16_t port);
-  bool 
+  bool
   RemAddr(bool remote, uint8_t addrId);
-  
+
 };
 
 }   //namespace ns3

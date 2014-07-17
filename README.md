@@ -13,6 +13,12 @@ NS_LOG="MpTcpTestSuite=*|prefix_func:Socket=*:MpTcpSocketBase:*=error|warn|logic
 In case you want to run it with gdb:
 NS_LOG="MpTcpTestSuite=*|prefix_func:Socket=*:MpTcpSocketBase:*=error|warn|logic" ./waf --command-template="gdb %s" --run "test-runner"
 
+How to configure waf for prototyping
+======
+Few interesting flags
+-Wno-reorder
+
+
 Features
 ======
 

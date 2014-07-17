@@ -8,7 +8,12 @@
 #include "ns3/mp-tcp-typedefs.h"
 #include "ns3/simulator.h"
 #include "ns3/log.h"
-#include "mp-tcp-subflow.h"
+#include "ns3/abort.h"
+#include "ns3/mp-tcp-subflow.h"
+#include "ns3/mp-tcp-socket-base.h"
+#include "ns3/tcp-l4-protocol.h"
+#include "ns3/ipv4-address.h"
+//#include "ns3/ipv4-address.h"
 
 NS_LOG_COMPONENT_DEFINE("MpTcpSubflow");
 
@@ -20,31 +25,99 @@ TypeId
 MpTcpSubFlow::GetTypeId(void)
 {
   static TypeId tid = TypeId("ns3::MpTcpSubFlow")
-      .SetParent<Object>()
-      .AddConstructor<MpTcpSubFlow>()
+      .SetParent<TcpSocketBase>()
       .AddTraceSource("cWindow",
           "The congestion control window to trace.",
            MakeTraceSourceAccessor(&MpTcpSubFlow::cwnd));
   return tid;
 }
 
-MpTcpSubFlow::MpTcpSubFlow() :
+
+
+Ptr<TcpSocketBase>
+MpTcpSubFlow::Fork(void)
+{
+  // Call CopyObject<> to clone me
+  NS_LOG_ERROR("Not implemented");
+
+
+  return CopyObject<MpTcpSubFlow> (this);
+}
+
+void
+MpTcpSubFlow::DupAck(const TcpHeader& t, uint32_t count)
+{
+  NS_LOG_DEBUG("DupAck ignored as specified in RFC");
+}
+
+void
+MpTcpSubFlow::SetSSThresh(uint32_t threshold)
+{
+  m_ssThresh = threshold;
+}
+
+
+uint32_t
+MpTcpSubFlow::GetSSThresh(void) const
+{
+  return m_ssThresh;
+}
+
+
+void
+MpTcpSubFlow::SetInitialCwnd(uint32_t cwnd)
+{
+  NS_ABORT_MSG_UNLESS(m_state == CLOSED, "MpTcpsocketBase::SetInitialCwnd() cannot change initial cwnd after connection started.");
+  m_initialCWnd = cwnd;
+}
+
+uint32_t
+MpTcpSubFlow::GetInitialCwnd(void) const
+{
+  return m_initialCWnd;
+}
+
+
+
+MpTcpSubFlow::MpTcpSubFlow(const MpTcpSubFlow& sock)
+  : TcpSocketBase(sock),
+//  m_cWnd(sock.m_cWnd),
+  m_ssThresh(sock.m_ssThresh)
+  // TODO
+//    m_initialCWnd (sock.m_initialCWnd),
+//    m_retxThresh (sock.m_retxThresh),
+//    m_inFastRec (false),
+//    m_limitedTx (sock.m_limitedTx)
+{
+  NS_LOG_FUNCTION (this);
+  NS_LOG_LOGIC ("Invoked the copy constructor");
+}
+
+MpTcpSubFlow::MpTcpSubFlow(Ptr<MpTcpSocketBase> masterSocket) :
+    TcpSocketBase(),
     routeId(0),
     state(CLOSED),
     sAddr(Ipv4Address::GetZero()),
     sPort(0),
     dAddr(Ipv4Address::GetZero()),
-    dPort(0),
+    m_dPort(0),
     oif(0),
-    mapDSN(0),
-    lastMeasuredRtt(Seconds(0.0))
+    m_ssThresh(65535),
+    m_mapDSN(0),
+    m_lastMeasuredRtt(Seconds(0.0)),
+     // TODO move out to MpTcpCControl
+
+
+    m_masterSocket(masterSocket)
 {
+  NS_ASSERT( masterSocket );
+
   connected = false;
   TxSeqNumber = rand() % 1000;
   RxSeqNumber = 0;
   bandwidth = 0;
   cwnd = 0;
-  ssthresh = 65535;
+
   maxSeqNb = TxSeqNumber - 1;
   highestAck = 0;
   rtt = CreateObject<RttMeanDeviation>();
@@ -76,22 +149,22 @@ MpTcpSubFlow::~MpTcpSubFlow()
   cwnd = 0;
   maxSeqNb = 0;
   highestAck = 0;
-  for (list<DSNMapping *>::iterator it = mapDSN.begin(); it != mapDSN.end(); ++it)
+  for (list<DSNMapping *>::iterator it = m_mapDSN.begin(); it != m_mapDSN.end(); ++it)
     {
       DSNMapping * ptrDSN = *it;
       delete ptrDSN;
     }
-  mapDSN.clear();
+  m_mapDSN.clear();
 }
 
 
-void 
+void
 MpTcpSubFlow::AdvertiseAddress(uint8_t addrId, Address addr, uint16_t port)
 {
-  NS_LOG_FUNCTION(m_node->GetId());
+  NS_LOG_FUNCTION("Started advertising address");
 
   // TODO check subflow is established !!
-  
+
       // there is at least one subflow
 //      Ptr<MpTcpSubFlow> sFlow = subflows[0];
 //      NS_ASSERT(sFlow!=0);
@@ -103,15 +176,18 @@ MpTcpSubFlow::AdvertiseAddress(uint8_t addrId, Address addr, uint16_t port)
 
       TcpHeader header;
       header.SetFlags(TcpHeader::ACK);
-      header.SetSequenceNumber(SequenceNumber32(sFlow->TxSeqNumber));
-      header.SetAckNumber(SequenceNumber32(sFlow->RxSeqNumber));
-      
-      header.SetSourcePort(sPort); // m_endPoint->GetLocalPort()
-      header.SetDestinationPort(dPort);
+//      header.SetSequenceNumber(SequenceNumber32(sFlow->TxSeqNumber));
+      header.SetSequenceNumber(SequenceNumber32(TxSeqNumber));
+//      header.SetAckNumber(SequenceNumber32(sFlow->RxSeqNumber));
+      header.SetAckNumber(SequenceNumber32(RxSeqNumber));
+
+//      header.SetSourcePort(sPort); // m_endPoint->GetLocalPort()
+      header.SetSourcePort( m_endPoint->GetLocalPort() ); // m_endPoint->GetLocalPort()
+      header.SetDestinationPort(m_dPort);
       uint8_t hlen = 0;
       uint8_t olen = 0;
 
-      #if 0 
+      #if 0
       // TODO That should go into a helper
       // Object from L3 to access to routing protocol, Interfaces and NetDevices and so on.
       Ptr<Ipv4L3Protocol> ipv4 = m_node->GetObject<Ipv4L3Protocol>();
@@ -133,11 +209,12 @@ MpTcpSubFlow::AdvertiseAddress(uint8_t addrId, Address addr, uint16_t port)
       olen += 6;
           m_localAddrs.insert(m_localAddrs.end(), addrInfo);
         }
-      #endif 
+      #endif
+//      IPv4Address;;ConvertFrom ( addr );
 
-      header.AddOptADDR(OPT_ADDR, addrId, addr );
+      header.AddOptADDR(OPT_ADDR, addrId, Ipv4Address::ConvertFrom ( addr ) );
       olen += 6;
-          
+
       uint8_t plen = (4 - (olen % 4)) % 4;
       header.SetWindowSize(AdvertisedWindowSize());
       olen = (olen + plen) / 4;
@@ -146,11 +223,14 @@ MpTcpSubFlow::AdvertiseAddress(uint8_t addrId, Address addr, uint16_t port)
       header.SetOptionsLength(olen);
       header.SetPaddingLength(plen);
 
-      //m_mptcp->SendPacket(pkt, header, m_endPoint->GetLocalAddress(), m_remoteAddress);
-      m_mptcp->SendPacket(pkt, header, m_localAddress, m_remoteAddress, FindOutputNetDevice(m_localAddress) );
+
+      m_tcp->SendPacket(pkt, header, m_endPoint->GetLocalAddress(), m_endPoint->GetPeerAddress());
+      // we 've got to rely on
+
+//      this->SendPacket(pkt, header, m_localAddress, m_remoteAddress, FindOutputNetDevice(m_localAddress) );
       NS_LOG_INFO("Advertise  Addresses-> "<< header);
-    }
 }
+
 
 bool
 MpTcpSubFlow::Finished(void)
@@ -177,7 +257,7 @@ MpTcpSubFlow::AddDSNMapping(uint8_t sFlowIdx, uint64_t dSeqNum, uint16_t dLvlLen
     Ptr<Packet> pkt)
 {
   NS_LOG_FUNCTION_NOARGS();
-  mapDSN.push_back(new DSNMapping(sFlowIdx, dSeqNum, dLvlLen, sflowSeqNum, ack, pkt));
+  m_mapDSN.push_back(new DSNMapping(sFlowIdx, dSeqNum, dLvlLen, sflowSeqNum, ack, pkt));
 }
 
 void
@@ -195,7 +275,7 @@ MpTcpSubFlow::GetunAckPkt()
 {
   NS_LOG_FUNCTION(this);
   DSNMapping * ptrDSN = 0;
-  for (list<DSNMapping *>::iterator it = mapDSN.begin(); it != mapDSN.end(); ++it)
+  for (list<DSNMapping *>::iterator it = m_mapDSN.begin(); it != m_mapDSN.end(); ++it)
     {
       DSNMapping * ptr = *it;
       if (ptr->subflowSeqNumber == highestAck + 1)

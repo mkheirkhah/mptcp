@@ -198,6 +198,8 @@ def build(bld):
         'model/mp-tcp-typedefs.cc',
         'model/tcp-options.cc',
         'model/mp-tcp-subflow.cc',
+        'model/mp-tcp-olia.cc'
+        #'model/mp-tcp-path-manager.cc',
         ]
 
     internet_test = bld.create_ns3_module_test_library('internet')
@@ -319,7 +321,12 @@ def build(bld):
         'model/mp-tcp-typedefs.h',          # Morteza Kheirkhah
         'model/tcp-options.h',              # Morteza Kheirkhah
         'model/mp-tcp-subflow.h',           # Morteza Kheirkhah
-        'model/mp-tcp-socket-factory-impl.h' # matt
+        'model/mp-tcp-socket-factory-impl.h', # matt
+        'model/mp-tcp-cc.h',                  # matt
+        'model/mp-tcp-olia.h',                # matt
+
+        #'model/mp-tcp-path-manager.h' # matt
+        # 'model/mp-tcp-path-manager-ndiff.h' # matt
        ]
 
     if bld.env['NSC_ENABLED']:

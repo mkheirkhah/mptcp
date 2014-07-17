@@ -24,23 +24,50 @@
 #include "ns3/tcp-socket.h"
 #include "ns3/ipv4-end-point.h"
 #include "ns3/ipv4-address.h"
+#include "ns3/tcp-socket-base.h"
+#include "ns3/tcp-header.h"
 
 using namespace std;
 
 namespace ns3{
 
-class MpTcpSubFlow : public Object
+class MpTcpSocketBase;
+
+
+class MpTcpSubFlow : public TcpSocketBase
 {
 public:
   static TypeId
   GetTypeId(void);
 
-  MpTcpSubFlow();
-  
+  MpTcpSubFlow(Ptr<MpTcpSocketBase> masterSocket);
+  MpTcpSubFlow(const MpTcpSubFlow&);
+
   virtual ~MpTcpSubFlow();
 
 
   virtual void AdvertiseAddress(uint8_t addrId, Address , uint16_t port);
+
+protected:
+  friend class MpTcpSocketBase;
+
+
+  virtual void
+  SetSSThresh(uint32_t threshold);
+  virtual uint32_t
+  GetSSThresh(void) const;
+  virtual void
+  SetInitialCwnd(uint32_t cwnd);
+  virtual uint32_t
+  GetInitialCwnd(void) const;
+
+  virtual Ptr<TcpSocketBase>
+  Fork(void); // Call CopyObject<> to clone me
+
+  virtual void
+  DupAck(const TcpHeader& t, uint32_t count); // Received dupack
+
+
 
   virtual void AddDSNMapping(uint8_t sFlowIdx, uint64_t dSeqNum, uint16_t dLvlLen, uint32_t sflowSeqNum, uint32_t ack, Ptr<Packet> pkt);
   virtual void StartTracing(string traced);
@@ -55,7 +82,7 @@ public:
   Ipv4Address sAddr;          // Source Ip address
   uint16_t sPort;             // Source port
   Ipv4Address dAddr;          // Destination address
-  uint16_t dPort;             // Destination port
+  uint16_t m_dPort;             // Destination port
   uint32_t oif;               // interface related to the subflow's sAddr
   EventId retxEvent;          // Retransmission timer
   EventId m_lastAckEvent;     // Timer for last ACK
@@ -65,7 +92,7 @@ public:
   uint32_t cnRetries;         // Number of connection retries before giving up
   Time     cnTimeout;         // Timeout for connection retry
   TracedValue<uint32_t> cwnd; // Congestion window (in bytes)
-  uint32_t ssthresh;          // Slow start threshold
+  uint32_t m_ssThresh;          //!< Slow start threshold
   uint32_t maxSeqNb;          // Highest sequence number of a sent byte. Equal to (TxSeqNumber - 1) until a retransmission occurs
   uint32_t highestAck;        // Highest received ACK for the subflow level sequence number
   uint64_t bandwidth;         // Link's bandwidth
@@ -76,16 +103,19 @@ public:
   bool m_limitedTx;           // perform limited transmit
   uint32_t m_dupAckCount;     // DupACK counter
   Ipv4EndPoint* m_endPoint;   // L4 stack object
-  list<DSNMapping *> mapDSN;  // List of all sent packets
-  multiset<double> measuredRTT;
+  std::list<DSNMapping *> m_mapDSN;  // List of all sent packets
+  std::multiset<double> measuredRTT;
   Ptr<RttMeanDeviation> rtt;  // RTT calculator
-  Time lastMeasuredRtt;       // Last measured RTT, used for plotting
+  Time m_lastMeasuredRtt;       // Last measured RTT, used for plotting
   uint32_t TxSeqNumber;       // Subflow's next expected sequence number to send
   uint32_t RxSeqNumber;       // Subflow's next expected sequence number to receive
   uint64_t PktCount;          // number of sent packets
   uint32_t initialSequnceNumber; // Plotting
   bool m_gotFin;              // Whether FIN is received
   SequenceNumber32 m_finSeq;  // SeqNb of received FIN
+
+
+//    uint32_t m_m_ssThresh;           // Slow start threshold
 
   //plotting
   vector<pair<double, uint32_t> > cwndTracer;
@@ -105,6 +135,9 @@ public:
   vector<pair<double, double> > _RTT;
   vector<pair<double, double> > _AvgRTT;
   vector<pair<double, double> > _RTO;
+
+protected:
+  Ptr<MpTcpSocketBase> m_masterSocket;
 };
 
 }

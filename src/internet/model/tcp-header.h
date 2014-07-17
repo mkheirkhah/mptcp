@@ -269,7 +269,7 @@ private:
   bool m_goodChecksum;    //!< Flag to indicate that checksum is correct
 
   // MPTCP related variables------------
-  vector<TcpOptions*> m_option;
+  std::vector<TcpOptions*> m_option;
   uint8_t oLen;
   uint8_t pLen;
   bool original;

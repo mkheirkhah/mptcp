@@ -49,10 +49,10 @@ class Ipv6EndPoint;
 /**
  * \ingroup tcp
  * \brief A layer between the sockets interface and IP
- * 
+ *
  * This class allocates "endpoint" objects (ns3::Ipv4EndPoint) for TCP,
  * and SHOULD checksum packets its receives from the socket layer going down
- * the stack , but currently checksumming is disabled.  It also receives 
+ * the stack , but currently checksumming is disabled.  It also receives
  * packets from IP, and forwards them up to the endpoints.
 */
 
@@ -184,7 +184,7 @@ public:
    * \param oif The output interface bound. Defaults to null (unspecified).
    */
   void Send (Ptr<Packet> packet,
-             Ipv4Address saddr, Ipv4Address daddr, 
+             Ipv4Address saddr, Ipv4Address daddr,
              uint16_t sport, uint16_t dport, Ptr<NetDevice> oif = 0);
   /**
    * \brief Send a packet via TCP (IPv6)
@@ -196,7 +196,7 @@ public:
    * \param oif The output interface bound. Defaults to null (unspecified).
    */
   void Send (Ptr<Packet> packet,
-             Ipv6Address saddr, Ipv6Address daddr, 
+             Ipv6Address saddr, Ipv6Address daddr,
              uint16_t sport, uint16_t dport, Ptr<NetDevice> oif = 0);
 
 
@@ -226,7 +226,7 @@ public:
 
 protected:
   virtual void DoDispose (void);
-  /* 
+  /*
    * This function will notify other components connected to the node that a new stack member is now connected
    * This will be used to notify Layer 3 protocol of layer 4 protocol stack to connect them together.
    */
@@ -244,7 +244,10 @@ private:
   //std::map<uint32_t, Ipv4EndPoint* > m_TokenMap;  // MPTCP related modification
 private:
   friend class TcpSocketBase;
-  friend class MpTcpSocketBase;
+
+  friend class MpTcpSocketBase; //
+  friend class MpTcpSubFlow; // Matt
+
   void SendPacket (Ptr<Packet>, const TcpHeader &,
                    Ipv4Address, Ipv4Address, Ptr<NetDevice> oif = 0);
   void SendPacket (Ptr<Packet>, const TcpHeader &,
@@ -265,6 +268,7 @@ private:
    */
   TcpL4Protocol &operator = (const TcpL4Protocol &);
 
+  // TODO
   std::vector<Ptr<TcpSocketBase> > m_sockets;      //!< list of sockets
   std::map<uint32_t, Ipv4EndPoint* > m_TokenMap;   //!< list of Token
   IpL4Protocol::DownTargetCallback m_downTarget;   //!< Callback to send packets over IPv4
