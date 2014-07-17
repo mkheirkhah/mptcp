@@ -74,7 +74,7 @@ public: // public methods
 public: // public variables
 
   // Evaluation & plotting parameters and containers
-  int mod;    // ?
+//  int mod;    // available in parent TODO remove
   int MSS;    // Maximum Segment Size
   int LinkCapacity; // ?
   int totalBytes; // ?
@@ -243,8 +243,8 @@ protected: // protected variables
   bool mpEnabled;   //!< True if remote host is MPTCP compliant
   bool mpTokenRegister; //!<
   bool m_addrAdvertised;  //!<
-  uint32_t localToken;  //!< Store local host token, generated during the 3-way handshake
-  uint32_t remoteToken; //!< Store remote host token
+  uint32_t m_localToken;  //!< Store local host token, generated during the 3-way handshake
+  uint32_t m_remoteToken; //!< Store remote host token
   uint32_t unOrdMaxSize;
   uint8_t  m_maxSubflows; //!< Max number of subflows
   uint8_t  lastUsedsFlowIdx;  //!<

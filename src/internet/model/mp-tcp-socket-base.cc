@@ -69,7 +69,7 @@ MpTcpSocketBase::MpTcpSocketBase(Ptr<Node> node) :
 //    ,m_pathManager(new MpTcpPathManager())
 //:
 //    m_node(node), m_mptcp(node->GetObject<TcpL4Protocol>()), mpState(MP_NONE), mpSendState(MP_NONE), mpRecvState(MP_NONE), mpEnabled(false), m_addrAdvertised(
-//        false), mpTokenRegister(false), subflows(0), m_localAddrs(0), m_remoteAddrs(0), lastUsedsFlowIdx(0), totalCwnd(0), localToken(0), remoteToken(0), client(
+//        false), mpTokenRegister(false), subflows(0), m_localAddrs(0), m_remoteAddrs(0), lastUsedsFlowIdx(0), totalCwnd(0), m_localToken(0), m_remoteToken(0), client(
 //        false), server(false), remoteRecvWnd(1), segmentSize(0), nextTxSequence(1), nextRxSequence(1)
 {
   NS_LOG_FUNCTION(this);
@@ -85,8 +85,8 @@ MpTcpSocketBase::MpTcpSocketBase(Ptr<Node> node) :
   mpTokenRegister = false;
   lastUsedsFlowIdx = 0;
   totalCwnd = 0;
-  localToken = 0;
-  remoteToken = 0;
+  m_localToken = 0;
+  m_remoteToken = 0;
   client = false;
   server = false;
   remoteRecvWnd = 1;
@@ -211,7 +211,7 @@ bool
 MpTcpSocketBase::ReadOptions(Ptr<Packet> pkt, const TcpHeader& mptcpHeader)
 {
   NS_LOG_FUNCTION(this << mptcpHeader);
-  NS_ASSERT(remoteToken == 0 && mpEnabled == false);
+  NS_ASSERT(m_remoteToken == 0 && mpEnabled == false);
   vector<TcpOptions*> mp_options = mptcpHeader.GetOptions();
   uint8_t flags = mptcpHeader.GetFlags();
   TcpOptions *opt;
@@ -223,7 +223,7 @@ MpTcpSocketBase::ReadOptions(Ptr<Packet> pkt, const TcpHeader& mptcpHeader)
         { // SYN+ACK would be send later on by ProcessSynRcvd(...)
           mpRecvState = MP_MPC;
           mpEnabled = true;
-          remoteToken = ((OptMultipathCapable *) opt)->senderToken;
+          m_remoteToken = ((OptMultipathCapable *) opt)->senderToken;
         }
       else
         NS_FATAL_ERROR("Unexpected option has received ... This could be a bug please report it to our GitHub page");
@@ -249,13 +249,13 @@ MpTcpSocketBase::ReadOptions(uint8_t sFlowIdx, Ptr<Packet> pkt, const TcpHeader&
         { // SYN+ACK would be send later on by ProcessSynRcvd(...)
           mpRecvState = MP_MPC;
           mpEnabled = true;
-          remoteToken = ((OptMultipathCapable *) opt)->senderToken;
+          m_remoteToken = ((OptMultipathCapable *) opt)->senderToken;
           NS_ASSERT(client);
         }
       else if ((opt->optName == OPT_JOIN) && hasSyn)
         {
           OptJoinConnection * optJoin = (OptJoinConnection *) opt;
-          if ((mpSendState == MP_ADDADDR) && (localToken == optJoin->receiverToken))
+          if ((mpSendState == MP_ADDADDR) && (m_localToken == optJoin->receiverToken))
             { // SYN+ACK would be send later on by ProcessSynRcvd(...)
               // Join option is sent over the path (couple of addresses) not already in use
             }
@@ -1263,7 +1263,7 @@ MpTcpSocketBase::DoRetransmit(uint8_t sFlowIdx, DSNMapping* ptrDSN)
   // Make sure info here comes from ptrDSN...
   header.AddOptDSN(OPT_DSN, ptrDSN->dataSeqNumber, ptrDSN->dataLevelLength, ptrDSN->subflowSeqNumber);
 
-  NS_LOG_WARN (Simulator::Now().GetSeconds() <<" RetransmitSegment -> "<< " localToken "<< localToken<<" Subflow "<<(int) sFlowIdx<<" DataSeq "<< ptrDSN->dataSeqNumber <<" SubflowSeq " << ptrDSN->subflowSeqNumber <<" dataLength " << ptrDSN->dataLevelLength << " packet size " << pkt->GetSize() << " 3DupACK");
+  NS_LOG_WARN (Simulator::Now().GetSeconds() <<" RetransmitSegment -> "<< " m_localToken "<< m_localToken <<" Subflow "<<(int) sFlowIdx<<" DataSeq "<< ptrDSN->dataSeqNumber <<" SubflowSeq " << ptrDSN->subflowSeqNumber <<" dataLength " << ptrDSN->dataLevelLength << " packet size " << pkt->GetSize() << " 3DupACK");
   uint8_t hlen = 5;
   uint8_t olen = 15;
   uint8_t plen = 0;
@@ -1991,20 +1991,20 @@ MpTcpSocketBase::SendEmptyPacket(uint8_t sFlowIdx, uint8_t flags)
   if (((sFlow->state == SYN_SENT) || (sFlow->state == SYN_RCVD && mpEnabled == true)) && mpSendState == MP_NONE)
     {
       mpSendState = MP_MPC;                  // This state means MP_MPC is sent
-      localToken = rand() % 1000 + 1;        // Random Local Token
-      header.AddOptMPC(OPT_MPC, localToken); // Adding MP_CAPABLE & Token to TCP option (5 Bytes)
+      m_localToken = rand() % 1000 + 1;        // Random Local Token
+      header.AddOptMPC(OPT_MPC, m_localToken); // Adding MP_CAPABLE & Token to TCP option (5 Bytes)
       olen += 5;
-      m_mptcp->m_TokenMap[localToken] = m_endPoint;       //m_mptcp->m_TokenMap.insert(std::make_pair(localToken, m_endPoint))
-      NS_LOG_INFO("("<< (int)sFlow->routeId<< ") SendEmptyPacket -> LOCALTOKEN is mapped to connection endpoint -> " << localToken << " -> " << m_endPoint << " TokenMapsSize: "<< m_mptcp->m_TokenMap.size());
+      m_mptcp->m_TokenMap[m_localToken] = m_endPoint;       //m_mptcp->m_TokenMap.insert(std::make_pair(m_localToken, m_endPoint))
+      NS_LOG_INFO("("<< (int)sFlow->routeId<< ") SendEmptyPacket -> m_localToken is mapped to connection endpoint -> " << m_localToken << " -> " << m_endPoint << " TokenMapsSize: "<< m_mptcp->m_TokenMap.size());
     }
   else if (sFlow->state == SYN_SENT && hasSyn && sFlow->routeId == 0)
     {
-      header.AddOptMPC(OPT_MPC, localToken);       // Adding MP_CAPABLE & Token to TCP option (5 Bytes)
+      header.AddOptMPC(OPT_MPC, m_localToken);       // Adding MP_CAPABLE & Token to TCP option (5 Bytes)
       olen += 5;
     }
   else if (sFlow->state == SYN_SENT && hasSyn && sFlow->routeId != 0)
     {
-      header.AddOptJOIN(OPT_JOIN, remoteToken, 0); // addID should be zero?
+      header.AddOptJOIN(OPT_JOIN, m_remoteToken, 0); // addID should be zero?
       olen += 6;
     }
 
@@ -2121,8 +2121,8 @@ MpTcpSocketBase::ForwardUp(Ptr<Packet> p, Ipv4Header header, uint16_t port, Ptr<
       // Reset all variables after cloning is ended to ready for next connection
       mpRecvState = MP_NONE;
       mpEnabled = false;
-      remoteToken = 0;
-      localToken = 0;
+      m_remoteToken = 0;
+      m_localToken = 0;
       remoteRecvWnd = 1;
       return;
     }
@@ -2256,7 +2256,7 @@ MpTcpSocketBase::InitiateSubflows()
         header.SetSourcePort(sFlow->sPort);
         header.SetDestinationPort(sFlow->m_dPort);
         header.SetWindowSize(AdvertisedWindowSize());
-        header.AddOptJOIN(OPT_JOIN, remoteToken, addrID);
+        header.AddOptJOIN(OPT_JOIN, m_remoteToken, addrID);
         uint8_t olen = 6;
         uint8_t plen = (4 - (olen % 4)) % 4;
         olen = (olen + plen) / 4;
