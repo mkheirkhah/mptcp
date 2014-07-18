@@ -40,13 +40,28 @@ public:
   static TypeId
   GetTypeId(void);
 
-  MpTcpSubFlow(Ptr<MpTcpSocketBase> masterSocket);
+  /**
+  the metasocket is the socket the application is talking to.
+  Every subflow is linked to that socket.
+  **/
+  MpTcpSubFlow(Ptr<MpTcpSocketBase> metaSocket
+//    , bool master
+      );
+
   MpTcpSubFlow(const MpTcpSubFlow&);
 
   virtual ~MpTcpSubFlow();
 
+  virtual int
+  Connect(const Address &address);      // Setup endpoint and call ProcessAction() to connect
 
   virtual void AdvertiseAddress(uint8_t addrId, Address , uint16_t port);
+
+  /**
+  Master socket is the first to initiate the connection, thus it will use
+  MP_CAPABLE instead of MP_JOIN
+  **/
+  virtual bool IsMaster() const;
 
 protected:
   friend class MpTcpSocketBase;
@@ -76,9 +91,15 @@ protected:
   virtual bool Finished();
   DSNMapping *GetunAckPkt();
 
-  uint16_t routeId;           // Subflow's ID (TODO remove ?)
-  bool connected;             // Subflow's connection status
+
+  uint16_t m_routeId;           // Subflow's ID (TODO remove ?)
+
+  // TODO replace with parent's m_connected
+//  bool connected;             // Subflow's connection status
+
+  // TODO remove in favor of m_state
   TcpStates_t state;          // Subflow's connection state
+
   Ipv4Address sAddr;          // Source Ip address
   uint16_t sPort;             // Source port
   Ipv4Address dAddr;          // Destination address
@@ -87,12 +108,19 @@ protected:
   EventId retxEvent;          // Retransmission timer
   EventId m_lastAckEvent;     // Timer for last ACK
   EventId m_timewaitEvent;    // Timer for closing connection at sender side
-  uint32_t MSS;               // Maximum Segment Size
-  uint32_t cnCount;           // Count of remaining connection retries
-  uint32_t cnRetries;         // Number of connection retries before giving up
+  // TODO replace by m_segmentSize
+//  uint32_t MSS;               // Maximum Segment Size
+
+
+//  uint32_t cnCount; // TODO remove, use parent's one          // Count of remaining connection retries
+//  uint32_t cnRetries;  same       // Number of connection retries before giving up
+
+  // TODO replace by parent's m_
   Time     cnTimeout;         // Timeout for connection retry
   TracedValue<uint32_t> cwnd; // Congestion window (in bytes)
-  uint32_t m_ssThresh;          //!< Slow start threshold
+
+  // TODO remove use parent's
+  // uint32_t m_ssThresh;          //!< Slow start threshold
   uint32_t maxSeqNb;          // Highest sequence number of a sent byte. Equal to (TxSeqNumber - 1) until a retransmission occurs
   uint32_t highestAck;        // Highest received ACK for the subflow level sequence number
   uint64_t bandwidth;         // Link's bandwidth
@@ -137,7 +165,13 @@ protected:
   vector<pair<double, double> > _RTO;
 
 protected:
-  Ptr<MpTcpSocketBase> m_masterSocket;
+  Ptr<MpTcpSocketBase> m_metaSocket;
+
+private:
+  bool m_masterSocket;
+  uint32_t m_localToken;  //!< Store local host token, generated during the 3-way handshake
+  uint32_t m_remoteToken; //!< Store remote host token
+
 };
 
 }

@@ -16,7 +16,7 @@ typedef enum
   OPT_NONE = 0,
   OPT_DSACK = 5,
   OPT_TT = 8,      // Time Stamp
-  OPT_MPC = 30,
+  OPT_MPCAPABLE = 30,
   OPT_JOIN = 31,
   OPT_ADDR = 32,
   OPT_REMADR = 33,

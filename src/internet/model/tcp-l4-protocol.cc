@@ -367,9 +367,9 @@ TcpL4Protocol::Receive(Ptr<Packet> packet, Ipv4Header const &ipHeader, Ptr<Ipv4I
   for (uint32_t j = 0; j < options.size(); j++)
     {
       opt = options[j];
-      if ((opt->optName == OPT_MPC) && hasSyn)
+      if ((opt->optName == OPT_MPCAPABLE) && hasSyn)
         { // In this case the endpoint with destination port and token value of zero need to be find.
-          NS_LOG_INFO("TcpL4Protocol::Receive -> OPT_MPC -> Do NOTTING");
+          NS_LOG_INFO("TcpL4Protocol::Receive -> OPT_MPCAPABLE -> Do NOTTING");
         }
       else if ((opt->optName == OPT_JOIN) && hasSyn)
         { // In this case there should be endPoint with this token, so look for a match on all endpoints.

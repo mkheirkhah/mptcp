@@ -318,9 +318,9 @@ TcpHeader::Print(std::ostream &os) const
 
       //os << opt->optName;
 
-      if (opt->optName == OPT_MPC)
+      if (opt->optName == OPT_MPCAPABLE)
         {
-          os << "OPT_MPC(";
+          os << "OPT_MPCAPABLE(";
           optMPC = (OptMultipathCapable *) opt;
           os << optMPC->senderToken << ")";
         }
@@ -437,7 +437,7 @@ TcpHeader::Serialize(Buffer::Iterator start) const
       OptTimesTamp *optTT;
       i.WriteU8(TcpOptionToUint(opt->optName));
 
-      if (opt->optName == OPT_MPC)
+      if (opt->optName == OPT_MPCAPABLE)
         {
           optMPC = (OptMultipathCapable *) opt;
           i.WriteHtonU32(optMPC->senderToken);
@@ -552,7 +552,7 @@ TcpHeader::Deserialize(Buffer::Iterator start)
     {
       TcpOptions *opt;
       TcpOption_t kind = (TcpOption_t) i.ReadU8(); //TcpOption_t kind = UintToTcpOption(i.ReadU8());
-      if (kind == OPT_MPC)
+      if (kind == OPT_MPCAPABLE)
         {
           opt = new OptMultipathCapable(kind, i.ReadNtohU32());
           plen = (plen + 5) % 4;
@@ -644,7 +644,7 @@ TcpHeader::GetOptionsLength() const
     {
       opt = m_option[j];
 
-      if (opt->optName == OPT_MPC)
+      if (opt->optName == OPT_MPCAPABLE)
         {
           length += 5;
         }
@@ -687,7 +687,7 @@ TcpHeader::TcpOptionToUint(TcpOption_t opt) const
   //NS_LOG_FUNCTION_NOARGS();
   uint8_t i = 0;
 
-  if (opt == OPT_MPC)
+  if (opt == OPT_MPCAPABLE)
     i = 30;
   else if (opt == OPT_JOIN)
     i = 31;
@@ -713,7 +713,7 @@ TcpHeader::UintToTcpOption(uint8_t kind) const
   TcpOption_t i = OPT_NONE;
 
   if (kind == 30)
-    i = OPT_MPC;
+    i = OPT_MPCAPABLE;
   else if (kind == 31)
     i = OPT_JOIN;
   else if (kind == 32)
@@ -778,7 +778,7 @@ TcpHeader::~TcpHeader()
       if (m_option[i] != 0)
         switch (m_option[i]->optName)
           {
-        case OPT_MPC:
+        case OPT_MPCAPABLE:
           delete (OptMultipathCapable*) m_option[i];
           break;
         case OPT_JOIN:
@@ -808,7 +808,7 @@ bool
 TcpHeader::AddOptMPC(TcpOption_t optName, uint32_t TxToken)
 {
 //  NS_LOG_FUNCTION(this);
-  if (optName == OPT_MPC)
+  if (optName == OPT_MPCAPABLE)
     {
       OptMultipathCapable* opt = new OptMultipathCapable(optName, TxToken);
 

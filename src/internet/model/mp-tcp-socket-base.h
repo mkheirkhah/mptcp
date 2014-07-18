@@ -27,6 +27,10 @@ class MpTcpSubFlow;
 
 /**
 TODO see how we can modify this to use
+
+This is the MPTCP meta socket the application talks with
+this socket. New subflows, as well as the first one (the master
+socket) are linked to this meta socket.
 **/
 class MpTcpSocketBase : public TcpSocketBase
 {
@@ -36,6 +40,11 @@ public: // public methods
   MpTcpSocketBase();
   MpTcpSocketBase(Ptr<Node> node);
   virtual ~MpTcpSocketBase();
+
+  virtual bool IsMpTcpEnabled() const;
+  virtual uint64_t GenerateKey() const;
+
+  bool IsConnected() const;
 
   // Public interface for MPTCP
   virtual int Bind();                         // Bind a socket by setting up endpoint in TcpL4Protocol
@@ -66,10 +75,12 @@ public: // public methods
 //  void SetPathManager(Ptr<MpTcpPathManager>);
 
   // Path management related functions
-  void
-  AdvertiseAddress(); //
-  void
-  AdvertiseAvailableAddresses(); // Advertise all addresses to the peer, including the already established address.
+  void AdvertiseAddress(); //
+  void AdvertiseAvailableAddresses(); // Advertise all addresses to the peer, including the already established address.
+
+  virtual uint32_t GenerateToken() const;
+  virtual uint32_t GetLocalToken() const;
+  virtual uint32_t GetRemoteToken() const;
 
 public: // public variables
 
@@ -84,6 +95,8 @@ public: // public variables
   uint32_t pAck;
   GnuplotCollection gnu;
   std::list<uint32_t> sampleList;
+
+  // TODO remove in favor of parents' ?
   vector<pair<double, double> > totalCWNDtrack;
   vector<pair<double, double> > reTxTrack;
   vector<pair<double, double> > timeOutTrack;
@@ -96,6 +109,9 @@ public: // public variables
 protected: // protected methods
 
   friend class Tcp;
+
+
+//  virtual int SetLocalToken(uint32_t token) const;
 
   // Implementing some inherited methods from ns3::TcpSocket. No need to comment them!
   virtual void SetSndBufSize (uint32_t size);
@@ -114,8 +130,12 @@ protected: // protected methods
   int  SetupEndpoint (void); // Configure local address for given remote address in a host - it query a routing protocol to find a source
   void CompleteFork(Ptr<Packet> p, const TcpHeader& h, const Address& fromAddress, const Address& toAddress);
 
+  // TODO remove should be done by helper instead
   bool InitiateSubflows();            // Initiate new subflows
 
+  /**
+  Will notify callback on ADD_ADDR reception
+  **/
   void SetAddAddrCallback(Callback<bool, Ptr<Socket>, Address, uint8_t> );
   void NotifyAddAddr(MpTcpAddressInfo);
   void NotifyRemAddr(uint8_t addrId);
@@ -127,6 +147,8 @@ protected: // protected methods
 
   // Transfer operations
   void ForwardUp(Ptr<Packet> p, Ipv4Header header, uint16_t port, Ptr<Ipv4Interface> interface);
+
+  // These should be removed (or at least remove the flowId)
   bool SendPendingData(uint8_t sFlowId = -1);
   void SendEmptyPacket(uint8_t sFlowId, uint8_t flags);
   void SendRST(uint8_t sFlowIdx);
@@ -223,12 +245,14 @@ protected: // protected variables
   // MPTCP connection parameters
   Ptr<Node>          m_node;
 //  Ipv4EndPoint*      m_endPoint;    // TODO could remove since its parent already defines it
-  Ptr<TcpL4Protocol> m_mptcp;       //? what is this ?
+//  Ptr<TcpL4Protocol> m_mptcp;       //? what is this ? use m_tcp from parent socket
+  // TODO remove
   Ipv4Address        m_localAddress;
   Ipv4Address        m_remoteAddress;
   uint16_t           m_localPort;
   uint16_t           m_remotePort;
-  uint8_t            currentSublow; // master socket ???
+  uint8_t            currentSublow; // master socket ??? to remove
+
   //Ptr<MpTcpPathManager> m_pathManager;
   Callback<bool, Ptr<Socket>, Address, uint8_t > m_onAddAddr;  // return true to create a subflow
 //  Callback<void, const MpTcpAddressInfo& > m_onRemAddr;
@@ -240,12 +264,11 @@ protected: // protected variables
   // MultiPath related parameters
   MpStates_t mpSendState;   //!< TODO to remove (useless)
   MpStates_t mpRecvState;   //!< TODO to remove (useless)
-  bool mpEnabled;   //!< True if remote host is MPTCP compliant
-  bool mpTokenRegister; //!<
-  bool m_addrAdvertised;  //!<
-  uint32_t m_localToken;  //!< Store local host token, generated during the 3-way handshake
-  uint32_t m_remoteToken; //!< Store remote host token
-  uint32_t unOrdMaxSize;
+  bool m_mpEnabled;   //!< True if remote host is MPTCP compliant
+//  bool mpTokenRegister; //!< TODO remove
+  bool m_addrAdvertised;  //!< TODO remove
+
+  uint32_t unOrdMaxSize;  //!< ?
   uint8_t  m_maxSubflows; //!< Max number of subflows
   uint8_t  lastUsedsFlowIdx;  //!<
 
@@ -265,7 +288,7 @@ protected: // protected variables
   // Congestion control
   // TODO store that in abstract class
   double alpha;
-  uint32_t totalCwnd;
+  uint32_t m_totalCwnd;
   CongestionCtrl_t AlgoCC;       // Algorithm for Congestion Control
   DataDistribAlgo_t distribAlgo; // Algorithm for Data Distribution
 
@@ -281,14 +304,22 @@ protected: // protected variables
   DataBuffer *sendingBuffer;
   DataBuffer *recvingBuffer;
 
-  bool client;  // TODO make private ? check what it does
+  // TODO make private ? check what it does
+  // should be able to rmeove one
+  bool client;
   bool server;
+
+private:
+  // TODO rename into m_localKey uint64_t and move tokens into subflow (maybe not even needed)
+  uint32_t m_localKey;  //!< Store local host token, generated during the 3-way handshake
+  uint32_t m_remoteKey; //!< Store remote host token
 
 private:
   bool
   AddAddr(bool remote, uint8_t addrId, const Address& address, uint16_t port);
   bool
   RemAddr(bool remote, uint8_t addrId);
+
 
 };
 

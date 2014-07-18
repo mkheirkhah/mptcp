@@ -26,6 +26,7 @@ namespace ns3
 
 /**
 MP kinds
+TODO remove ?
 **/
 typedef enum
 {

@@ -246,7 +246,7 @@ protected:
   SendPendingData(bool withAck = false); // Send as much as the window allows
   uint32_t
   SendDataPacket(SequenceNumber32 seq, uint32_t maxSize, bool withAck); // Send a data packet
-  void
+  virtual void
   SendEmptyPacket(uint8_t flags); // Send a empty packet that carries a flag, e.g. ACK
   void
   SendRST(void); // Send reset and tear down this socket
