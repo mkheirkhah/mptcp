@@ -26,3 +26,4 @@ Limitations
 ======
 -TCP options implementation is temporary and will be replaced by the Socis student implementation. So for now there is no limit to the number of options you can add. You cannot specify any port number in an ADD_ADDR
 -does not work with IPv6 addresses
+-CancelAllTimers() of TcpSocketBase is not virtual
