@@ -76,7 +76,7 @@ protected:
   virtual bool Finished();
   DSNMapping *GetunAckPkt();
 
-  uint16_t routeId;           // Subflow's ID
+  uint16_t routeId;           // Subflow's ID (TODO remove ?)
   bool connected;             // Subflow's connection status
   TcpStates_t state;          // Subflow's connection state
   Ipv4Address sAddr;          // Source Ip address

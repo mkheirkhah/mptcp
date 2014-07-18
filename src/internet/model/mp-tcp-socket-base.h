@@ -249,7 +249,7 @@ protected: // protected variables
   uint8_t  m_maxSubflows; //!< Max number of subflows
   uint8_t  lastUsedsFlowIdx;  //!<
 
-  std::vector<Ptr<MpTcpSubFlow> > subflows;
+  std::vector<Ptr<MpTcpSubFlow> > m_subflows;
 
   // MPTCP containers
 
@@ -273,7 +273,7 @@ protected: // protected variables
   uint32_t m_ssThresh;           // Slow start threshold
   uint32_t m_initialCWnd;        // Initial congestion window value
   uint32_t remoteRecvWnd;        // Flow control window at remote side
-  uint32_t segmentSize;          // Segment size
+  uint32_t m_segmentSize;          // Segment size
   uint64_t nextTxSequence;       // Next expected sequence number to send in connection level
   uint64_t nextRxSequence;       // Next expected sequence number to receive in connection level
 
