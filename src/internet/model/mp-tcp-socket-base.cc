@@ -36,21 +36,41 @@ MpTcpSocketBase::GetTypeId(void)
   static TypeId tid = TypeId("ns3::MpTcpSocketBase")
       .SetParent<TcpSocketBase>()
       .AddConstructor<MpTcpSocketBase>()
-      .AddAttribute("CongestionControl","Congestion control algorithm",
+      .AddAttribute("CongestionControl",
+                    "Congestion control algorithm",
           EnumValue(Uncoupled_TCPs),
           MakeEnumAccessor(&MpTcpSocketBase::SetCongestionCtrlAlgo),
-          MakeEnumChecker(Uncoupled_TCPs, "Uncoupled_TCPs",Fully_Coupled, "Fully_Coupled", RTT_Compensator, "RTT_Compensator", Linked_Increases,"Linked_Increases"))
-      .AddAttribute("SchedulingAlgorithm", "Algorithm for data distribution between subflows", EnumValue(Round_Robin),
+          MakeEnumChecker(Uncoupled_TCPs, "Uncoupled_TCPs",
+                          Fully_Coupled, "Fully_Coupled",
+                          RTT_Compensator, "RTT_Compensator",
+                          Linked_Increases, "Linked_Increases"))
+
+      .AddAttribute("SchedulingAlgorithm",
+                    "Algorithm for data distribution between subflows",
+          EnumValue(Round_Robin),
           MakeEnumAccessor(&MpTcpSocketBase::SetDataDistribAlgo),
           MakeEnumChecker(Round_Robin, "Round_Robin"))
-      .AddAttribute("MaxSubflows","Maximum number of subflows per each mptcp connection",
+
+      .AddAttribute("Path Management",
+                     "Mechanism for establishing new subflows",
+          EnumValue(FullMesh),
+          MakeEnumAccessor(&MpTcpSocketBase::SetPathManager),
+          MakeEnumChecker(Default,"Default",
+                          FullMesh, "FullMesh",
+                          NdiffPorts, "NdiffPorts"))
+
+      .AddAttribute("MaxSubflows",
+                    "Maximum number of subflows per each mptcp connection",
           UintegerValue(255),
           MakeUintegerAccessor(&MpTcpSocketBase::maxSubflows),
           MakeUintegerChecker<uint8_t>())
-      .AddAttribute("Subflows", "The list of subflows associated to this protocol.",
+
+      .AddAttribute("Subflows",
+                    "The list of subflows associated to this protocol.",
           ObjectVectorValue(),
           MakeObjectVectorAccessor(&MpTcpSocketBase::subflows),
           MakeObjectVectorChecker<MpTcpSocketBase>());
+
   return tid;
 }
 
@@ -229,6 +249,7 @@ MpTcpSocketBase::ReadOptions(uint8_t sFlowIdx, Ptr<Packet> pkt, const TcpHeader&
           if ((mpSendState == MP_ADDR) && (localToken == optJoin->receiverToken))
             { // SYN+ACK would be send later on by ProcessSynRcvd(...)
               // Join option is sent over the path (couple of addresses) not already in use
+              NS_LOG_UNCOND("Server receive new subflow!");
             }
         }
       else if ((opt->optName == OPT_ADDR) && (mpRecvState == MP_MPC))
@@ -254,7 +275,7 @@ MpTcpSocketBase::ReadOptions(uint8_t sFlowIdx, Ptr<Packet> pkt, const TcpHeader&
     {
       mpRecvState = MP_ADDR;
       // If addresses did not send yet then advertise them...
-      if (mpSendState != MP_ADDR)
+      if (mpSendState != MP_ADDR && pathManager == FullMesh)
         {
           NS_LOG_DEBUG(Simulator::Now().GetSeconds()<< "---------------------- AdvertiseAvailableAddresses By Server ---------------------");
           AdvertiseAvailableAddresses(); // this is what the receiver has to do
@@ -341,7 +362,7 @@ MpTcpSocketBase::ProcessListen(Ptr<Packet> packet, const TcpHeader& mptcpHeader,
 
   // Clone the socket, simulate fork
   Ptr<MpTcpSocketBase> newSock = CopyObject<MpTcpSocketBase>(this);
-  NS_LOG_DEBUG ("Clone new MpTcpSocketBase new connection. ListenerSocket " << this << " AcceptedSocket "<< newSock);
+  NS_LOG_UNCOND ("Clone new MpTcpSocketBase new connection. ListenerSocket " << this << " AcceptedSocket "<< newSock);
   Simulator::ScheduleNow(&MpTcpSocketBase::CompleteFork, newSock, packet, mptcpHeader, fromAddress, toAddress);
 }
 
@@ -355,10 +376,10 @@ MpTcpSocketBase::CompleteFork(Ptr<Packet> p, const TcpHeader& mptcpHeader, const
   if (InetSocketAddress::IsMatchingType(toAddress))
     {
       m_endPoint = m_mptcp->Allocate(InetSocketAddress::ConvertFrom(toAddress).GetIpv4(), InetSocketAddress::ConvertFrom(toAddress).GetPort(),
-          InetSocketAddress::ConvertFrom(fromAddress).GetIpv4(), InetSocketAddress::ConvertFrom(fromAddress).GetPort());
+      InetSocketAddress::ConvertFrom(fromAddress).GetIpv4(), InetSocketAddress::ConvertFrom(fromAddress).GetPort());
     }
-  NS_ASSERT(InetSocketAddress::ConvertFrom(toAddress).GetIpv4() == m_localAddress);
-  NS_ASSERT(InetSocketAddress::ConvertFrom(toAddress).GetPort() == m_localPort);
+  NS_ASSERT(InetSocketAddress::ConvertFrom(toAddress).GetIpv4()   == m_localAddress);
+  NS_ASSERT(InetSocketAddress::ConvertFrom(toAddress).GetPort()   == m_localPort);
   NS_ASSERT(InetSocketAddress::ConvertFrom(fromAddress).GetIpv4() == m_remoteAddress);
   NS_ASSERT(InetSocketAddress::ConvertFrom(fromAddress).GetPort() == m_remotePort);
 
@@ -385,7 +406,8 @@ MpTcpSocketBase::CompleteFork(Ptr<Packet> p, const TcpHeader& mptcpHeader, const
 
   // Update currentSubflow in case close just after 3WHS.
   currentSublow = sFlow->routeId;
-  NS_LOG_UNCOND("CompleteFork -> receivingBufferSize: " << recvingBuffer->bufMaxSize);NS_LOG_INFO(this << "  MPTCP connection is initiated (Receiver): " << sFlow->sAddr << ":" << sFlow->sPort << " -> " << sFlow->dAddr << ":" << sFlow->dPort);
+  NS_LOG_UNCOND("CompleteFork -> receivingBufferSize: " << recvingBuffer->bufMaxSize);//
+  NS_LOG_INFO(this << "  MPTCP connection is initiated (Receiver): " << sFlow->sAddr << ":" << sFlow->sPort << " -> " << sFlow->dAddr << ":" << sFlow->dPort);
 }
 
 /** Received a packet upon LISTEN state. */
@@ -469,17 +491,26 @@ MpTcpSocketBase::ProcessSynSent(uint8_t sFlowIdx, Ptr<Packet> packet, const TcpH
       SendEmptyPacket(sFlowIdx, TcpHeader::ACK);
 
       // Advertise available addresses...
-      if (addrAdvertised == false)
+      if (addrAdvertised == false && pathManager == FullMesh)
         {
           NS_LOG_WARN("---------------------- AdvertiseAvailableAddresses By Client ---------------------");
           AdvertiseAvailableAddresses();
           addrAdvertised = true;
         }
+
+
       if (m_state != ESTABLISHED)
         {
           m_state = ESTABLISHED;
           NotifyConnectionSucceeded();
-        }NS_LOG_UNCOND("ProcessSynSent -> SubflowsSize: " << subflows.size());
+        }
+      if (addrAdvertised == false && pathManager == NdiffPorts)
+        {
+          uint32_t MaxSubflow = 4;
+          InitiateSubflows(MaxSubflow);
+          addrAdvertised = true;
+        }
+      NS_LOG_UNCOND("ProcessSynSent -> SubflowsSize: " << subflows.size());
     }
   else
     { // Other in-sequence input
@@ -1291,7 +1322,7 @@ MpTcpSocketBase::Connect(Ipv4Address servAddr, uint16_t servPort)
   sFlow->sPort = m_endPoint->GetLocalPort();
   sFlow->MSS = segmentSize;
   sFlow->cwnd = sFlow->MSS;
-  NS_LOG_INFO("Connect -> SegmentSize: " << sFlow->MSS << " tcpSegmentSize: " << m_segmentSize << " segmentSize: " << segmentSize) ;//
+  NS_LOG_INFO  ("Connect -> SegmentSize: "       << sFlow->MSS << " tcpSegmentSize: " << m_segmentSize << " segmentSize: " << segmentSize) ;//
   NS_LOG_UNCOND("Connect -> SendingBufferSize: " << sendingBuffer->bufMaxSize);
 
   // This is master subsocket (master subflow) then its endpoint is the same as connection endpoint.
@@ -1933,13 +1964,10 @@ MpTcpSocketBase::ForwardUp(Ptr<Packet> p, Ipv4Header header, uint16_t port, Ptr<
   m_localAddress = header.GetDestination();
   m_remoteAddress = header.GetSource();
   m_remotePort = port;
-  if (server)
-    NS_LOG_ERROR("PacketSize BEFORE peeling: " << p->GetSize());
+
   // Peel off TCP header and do validity checking
   TcpHeader mptcpHeader;
   p->RemoveHeader(mptcpHeader);
-  if (server)
-    NS_LOG_ERROR("PacketSize AFTER peeling: " << p->GetSize() << " Optionsize: " << (int)mptcpHeader.GetOptionsLength() << " Padding:" << (int)mptcpHeader.GetPaddingLength());
 
   m_localPort = mptcpHeader.GetDestinationPort();
   NS_ASSERT(m_localPort == m_endPoint->GetLocalPort());
@@ -1948,7 +1976,7 @@ MpTcpSocketBase::ForwardUp(Ptr<Packet> p, Ipv4Header header, uint16_t port, Ptr<
   if (subflows.size() == 0 && m_state == LISTEN)
     {
       NS_ASSERT(server && m_state == LISTEN);
-      NS_LOG_INFO("Listening socket receives SYN packet, it need to be CLONED... " << mptcpHeader);
+      NS_LOG_UNCOND("Listening socket receives SYN packet, it need to be CLONED... " << mptcpHeader);
       // Update the flow control window
       remoteRecvWnd = (uint32_t) mptcpHeader.GetWindowSize();
       // We need to define another ReadOption with no subflow in it
@@ -1964,18 +1992,17 @@ MpTcpSocketBase::ForwardUp(Ptr<Packet> p, Ipv4Header header, uint16_t port, Ptr<
       remoteRecvWnd = 1;
       return;
     }
-  // Accepted sockets being dealt with from here.......
-  // LookupByAddrs of src and destination.
-  uint8_t sFlowIdx = LookupByAddrs(m_localAddress, m_remoteAddress); //m_endPoint->GetPeerAddress());
-  NS_ASSERT_MSG((sFlowIdx < maxSubflows), "Subflow number should be smaller than MaxNumOfSubflows");
+  // Accepted sockets being dealt with from here on .......
+  // Lookup for a subflow based on 4-tuple of incoming packet
+  int sFlowIdx = LookupSubflow(m_localAddress, m_localPort, m_remoteAddress, m_remotePort);
+
+  NS_ASSERT_MSG(sFlowIdx < maxSubflows, "Subflow number should be smaller than MaxNumOfSubflows");
+  NS_ASSERT_MSG(sFlowIdx >= 0, "sFlowIdx is -1, i.e., invalid packet received - This is not a bug we need to deal with it - sFlowIdx: "<< sFlowIdx);
 
   Ptr<MpTcpSubFlow> sFlow = subflows[sFlowIdx];
 
   //uint32_t dataLen;   // packet's payload length
   remoteRecvWnd = (uint32_t) mptcpHeader.GetWindowSize(); //update the flow control window
-
-  sFlow->dAddr = m_remoteAddress;
-  sFlow->dPort = m_endPoint->GetPeerPort();
 
   if (mptcpHeader.GetFlags() & TcpHeader::ACK)
     { // This function update subflow's lastMeasureRtt variable.
@@ -2104,6 +2131,58 @@ MpTcpSocketBase::InitiateSubflows()
         m_mptcp->SendPacket(pkt, header, local, remote, FindOutputNetDevice(local));
         NS_LOG_INFO("InitiateSubflows -> (" << local << " -> " << remote << ") | "<< header);
       }
+  return true;
+}
+
+bool
+MpTcpSocketBase::InitiateSubflows(uint32_t maxSubflows)
+{
+  NS_LOG_FUNCTION_NOARGS();
+
+  NS_ASSERT(pathManager == NdiffPorts);
+  for (uint32_t i = 0; i < maxSubflows; i++)
+    {
+      // Create new subflow
+      Ptr<MpTcpSubFlow> sFlow = CreateObject<MpTcpSubFlow>();
+      sFlow->routeId = (subflows.size() == 0 ? 0 : subflows[subflows.size() - 1]->routeId + 1);
+
+      // Set up subflow based on different source ports
+      sFlow->sAddr = m_endPoint->GetLocalAddress();
+      sFlow->sPort = m_endPoint->GetLocalPort()+ i + 1;
+      sFlow->dAddr = m_endPoint->GetPeerAddress();
+      sFlow->dPort = m_endPoint->GetPeerPort();
+      sFlow->MSS = segmentSize;
+      sFlow->cwnd = sFlow->MSS;
+      sFlow->state = SYN_SENT;
+      sFlow->cnCount = sFlow->cnRetries;
+      sFlow->m_endPoint = m_mptcp->Allocate(sFlow->sAddr, sFlow->sPort, sFlow->dAddr, sFlow->dPort);
+      if (sFlow->m_endPoint == 0)
+        return -1;
+      sFlow->m_endPoint->SetRxCallback(MakeCallback(&MpTcpSocketBase::ForwardUp, Ptr<MpTcpSocketBase>(this)));
+      subflows.insert(subflows.end(), sFlow);
+
+      // Create packet and add MP_JOIN option to it.
+      Ptr<Packet> pkt = Create<Packet>();
+      TcpHeader header;
+      header.SetFlags(TcpHeader::SYN);
+      header.SetSequenceNumber(SequenceNumber32(sFlow->TxSeqNumber));
+      header.SetAckNumber(SequenceNumber32(sFlow->RxSeqNumber));
+      header.SetSourcePort(sFlow->sPort);
+      header.SetDestinationPort(sFlow->dPort);
+      header.SetWindowSize(AdvertisedWindowSize());
+      header.AddOptJOIN(OPT_JOIN, remoteToken, /*addrID*/0);
+      uint8_t olen = 6;
+      uint8_t plen = (4 - (olen % 4)) % 4;
+      olen = (olen + plen) / 4;
+      uint8_t hlen = 5 + olen;
+      header.SetLength(hlen);
+      header.SetOptionsLength(olen);
+      header.SetPaddingLength(plen);
+      NS_LOG_ERROR("InitiateSubflow-> hLen: " << (int) hlen);
+      NS_LOG_UNCOND("InitiateSubflow -> 4-Tuple: " << sFlow->sAddr<< ":"<< sFlow->sPort << " , "<< sFlow->dAddr << ":" << sFlow->dPort);
+      // Send packet lower down the networking stack
+      m_mptcp->SendPacket(pkt, header, sFlow->sAddr, sFlow->dAddr, FindOutputNetDevice(sFlow->sAddr));
+    }
   return true;
 }
 
@@ -3400,6 +3479,22 @@ MpTcpSocketBase::IsLocalAddress(Ipv4Address addr)
   return found;
 }
 
+bool
+MpTcpSocketBase::IsRemoteAddress(Ipv4Address addr)
+{
+  bool found = false;
+  MpTcpAddressInfo * mpAddrInfo;
+  for (uint32_t i = 0; i < remoteAddrs.size(); i++)
+    {
+      mpAddrInfo = remoteAddrs[i];
+      if (mpAddrInfo->ipv4Addr == addr)
+        {
+          found = true;
+          break;
+        }
+    }
+  return found;
+}
 //void
 //MpTcpSocketBase::DetectLocalAddresses()
 //{
@@ -3560,6 +3655,60 @@ MpTcpSocketBase::LookupByAddrs(Ipv4Address src, Ipv4Address dst)
             }
         }
     }NS_LOG_DEBUG("LookupByAddrs -> TotalSubflows{" << subflows.size() <<"} (src,dst) = (" << src << "," << dst << "). Forwarded to (" << (int) sFlowIdx << ")");
+  return sFlowIdx;
+}
+
+// This lookup is to find a subflow for an incoming packet. It is based on 4-tuple.
+int
+MpTcpSocketBase::LookupSubflow(Ipv4Address src, uint32_t srcPort, Ipv4Address dst, uint32_t dstPort)
+{
+  NS_LOG_FUNCTION(this);
+
+  NS_ASSERT(m_localAddress == src);
+  NS_ASSERT(m_remoteAddress == dst);
+  NS_ASSERT(m_localPort == srcPort);
+  NS_ASSERT(m_remotePort == dstPort);
+
+  Ptr<MpTcpSubFlow> sFlow = 0;
+  uint8_t sFlowIdx = maxSubflows;
+
+  // Walk through the existing subflow container and try to find one with 4-tuple match!
+  for (uint32_t i = 0; i < subflows.size(); i++)
+    {
+      sFlow = subflows[i];
+      if (sFlow->sAddr == src && sFlow->dAddr == dst && sFlow->sPort == srcPort && sFlow->dPort == dstPort)
+        {
+          sFlowIdx = i;
+          return sFlowIdx;
+        }
+    }
+
+  // For now this should be happen only at server side
+  NS_ASSERT(server);
+
+  // If a new subflow need to be created then src/dst pair should be already known to mptcp socket.
+  if (!IsLocalAddress(src) || !IsRemoteAddress(dst))
+    return -1;
+
+  // Recevier would create its new subflow when SYN with MP_JOIN being sent.
+  sFlowIdx = subflows.size();
+  sFlow = CreateObject<MpTcpSubFlow>();
+  sFlow->routeId = subflows[subflows.size() - 1]->routeId + 1;
+  sFlow->dAddr = dst;
+  sFlow->dPort = dstPort;
+  sFlow->sAddr = src;
+  sFlow->sPort = srcPort;
+  sFlow->MSS = segmentSize;
+  sFlow->cwnd = sFlow->MSS;
+  sFlow->state = LISTEN;
+  sFlow->cnCount = sFlow->cnRetries;
+  sFlow->m_endPoint = m_mptcp->Allocate(sFlow->sAddr, sFlow->sPort, sFlow->dAddr, sFlow->dPort);
+  if (sFlow->m_endPoint == 0)
+    return -1;
+  sFlow->m_endPoint->SetRxCallback(MakeCallback(&MpTcpSocketBase::ForwardUp, Ptr<MpTcpSocketBase>(this)));
+  subflows.insert(subflows.end(), sFlow);
+  NS_LOG_UNCOND("LookupSubflow -> Subflow(" << (int) sFlowIdx <<") has created its (src,dst) = (" << sFlow->sAddr << "," << sFlow->dAddr << ")" );
+
   return sFlowIdx;
 }
 
@@ -3756,6 +3905,7 @@ MpTcpSocketBase::DeallocateEndPoint(uint8_t sFlowIdx)
 //  return subflows[sFlowIdx];
 //}
 
+
 void
 MpTcpSocketBase::SetCongestionCtrlAlgo(CongestionCtrl_t ccalgo)
 {
@@ -3766,6 +3916,11 @@ void
 MpTcpSocketBase::SetDataDistribAlgo(DataDistribAlgo_t ddalgo)
 {
   distribAlgo = ddalgo;
+}
+
+void
+MpTcpSocketBase::SetPathManager(PathManager_t pManagerMode){
+  pathManager = pManagerMode;
 }
 
 //DSNMapping*

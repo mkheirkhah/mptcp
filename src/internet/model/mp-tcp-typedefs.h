@@ -47,21 +47,28 @@ typedef enum
 
 typedef enum
 {
-  NoPR_Algo,
-} PacketReorder_t;
+  Default,
+  FullMesh,
+  NdiffPorts
+} PathManager_t;
 
-typedef enum
-{
-  Slow_Start,
-  Congestion_Avoidance,
-} Phase_t;
+//typedef enum
+//{
+//  NoPR_Algo,
+//} PacketReorder_t;
 
-typedef enum
-{
-  NO_ACTION,
-  ADDR_TX,
-  INIT_SUBFLOWS
-} MpActions_t;
+//typedef enum
+//{
+//  Slow_Start,
+//  Congestion_Avoidance,
+//} Phase_t;
+
+//typedef enum
+//{
+//  NO_ACTION,
+//  ADDR_TX,
+//  INIT_SUBFLOWS
+//} MpActions_t;
 
 class DSNMapping
 {

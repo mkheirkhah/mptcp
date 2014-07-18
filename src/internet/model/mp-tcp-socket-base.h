@@ -51,6 +51,7 @@ public: // public methods
   // Setter for congestion Control and data distribution algorithm
   void SetCongestionCtrlAlgo(CongestionCtrl_t ccalgo);  // This would be used by attribute system for setting congestion control
   void SetDataDistribAlgo(DataDistribAlgo_t ddalgo);    // Round Robin is only algorithms used.
+  void SetPathManager (PathManager_t);
 
 public: // public variables
 
@@ -95,7 +96,8 @@ protected: // protected methods
   int  SetupEndpoint (void); // Configure local address for given remote address in a host - it query a routing protocol to find a source
   void CompleteFork(Ptr<Packet> p, const TcpHeader& h, const Address& fromAddress, const Address& toAddress);
   void AdvertiseAvailableAddresses(); // Advertise all addresses to the peer, including the already established address.
-  bool InitiateSubflows();            // Initiate new subflows
+  bool InitiateSubflows();            // Initiate new subflows when FullMesh mode is active
+  bool InitiateSubflows(uint32_t maxSubflows); // Initiate new subflows when nDiffPorts is active
 
   // Transfer operations
   void ForwardUp(Ptr<Packet> p, Ipv4Header header, uint16_t port, Ptr<Ipv4Interface> interface);
@@ -167,9 +169,12 @@ protected: // protected methods
 
   // Helper functions -> main operations
   uint8_t LookupByAddrs(Ipv4Address src, Ipv4Address dst); // Called by Forwardup() to find the right subflow for incoing packet
+  int LookupSubflow(Ipv4Address src, uint32_t sPort, Ipv4Address dst , uint32_t dPort); // LookupBy4-Tuple
+
   uint8_t getSubflowToUse();  // Called by SendPendingData() to get a subflow based on round robin algorithm
   bool IsThereRoute(Ipv4Address src, Ipv4Address dst);     // Called by InitiateSubflow & LookupByAddrs and Connect to check whether there is route between a pair of addresses.
   bool IsLocalAddress(Ipv4Address addr);
+  bool IsRemoteAddress(Ipv4Address addr);
   Ptr<NetDevice> FindOutputNetDevice(Ipv4Address);         // Find Netdevice object of specific IP address.
   DSNMapping* getAckedSegment(uint8_t sFlowIdx, uint32_t ack);
   DSNMapping* getSegmentOfACK(uint8_t sFlowIdx, uint32_t ack);
@@ -225,6 +230,7 @@ protected: // protected variables
   uint32_t totalCwnd;
   CongestionCtrl_t AlgoCC;       // Algorithm for Congestion Control
   DataDistribAlgo_t distribAlgo; // Algorithm for Data Distribution
+  PathManager_t pathManager;        // Mechanism for subflow establishement
 
   // Window management variables
   uint32_t m_ssThresh;           // Slow start threshold
