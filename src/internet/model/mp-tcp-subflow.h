@@ -63,6 +63,9 @@ public:
   **/
   virtual bool IsMaster() const;
 
+  virtual uint32_t GetLocalToken() const;
+  virtual uint32_t GetRemoteToken() const;
+
 protected:
   friend class MpTcpSocketBase;
 
@@ -75,6 +78,8 @@ protected:
   SetInitialCwnd(uint32_t cwnd);
   virtual uint32_t
   GetInitialCwnd(void) const;
+
+  virtual void SendEmptyPacket(uint8_t flags);
 
   virtual Ptr<TcpSocketBase>
   Fork(void); // Call CopyObject<> to clone me
@@ -119,8 +124,8 @@ protected:
   Time     cnTimeout;         // Timeout for connection retry
   TracedValue<uint32_t> cwnd; // Congestion window (in bytes)
 
-  // TODO remove use parent's
-  // uint32_t m_ssThresh;          //!< Slow start threshold
+
+   uint32_t m_ssThresh;          //!< Slow start threshold
   uint32_t maxSeqNb;          // Highest sequence number of a sent byte. Equal to (TxSeqNumber - 1) until a retransmission occurs
   uint32_t highestAck;        // Highest received ACK for the subflow level sequence number
   uint64_t bandwidth;         // Link's bandwidth

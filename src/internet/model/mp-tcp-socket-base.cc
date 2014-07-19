@@ -141,10 +141,15 @@ MpTcpSocketBase::GetLocalKey() const
   return m_localKey;
 }
 
-uint32_t
-MpTcpSocketBase::GetRemoteKey() const
+int
+MpTcpSocketBase::GetRemoteKey(uint32_t& remoteKey) const
 {
-  return m_remoteKey;
+  if( IsMpTcpEnabled() )
+  {
+    remoteKey = m_remoteKey;
+    return 0;
+  }
+  return -ERROR_INVAL;
 }
 
 
@@ -509,9 +514,9 @@ MpTcpSocketBase::CompleteFork(Ptr<Packet> p, const TcpHeader& mptcpHeader, const
   sFlow->sPort = m_localPort;    //m_endPoint->GetLocalPort();
   sFlow->dAddr = m_remoteAddress;
   sFlow->m_dPort = m_remotePort;
-  sFlow->MSS = m_segmentSize;
+  sFlow->SetSegSize(m_segmentSize);
   sFlow->state = SYN_RCVD;
-  sFlow->m_cnCount = sFlow->cnRetries;
+  sFlow->m_cnCount = sFlow->m_cnRetries;
   sFlow->m_endPoint = m_endPoint; // This is master subsock, its endpoint is the same as connection endpoint.
 
   NS_LOG_INFO ("("<< (int)sFlow->m_routeId<<") LISTEN -> SYN_RCVD");
@@ -946,7 +951,7 @@ MpTcpSocketBase::ReceivedAck(uint8_t sFlowIdx, Ptr<Packet> packet, const TcpHead
   Ptr<MpTcpSubFlow> sFlow = m_subflows[sFlowIdx];
   uint32_t ack = (mptcpHeader.GetAckNumber()).GetValue();
 
-  uint32_t tmp = ((ack - sFlow->initialSequnceNumber) / sFlow->MSS) % mod;
+  uint32_t tmp = ((ack - sFlow->initialSequnceNumber) / sFlow->GetSegSize()) % mod;
   sFlow->ACK.push_back(make_pair(Simulator::Now().GetSeconds(), tmp));
 
   // Stop execution if TCPheader is not ACK at all.
@@ -1158,7 +1163,7 @@ MpTcpSocketBase::SendDataPacket(uint8_t sFlowIdx, uint32_t size, bool withAck)
   if (rem->IsCorrupt(p))
     { // {ranVar < rate => Packet drop...}
       PacketDrop.push_back(make_pair(Simulator::Now().GetSeconds(), sFlow->cwnd.Get()));
-      uint32_t tmp = (((sFlow->TxSeqNumber + packetSize) - sFlow->initialSequnceNumber) / sFlow->MSS) % mod;
+      uint32_t tmp = (((sFlow->TxSeqNumber + packetSize) - sFlow->initialSequnceNumber) / sFlow->GetSegSize()) % mod;
       sFlow->DROP.push_back(make_pair(Simulator::Now().GetSeconds(), tmp));
     }
   else
@@ -1167,7 +1172,7 @@ MpTcpSocketBase::SendDataPacket(uint8_t sFlowIdx, uint32_t size, bool withAck)
       m_tcp->SendPacket(p, header, sFlow->sAddr, sFlow->dAddr, netDevice);
       if (!guard)
         sFlow->PktCount++;
-      uint32_t tmp = (((sFlow->TxSeqNumber + packetSize) - sFlow->initialSequnceNumber) / sFlow->MSS) % mod;
+      uint32_t tmp = (((sFlow->TxSeqNumber + packetSize) - sFlow->initialSequnceNumber) / sFlow->GetSegSize()) % mod;
       sFlow->DATA.push_back(make_pair(Simulator::Now().GetSeconds(), tmp));
     }NS_LOG_WARN(Simulator::Now().GetSeconds() << " ["<< m_node->GetId()<< "] SendDataPacket->  " << header <<" dSize: " << packetSize<< " sFlow: " << sFlow->m_routeId);
 
@@ -1260,7 +1265,7 @@ MpTcpSocketBase::DoRetransmit(uint8_t sFlowIdx)
   //reset RTO
   SetReTxTimeout(sFlowIdx);
 
-  uint32_t tmp = (((ptrDSN->subflowSeqNumber + ptrDSN->dataLevelLength) - sFlow->initialSequnceNumber) / sFlow->MSS) % mod;
+  uint32_t tmp = (((ptrDSN->subflowSeqNumber + ptrDSN->dataLevelLength) - sFlow->initialSequnceNumber) / sFlow->GetSegSize()) % mod;
   sFlow->RETRANSMIT.push_back(make_pair(Simulator::Now().GetSeconds(), tmp));
 
   if (sFlow->m_inFastRec)
@@ -1317,7 +1322,7 @@ MpTcpSocketBase::DoRetransmit(uint8_t sFlowIdx, DSNMapping* ptrDSN)
 
   // Send Segment to lower layer
   m_tcp->SendPacket(pkt, header, sFlow->sAddr, sFlow->dAddr, FindOutputNetDevice(sFlow->sAddr));
-  uint32_t tmp = (((ptrDSN->subflowSeqNumber + ptrDSN->dataLevelLength) - sFlow->initialSequnceNumber) / sFlow->MSS) % mod;
+  uint32_t tmp = (((ptrDSN->subflowSeqNumber + ptrDSN->dataLevelLength) - sFlow->initialSequnceNumber) / sFlow->GetSegSize()) % mod;
   sFlow->RETRANSMIT.push_back(make_pair(Simulator::Now().GetSeconds(), tmp));
 
   // Notify RTT
@@ -1425,12 +1430,13 @@ MpTcpSocketBase::Listen(void)
 
 
 // TODO rename ? CreateAndAdd? Add ? Start ? Initiate
+// , bool first
 int
 //Ptr<MpTcpSubFlow>
-MpTcpSocketBase::CreateSubflow(const Address& srcAddr, const Address& dstAddr, bool first)
+MpTcpSocketBase::CreateSubflow(const Address& srcAddr, const Address& dstAddr)
 {
 
-  bool masterSocket = false;
+//  bool masterSocket = false;
 
   // Checker que ca existe pas déjà ?
   // create subflow
@@ -1449,11 +1455,11 @@ MpTcpSocketBase::CreateSubflow(const Address& srcAddr, const Address& dstAddr, b
   }
   else
   {
-    masterSocket = true;
+//    masterSocket = true;
   }
 
 
-  Ptr<MpTcpSubFlow> sFlow = CreateObject<MpTcpSubFlow>(this, masterSocket);
+  Ptr<MpTcpSubFlow> sFlow = CreateObject<MpTcpSubFlow>(this);
 
   //
 //  sFlow->Bind
@@ -1461,6 +1467,7 @@ MpTcpSocketBase::CreateSubflow(const Address& srcAddr, const Address& dstAddr, b
 
   m_subflows.push_back( sFlow );  //subflows.insert(subflows.end(), sFlow);
   m_tcp->m_sockets.push_back(this);
+  return 0;
 }
 
 
@@ -1567,7 +1574,7 @@ MpTcpSocketBase::Connect(Ipv4Address servAddr, uint16_t servPort)
 bool
 MpTcpSocketBase::IsMpTcpEnabled() const
 {
-  return m_
+  return m_mpEnabled;
 }
 
 
@@ -1701,15 +1708,15 @@ MpTcpSocketBase::SendPendingData(uint8_t sFlowIdx)
       // Note that the algorithm used for detecting whether sub-flow is in timeout need to be studied further.
       if (sF->state == ESTABLISHED && sF->m_mapDSN.size() > 0 && sF->maxSeqNb > sF->TxSeqNumber)
         {
-          uint32_t window = std::min(AvailableWindow(sFlowIdx), sF->MSS);
+          uint32_t window = std::min(AvailableWindow(sFlowIdx), sF->GetSegSize());
           NS_LOG_ERROR("SendingBuffer Empty!, Sub-flow (" << (int)sFlowIdx << ") AvailableWindow" << window);
 
           // Send all data packets in subflowBuffer (m_mapDSN) until subflow's available window is full.
-          while (window != 0 && window >= sF->MSS)
+          while (window != 0 && window >= sF->GetSegSize())
             { // In case case more than one packet can be sent, if subflow's window allow
               if (SendDataPacket(sF->m_routeId, window, false) == 0)
                 return false;
-              window = std::min(AvailableWindow(sFlowIdx), sF->MSS);
+              window = std::min(AvailableWindow(sFlowIdx), sF->GetSegSize());
             }
         }
 
@@ -1764,9 +1771,9 @@ MpTcpSocketBase::SendPendingData(uint8_t sFlowIdx)
       if (sFlow->state == ESTABLISHED)
         {
           currentSublow = sFlow->m_routeId;
-          uint32_t s = std::min(window, sFlow->MSS);  // Send no more than window
-          if (sFlow->maxSeqNb > sFlow->TxSeqNumber && sendingBuffer->PendingData() <= sFlow->MSS)
-            s = sFlow->MSS;
+          uint32_t s = std::min(window, sFlow->GetSegSize());  // Send no more than window
+          if (sFlow->maxSeqNb > sFlow->TxSeqNumber && sendingBuffer->PendingData() <= sFlow->GetSegSize())
+            s = sFlow->GetSegSize();
           uint32_t amountSent = SendDataPacket(sFlow->m_routeId, s, false);
           nOctetsSent += amountSent;  // Count total bytes sent in this loop
         } // end of if statement
@@ -1834,7 +1841,7 @@ void
 MpTcpSocketBase::ReduceCWND(uint8_t sFlowIdx, DSNMapping* ptrDSN)
 {
   Ptr<MpTcpSubFlow> sFlow = m_subflows[sFlowIdx];
-  uint32_t m_segmentSize = sFlow->MSS;
+  uint32_t m_segmentSize = sFlow->GetSegSize();
   int cwnd_tmp = 0;
   calculateTotalCWND();
 
@@ -1886,8 +1893,8 @@ MpTcpSocketBase::Retransmit(uint8_t sFlowIdx)
   // According to RFC2581 sec.3.1, upon RTO, GetSSThresh() is set to half of flight
   // size and cwnd is set to 1*MSS, then the lost packet is retransmitted and
   // TCP back to slow start
-  sFlow->SetSSThresh( std::max(2 * sFlow->MSS, BytesInFlight(sFlowIdx) / 2) );
-  sFlow->cwnd = sFlow->MSS; //  sFlow->cwnd = 1.0;
+  sFlow->SetSSThresh( std::max(2 * sFlow->GetSegSize(), BytesInFlight(sFlowIdx) / 2) );
+  sFlow->cwnd = sFlow->GetSegSize(); //  sFlow->cwnd = 1.0;
   sFlow->TxSeqNumber = sFlow->highestAck + 1; // m_nextTxSequence = m_txBuffer.HeadSequence(); // Restart from highest Ack
   sFlow->rtt->IncreaseMultiplier();  // Double the next RTO
   DoRetransmit(sFlowIdx);  // Retransmit the packet
@@ -1956,7 +1963,7 @@ MpTcpSocketBase::NewAckNewReno(uint8_t sFlowIdx, const TcpHeader& mptcpHeader, T
       NS_LOG_WARN("NewAckNewReno -> ");
       sFlow->cwnd -= ack.GetValue() - (sFlow->highestAck + 1); // data bytes where acked
       // RFC3782 sec.5, partialAck condition for inflating.
-      sFlow->cwnd += sFlow->MSS; // increase cwnd
+      sFlow->cwnd += sFlow->GetSegSize(); // increase cwnd
 
       // Plotting
       NS_LOG_LOGIC ("Partial ACK in fast recovery: cwnd set to " << sFlow->cwnd.Get());
@@ -1977,7 +1984,7 @@ MpTcpSocketBase::NewAckNewReno(uint8_t sFlowIdx, const TcpHeader& mptcpHeader, T
   else if (sFlow->m_inFastRec && ack >= sFlow->m_recover)
     { // Full ACK (RFC2582 sec.3 bullet #5 paragraph 2, option 1)
       NS_LOG_WARN("NewAckNewReno -> FullAck");
-      sFlow->cwnd = std::min(sFlow->GetSSThresh(), BytesInFlight(sFlowIdx) + sFlow->MSS);
+      sFlow->cwnd = std::min(sFlow->GetSSThresh(), BytesInFlight(sFlowIdx) + sFlow->GetSegSize() );
 
       // Exit from Fast recovery
       sFlow->m_inFastRec = false;
@@ -2038,7 +2045,12 @@ int
 MpTcpSocketBase::GenerateToken(uint32_t& token) const
 {
   // if connection not established yet then we've got not key to generate the token
-  if()
+  if( IsConnected() )
+  {
+    // TODO hash keys
+    token = 2;
+    return 0;
+  }
 
   return -ERROR_NOTCONN;
 }
@@ -2103,7 +2115,7 @@ MpTcpSocketBase::SendEmptyPacket(uint8_t sFlowIdx, uint8_t flags)
         }
       else
         { // Exponential backoff of connection time out
-          int backoffCount = 0x1 << (sFlow->cnRetries - sFlow->m_cnCount);
+          int backoffCount = 0x1 << (sFlow->m_cnRetries - sFlow->m_cnCount);
           RTO = Seconds(sFlow->cnTimeout.GetSeconds() * backoffCount);
           sFlow->m_cnCount = sFlow->m_cnCount - 1;
           NS_LOG_UNCOND("("<< (int)sFlow->m_routeId<< ") SendEmptyPacket -> backoffCount: " << backoffCount << " RTO: " << RTO.GetSeconds() << " cnTimeout: " << sFlow->cnTimeout.GetSeconds() <<" m_cnCount: "<< sFlow->m_cnCount);
@@ -2484,11 +2496,11 @@ MpTcpSocketBase::DupAck(uint8_t sFlowIdx, DSNMapping* ptrDSN)
   sFlow->m_dupAckCount++;
   ptrDSN->dupAckCount++; // Used for evaluation purposes only
   uint32_t cwnd = sFlow->cwnd.Get();
-  uint32_t m_segmentSize = sFlow->MSS;
+  uint32_t m_segmentSize = sFlow->GetSegSize();
   calculateTotalCWND();
 
   // Plotting
-  uint32_t tmp = (((ptrDSN->subflowSeqNumber) - sFlow->initialSequnceNumber) / sFlow->MSS) % mod;
+  uint32_t tmp = (((ptrDSN->subflowSeqNumber) - sFlow->initialSequnceNumber) / sFlow->GetSegSize() % mod);
   sFlow->DUPACK.push_back(make_pair(Simulator::Now().GetSeconds(), tmp));
 
   // Congestion control algorithms
@@ -2953,7 +2965,7 @@ MpTcpSocketBase::GenerateCwndTracer()
       vector<pair<double, uint32_t> >::iterator it = sFlow->cwndTracer.begin();
       while (it != sFlow->cwndTracer.end())
         {
-          dataSet.Add(it->first, it->second / sFlow->MSS);
+          dataSet.Add(it->first, it->second / sFlow->GetSegSize() );
           it++;
         }
       if (sFlow->cwndTracer.size() > 0)
@@ -2971,7 +2983,7 @@ MpTcpSocketBase::GenerateCwndTracer()
       vector<pair<double, double> >::iterator it = sFlow->ssthreshtrack.begin();
       while (it != sFlow->ssthreshtrack.end())
         {
-          dataSet.Add(it->first, it->second / sFlow->MSS);
+          dataSet.Add(it->first, it->second / sFlow->GetSegSize( ) );
           it++;
         }
       if (sFlow->ssthreshtrack.size() > 0)
@@ -3014,7 +3026,7 @@ MpTcpSocketBase::GenerateCWNDPlot()
 
       while (it != sFlow->CWNDtrack.end())
         {
-          dataSet.Add(it->first, it->second / sFlow->MSS);
+          dataSet.Add(it->first, it->second / sFlow->GetSegSize( ) );
           it++;
         }
       if (sFlow->CWNDtrack.size() > 0)
@@ -3038,7 +3050,7 @@ MpTcpSocketBase::GenerateCWNDPlot()
 
       while (it != sFlow->ssthreshtrack.end())
         {
-          dataSet.Add(it->first, it->second / sFlow->MSS);
+          dataSet.Add(it->first, it->second / sFlow->GetSegSize( ) );
           it++;
         }
       if (sFlow->ssthreshtrack.size() > 0)
@@ -3754,9 +3766,12 @@ MpTcpSocketBase::AvailableWindow(uint8_t sFlowIdx)
   uint32_t window = std::min(remoteRecvWnd, sFlow->cwnd.Get());
   uint32_t unAcked = (sFlow->TxSeqNumber - (sFlow->highestAck + 1));
   uint32_t freeCWND = (window < unAcked) ? 0 : (window - unAcked);
-  if (freeCWND < sFlow->MSS && sendingBuffer->PendingData() >= sFlow->MSS)
+  if (
+    (freeCWND < sFlow->GetSegSize() )
+    && (sendingBuffer->PendingData() >= sFlow->GetSegSize() )
+    )
     {
-      NS_LOG_WARN("AvailableWindow: ("<< (int)sFlowIdx <<") -> " << freeCWND << " => 0" << " MSS: " << sFlow->MSS);
+      NS_LOG_WARN("AvailableWindow: ("<< (int)sFlowIdx <<") -> " << freeCWND << " => 0" << " MSS: " << sFlow->GetSegSize() );
       return 0;
     }
   else
@@ -3844,10 +3859,10 @@ MpTcpSocketBase::LookupByAddrs(Ipv4Address src, Ipv4Address dst)
               sFlow->m_dPort = m_remotePort;
               sFlow->sAddr = m_localAddress;
               sFlow->sPort = m_localPort;
-              sFlow->MSS = m_segmentSize;
-              sFlow->cwnd = sFlow->MSS;
+              sFlow->SetSegSize(m_segmentSize);
+              sFlow->cwnd = sFlow->GetSegSize();
               sFlow->state = LISTEN;
-              sFlow->m_cnCount = sFlow->cnRetries;
+              sFlow->m_cnCount = sFlow->m_cnRetries;
               sFlow->m_endPoint = m_tcp->Allocate(sFlow->sAddr, sFlow->sPort, sFlow->dAddr, sFlow->m_dPort);
               if (sFlow->m_endPoint == 0)
                 return -1;
@@ -3876,10 +3891,12 @@ MpTcpSocketBase::OpenCWND(uint8_t sFlowIdx, uint32_t ackedBytes)
   uint32_t cwnd = sFlow->cwnd.Get();
   uint32_t ssthresh = sFlow->GetSSThresh();
 
+  int MSS = sFlow->GetSegSize();
+
   calculateTotalCWND();
   if (cwnd < ssthresh)
     {
-      sFlow->cwnd += sFlow->MSS;
+      sFlow->cwnd += MSS;
 
       // Plotting
       sFlow->ssthreshtrack.push_back(make_pair(Simulator::Now().GetSeconds(), sFlow->GetSSThresh() ));
@@ -3894,30 +3911,40 @@ MpTcpSocketBase::OpenCWND(uint8_t sFlowIdx, uint32_t ackedBytes)
         {
       case RTT_Compensator:
         calculateAlpha(); // Calculate alpha per drop or RTT...RFC 6356 (Section 4.1)
-        adder = std::min(alpha * sFlow->MSS * sFlow->MSS / m_totalCwnd, static_cast<double>(sFlow->MSS * sFlow->MSS) / cwnd);
+        adder = std::min(alpha * MSS * MSS / m_totalCwnd, static_cast<double>(MSS * MSS) / cwnd);
         adder = std::max(1.0, adder);
         sFlow->cwnd += static_cast<double>(adder);
         // Plotting
         sFlow->ssthreshtrack.push_back(make_pair(Simulator::Now().GetSeconds(), sFlow->GetSSThresh()));
         sFlow->CWNDtrack.push_back(make_pair(Simulator::Now().GetSeconds(), sFlow->cwnd));
         totalCWNDtrack.push_back(make_pair(Simulator::Now().GetSeconds(), m_totalCwnd));
-        NS_LOG_ERROR ("Congestion Control (RTT_Compensator): alpha "<<alpha<<" ackedBytes (" << ackedBytes << ") m_totalCwnd ("<< m_totalCwnd / sFlow->MSS<<" packets) -> increment is "<<adder << " cwnd: " << sFlow->cwnd);
+        NS_LOG_ERROR ("Congestion Control (RTT_Compensator): alpha "<<alpha
+                    <<" ackedBytes (" << ackedBytes
+                    << ") m_totalCwnd ("<< m_totalCwnd / sFlow->GetSegSize()
+                    <<" packets) -> increment is "<<adder
+                    << " cwnd: " << sFlow->cwnd
+                    );
         break;
 
       case Linked_Increases:
         calculateAlpha();
-        adder = alpha * sFlow->MSS * sFlow->MSS / m_totalCwnd;
+        adder = alpha * MSS * MSS / m_totalCwnd;
         adder = std::max(1.0, adder);
         sFlow->cwnd += static_cast<double>(adder);
         // Plotting
         sFlow->ssthreshtrack.push_back(make_pair(Simulator::Now().GetSeconds(), sFlow->GetSSThresh()));
         sFlow->CWNDtrack.push_back(make_pair(Simulator::Now().GetSeconds(), sFlow->cwnd));
         totalCWNDtrack.push_back(make_pair(Simulator::Now().GetSeconds(), m_totalCwnd));
-        NS_LOG_ERROR ("Subflow "<<(int)sFlowIdx<<" Congestion Control (Linked_Increases): alpha "<<alpha<<" increment is "<<adder<<" GetSSThresh() "<< GetSSThresh() << " cwnd "<<cwnd );
+        NS_LOG_ERROR ("Subflow "
+                <<(int)sFlowIdx
+                <<" Congestion Control (Linked_Increases): alpha "<<alpha
+                <<" increment is "<<adder
+                <<" GetSSThresh() "<< GetSSThresh()
+                << " cwnd "<<cwnd );
         break;
 
       case Uncoupled_TCPs:
-        adder = static_cast<double>(sFlow->MSS * sFlow->MSS) / cwnd;
+        adder = static_cast<double>(MSS * MSS) / cwnd;
         adder = std::max(1.0, adder);
         sFlow->cwnd += static_cast<double>(adder);
         // Plotting
@@ -3928,7 +3955,7 @@ MpTcpSocketBase::OpenCWND(uint8_t sFlowIdx, uint32_t ackedBytes)
         break;
 
       case Fully_Coupled:
-        adder = static_cast<double>(sFlow->MSS * sFlow->MSS) / m_totalCwnd;
+        adder = static_cast<double>(MSS * MSS) / m_totalCwnd;
         adder = std::max(1.0, adder);
         sFlow->cwnd += static_cast<double>(adder);
         // plotting

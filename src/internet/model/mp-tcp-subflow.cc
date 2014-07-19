@@ -78,6 +78,19 @@ MpTcpSubFlow::GetInitialCwnd(void) const
 }
 
 
+uint32_t
+MpTcpSubFlow::GetLocalToken() const
+{
+  return m_localToken;
+}
+
+uint32_t
+MpTcpSubFlow::GetRemoteToken() const
+{
+  return m_remoteToken;
+}
+
+// TODO should improve parent's one once SOCIS code gets merged
 void
 MpTcpSubFlow::SendEmptyPacket(uint8_t flags)
 {
@@ -96,7 +109,7 @@ MpTcpSubFlow::SendEmptyPacket(uint8_t flags)
   if (flags & TcpHeader::FIN)
     {
       //flags |= TcpHeader::ACK;
-      if (maxSeqNb != TxSeqNumber - 1 && client)
+      if (maxSeqNb != TxSeqNumber - 1 ) // Potential bug ?  && client)
         s = maxSeqNb + 1;
     }
   else if (m_state == FIN_WAIT_1 || m_state == LAST_ACK || m_state == CLOSING)
@@ -138,23 +151,31 @@ MpTcpSubFlow::SendEmptyPacket(uint8_t flags)
         }
     }
 
-  if (((m_state == SYN_SENT) || (m_state == SYN_RCVD && m_mpEnabled == true)) && mpSendState == MP_NONE)
+  if (((m_state == SYN_SENT) || (m_state == SYN_RCVD && m_metaSocket->IsMpTcpEnabled() ))
+    //&& mpSendState == MP_NONE
+
+    )
     {
-      mpSendState = MP_MPC;                  // This state means MP_MPC is sent
+//      mpSendState = MP_MPC;                  // This state means MP_MPC is sent
       m_localToken = rand() % 1000 + 1;        // Random Local Token
       header.AddOptMPC(OPT_MPCAPABLE, m_localToken); // Adding MP_CAPABLE & Token to TCP option (5 Bytes)
       olen += 5;
       m_tcp->m_TokenMap[m_localToken] = m_endPoint;       //m_tcp->m_TokenMap.insert(std::make_pair(m_localToken, m_endPoint))
-      NS_LOG_INFO("("<< (int)sFlow->m_routeId<< ") SendEmptyPacket -> m_localToken is mapped to connection endpoint -> " << m_localToken << " -> " << m_endPoint << " TokenMapsSize: "<< m_tcp->m_TokenMap.size());
+      NS_LOG_INFO("("
+//            << (int)sFlow->m_routeId
+            << ") SendEmptyPacket -> m_localToken is mapped to connection endpoint -> "
+            << m_localToken << " -> " << m_endPoint
+            << " TokenMapsSize: "<< m_tcp->m_TokenMap.size());
+
     }
-  else if (sFlow->state == SYN_SENT && hasSyn && sFlow->m_routeId == 0)
+  else if (m_state == SYN_SENT && hasSyn && IsMaster() )
     {
-      header.AddOptMPC(OPT_MPCAPABLE, m_localToken);       // Adding MP_CAPABLE & Token to TCP option (5 Bytes)
+      header.AddOptMPC(OPT_MPCAPABLE, GetLocalToken() );       // Adding MP_CAPABLE & Token to TCP option (5 Bytes)
       olen += 5;
     }
-  else if (sFlow->state == SYN_SENT && hasSyn && sFlow->m_routeId != 0)
+  else if (m_state == SYN_SENT && hasSyn && !IsMaster())
     {
-      header.AddOptJOIN(OPT_JOIN, m_remoteToken, 0); // addID should be zero?
+      header.AddOptJOIN(OPT_JOIN, GetRemoteToken(), 0); // addID should be zero?
       olen += 6;
     }
 
@@ -165,18 +186,26 @@ MpTcpSubFlow::SendEmptyPacket(uint8_t flags)
   header.SetOptionsLength(olen);
   header.SetPaddingLength(plen);
 
-  m_tcp->SendPacket(p, header, sAddr, dAddr, FindOutputNetDevice(sAddr));
+  m_tcp->SendPacket(p, header, sAddr, dAddr, m_metaSocket->FindOutputNetDevice(sAddr));
   //sFlow->rtt->SentSeq (sFlow->TxSeqNumber, 1);           // notify the RTT
 
   if (retxEvent.IsExpired() && (hasFin || hasSyn) && !isAck)
     { // Retransmit SYN / SYN+ACK / FIN / FIN+ACK to guard against lost
 //RTO = rtt->RetransmitTimeout();
-      retxEvent = Simulator::Schedule(RTO, &MpTcpSubFlow::SendEmptyPacket, this, sFlowIdx, flags);
-      NS_LOG_INFO ("("<<(int)sFlowIdx <<") SendEmptyPacket -> ReTxTimer set for FIN / FIN+ACK / SYN / SYN+ACK now " << Simulator::Now ().GetSeconds () << " Expire at " << (Simulator::Now () + RTO).GetSeconds () << " RTO: " << RTO.GetSeconds());
+//sFlowIdx,
+      retxEvent = Simulator::Schedule(RTO, &MpTcpSubFlow::SendEmptyPacket, this, flags);
+      NS_LOG_INFO ("("
+//            <<(int)sFlowIdx <<
+            ") SendEmptyPacket -> ReTxTimer set for FIN / FIN+ACK / SYN / SYN+ACK now "
+            << Simulator::Now ().GetSeconds () << " Expire at " << (Simulator::Now () + RTO).GetSeconds ()
+            << " RTO: " << RTO.GetSeconds());
     }
 
   //if (!isAck)
-  NS_LOG_INFO("("<< (int)sFlowIdx<<") SendEmptyPacket-> "<< header <<" Length: "<< (int)header.GetLength());
+  NS_LOG_INFO("("
+//          << (int)sFlowIdx
+          <<") SendEmptyPacket-> "
+          << header <<" Length: "<< (int)header.GetLength());
 }
 
 
@@ -230,7 +259,7 @@ MpTcpSubFlow::Connect(const Address &address)
     {
     // TODO this might be removed since SetupEndpoint does it
     // Make sure there is an route from source to destination. Source might be set wrongly.
-      if ((IsThereRoute(m_endPoint->GetLocalAddress(), m_endPoint->GetPeerAddress())) == false)
+      if (( m_metaSocket->IsThereRoute(m_endPoint->GetLocalAddress(), m_endPoint->GetPeerAddress())) == false)
         {
           NS_LOG_INFO("Connect -> There is no route from " << m_endPoint->GetLocalAddress() << " to " << m_endPoint->GetPeerAddress());
           //m_tcp->DeAllocate(m_endPoint); // this would fire up destroy function...
@@ -249,7 +278,7 @@ MpTcpSubFlow::Connect(const Address &address)
 
   // This is master subsocket (master subflow) then its endpoint is the same as connection endpoint.
   // Ptet buggy la
-  this->m_endPoint = m_metaSocket->m_endPoint;
+//  this->m_endPoint = m_metaSocket->m_endPoint;
 
 
   //sFlow->rtt->Reset();
@@ -275,7 +304,8 @@ MpTcpSubFlow::Connect(const Address &address)
     { // send a SYN packet and change state into SYN_SENT
 //      TODO
 //      SendEmptyPacket(TcpHeader::SYN);
-      SendEmptyPacket(m_routeId, TcpHeader::SYN);
+      SendEmptyPacket( TcpHeader::SYN);
+//      SendEmptyPacket(m_routeId, TcpHeader::SYN);
       NS_LOG_INFO (TcpStateName[m_state] << " -> SYN_SENT");
       m_state = SYN_SENT;
     }
@@ -339,7 +369,7 @@ MpTcpSubFlow::MpTcpSubFlow(Ptr<MpTcpSocketBase> metaSocket
     m_localToken(0),
     m_remoteToken(0)
 {
-  NS_ASSERT( masterSocket );
+  NS_ASSERT( m_metaSocket );
 
 //  connected = false;
 

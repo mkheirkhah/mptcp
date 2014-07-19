@@ -41,6 +41,10 @@ public: // public methods
   MpTcpSocketBase(Ptr<Node> node);
   virtual ~MpTcpSocketBase();
 
+
+  /**
+  \warn This function should be called once a connection is established else
+  **/
   virtual bool IsMpTcpEnabled() const;
   virtual uint64_t GenerateKey() const;
 
@@ -73,16 +77,26 @@ public: // public methods
   void SetDataDistribAlgo(DataDistribAlgo_t ddalgo);    // Round Robin is only algorithms used.
 
 //  void SetPathManager(Ptr<MpTcpPathManager>);
-
+  //
+  int CreateSubflow(const Address& srcAddr, const Address& dstAddr);
   // Path management related functions
   void AdvertiseAddress(); //
   void AdvertiseAvailableAddresses(); // Advertise all addresses to the peer, including the already established address.
 
-  virtual uint32_t GenerateToken() const;
-  virtual uint32_t GetLocalToken() const;
-  virtual uint32_t GetRemoteToken() const;
+  virtual int GenerateToken(uint32_t& token ) const;
+
+  /**
+  \return 0 In case of success
+  TODO bool ?
+  **/
+  int GetRemoteKey(uint32_t& remoteKey) const;
+  uint32_t
+  GetLocalKey() const;
 
 public: // public variables
+
+  // TODO move back to protected/private later on
+
 
   // Evaluation & plotting parameters and containers
 //  int mod;    // available in parent TODO remove
@@ -109,6 +123,7 @@ public: // public variables
 protected: // protected methods
 
   friend class Tcp;
+  friend class MpTcpSubFlow;
 
 
 //  virtual int SetLocalToken(uint32_t token) const;
@@ -253,6 +268,8 @@ protected: // protected variables
   uint16_t           m_remotePort;
   uint8_t            currentSublow; // master socket ??? to remove
 
+  std::vector<Ptr<MpTcpSubFlow> > m_subflows;
+
   //Ptr<MpTcpPathManager> m_pathManager;
   Callback<bool, Ptr<Socket>, Address, uint8_t > m_onAddAddr;  // return true to create a subflow
 //  Callback<void, const MpTcpAddressInfo& > m_onRemAddr;
@@ -272,7 +289,7 @@ protected: // protected variables
   uint8_t  m_maxSubflows; //!< Max number of subflows
   uint8_t  lastUsedsFlowIdx;  //!<
 
-  std::vector<Ptr<MpTcpSubFlow> > m_subflows;
+
 
   // MPTCP containers
 
