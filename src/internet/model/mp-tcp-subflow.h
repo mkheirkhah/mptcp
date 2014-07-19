@@ -96,6 +96,33 @@ protected:
   virtual bool Finished();
   DSNMapping *GetunAckPkt();
 
+  //------------------------------
+  // Connection closing operation
+  virtual int  Close();
+  virtual int  DoClose();
+  virtual void PeerClose(Ptr<Packet> p, const TcpHeader& tcpHeader);
+  virtual void DoPeerClose();
+  virtual void CloseAndNotify();
+  virtual void CancelAllTimers();
+  virtual void DeallocateEndPoint();
+  virtual void TimeWait();
+
+  // State transitions
+  virtual void ProcessEstablished (Ptr<Packet>, const TcpHeader&);
+  virtual void ProcessListen  (Ptr<Packet>, const TcpHeader&, const Address&, const Address&);
+  virtual void ProcessSynSent (Ptr<Packet>, const TcpHeader&);
+  virtual void ProcessSynRcvd (Ptr<Packet>, const TcpHeader&, const Address&, const Address&);
+  virtual void ProcessWait    (Ptr<Packet>, const TcpHeader&);
+  virtual void ProcessClosing (Ptr<Packet>, const TcpHeader&);
+  virtual void ProcessLastAck (Ptr<Packet>, const TcpHeader&);
+
+  // Window Management
+  virtual uint32_t BytesInFlight();  // Return total bytes in flight of a subflow
+  virtual uint32_t AvailableWindow();
+
+  // Buffer management
+  bool FindPacketFromUnOrdered();
+  //------------------------------
 
   uint16_t m_routeId;           // Subflow's ID (TODO remove ?)
 

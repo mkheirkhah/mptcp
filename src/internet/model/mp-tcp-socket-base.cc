@@ -3326,25 +3326,7 @@ MpTcpSocketBase::LastAckTimeout(uint8_t sFlowIdx)
 
 
 
-bool
-MpTcpSocketBase::FindPacketFromUnOrdered(uint8_t sFlowIdx)
-{
-  NS_LOG_FUNCTION((int)sFlowIdx);
-  bool reValue = false;
-  list<DSNMapping *>::iterator current = unOrdered.begin();
-  while (current != unOrdered.end())
-    {
-      DSNMapping* ptrDSN = *current;
-      if (ptrDSN->subflowIndex == sFlowIdx)
-        {
-          reValue = true;
-          NS_LOG_LOGIC("(" << (int)sFlowIdx << ") FindPacketFromUnOrdered -> SeqNb" << ptrDSN->subflowSeqNumber << " pSize: " << ptrDSN->dataLevelLength);
-          break;
-        }
-      current++;
-    }
-  return reValue;
-}
+
 
 /** This function closes the endpoint completely. Called upon RST_TX action. */
 void
@@ -3378,47 +3360,7 @@ MpTcpSocketBase::CloseAndNotify(uint8_t sFlowIdx)
   CloseMultipathConnection();
 }
 
-/** Inherit from Socket class: Kill this socket and signal the peer (if any) */
-int
-MpTcpSocketBase::Close(uint8_t sFlowIdx)
-{
-  NS_LOG_FUNCTION (this << (int)sFlowIdx);
-  Ptr<MpTcpSubFlow> sFlow = m_subflows[sFlowIdx];
 
-  //  if (client)
-//      NS_LOG_INFO("Close(" <<(int) sFlowIdx << ")" << ", PendingData: " << sendingBuffer->PendingData() << ", m_mapDSN.size: " << sFlow->m_mapDSN.size());
-
-// First we check to see if there is any unread rx data
-// Bug number 426 claims we should send reset in this case.
-  if (server && unOrdered.size() > 0 && FindPacketFromUnOrdered(sFlowIdx) && !sFlow->Finished()) /* && recvingBuffer->PendingData() != 0 */
-    {  // I don't expect this to happens in normal scenarios!
-      NS_FATAL_ERROR("Receiver called close() when there are some unread packets in its buffer");
-      SendRST(sFlowIdx);
-      CloseAndNotify(sFlowIdx);
-      NS_LOG_WARN("unOrderedBuffer: " << unOrdered.size() << " currentSubflow: " << sFlow->m_routeId);
-      return 0;
-    }
-
-  if (client && sendingBuffer->PendingData() > 0) //if (m_txBuffer.SizeFromSequence(m_nextTxSequence) > 0)
-    { // App close with pending data must wait until all data transmitted
-//      if (m_closeOnEmpty == false)
-//        {
-//          m_closeOnEmpty = true;
-//          NS_LOG_INFO("-----------------------CLOSE is issued by sender application-----------------------");NS_LOG_INFO ("Socket " << this << " deferring close, Connection state " << TcpStateName[m_state] << " PendingData: " << sendingBuffer->PendingData());
-//        }
-      return 0;
-    }
-//  else if (client && sendingBuffer->PendingData() == 0 && sFlow->maxSeqNb != sFlow->TxSeqNumber -1)
-//    return 0;
-
-  if (client)
-    NS_ASSERT(sendingBuffer->Empty());
-  if (server)
-    NS_ASSERT_MSG(sFlow->Finished(),
-        " state: " << TcpStateName[sFlow->state] << " GotFin: " << sFlow->m_gotFin << " FinSeq: " << sFlow->m_finSeq << " m_mapDSN: " << sFlow->m_mapDSN.size());
-
-  return DoClose(sFlowIdx);
-}
 
 /** Do the action to close the socket. Usually send a packet with appropriate
  flags depended on the current m_state. */

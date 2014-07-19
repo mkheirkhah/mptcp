@@ -220,73 +220,73 @@ protected:
   GetAllowBroadcast(void) const;
 
   // Helper functions: Connection set up
-  int
+  virtual int
   SetupCallback(void);        // Common part of the two Bind(), i.e. set callback and remembering local addr:port
-  int
+  virtual int
   DoConnect(void);            // Sending a SYN packet to make a connection if the state allows
-  void
+  virtual void
   ConnectionSucceeded(void); // Schedule-friendly wrapper for Socket::NotifyConnectionSucceeded()
-  int
+  virtual int
   SetupEndpoint(void);        // Configure m_endpoint for local addr for given remote addr
-  int
+  virtual int
   SetupEndpoint6(void);       // Configure m_endpoint6 for local addr for given remote addr
-  void
+  virtual void
   CompleteFork(Ptr<Packet>, const TcpHeader&, const Address& fromAddress, const Address& toAdress);
 
   // Helper functions: Transfer operation
-  void
+  virtual void
   ForwardUp(Ptr<Packet> packet, Ipv4Header header, uint16_t port, Ptr<Ipv4Interface> incomingInterface);
-  void
+  virtual void
   ForwardUp6(Ptr<Packet> packet, Ipv6Address saddr, Ipv6Address daddr, uint16_t port);
   virtual void
   DoForwardUp(Ptr<Packet> packet, Ipv4Header header, uint16_t port, Ptr<Ipv4Interface> incomingInterface); //Get a pkt from L3
   virtual void
   DoForwardUp(Ptr<Packet> packet, Ipv6Address saddr, Ipv6Address daddr, uint16_t port); // Ipv6 version
-  bool
+  virtual bool
   SendPendingData(bool withAck = false); // Send as much as the window allows
-  uint32_t
+  virtual uint32_t
   SendDataPacket(SequenceNumber32 seq, uint32_t maxSize, bool withAck); // Send a data packet
   virtual void
   SendEmptyPacket(uint8_t flags); // Send a empty packet that carries a flag, e.g. ACK
-  void
+  virtual void
   SendRST(void); // Send reset and tear down this socket
-  bool
+  virtual bool
   OutOfRange(SequenceNumber32 head, SequenceNumber32 tail) const; // Check if a sequence number range is within the rx window
 
   // Helper functions: Connection close
-  int
+  virtual int
   DoClose(void); // Close a socket by sending RST, FIN, or FIN+ACK, depend on the current state
-  void
+  virtual void
   CloseAndNotify(void); // To CLOSED state, notify upper layer, and deallocate end point
-  void
+  virtual void
   Destroy(void); // Kill this socket by zeroing its attributes
-  void
+  virtual void
   Destroy6(void); // Kill this socket by zeroing its attributes
-  void
+  virtual void
   DeallocateEndPoint(void); // Deallocate m_endPoint
-  void
+  virtual void
   PeerClose(Ptr<Packet>, const TcpHeader&); // Received a FIN from peer, notify rx buffer
-  void
+  virtual void
   DoPeerClose(void); // FIN is in sequence, notify app and respond with a FIN
-  void
+  virtual void
   CancelAllTimers(void); // Cancel all timer when endpoint is deleted
-  void
+  virtual void
   TimeWait(void);  // Move from CLOSING or FIN_WAIT_2 to TIME_WAIT state
 
   // State transition functions
-  void
+  virtual void
   ProcessEstablished(Ptr<Packet>, const TcpHeader&); // Received a packet upon ESTABLISHED state
-  void
+  virtual void
   ProcessListen(Ptr<Packet>, const TcpHeader&, const Address&, const Address&); // Process the newly received ACK
-  void
+  virtual void
   ProcessSynSent(Ptr<Packet>, const TcpHeader&); // Received a packet upon SYN_SENT
-  void
+  virtual void
   ProcessSynRcvd(Ptr<Packet>, const TcpHeader&, const Address&, const Address&); // Received a packet upon SYN_RCVD
-  void
+  virtual void
   ProcessWait(Ptr<Packet>, const TcpHeader&); // Received a packet upon CLOSE_WAIT, FIN_WAIT_1, FIN_WAIT_2
-  void
+  virtual void
   ProcessClosing(Ptr<Packet>, const TcpHeader&); // Received a packet upon CLOSING
-  void
+  virtual void
   ProcessLastAck(Ptr<Packet>, const TcpHeader&); // Received a packet upon LAST_ACK
 
   // Window management

@@ -556,4 +556,62 @@ MpTcpSubFlow::GetunAckPkt()
     }
   return ptrDSN;
 }
+
+
+
+//-----------------------------------
+/** Inherit from Socket class: Kill this socket and signal the peer (if any) */
+int
+MpTcpSubFlow::Close()
+{
+  NS_LOG_FUNCTION (this << (int)sFlowIdx);
+
+// First we check to see if there is any unread rx data
+// Bug number 426 claims we should send reset in this case.
+  if (/*server &&*/ m_metaSocket->unOrdered.size() > 0 && FindPacketFromUnOrdered() && !Finished()) /* && recvingBuffer->PendingData() != 0 */
+    { // I don't expect this to happens in normal scenarios!
+      NS_FATAL_ERROR("Receiver called close() when there are some unread packets in its buffer");
+      SendRST();
+      CloseAndNotify();
+      return 0;
+    }
+
+  if (/*client &&*/ m_metaSocket->sendingBuffer->PendingData() > 0) //if (m_txBuffer.SizeFromSequence(m_nextTxSequence) > 0)
+    { // App close with pending data must wait until all data transmitted
+//      if (m_closeOnEmpty == false)
+//        {
+//          m_closeOnEmpty = true;
+//          NS_LOG_INFO("-----------------------CLOSE is issued by sender application-----------------------");NS_LOG_INFO ("Socket " << this << " deferring close, Connection state " << TcpStateName[m_state] << " PendingData: " << sendingBuffer->PendingData());
+//        }
+      return 0;
+    }
+//  else if (client && sendingBuffer->PendingData() == 0 && sFlow->maxSeqNb != sFlow->TxSeqNumber -1)
+//    return 0;
+
+//  if (client)
+//    NS_ASSERT(sendingBuffer->Empty());
+//  if (server)
+//    NS_ASSERT_MSG(sFlow->Finished(),
+//        " state: " << TcpStateName[sFlow->state] << " GotFin: " << sFlow->m_gotFin << " FinSeq: " << sFlow->m_finSeq << " m_mapDSN: " << sFlow->m_mapDSN.size());
+
+  return DoClose();
+}
+
+bool
+MpTcpSubFlow::FindPacketFromUnOrdered()
+{
+  NS_LOG_FUNCTION_NOARGS();
+  list<DSNMapping *>::iterator current = m_metaSocket->unOrdered.begin();
+  while (current != m_metaSocket->unOrdered.end())
+    {
+      DSNMapping* ptrDSN = *current;
+      if (ptrDSN->subflowIndex == m_routeId)
+        {
+          return true;
+        }
+      current++;
+    }
+  return false;
+}
+
 }

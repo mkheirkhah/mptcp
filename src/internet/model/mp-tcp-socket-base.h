@@ -60,7 +60,7 @@ public: // public methods
 
   virtual int Listen(void);
   virtual int Close(void);                    // Close by app: Kill socket upon tx buffer emptied
-  virtual int Close(uint8_t sFlowIdx);        // Closing subflow...
+
   uint32_t GetTxAvailable();                  // Return available space in sending buffer to application
   bool SendBufferedData();                    // This would called SendPendingData() - TcpTxBuffer API need to be used in future!
   int FillBuffer(uint8_t* buf, uint32_t size);// Fill sending buffer with data - TcpTxBuffer API need to be used in future!
@@ -170,34 +170,21 @@ protected: // protected methods
   uint32_t SendDataPacket (uint8_t sFlowIdx, uint32_t pktSize, bool withAck);
 
   // Connection closing operations
-  virtual int DoClose(uint8_t sFlowIdx);
   bool CloseMultipathConnection();      // Close MPTCP connection is possible
-  void PeerClose(uint8_t sFlow, Ptr<Packet> p, const TcpHeader& tcpHeader);
-  void DoPeerClose(uint8_t sFlowIdx);
-  void CloseAndNotify(uint8_t sFlowIdx);
+
+
   void Destroy(void);
-  void DestroySubflowMapDSN(void);
-  void DestroyUnOrdered();
-  void CancelAllTimers(uint8_t sFlowIdx);
-  void DeallocateEndPoint(uint8_t sFlowIdx);
+  void DestroySubflowMapDSN(void); // TODO MK: It could be removed
+  void DestroyUnOrdered();         // TODO MK: It could be removed
   void CancelAllSubflowTimers(void);
-  void TimeWait(uint8_t sFlowIdx);
+
 
   // State transition functions
-  void ProcessEstablished (uint8_t sFlowIdx, Ptr<Packet>, const TcpHeader&);
-  void ProcessListen  (uint8_t sFlowIdx, Ptr<Packet>, const TcpHeader&, const Address&, const Address&);
   void ProcessListen  (Ptr<Packet>, const TcpHeader&, const Address&, const Address&);
-  void ProcessSynSent (uint8_t sFlowIdx, Ptr<Packet>, const TcpHeader&);
-  void ProcessSynRcvd (uint8_t sFlowIdx, Ptr<Packet>, const TcpHeader&, const Address&, const Address&);
-  void ProcessWait    (uint8_t sFlowIdx, Ptr<Packet>, const TcpHeader&);
-  void ProcessClosing (uint8_t sFlowIdx, Ptr<Packet>, const TcpHeader&);
-  void ProcessLastAck (uint8_t sFlowIdx, Ptr<Packet>, const TcpHeader&);
   uint8_t ProcessOption(TcpOptions *opt);
 
   // Window Management
-  virtual uint32_t BytesInFlight(uint8_t sFlowIdx);  // Return total bytes in flight of a subflow
   uint16_t AdvertisedWindowSize();
-  uint32_t AvailableWindow(uint8_t sFlowIdx);
 
   // Manage data Tx/Rx
   virtual Ptr<TcpSocketBase> Fork(void);
@@ -222,7 +209,7 @@ protected: // protected methods
   // Re-ordering buffer
   bool StoreUnOrderedData(DSNMapping *ptr);
   void ReadUnOrderedData();
-  bool FindPacketFromUnOrdered(uint8_t sFlowIdx);
+
 
   // Congestion control
   void OpenCWND(uint8_t sFlowIdx, uint32_t ackedBytes);
