@@ -53,7 +53,7 @@ public:
   virtual ~MpTcpSubFlow();
 
   virtual int
-  Connect(const Address &address);      // Setup endpoint and call ProcessAction() to connect
+  Connect(const Address &address);
 
   virtual void AdvertiseAddress(uint8_t addrId, Address , uint16_t port);
 
@@ -80,7 +80,7 @@ protected:
   GetInitialCwnd(void) const;
 
 
-
+  // TODO MK: I guess if we need to fork meta socket as well as master socket for new MPTCP socket?!
   virtual Ptr<TcpSocketBase>
   Fork(void); // Call CopyObject<> to clone me
 
@@ -150,7 +150,7 @@ protected:
   Ipv4Address dAddr;          // Destination address
   uint16_t m_dPort;             // Destination port
 
-  // TODO need to be replaced with m_boundNetDevice from Socket object
+  // TODO MK: need to be replaced with m_boundNetDevice from Socket object
   uint32_t oif;               // interface related to the subflow's sAddr
 
   EventId retxEvent;          // Retransmission timer

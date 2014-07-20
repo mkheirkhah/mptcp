@@ -32,6 +32,19 @@ This is the MPTCP meta socket the application talks with
 this socket. New subflows, as well as the first one (the master
 socket) are linked to this meta socket.
 **/
+
+/**
+ * Some more mechanisms and questions:
+ * 1) if sendRST() is called over a subflow, how can be put back its unacked data to main sending buffer
+ * 2) Could we use current TCP socket buffer for MPTCP??!
+ * 3) Should we follow current implementation of congestion control or could we implement it per packet.
+ * 4) How often we should send Data Sequence Mapping to the receiver?!
+ * 5) When we need to send DataACK
+ * 6) When we want to create new MPTCP connection, how should be fork? Should be fork masterSocket and metaSocket?
+ * 7) Do we need to have Local and remote Token per subflow or per connection?!
+ * 8) Do we plan to support TCP connection as well, i.e, our mptcp server can reply to incoming TCP connection?
+ *
+ */
 class MpTcpSocketBase : public TcpSocketBase
 {
 public: // public methods
@@ -100,7 +113,7 @@ public: // public variables
 
   // Evaluation & plotting parameters and containers
 //  int mod;    // available in parent TODO remove
-  int MSS;    // Maximum Segment Size
+  int MSS;      // Maximum Segment Size
   int LinkCapacity; // ?
   int totalBytes; // ?
   double RTT; //
@@ -187,6 +200,7 @@ protected: // protected methods
   uint16_t AdvertisedWindowSize();
 
   // Manage data Tx/Rx
+  // TODO MK: Buffer management need to be discussed, maybe we can re-use all of this method from parent class
   virtual Ptr<TcpSocketBase> Fork(void);
   virtual void ReceivedAck (uint8_t sFlowIdx, Ptr<Packet>, const TcpHeader&); // Received an ACK packet
   virtual void ReceivedData (uint8_t sFlowIdx, Ptr<Packet>, const TcpHeader&); // Recv of a data, put into buffer, call L7 to get it if necessary
@@ -207,6 +221,7 @@ protected: // protected methods
   void DiscardUpTo(uint8_t sFlowIdx, uint32_t ack);
 
   // Re-ordering buffer
+  // TODO MK: Buffer management need to be discussed
   bool StoreUnOrderedData(DSNMapping *ptr);
   void ReadUnOrderedData();
 
@@ -218,11 +233,15 @@ protected: // protected methods
   void calculateTotalCWND();
 
   // Helper functions -> main operations
+  // TODO MK: LookupByAddrs() should be removed as data should be forwarded directly to subflow
   uint8_t LookupByAddrs(Ipv4Address src, Ipv4Address dst); // Called by Forwardup() to find the right subflow for incoing packet
   uint8_t getSubflowToUse();  // Called by SendPendingData() to get a subflow based on round robin algorithm
+  // TODO MK: We possibly need this as for subflow initiation process
   bool IsThereRoute(Ipv4Address src, Ipv4Address dst);     // Called by InitiateSubflow & LookupByAddrs and Connect to check whether there is route between a pair of addresses.
+  // TODO MK: I don't see any reason to hold this one as well
   bool IsLocalAddress(Ipv4Address addr);
   //Ptr<NetDevice> FindOutputNetDevice(Ipv4Address);         // Find Netdevice object of specific IP address.
+  // TODO MK: Buffer management need to be discussed
   DSNMapping* getAckedSegment(uint8_t sFlowIdx, uint32_t ack);
   DSNMapping* getSegmentOfACK(uint8_t sFlowIdx, uint32_t ack);
 
@@ -245,6 +264,7 @@ protected: // protected methods
 protected: // protected variables
 
   // MPTCP connection parameters
+  // TODO MK: can use its parent - no need for it.
   Ptr<Node>          m_node;
 //  Ipv4EndPoint*      m_endPoint;    // TODO could remove since its parent already defines it
 //  Ptr<TcpL4Protocol> m_mptcp;       //? what is this ? use m_tcp from parent socket
@@ -253,7 +273,7 @@ protected: // protected variables
   Ipv4Address        m_remoteAddress;
   uint16_t           m_localPort;
   uint16_t           m_remotePort;
-  uint8_t            currentSublow; // master socket ??? to remove
+  uint8_t            currentSublow; // master socket ??? to remove MK: Agree should be removed
 
   std::vector<Ptr<MpTcpSubFlow> > m_subflows;
 
@@ -266,11 +286,11 @@ protected: // protected variables
 
 
   // MultiPath related parameters
-  MpStates_t mpSendState;   //!< TODO to remove (useless)
-  MpStates_t mpRecvState;   //!< TODO to remove (useless)
-  bool m_mpEnabled;   //!< True if remote host is MPTCP compliant
-//  bool mpTokenRegister; //!< TODO remove
-  bool m_addrAdvertised;  //!< TODO remove
+  MpStates_t mpSendState;   //!< TODO to remove (useless) // MK: Now we don't need them as we can recognize master socket
+  MpStates_t mpRecvState;   //!< TODO to remove (useless) // MK: Agree
+  bool m_mpEnabled;   //!< True if remote host is MPTCP complaint
+//  bool mpTokenRegister; //!< TODO remove MK: Agree
+  bool m_addrAdvertised;  //!< TODO remove MK: Agree
 
   uint32_t unOrdMaxSize;  //!< ?
   uint8_t  m_maxSubflows; //!< Max number of subflows
@@ -305,16 +325,20 @@ protected: // protected variables
   uint64_t nextRxSequence;       // Next expected sequence number to receive in connection level
 
   // Buffer management
+  // TODO MK: I guess we can simply use TcpTxBuffer/TcpRxBuffer as a main mptcp connection buffer!?
   DataBuffer *sendingBuffer;
   DataBuffer *recvingBuffer;
 
   // TODO make private ? check what it does
+  // TODO MK: We don't need these, they should be removed
   // should be able to rmeove one
+
   bool client;
   bool server;
 
 private:
   // TODO rename into m_localKey uint64_t and move tokens into subflow (maybe not even needed)
+  // TODO MK: Not sure about this as all subflow should hold the same token, wast of resources. Why not meta socket hold it?
   uint32_t m_localKey;  //!< Store local host token, generated during the 3-way handshake
   uint32_t m_remoteKey; //!< Store remote host token
 

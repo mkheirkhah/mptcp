@@ -434,6 +434,8 @@ MpTcpSubFlow::AdvertiseAddress(uint8_t addrId, Address addr, uint16_t port)
   NS_LOG_FUNCTION("Started advertising address");
 
   // TODO check subflow is established !!
+  // TODO MK: make sure this is masterSocket (IsMaster()), possibly by assertion
+
 
       // there is at least one subflow
 //      Ptr<MpTcpSubFlow> sFlow = subflows[0];
