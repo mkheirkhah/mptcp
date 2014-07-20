@@ -560,88 +560,88 @@ MpTcpSubFlow::GetunAckPkt()
 
 
 //-----------------------------------
-/** Inherit from Socket class: Kill this socket and signal the peer (if any) */
-int
-MpTcpSubFlow::Close()
-{
-  NS_LOG_FUNCTION (this << (int)sFlowIdx);
+///** Inherit from Socket class: Kill this socket and signal the peer (if any) */
+//int
+//MpTcpSubFlow::Close()
+//{
+//  NS_LOG_FUNCTION (this << (int)sFlowIdx);
+//
+//// First we check to see if there is any unread rx data
+//// Bug number 426 claims we should send reset in this case.
+//  if (/*server &&*/ m_metaSocket->unOrdered.size() > 0 && FindPacketFromUnOrdered() && !Finished()) /* && recvingBuffer->PendingData() != 0 */
+//    { // I don't expect this to happens in normal scenarios!
+//      NS_FATAL_ERROR("Receiver called close() when there are some unread packets in its buffer");
+//      SendRST();
+//      CloseAndNotify();
+//      return 0;
+//    }
+//
+//  if (/*client &&*/ m_metaSocket->sendingBuffer->PendingData() > 0) //if (m_txBuffer.SizeFromSequence(m_nextTxSequence) > 0)
+//    { // App close with pending data must wait until all data transmitted
+////      if (m_closeOnEmpty == false)
+////        {
+////          m_closeOnEmpty = true;
+////          NS_LOG_INFO("-----------------------CLOSE is issued by sender application-----------------------");NS_LOG_INFO ("Socket " << this << " deferring close, Connection state " << TcpStateName[m_state] << " PendingData: " << sendingBuffer->PendingData());
+////        }
+//      return 0;
+//    }
+////  else if (client && sendingBuffer->PendingData() == 0 && sFlow->maxSeqNb != sFlow->TxSeqNumber -1)
+////    return 0;
+//
+////  if (client)
+////    NS_ASSERT(sendingBuffer->Empty());
+////  if (server)
+////    NS_ASSERT_MSG(sFlow->Finished(),
+////        " state: " << TcpStateName[sFlow->state] << " GotFin: " << sFlow->m_gotFin << " FinSeq: " << sFlow->m_finSeq << " m_mapDSN: " << sFlow->m_mapDSN.size());
+//
+//  return DoClose();
+//}
 
-// First we check to see if there is any unread rx data
-// Bug number 426 claims we should send reset in this case.
-  if (/*server &&*/ m_metaSocket->unOrdered.size() > 0 && FindPacketFromUnOrdered() && !Finished()) /* && recvingBuffer->PendingData() != 0 */
-    { // I don't expect this to happens in normal scenarios!
-      NS_FATAL_ERROR("Receiver called close() when there are some unread packets in its buffer");
-      SendRST();
-      CloseAndNotify();
-      return 0;
-    }
-
-  if (/*client &&*/ m_metaSocket->sendingBuffer->PendingData() > 0) //if (m_txBuffer.SizeFromSequence(m_nextTxSequence) > 0)
-    { // App close with pending data must wait until all data transmitted
-//      if (m_closeOnEmpty == false)
-//        {
-//          m_closeOnEmpty = true;
-//          NS_LOG_INFO("-----------------------CLOSE is issued by sender application-----------------------");NS_LOG_INFO ("Socket " << this << " deferring close, Connection state " << TcpStateName[m_state] << " PendingData: " << sendingBuffer->PendingData());
-//        }
-      return 0;
-    }
-//  else if (client && sendingBuffer->PendingData() == 0 && sFlow->maxSeqNb != sFlow->TxSeqNumber -1)
-//    return 0;
-
-//  if (client)
-//    NS_ASSERT(sendingBuffer->Empty());
-//  if (server)
-//    NS_ASSERT_MSG(sFlow->Finished(),
-//        " state: " << TcpStateName[sFlow->state] << " GotFin: " << sFlow->m_gotFin << " FinSeq: " << sFlow->m_finSeq << " m_mapDSN: " << sFlow->m_mapDSN.size());
-
-  return DoClose();
-}
-
-/** Do the action to close the socket. Usually send a packet with appropriate
- flags depended on the current m_state. */
-int
-MpTcpSubFlow::DoClose()
-{
-  NS_LOG_FUNCTION (this << m_subflows.size());
-
-  switch (m_state)
-    {
-  case SYN_RCVD:
-  case ESTABLISHED:
-    // send FIN to close the peer
-    SendEmptyPacket(TcpHeader::FIN);
-    NS_LOG_INFO ("("<< (int) m_routeId<< ") ESTABLISHED -> FIN_WAIT_1 {DoClose} FIN is sent as separate pkt");
-    m_state = FIN_WAIT_1;
-    break;
-  case CLOSE_WAIT:
-    // send FIN+ACK to close the peer (in normal scenario receiver should use this when she got FIN from sender)
-    SendEmptyPacket(TcpHeader::FIN | TcpHeader::ACK);
-    NS_LOG_INFO ("("<< (int) m_routeId<< ") CLOSE_WAIT -> LAST_ACK {DoClose}");
-    m_state = LAST_ACK;
-    break;
-  case SYN_SENT:
-  case CLOSING:
-    // Send RST if application closes in SYN_SENT and CLOSING
-    NS_LOG_INFO("DoClose -> Socket src/des (" << sAddr << ":" << sPort << "/" << dAddr << ":" << m_dPort << ")" << " state: " << TcpStateName[m_state]);
-    SendRST();
-    CloseAndNotify();
-    break;
-  case LISTEN:
-  case LAST_ACK:
-    // In these three states, move to CLOSED and tear down the end point
-    CloseAndNotify();
-    break;
-  case CLOSED:
-  case FIN_WAIT_1:
-  case FIN_WAIT_2:
-  case TIME_WAIT:
-  default: /* mute compiler */
-    //NS_LOG_INFO("DoClose -> DoNotting since subflow's state is " << TcpStateName[sFlow->state] << "(" << sFlow->m_routeId<< ")");
-    // Do nothing in these four states
-    break;
-    }
-  return 0;
-}
+///** Do the action to close the socket. Usually send a packet with appropriate
+// flags depended on the current m_state. */
+//int
+//MpTcpSubFlow::DoClose()
+//{
+//  NS_LOG_FUNCTION (this << m_subflows.size());
+//
+//  switch (m_state)
+//    {
+//  case SYN_RCVD:
+//  case ESTABLISHED:
+//    // send FIN to close the peer
+//    SendEmptyPacket(TcpHeader::FIN);
+//    NS_LOG_INFO ("("<< (int) m_routeId<< ") ESTABLISHED -> FIN_WAIT_1 {DoClose} FIN is sent as separate pkt");
+//    m_state = FIN_WAIT_1;
+//    break;
+//  case CLOSE_WAIT:
+//    // send FIN+ACK to close the peer (in normal scenario receiver should use this when she got FIN from sender)
+//    SendEmptyPacket(TcpHeader::FIN | TcpHeader::ACK);
+//    NS_LOG_INFO ("("<< (int) m_routeId<< ") CLOSE_WAIT -> LAST_ACK {DoClose}");
+//    m_state = LAST_ACK;
+//    break;
+//  case SYN_SENT:
+//  case CLOSING:
+//    // Send RST if application closes in SYN_SENT and CLOSING
+//    NS_LOG_INFO("DoClose -> Socket src/des (" << sAddr << ":" << sPort << "/" << dAddr << ":" << m_dPort << ")" << " state: " << TcpStateName[m_state]);
+//    SendRST();
+//    CloseAndNotify();
+//    break;
+//  case LISTEN:
+//  case LAST_ACK:
+//    // In these three states, move to CLOSED and tear down the end point
+//    CloseAndNotify();
+//    break;
+//  case CLOSED:
+//  case FIN_WAIT_1:
+//  case FIN_WAIT_2:
+//  case TIME_WAIT:
+//  default: /* mute compiler */
+//    //NS_LOG_INFO("DoClose -> DoNotting since subflow's state is " << TcpStateName[sFlow->state] << "(" << sFlow->m_routeId<< ")");
+//    // Do nothing in these four states
+//    break;
+//    }
+//  return 0;
+//}
 
 
 

@@ -98,16 +98,21 @@ protected:
 
   //------------------------------
   // Connection closing operation
-  virtual int  Close();
-  virtual int  DoClose();
-  virtual void PeerClose(Ptr<Packet> p, const TcpHeader& tcpHeader);
-  virtual void DoPeerClose();
-  virtual void CloseAndNotify();
-  virtual void CancelAllTimers();
-  virtual void DeallocateEndPoint();
-  virtual void TimeWait();
+  // TODO MK: I guess we can re-use code from parent! Not all of them though!
+  // Q) The important question is that can we be able to reuse current TcpTxBuffer as a holding of subflow's sent packets if so then
+  // most of the codes from TcpSocketBase can be re-used here!?
+
+//  virtual int  Close();
+//  virtual int  DoClose();
+//  virtual void PeerClose(Ptr<Packet> p, const TcpHeader& tcpHeader);
+//  virtual void DoPeerClose();
+//  virtual void CloseAndNotify();
+//  virtual void CancelAllTimers();
+//  virtual void DeallocateEndPoint();
+//  virtual void TimeWait();
 
   // State transitions
+  // TODO MK: Need to be implemnt if current SeqNmering is reused for this version
   virtual void ProcessEstablished (Ptr<Packet>, const TcpHeader&);
   virtual void ProcessListen  (Ptr<Packet>, const TcpHeader&, const Address&, const Address&);
   virtual void ProcessSynSent (Ptr<Packet>, const TcpHeader&);
@@ -118,6 +123,7 @@ protected:
 
   // Window Management
   virtual uint32_t BytesInFlight();  // Return total bytes in flight of a subflow
+  // TODO MK: Can be reused from parent but UnAckDataCount() need to implement if the current code reused for sequence numbering
   virtual uint32_t AvailableWindow();
 
   // Transfer operation
@@ -143,7 +149,10 @@ protected:
   uint16_t sPort;             // Source port
   Ipv4Address dAddr;          // Destination address
   uint16_t m_dPort;             // Destination port
+
+  // TODO need to be replaced with m_boundNetDevice from Socket object
   uint32_t oif;               // interface related to the subflow's sAddr
+
   EventId retxEvent;          // Retransmission timer
   EventId m_lastAckEvent;     // Timer for last ACK
   EventId m_timewaitEvent;    // Timer for closing connection at sender side
