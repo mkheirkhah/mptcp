@@ -78,6 +78,11 @@ typedef TcpNewReno SocketToBeTested;
 
 
 
+/**
+Provide basic functions to generate a topology (or outsource them ?)
+
+Control the Number of interfaces per node
+**/
 class MpTcpTestCase : public TestCase
 {
 public:
@@ -85,10 +90,11 @@ public:
   virtual ~MpTcpTestCase ();
 
 protected:
-    void
-  SetupDefaultSim (void);
-private:
-//  virtual void DoSetup(void) = 0;
+  virtual void SetupNodes();
+
+  virtual void SetupDefaultSim (Ptr<Node> n0, Ptr<Node> n1, int nbOfParallelLinks);
+//private:
+  virtual void DoSetup(void);
   virtual void DoRun(void) = 0;
   virtual void DoTeardown (void);
 
@@ -100,11 +106,17 @@ private:
   void SourceHandleRecv (Ptr<Socket> sock);
 
 
+  uint8_t m_nbInterfacesClient;
+  uint8_t m_nbInterfacesServer;
 
   Ptr<Node> m_client;
   Ptr<Node> m_server;
 };
 
+
+/**
+Number of interfaces per node
+**/
 class MpTcpAddressTestCase : public MpTcpTestCase
 {
 public:
@@ -117,7 +129,10 @@ private:
 
 };
 
-MpTcpTestCase::MpTcpTestCase(std::string name) : TestCase(name)
+MpTcpTestCase::MpTcpTestCase(std::string name) :
+  TestCase(name),
+  m_nbInterfacesClient(1),
+  m_nbInterfacesServer(m_nbInterfacesClient)  // Too complex to have an odd fullmesh
 {
   NS_LOG_LOGIC (this);
 
@@ -127,7 +142,69 @@ MpTcpTestCase::~MpTcpTestCase()
 {
 }
 
+MpTcpTestCase::SetupNodes()
+{
 
+  Ipv4AddressHelper addressHelper;  //!< To install
+
+
+  m_client = CreateObject<Node>();
+  m_server = CreateObject<Node>();
+
+
+  //PointToPointStarHelper
+
+  // client
+  //PointToPointHelper pointToPointHelper;
+  for(int i = 0; i < m_nbInterfacesClient; i++ )
+  {
+    Ptr<PointToPointNetDevice> devClient = CreateObject<PointToPointNetDevice>();
+    devClient->SetDataRate( DataRate ("5Mb/s")  );
+    devClient->SetAddress(Mac48Address::Allocate ());
+    devClient->SetQueue (CreateObject<DropTailQueue> ());
+    m_client->AddDevice( device );
+
+      // Server
+//      for(int j = 0; j < m_nbInterfacesServer; j++ )
+//      {
+        Ptr<PointToPointNetDevice> devServer = CreateObject<PointToPointNetDevice>();
+        devServer->SetDataRate( DataRate ("5Mb/s") );
+        devServer->SetAddress(Mac48Address::Allocate ());
+        devServer->SetQueue (CreateObject<DropTailQueue> ());
+
+        // Attach
+        m_server->AddDevice( device );
+
+        // TODO attach link
+        Ptr<PointToPointChannel> channel = CreateObject<PointToPointChannel>()
+        devServer->Attach( channel );
+        devClient->Attach( channel );
+
+        NetDeviceContainer devicesContainer;
+        devicesContainer.Add(devClient);
+        devicesContainer.Add(devServer);
+
+        std::stringstream netAddr;
+        netAddr << "10." << i << ".1.0";
+        addressHelper.SetBase ( netAddr.str() , "255.255.0.0");
+        addressHelper.Assign( devicesContainer );
+//      }
+
+
+  }
+
+  // Server
+//  for(int i = 0; i < m_nbInterfacesServer; i++ )
+//  {
+//    Ptr<PointToPointNetDevice> device = CreateObject<PointToPointNetDevice>();
+//    device->SetDataRate( DataRate ("5Mb/s") );
+//    // Attach
+//    m_server->AddDevice( device );
+//
+//  }
+
+  // TODO create interfaces for each node
+}
 
 MpTcpAddressTestCase::MpTcpAddressTestCase() : MpTcpTestCase("Mptcp address handling")
 {
@@ -138,6 +215,13 @@ MpTcpAddressTestCase::MpTcpAddressTestCase() : MpTcpTestCase("Mptcp address hand
 //{
 //
 //}
+
+void
+MpTcpTestCase::DoSetup()
+{
+  SetupNodes();
+
+}
 
 
 void
@@ -159,7 +243,7 @@ void
 MpTcpAddressTestCase::DoRun (void)
 {
   NS_LOG_LOGIC ("Doing run in MpTcpAddressTestCase");
-  SetupDefaultSim();
+//  SetupDefaultSim();
   Simulator::Run();
 
   NS_LOG_LOGIC("Simulation ended");
@@ -172,31 +256,39 @@ MpTcpAddressTestCase::DoRun (void)
 void
 MpTcpTestCase::SetupDefaultSim (void)
 {
+  ////////////////////////////////////////////////////////
+  // Topology construction
+  //
 
-ns3::PacketMetadata::Enable ();
+  // TODO change program so that it becomes useless
+  ns3::PacketMetadata::Enable ();
 //  const char* netmask = "255.255.255.0";
 //  const char* ipaddr0 = "192.168.1.1";
 //  const char* ipaddr1 = "192.168.1.2";
   uint16_t port = 50000;
 
 
-  NodeContainer nodes;//ContainerHelper;
+//  NodeContainer nodes;//ContainerHelper;
   PointToPointHelper pointToPointHelper;
   InternetStackHelper stackHelper;
   NetDeviceContainer devices;
   Ipv4AddressHelper addressHelper;  //!< To install
 
 
-  nodes.Create(2);
-  m_client = nodes.Get(0);
-  m_server = nodes.Get(1);
+
+//  nodes.Create(2);
+//  m_client = nodes.Get(0);
+//  m_server = nodes.Get(1);
+
+  // TODO should be able to configure that through a ConfigStore ?
   pointToPointHelper.SetDeviceAttribute ("DataRate", StringValue ("5Mbps"));
   pointToPointHelper.SetChannelAttribute ("Delay", StringValue ("2ms"));
 
   // Creates netdevices in nodes, can I install it several times ?
   devices = pointToPointHelper.Install(nodes);
 
-  stackHelper.Install(nodes);
+  stackHelper.Install( m_client );
+  stackHelper.Install( m_server );
 
   addressHelper.SetBase ("10.1.1.0", "255.255.255.0");
   addressHelper.Assign(devices);
@@ -213,13 +305,15 @@ ns3::PacketMetadata::Enable ();
 //  m_server->
 //  m_client->Connect( serverremoteaddr );
 // lSocket
-  
+
+// Should work too ?! more straightforward ! TODO try
+// Ptr<MpTcpSocketBase> serverSock =  Socket::CreateSocket (n0n1.Get (0),  MpTcpSocketFactory::GetTypeId ());
   Ptr<MpTcpSocketFactoryImpl> sockFactory0 = CreateObject<MpTcpSocketFactoryImpl> ();
   sockFactory0->SetTcp(m_server->GetObject<TcpL4Protocol> ());
-  
+
   m_server->AggregateObject(sockFactory0);
 //  Ptr<SocketFactory> sockFactory1 = m_client->GetObject<MpTcpSocketFactory> ();
-  
+
   Ptr<Socket> serverSock = sockFactory0->CreateSocket ();
   Ptr<Socket> clientSock = sockFactory0->CreateSocket ();
 
@@ -227,6 +321,12 @@ ns3::PacketMetadata::Enable ();
   serverSock->Listen();
   serverSock->SetAcceptCallback (MakeNullCallback<bool, Ptr< Socket >, const Address &> (),
                              MakeCallback (&MpTcpTestCase::ServerHandleConnectionCreated,this));
+
+
+// 1 cb on add/1 on remove from remote side
+//Remote
+// SetOnPathIdEventRcv()
+//  serverSock->SetAddrMgmtCallback();
 
   clientSock->Bind(); // is that one useful ?
   //serverremoteaddr
@@ -289,8 +389,12 @@ static class MpTcpTestSuite : public TestSuite
 {
 public:
   MpTcpTestSuite ()
-    : TestSuite ("mptcp-testsuite", UNIT)
+    : TestSuite ("mptcp", UNIT)
   {
+//    CommandLine cmd;
+
+    // KESAKO ?
+    Packet::EnablePrinting ();  // Enable packet metadata for all test cases
     // Arguments to these test cases are 1) totalStreamSize,
     // 2) source write size, 3) source read size
     // 4) server write size, and 5) server read size

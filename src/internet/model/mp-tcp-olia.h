@@ -20,7 +20,7 @@ public:
   virtual uint32_t
   GetInitialCwnd(void) const;
 
-
+  virtual uint8_t getSubflowToUse();  // Called by SendPendingData() to get a subflow based on round robin algorithm
 };
 
 

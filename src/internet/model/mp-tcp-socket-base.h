@@ -26,7 +26,7 @@ class MpTcpSubFlow;
 
 
 /**
-TODO see how we can modify this to use
+TODO rename in MetaSocket ?
 
 This is the MPTCP meta socket the application talks with
 this socket. New subflows, as well as the first one (the master
@@ -80,7 +80,7 @@ public: // public methods
   //
   int CreateSubflow(const Address& srcAddr, const Address& dstAddr);
   // Path management related functions
-  void AdvertiseAddress(); //
+//  void AdvertiseAddress(); //
   void AdvertiseAvailableAddresses(); // Advertise all addresses to the peer, including the already established address.
 
   virtual int GenerateToken(uint32_t& token ) const;
@@ -149,6 +149,12 @@ protected: // protected methods
   bool InitiateSubflows();            // Initiate new subflows
 
   /**
+  Fails if
+  **/
+//  bool AddLocalAddress(uint8_t&, Port);
+// Should generate an Id
+
+  /**
   Will notify callback on ADD_ADDR reception
   **/
   void SetAddAddrCallback(Callback<bool, Ptr<Socket>, Address, uint8_t> );
@@ -178,6 +184,8 @@ protected: // protected methods
   void Destroy(void);
   void DestroySubflowMapDSN(void);
   void DestroyUnOrdered();
+
+  // Why do we need those ?
   void CancelAllTimers(uint8_t sFlowIdx);
   void DeallocateEndPoint(uint8_t sFlowIdx);
   void CancelAllSubflowTimers(void);
@@ -232,7 +240,9 @@ protected: // protected methods
 
   // Helper functions -> main operations
   uint8_t LookupByAddrs(Ipv4Address src, Ipv4Address dst); // Called by Forwardup() to find the right subflow for incoing packet
+
   uint8_t getSubflowToUse();  // Called by SendPendingData() to get a subflow based on round robin algorithm
+
   bool IsThereRoute(Ipv4Address src, Ipv4Address dst);     // Called by InitiateSubflow & LookupByAddrs and Connect to check whether there is route between a pair of addresses.
   bool IsLocalAddress(Ipv4Address addr);
   Ptr<NetDevice> FindOutputNetDevice(Ipv4Address);         // Find Netdevice object of specific IP address.
@@ -261,12 +271,14 @@ protected: // protected variables
   Ptr<Node>          m_node;
 //  Ipv4EndPoint*      m_endPoint;    // TODO could remove since its parent already defines it
 //  Ptr<TcpL4Protocol> m_mptcp;       //? what is this ? use m_tcp from parent socket
+
+
   // TODO remove
   Ipv4Address        m_localAddress;
   Ipv4Address        m_remoteAddress;
   uint16_t           m_localPort;
   uint16_t           m_remotePort;
-  uint8_t            currentSublow; // master socket ??? to remove
+  uint8_t            m_currentSublow; // master socket ??? to remove
 
   std::vector<Ptr<MpTcpSubFlow> > m_subflows;
 
@@ -283,29 +295,23 @@ protected: // protected variables
   MpStates_t mpRecvState;   //!< TODO to remove (useless)
   bool m_mpEnabled;   //!< True if remote host is MPTCP compliant
 //  bool mpTokenRegister; //!< TODO remove
-  bool m_addrAdvertised;  //!< TODO remove
+//  bool m_addrAdvertised;  //!< TODO remove
 
-  uint32_t unOrdMaxSize;  //!< ?
+//  uint32_t m_unOrdMaxSize;  //!< Looks like it can be removed safely ?
   uint8_t  m_maxSubflows; //!< Max number of subflows
-  uint8_t  lastUsedsFlowIdx;  //!<
+  uint8_t  m_lastUsedsFlowIdx;  //!< TODO remove ? part of the scheduler
+
+  Ptr<MpTcpPathIdManager> m_remotePathIdManager;  //!< Keep track of advertised ADDR id advertised by remote endhost
 
 
+  std::list<DSNMapping *> m_unOrdered;  // buffer that hold the out of sequence received packet
 
-  // MPTCP containers
-
-  typedef std::multimap<uint8_t,MpTcpAddressInfo>  MpTcpAddressContainer;
-
-  //! Maps an Address Id to the pair  (Ipv4/v6, port)
-  std::map<uint8_t,MpTcpAddressInfo> m_localAddrs;
-   //! List addresses advertised by the remote host
-   //! index 0 for local, 1 for remote addr
-  MpTcpAddressContainer m_remoteAddrs[2];
-  std::list<DSNMapping *> unOrdered;  // buffer that hold the out of sequence received packet
 
   // Congestion control
   // TODO store that in abstract class
   double alpha;
   uint32_t m_totalCwnd;
+
   CongestionCtrl_t AlgoCC;       // Algorithm for Congestion Control
   DataDistribAlgo_t distribAlgo; // Algorithm for Data Distribution
 
@@ -332,9 +338,9 @@ private:
   uint32_t m_remoteKey; //!< Store remote host token
 
 private:
-  bool
-  AddAddr(bool remote, uint8_t addrId, const Address& address, uint16_t port);
-  bool
+//  bool
+//  AddLocalAddr(bool remote, uint8_t addrId, const Address& address, uint16_t port);
+//  bool
   RemAddr(bool remote, uint8_t addrId);
 
 

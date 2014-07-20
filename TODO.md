@@ -20,3 +20,6 @@ Requests for ns3;
 * add an IsConnected member to TcpSocketBase ?
 * TcpSocketBase should have all members virtual. MpTcpSubflow::CancelAllTimers should call its parent's but it is not virtual
 * same for DoConnect
+* PoinToPointHelper should be able to Install channel between 2 netDevices ?
+
+use "/NodeList/[i]/DeviceList/[i]" ?

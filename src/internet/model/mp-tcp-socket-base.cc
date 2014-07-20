@@ -71,7 +71,7 @@ MpTcpSocketBase::MpTcpSocketBase(Ptr<Node> node) :
 //    ,m_pathManager(new MpTcpPathManager())
 //:
 //    m_node(node), m_tcp(node->GetObject<TcpL4Protocol>()), mpState(MP_NONE), mpSendState(MP_NONE), mpRecvState(MP_NONE), m_mpEnabled(false), m_addrAdvertised(
-//        false), mpTokenRegister(false), m_subflows(0), m_localAddrs(0), m_remoteAddrs(0), lastUsedsFlowIdx(0), m_totalCwnd(0), m_localKey(0), m_remoteKey(0), client(
+//        false), mpTokenRegister(false), m_subflows(0), m_localAddrs(0), m_remoteAddrs(0), m_lastUsedsFlowIdx(0), m_totalCwnd(0), m_localKey(0), m_remoteKey(0), client(
 //        false), server(false), remoteRecvWnd(1), m_segmentSize(0), nextTxSequence(1), nextRxSequence(1)
 {
   NS_LOG_FUNCTION(this);
@@ -83,9 +83,9 @@ MpTcpSocketBase::MpTcpSocketBase(Ptr<Node> node) :
   mpRecvState = MP_NONE;
   m_mpEnabled = false;
 
-  m_addrAdvertised = false;
+//  m_addrAdvertised = false;
 //  mpTokenRegister = false;
-  lastUsedsFlowIdx = 0;
+  m_lastUsedsFlowIdx = 0;
   m_totalCwnd = 0;
 //  m_localKey = 0;
   m_remoteKey = 0;
@@ -161,7 +161,7 @@ MpTcpSocketBase::GetRemoteKey(uint32_t& remoteKey) const
 
 
 void
-MpTcpSocketBase::SetAddAddrCallback(Callback<bool, Ptr<Socket>, Address, uint8_t> addAddr)
+MpTcpSocketBase::SetAddAddrCallback(Callback<bool, Ptr<Socket>, Address, uint8_t> addAddrCb)
 {
   NS_LOG_FUNCTION (this << &addAddr);
 
@@ -300,25 +300,32 @@ MpTcpSocketBase::ReadOptions(uint8_t sFlowIdx, Ptr<Packet> pkt, const TcpHeader&
           uint8_t addrId = ((OptAddAddress *) opt)->addrID;
 //          addrInfo->ipv4Addr = ((OptAddAddress *) opt)->addr;
 
-          if( AddAddr(true, addrId, ((OptAddAddress *) opt)->addr, 0 ) )
+          //TODO support port
+          if( m_remotePathIdManager->AddAddr(true, addrId, ((OptAddAddress *) opt)->addr, 0 ) )
           {
 //            TxAddr = true;
-//            NotifyAddAddr( );
+// bool remote //new local
+//            NotifyNewRemoteAddAddr( );
           }
-          // TODO take into account the port
-//          MpTcpAddressInfo addrInfo = std::make_pair(((OptAddAddress *) opt)->addr,0);
-//          std::pair<MpTcpAddressContainer::iterator,bool> ret = m_remoteAddrs.insert( std::make_pair(addrId, addrInfo ) );
-//          if(ret->second == false)
-//          {
-//            NS_LOG_WARN("Could not insert remote addr");
-//          }
-//
+
 
         }
       else if (opt->optName == OPT_REMADR)
         { // not implemented yet
           NS_LOG_WARN(this << "ReadOption-> OPT_REMADR is not implemented yet");
-          RemAddr(true, ((OptAddAddress *) opt)->addrID );
+
+          /**
+          This is achieved through the Remove Address (REMOVE_ADDR) option
+         (Figure 13), which will remove a previously added address (or list of
+         addresses) from a connection and terminate any subflows currently
+         using that address.
+
+         **/
+         // TODO look for subflow matching that addr and remove it
+         // Also remove from pathManager
+         m_remote
+         RemoveRemoteAddr( ((OptAddAddress *) opt)->addrID );
+
         }
       else if (opt->optName == OPT_DSN)
         { // not implemented yet
@@ -326,82 +333,11 @@ MpTcpSocketBase::ReadOptions(uint8_t sFlowIdx, Ptr<Packet> pkt, const TcpHeader&
         }
     }
 
-
-  #if 0
-  // if received an address move that to notifyAddAddr
-  if (TxAddr == true)
-    {
-      mpRecvState = MP_ADDADDR;
-      // If addresses did not send yet then advertise them...
-      if (mpSendState != MP_ADDADDR)
-        {
-          NS_LOG_DEBUG(Simulator::Now().GetSeconds()<< "---------------------- AdvertiseAvailableAddresses By Server ---------------------");
-          AdvertiseAvailableAddresses(); // this is what the receiver has to do
-          return false;
-        }
-      // If addresses already sent then initiate subflows...
-      else if (mpSendState == MP_ADDADDR)
-        {
-          InitiateSubflows();  // this is what the initiator has to do
-          return false;
-        }
-    }
-  #endif
   return true;
 }
 
 
-bool
-MpTcpSocketBase::RemAddr(bool remote, uint8_t addrId)
-{
-//  MpTcpAddressContainer& container = m_remoteAddrs[remote];
 
-  // TODO retreive the address, check there is no subflow establish with this ID
-  // Than remove it from available addresses
-  NS_LOG_ERROR("Function not implemented ");
-//  NotifyRemAddress(addrId);
-  return false;
-}
-
-bool
-MpTcpSocketBase::AddAddr(bool remote, uint8_t addrId, const Address& address, uint16_t port)
-{
-  MpTcpAddressContainer& container = m_remoteAddrs[remote];
-
-  MpTcpAddressInfo addrInfo = std::make_pair(address,port);
-
-
-  NS_LOG_INFO("Trying to ADD_ADDR [" << addrId << "] ");
-
-  std::pair< MpTcpAddressContainer::iterator,MpTcpAddressContainer::iterator > it = container.equal_range( addrId );
-  // if id already registered then we need to check the IPs are the same as the one advertised and that ports are different
-//  if(it != container.end() )
-//  {
-    for(MpTcpAddressContainer::iterator it2 = it.first; it2 != it.second; it2++)
-    {
-      // id already registered to another IP
-      if (it2->second.first != address)
-      {
-        NS_LOG_WARN("Rejected ADD_ADDR because id [" << addrId << "] already registered with IP " << address);
-        return false;
-      }
-      // port already in use
-      else if(it2->second.second == port)
-      {
-        NS_LOG_WARN("Rejected ADD_ADDR because this port " << port << " was already advertised with id [" << addrId << "] " << address);
-        return false;
-      }
-    }
-
-
-//  }
-
-  // assume it works
-  container.insert( std::make_pair(addrId, addrInfo ) );
-  // Should be RFC compliant to addaddr
-  NotifyAddAddr( addrInfo );
-  return true;
-}
 
 
 
@@ -529,7 +465,7 @@ MpTcpSocketBase::CompleteFork(Ptr<Packet> p, const TcpHeader& mptcpHeader, const
   SendEmptyPacket(sFlow->m_routeId, TcpHeader::SYN | TcpHeader::ACK);
 
   // Update currentSubflow in case close just after 3WHS.
-  currentSublow = sFlow->m_routeId;
+  m_currentSublow = sFlow->m_routeId;
   NS_LOG_UNCOND("CompleteFork -> receivingBufferSize: " << recvingBuffer->bufMaxSize);NS_LOG_INFO(this << "  MPTCP connection is initiated (Receiver): " << sFlow->sAddr << ":" << sFlow->sPort << " -> " << sFlow->dAddr << ":" << sFlow->m_dPort);
 }
 
@@ -637,12 +573,12 @@ MpTcpSocketBase::ProcessSynSent(uint8_t sFlowIdx, Ptr<Packet> packet, const TcpH
       SendEmptyPacket(sFlowIdx, TcpHeader::ACK);
 
       // Advertise available addresses...
-      if (m_addrAdvertised == false)
-        {
-          NS_LOG_WARN("---------------------- AdvertiseAvailableAddresses By Client ---------------------");
-          AdvertiseAvailableAddresses();
-          m_addrAdvertised = true;
-        }
+//      if (m_addrAdvertised == false)
+//        {
+//          NS_LOG_WARN("---------------------- AdvertiseAvailableAddresses By Client ---------------------");
+//          AdvertiseAvailableAddresses();
+//          m_addrAdvertised = true;
+//        }
       if (m_state != ESTABLISHED)
         {
           m_state = ESTABLISHED;
@@ -1554,7 +1490,7 @@ MpTcpSocketBase::Connect(Ipv4Address servAddr, uint16_t servPort)
   sFlow->state = SYN_SENT;  // Subflow state should be changed first then SendEmptyPacket...
 
   SendEmptyPacket(sFlow->m_routeId, TcpHeader::SYN);
-  currentSublow = sFlow->m_routeId; // update currentSubflow in case close just after 3WHS.
+  m_currentSublow = sFlow->m_routeId; // update currentSubflow in case close just after 3WHS.
   NS_LOG_INFO(this << "  MPTCP connection is initiated (Sender): " << sFlow->sAddr << ":" << sFlow->sPort << " -> " << sFlow->dAddr << ":" << sFlow->m_dPort << " m_state: " << TcpStateName[m_state]);
 
   // TODO notify connection succeeded ?
@@ -1747,16 +1683,16 @@ MpTcpSocketBase::SendPendingData(uint8_t sFlowIdx)
       while (count < m_subflows.size())
         {
           count++;
-          window = std::min(AvailableWindow(lastUsedsFlowIdx), sendingBuffer->PendingData()); // Get available window size
+          window = std::min(AvailableWindow(m_lastUsedsFlowIdx), sendingBuffer->PendingData()); // Get available window size
 
           if (window == 0)
             {  // No more available window in the current subflow, try with another one
-              NS_LOG_WARN("SendPendingData-> No window available on (" << (int)lastUsedsFlowIdx << ")");
-              lastUsedsFlowIdx = getSubflowToUse();
+              NS_LOG_WARN("SendPendingData-> No window available on (" << (int)m_lastUsedsFlowIdx << ")");
+              m_lastUsedsFlowIdx = getSubflowToUse();
             }
           else
             {
-              NS_LOG_LOGIC ("MpTcpSocketBase::SendPendingData -> PendingData (" << sendingBuffer->PendingData() << ") Available window ("<<AvailableWindow (lastUsedsFlowIdx)<<")");
+              NS_LOG_LOGIC ("MpTcpSocketBase::SendPendingData -> PendingData (" << sendingBuffer->PendingData() << ") Available window ("<<AvailableWindow (m_lastUsedsFlowIdx)<<")");
               break;
             }
         }
@@ -1765,19 +1701,19 @@ MpTcpSocketBase::SendPendingData(uint8_t sFlowIdx)
         break;
 
       // Take a pointer to the subflow with available window.
-      sFlow = m_subflows[lastUsedsFlowIdx];
+      sFlow = m_subflows[m_lastUsedsFlowIdx];
 
       // By this condition only connection initiator can send data need to be change though!
       if (sFlow->state == ESTABLISHED)
         {
-          currentSublow = sFlow->m_routeId;
+          m_currentSublow = sFlow->m_routeId;
           uint32_t s = std::min(window, sFlow->GetSegSize());  // Send no more than window
           if (sFlow->maxSeqNb > sFlow->TxSeqNumber && sendingBuffer->PendingData() <= sFlow->GetSegSize())
             s = sFlow->GetSegSize();
           uint32_t amountSent = SendDataPacket(sFlow->m_routeId, s, false);
           nOctetsSent += amountSent;  // Count total bytes sent in this loop
         } // end of if statement
-      lastUsedsFlowIdx = getSubflowToUse();
+      m_lastUsedsFlowIdx = getSubflowToUse();
     } // end of main while loop
   NS_LOG_LOGIC ("SendPendingData -> amount data sent = " << nOctetsSent << "... Notify application.");
   NotifyDataSent(GetTxAvailable());
@@ -1792,7 +1728,7 @@ MpTcpSocketBase::getSubflowToUse()
   switch (distribAlgo)
     {
   case Round_Robin:
-    nextSubFlow = (lastUsedsFlowIdx + 1) % m_subflows.size();
+    nextSubFlow = (m_lastUsedsFlowIdx + 1) % m_subflows.size();
     break;
   default:
     break;
@@ -2028,7 +1964,10 @@ MpTcpSocketBase::NewACK(uint8_t sFlowIdx, const TcpHeader& mptcpHeader, TcpOptio
       sFlow->TxSeqNumber = ack; // If advanced
     }
 
-  if (sendingBuffer->Empty() && sFlow->m_mapDSN.size() == 0 && sFlow->state != FIN_WAIT_1 && sFlow->state != CLOSING)
+  if (
+      (sendingBuffer->Empty() ) && (sFlow->m_mapDSN.size() == 0) &&
+      (sFlow->state != FIN_WAIT_1) && (sFlow->state != CLOSING)
+      )
     { // No retransmit timer if no data to retransmit
       NS_LOG_INFO ("("<< (int)sFlow->m_routeId << ") NewAck -> Cancelled ReTxTimeout event which was set to expire at " << (Simulator::Now () + Simulator::GetDelayLeft (sFlow->retxEvent)).GetSeconds () << ", DSNmap: " << sFlow->m_mapDSN.size());
       sFlow->retxEvent.Cancel();
@@ -2037,7 +1976,7 @@ MpTcpSocketBase::NewACK(uint8_t sFlowIdx, const TcpHeader& mptcpHeader, TcpOptio
   sFlow->highestAck = std::max(sFlow->highestAck, ack - 1);
   NS_LOG_WARN("NewACK-> sFlow->highestAck: " << sFlow->highestAck);
 
-  currentSublow = sFlow->m_routeId;
+  m_currentSublow = sFlow->m_routeId;
   SendPendingData(sFlow->m_routeId);
 }
 
@@ -2063,6 +2002,11 @@ MpTcpSocketBase::GenerateKey() const
   return (rand() % 1000 + 1);
 }
 
+
+
+/**
+TODO remove ?
+**/
 void
 MpTcpSocketBase::SendEmptyPacket(uint8_t sFlowIdx, uint8_t flags)
 {
@@ -2180,7 +2124,7 @@ MpTcpSocketBase::allocateRecvingBuffer(uint32_t size)
 //MpTcpSocketBase::SetunOrdBufMaxSize(uint32_t size)
 //{
 //  NS_LOG_FUNCTION_NOARGS();
-//  //unOrdMaxSize = size;
+//  //m_unOrdMaxSize = size;
 //}
 
 void
@@ -2282,7 +2226,7 @@ MpTcpSocketBase::ForwardUp(Ptr<Packet> p, Ipv4Header header, uint16_t port, Ptr<
 
 // TCP state machine code in different process functions
 // C.f.: tcp_rcv_state_process() in tcp_input.c in Linux kernel
-  currentSublow = sFlow->m_routeId;
+  m_currentSublow = sFlow->m_routeId;
   switch (sFlow->state)
     {
   case ESTABLISHED:
@@ -2423,12 +2367,12 @@ MpTcpSocketBase::calculateTotalCWND()
 void
 MpTcpSocketBase::ReadUnOrderedData()
 {
-  NS_LOG_FUNCTION (this);NS_LOG_WARN("ReadUnOrderedData()-> Size: " << unOrdered.size());
-  list<DSNMapping *>::iterator current = unOrdered.begin();
-  list<DSNMapping *>::iterator next = unOrdered.begin();
+  NS_LOG_FUNCTION (this);NS_LOG_WARN("ReadUnOrderedData()-> Size: " << m_unOrdered.size());
+  list<DSNMapping *>::iterator current = m_unOrdered.begin();
+  list<DSNMapping *>::iterator next = m_unOrdered.begin();
 
   // I changed this method, now whenever a segment is readed it get dropped from that list
-  while (next != unOrdered.end())
+  while (next != m_unOrdered.end())
     {
       ++next;
       DSNMapping *ptrDSN = *current;
@@ -2462,7 +2406,7 @@ MpTcpSocketBase::ReadUnOrderedData()
             NS_ASSERT(ptrDSN->subflowSeqNumber < sFlow->RxSeqNumber);
 
           NotifyDataRecv();
-          unOrdered.erase(current);
+          m_unOrdered.erase(current);
 //          delete ptrDSN;
         }
       else if (ptrDSN->subflowSeqNumber == sFlow->RxSeqNumber)
@@ -3187,18 +3131,18 @@ MpTcpSocketBase::StoreUnOrderedData(DSNMapping *ptr1)
    * if unOrdered buffer can't hold the out of sequence data and currently received
    */
   bool inserted = false;
-  for (list<DSNMapping *>::iterator it = unOrdered.begin(); it != unOrdered.end(); ++it)
+  for (list<DSNMapping *>::iterator it = m_unOrdered.begin(); it != m_unOrdered.end(); ++it)
     {
       DSNMapping *ptr2 = *it;
       if (ptr1->dataSeqNumber == ptr2->dataSeqNumber)
         {
-          NS_LOG_WARN ("Data Sequence ("<< ptr1->dataSeqNumber <<") ALREADY STORED in unOrdered buffer !");
+          NS_LOG_WARN ("Data Sequence ("<< ptr1->dataSeqNumber <<") ALREADY STORED in m_unOrdered buffer !");
           return false;
         }
       else if (ptr1->dataSeqNumber < ptr2->dataSeqNumber)
         {
-          NS_LOG_WARN ("Data Sequence ("<< ptr1->dataSeqNumber <<" with subFlowSeqNb: )" << ptr1->subflowSeqNumber << " HAS stored in unOrdered buffer SUCCESSFULLY!");
-          unOrdered.insert(it, ptr1);
+          NS_LOG_WARN ("Data Sequence ("<< ptr1->dataSeqNumber <<" with subFlowSeqNb: )" << ptr1->subflowSeqNumber << " HAS stored in m_unOrdered buffer SUCCESSFULLY!");
+          m_unOrdered.insert(it, ptr1);
           inserted = true;
           break;
         }
@@ -3206,7 +3150,7 @@ MpTcpSocketBase::StoreUnOrderedData(DSNMapping *ptr1)
   if (!inserted)
     {
       NS_LOG_WARN ("StoreUnOrderedData -> DataSeqNb: " << ptr1->dataSeqNumber << " with subflowSeqNb: " << ptr1->subflowSeqNumber << " has stored at the end of list");
-      unOrdered.insert(unOrdered.end(), ptr1);
+      m_unOrdered.insert(m_unOrdered.end(), ptr1);
     }
 
   return true;
@@ -3331,8 +3275,8 @@ MpTcpSocketBase::FindPacketFromUnOrdered(uint8_t sFlowIdx)
 {
   NS_LOG_FUNCTION((int)sFlowIdx);
   bool reValue = false;
-  list<DSNMapping *>::iterator current = unOrdered.begin();
-  while (current != unOrdered.end())
+  list<DSNMapping *>::iterator current = m_unOrdered.begin();
+  while (current != m_unOrdered.end())
     {
       DSNMapping* ptrDSN = *current;
       if (ptrDSN->subflowIndex == sFlowIdx)
@@ -3390,12 +3334,12 @@ MpTcpSocketBase::Close(uint8_t sFlowIdx)
 
 // First we check to see if there is any unread rx data
 // Bug number 426 claims we should send reset in this case.
-  if (server && unOrdered.size() > 0 && FindPacketFromUnOrdered(sFlowIdx) && !sFlow->Finished()) /* && recvingBuffer->PendingData() != 0 */
+  if (server && m_unOrdered.size() > 0 && FindPacketFromUnOrdered(sFlowIdx) && !sFlow->Finished()) /* && recvingBuffer->PendingData() != 0 */
     {  // I don't expect this to happens in normal scenarios!
       NS_FATAL_ERROR("Receiver called close() when there are some unread packets in its buffer");
       SendRST(sFlowIdx);
       CloseAndNotify(sFlowIdx);
-      NS_LOG_WARN("unOrderedBuffer: " << unOrdered.size() << " currentSubflow: " << sFlow->m_routeId);
+      NS_LOG_WARN("m_unOrderedBuffer: " << m_unOrdered.size() << " currentSubflow: " << sFlow->m_routeId);
       return 0;
     }
 
@@ -3476,10 +3420,10 @@ MpTcpSocketBase::Close(void)
     {
         { // This block could be removed...
           if (m_subflows.size() == 1)
-            NS_ASSERT(currentSublow == 0);
-          NS_LOG_WARN("Close() -> CurrentSubflow: " << (int)currentSublow);
+            NS_ASSERT(m_currentSublow == 0);
+          NS_LOG_WARN("Close() -> CurrentSubflow: " << (int)m_currentSublow);
         } //-------------------------------
-      return Close(currentSublow);
+      return Close(m_currentSublow);
     }
   else
     { //CloseMultipathConnection(); this could be used as well...
@@ -3536,7 +3480,7 @@ MpTcpSocketBase::CloseMultipathConnection()
         }
       if (m_state != CLOSED)
         {
-          NS_LOG_INFO("CloseMultipathConnection -> MPTCP connection is closed {" << this << "}, m_state: " << TcpStateName[m_state] << " -> CLOSED" << " CurrentSubflow (" << (int)currentSublow << ") SubflowsSize: " <<m_subflows.size());
+          NS_LOG_INFO("CloseMultipathConnection -> MPTCP connection is closed {" << this << "}, m_state: " << TcpStateName[m_state] << " -> CLOSED" << " CurrentSubflow (" << (int)m_currentSublow << ") SubflowsSize: " <<m_subflows.size());
           m_state = CLOSED;
           NotifyNormalClose();
           m_endPoint->SetDestroyCallback(MakeNullCallback<void>()); // Remove callback to destroy()
@@ -4028,11 +3972,11 @@ void
 MpTcpSocketBase::DestroyUnOrdered()
 {
   NS_LOG_FUNCTION_NOARGS();
-  for (std::list<DSNMapping*>::iterator i = unOrdered.begin(); i != unOrdered.end(); i++)
+  for (std::list<DSNMapping*>::iterator i = m_unOrdered.begin(); i != m_unOrdered.end(); i++)
     {
-      i = unOrdered.erase(i);
+      i = m_unOrdered.erase(i);
     }
-  unOrdered.clear();
+  m_unOrdered.clear();
 }
 
 /** Kill this socket. This is a callback function configured to m_endpoint in

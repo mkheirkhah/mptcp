@@ -428,6 +428,26 @@ MpTcpSubFlow::IsMaster() const
   return (m_metaSocket->m_subflows.size() == 1);
 }
 
+/**
+should be able to advertise several in one packet if enough space
+It is possible
+http://tools.ietf.org/html/rfc6824#section-3.4.1
+   A host can send an ADD_ADDR message with an already assigned Address
+   ID, but the Address MUST be the same as previously assigned to this
+   Address ID, and the Port MUST be different from one already in use
+   for this Address ID.  If these conditions are not met, the receiver
+   SHOULD silently ignore the ADD_ADDR.  A host wishing to replace an
+   existing Address ID MUST first remove the existing one
+   (Section 3.4.2).
+
+   A host that receives an ADD_ADDR but finds a connection set up to
+   that IP address and port number is unsuccessful SHOULD NOT perform
+   further connection attempts to this address/port combination for this
+   connection.  A sender that wants to trigger a new incoming connection
+   attempt on a previously advertised address/port combination can
+   therefore refresh ADD_ADDR information by sending the option again.
+
+**/
 void
 MpTcpSubFlow::AdvertiseAddress(uint8_t addrId, Address addr, uint16_t port)
 {

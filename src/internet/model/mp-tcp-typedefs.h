@@ -95,7 +95,6 @@ public:
   Ipv4Mask mask;
 };
 */
-typedef std::pair<const Address, uint16_t> MpTcpAddressInfo;  //!< Ipv4/v6 address and its port
 
 class DataBuffer
 {
