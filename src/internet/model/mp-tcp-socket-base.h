@@ -165,7 +165,7 @@ protected: // protected methods
 
   // These should be removed (or at least remove the flowId)
   bool SendPendingData(uint8_t sFlowId = -1);
-  void SendEmptyPacket(uint8_t sFlowId, uint8_t flags);
+
   void SendRST(uint8_t sFlowIdx);
   uint32_t SendDataPacket (uint8_t sFlowIdx, uint32_t pktSize, bool withAck);
 
@@ -222,7 +222,7 @@ protected: // protected methods
   uint8_t getSubflowToUse();  // Called by SendPendingData() to get a subflow based on round robin algorithm
   bool IsThereRoute(Ipv4Address src, Ipv4Address dst);     // Called by InitiateSubflow & LookupByAddrs and Connect to check whether there is route between a pair of addresses.
   bool IsLocalAddress(Ipv4Address addr);
-  Ptr<NetDevice> FindOutputNetDevice(Ipv4Address);         // Find Netdevice object of specific IP address.
+  //Ptr<NetDevice> FindOutputNetDevice(Ipv4Address);         // Find Netdevice object of specific IP address.
   DSNMapping* getAckedSegment(uint8_t sFlowIdx, uint32_t ack);
   DSNMapping* getSegmentOfACK(uint8_t sFlowIdx, uint32_t ack);
 

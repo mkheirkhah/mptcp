@@ -597,6 +597,152 @@ MpTcpSubFlow::Close()
   return DoClose();
 }
 
+/** Do the action to close the socket. Usually send a packet with appropriate
+ flags depended on the current m_state. */
+int
+MpTcpSubFlow::DoClose()
+{
+  NS_LOG_FUNCTION (this << m_subflows.size());
+
+  switch (m_state)
+    {
+  case SYN_RCVD:
+  case ESTABLISHED:
+    // send FIN to close the peer
+    SendEmptyPacket(TcpHeader::FIN);
+    NS_LOG_INFO ("("<< (int) m_routeId<< ") ESTABLISHED -> FIN_WAIT_1 {DoClose} FIN is sent as separate pkt");
+    m_state = FIN_WAIT_1;
+    break;
+  case CLOSE_WAIT:
+    // send FIN+ACK to close the peer (in normal scenario receiver should use this when she got FIN from sender)
+    SendEmptyPacket(TcpHeader::FIN | TcpHeader::ACK);
+    NS_LOG_INFO ("("<< (int) m_routeId<< ") CLOSE_WAIT -> LAST_ACK {DoClose}");
+    m_state = LAST_ACK;
+    break;
+  case SYN_SENT:
+  case CLOSING:
+    // Send RST if application closes in SYN_SENT and CLOSING
+    NS_LOG_INFO("DoClose -> Socket src/des (" << sAddr << ":" << sPort << "/" << dAddr << ":" << m_dPort << ")" << " state: " << TcpStateName[m_state]);
+    SendRST();
+    CloseAndNotify();
+    break;
+  case LISTEN:
+  case LAST_ACK:
+    // In these three states, move to CLOSED and tear down the end point
+    CloseAndNotify();
+    break;
+  case CLOSED:
+  case FIN_WAIT_1:
+  case FIN_WAIT_2:
+  case TIME_WAIT:
+  default: /* mute compiler */
+    //NS_LOG_INFO("DoClose -> DoNotting since subflow's state is " << TcpStateName[sFlow->state] << "(" << sFlow->m_routeId<< ")");
+    // Do nothing in these four states
+    break;
+    }
+  return 0;
+}
+
+
+
+void
+MpTcpSubFlow::SendEmptyPacket(uint8_t flags)
+{
+  NS_LOG_FUNCTION (this << (int) m_routeId);
+  Ptr<Packet> p = Create<Packet>();
+
+  SequenceNumber32 s = SequenceNumber32(TxSeqNumber);
+
+  if (m_endPoint == 0)
+    {
+      NS_FATAL_ERROR("Failed to send empty packet due to null subflow's endpoint");
+      return;
+    }
+  if (flags & TcpHeader::FIN)
+    {
+      //flags |= TcpHeader::ACK;
+      if (maxSeqNb != TxSeqNumber - 1 /*&& client*/) // NOTE-MK: Client is just a symbol we used as a testing, no issue to remove it
+        s = maxSeqNb + 1;
+    }
+  else if (m_metaSocket->m_state == FIN_WAIT_1 || m_metaSocket->m_state == LAST_ACK || m_metaSocket->m_state == CLOSING)// TODO MK: MPTCP connection's state machine must be revised!
+    {
+      ++s;
+    }
+
+  TcpHeader header;
+  uint8_t hlen = 0;
+  uint8_t olen = 0;
+
+  header.SetSourcePort(sPort);
+  header.SetDestinationPort(m_dPort);
+  header.SetFlags(flags);
+  header.SetSequenceNumber(s);
+  header.SetAckNumber(SequenceNumber32(RxSeqNumber));
+  header.SetWindowSize(AdvertisedWindowSize());
+
+  bool hasSyn = flags & TcpHeader::SYN;
+  bool hasFin = flags & TcpHeader::FIN;
+  bool isAck = flags == TcpHeader::ACK;
+
+  Time RTO = rtt->RetransmitTimeout();
+
+  if (hasSyn)
+    {
+      if (m_cnCount == 0)
+        { // No more connection retries, give up
+          NS_LOG_INFO ("Connection failed.");
+          CloseAndNotify();
+          return;
+        }
+      else
+        { // Exponential backoff of connection time out
+          int backoffCount = 0x1 << (m_cnRetries - m_cnCount);
+          RTO = Seconds(cnTimeout.GetSeconds() * backoffCount);
+          m_cnCount = m_cnCount - 1;
+          NS_LOG_UNCOND("("<< (int)m_routeId<< ") SendEmptyPacket -> backoffCount: " << backoffCount << " RTO: " << RTO.GetSeconds() << " cnTimeout: " << cnTimeout.GetSeconds() <<" m_cnCount: "<< m_cnCount);
+        }
+    }
+  if (((m_state == SYN_SENT) || (m_state == SYN_RCVD && m_metaSocket->m_mpEnabled == true)) /*&& mpSendState == MP_NONE*/ && IsMaster())
+    {
+      //mpSendState = MP_MPC;            // TODO MK: We don't need this as IsMaster does the job // This state means MP_MPC is sent
+      m_localToken = rand() % 1000 + 1;  // TODO MK: Better to  put it on the method
+      header.AddOptMPC(OPT_MPCAPABLE, m_localToken); // Adding MP_CAPABLE & Token to TCP option (5 Bytes)
+      olen += 5;
+      m_tcp->m_TokenMap[m_localToken] = m_endPoint;       //m_tcp->m_TokenMap.insert(std::make_pair(m_localKey, m_endPoint))
+      NS_LOG_INFO("("<< (int)sFlow->m_routeId<< ") SendEmptyPacket -> m_localKey is mapped to connection endpoint -> " << m_localToken << " -> " << m_endPoint << " TokenMapsSize: "<< m_tcp->m_TokenMap.size());
+    }
+  else if (m_state == SYN_SENT && hasSyn && m_routeId == 0)
+    {
+      header.AddOptMPC(OPT_MPCAPABLE, m_localToken);       // Adding MP_CAPABLE & Token to TCP option (5 Bytes)
+      olen += 5;
+    }
+  else if (m_state == SYN_SENT && hasSyn && m_routeId != 0)
+    {
+      header.AddOptJOIN(OPT_JOIN, m_remoteToken, 0); // addID should be zero? //TODO MK: This need to be fixed
+      olen += 6;
+    }
+
+  uint8_t plen = (4 - (olen % 4)) % 4;
+  olen = (olen + plen) / 4;
+  hlen = 5 + olen;
+  header.SetLength(hlen);
+  header.SetOptionsLength(olen);
+  header.SetPaddingLength(plen);
+
+  m_tcp->SendPacket(p, header, sAddr, dAddr, FindOutputNetDevice(sAddr));
+  //sFlow->rtt->SentSeq (sFlow->TxSeqNumber, 1);           // notify the RTT
+
+  if (retxEvent.IsExpired() && (hasFin || hasSyn) && !isAck)
+    { // Retransmit SYN / SYN+ACK / FIN / FIN+ACK to guard against lost
+      //RTO = sFlow->rtt->RetransmitTimeout();
+      retxEvent = Simulator::Schedule(RTO, &MpTcpSocketBase::SendEmptyPacket, this, m_routeId, flags);
+      NS_LOG_INFO ("("<<(int)m_routeId <<") SendEmptyPacket -> ReTxTimer set for FIN / FIN+ACK / SYN / SYN+ACK now " << Simulator::Now ().GetSeconds () << " Expire at " << (Simulator::Now () + RTO).GetSeconds () << " RTO: " << RTO.GetSeconds());
+    }
+
+  //if (!isAck)
+  NS_LOG_INFO("("<< (int)m_routeId <<") SendEmptyPacket-> "<< header <<" Length: "<< (int)header.GetLength());
+}
+
 bool
 MpTcpSubFlow::FindPacketFromUnOrdered()
 {

@@ -2063,104 +2063,7 @@ MpTcpSocketBase::GenerateKey() const
   return (rand() % 1000 + 1);
 }
 
-void
-MpTcpSocketBase::SendEmptyPacket(uint8_t sFlowIdx, uint8_t flags)
-{
-  NS_LOG_FUNCTION (this << (int)sFlowIdx);
-  Ptr<MpTcpSubFlow> sFlow = m_subflows[sFlowIdx];
-  Ptr<Packet> p = Create<Packet>();
 
-  SequenceNumber32 s = SequenceNumber32(sFlow->TxSeqNumber);
-
-  if (sFlow->m_endPoint == 0)
-    {
-      NS_FATAL_ERROR("Failed to send empty packet due to null subflow's endpoint");
-      NS_LOG_WARN ("Failed to send empty packet due to null subflow's endpoint");
-      return;
-    }
-  if (flags & TcpHeader::FIN)
-    {
-      //flags |= TcpHeader::ACK;
-      if (sFlow->maxSeqNb != sFlow->TxSeqNumber - 1 && client)
-        s = sFlow->maxSeqNb + 1;
-    }
-  else if (m_state == FIN_WAIT_1 || m_state == LAST_ACK || m_state == CLOSING)
-    {
-      ++s;
-    }
-
-  TcpHeader header;
-  uint8_t hlen = 0;
-  uint8_t olen = 0;
-
-  header.SetSourcePort(sFlow->sPort);
-  header.SetDestinationPort(sFlow->m_dPort);
-  header.SetFlags(flags);
-  header.SetSequenceNumber(s);
-  header.SetAckNumber(SequenceNumber32(sFlow->RxSeqNumber));
-  header.SetWindowSize(AdvertisedWindowSize());
-
-  bool hasSyn = flags & TcpHeader::SYN;
-  bool hasFin = flags & TcpHeader::FIN;
-  bool isAck = flags == TcpHeader::ACK;
-
-  Time RTO = sFlow->rtt->RetransmitTimeout();
-  if (hasSyn)
-    {
-      if (sFlow->m_cnCount == 0)
-        { // No more connection retries, give up
-          NS_LOG_INFO ("Connection failed.");
-          CloseAndNotify(sFlow->m_routeId);
-          return;
-        }
-      else
-        { // Exponential backoff of connection time out
-          int backoffCount = 0x1 << (sFlow->m_cnRetries - sFlow->m_cnCount);
-          RTO = Seconds(sFlow->cnTimeout.GetSeconds() * backoffCount);
-          sFlow->m_cnCount = sFlow->m_cnCount - 1;
-          NS_LOG_UNCOND("("<< (int)sFlow->m_routeId<< ") SendEmptyPacket -> backoffCount: " << backoffCount << " RTO: " << RTO.GetSeconds() << " cnTimeout: " << sFlow->cnTimeout.GetSeconds() <<" m_cnCount: "<< sFlow->m_cnCount);
-        }
-    }
-  if (((sFlow->state == SYN_SENT) || (sFlow->state == SYN_RCVD && m_mpEnabled == true)) && mpSendState == MP_NONE)
-    {
-      mpSendState = MP_MPC;                  // This state means MP_MPC is sent
-      m_localKey = rand() % 1000 + 1;        // Random Local Token
-      header.AddOptMPC(OPT_MPCAPABLE, m_localKey); // Adding MP_CAPABLE & Token to TCP option (5 Bytes)
-      olen += 5;
-      m_tcp->m_TokenMap[m_localKey] = m_endPoint;       //m_tcp->m_TokenMap.insert(std::make_pair(m_localKey, m_endPoint))
-      NS_LOG_INFO("("<< (int)sFlow->m_routeId<< ") SendEmptyPacket -> m_localKey is mapped to connection endpoint -> " << m_localKey << " -> " << m_endPoint << " TokenMapsSize: "<< m_tcp->m_TokenMap.size());
-    }
-  else if (sFlow->state == SYN_SENT && hasSyn && sFlow->m_routeId == 0)
-    {
-      header.AddOptMPC(OPT_MPCAPABLE, m_localKey);       // Adding MP_CAPABLE & Token to TCP option (5 Bytes)
-      olen += 5;
-    }
-  else if (sFlow->state == SYN_SENT && hasSyn && sFlow->m_routeId != 0)
-    {
-      header.AddOptJOIN(OPT_JOIN, m_remoteKey, 0); // addID should be zero?
-      olen += 6;
-    }
-
-  uint8_t plen = (4 - (olen % 4)) % 4;
-  olen = (olen + plen) / 4;
-  hlen = 5 + olen;
-  header.SetLength(hlen);
-  header.SetOptionsLength(olen);
-  header.SetPaddingLength(plen);
-
-  m_tcp->SendPacket(p, header, sFlow->sAddr, sFlow->dAddr, FindOutputNetDevice(sFlow->sAddr));
-  //sFlow->rtt->SentSeq (sFlow->TxSeqNumber, 1);           // notify the RTT
-
-  if (sFlow->retxEvent.IsExpired() && (hasFin || hasSyn) && !isAck)
-    { // Retransmit SYN / SYN+ACK / FIN / FIN+ACK to guard against lost
-//RTO = sFlow->rtt->RetransmitTimeout();
-      sFlow->retxEvent = Simulator::Schedule(RTO, &MpTcpSocketBase::SendEmptyPacket, this, sFlowIdx, flags);
-      NS_LOG_INFO ("("<<(int)sFlowIdx <<") SendEmptyPacket -> ReTxTimer set for FIN / FIN+ACK / SYN / SYN+ACK now " << Simulator::Now ().GetSeconds () << " Expire at " << (Simulator::Now () + RTO).GetSeconds () << " RTO: " << RTO.GetSeconds());
-    }
-
-  //if (!isAck)
-  NS_LOG_INFO("("<< (int)sFlowIdx<<") SendEmptyPacket-> "<< header <<" Length: "<< (int)header.GetLength());
-}
 
 void
 MpTcpSocketBase::allocateSendingBuffer(uint32_t size)
@@ -3362,53 +3265,7 @@ MpTcpSocketBase::CloseAndNotify(uint8_t sFlowIdx)
 
 
 
-/** Do the action to close the socket. Usually send a packet with appropriate
- flags depended on the current m_state. */
-int
-MpTcpSocketBase::DoClose(uint8_t sFlowIdx)
-{
-  NS_LOG_FUNCTION (this << (int)sFlowIdx << m_subflows.size());
 
-  Ptr<MpTcpSubFlow> sFlow = m_subflows[sFlowIdx];
-  //NS_LOG_INFO("DoClose -> Socket src/des (" << sFlow->sAddr << ":" << sFlow->sPort << "/" << sFlow->dAddr << ":" << sFlow->m_dPort << ")" << " state: " << TcpStateName[sFlow->state]);
-  switch (sFlow->state)
-    {
-  case SYN_RCVD:
-  case ESTABLISHED:
-// send FIN to close the peer
-    SendEmptyPacket(sFlowIdx, TcpHeader::FIN);
-    NS_LOG_INFO ("("<< (int) sFlow->m_routeId<< ") ESTABLISHED -> FIN_WAIT_1 {DoClose} FIN is sent as separate pkt");
-    sFlow->state = FIN_WAIT_1;
-    break;
-  case CLOSE_WAIT:
-// send FIN+ACK to close the peer (in normal scenario receiver should use this when she got FIN from sender)
-    SendEmptyPacket(sFlowIdx, TcpHeader::FIN | TcpHeader::ACK);
-    NS_LOG_INFO ("("<< (int) sFlow->m_routeId<< ") CLOSE_WAIT -> LAST_ACK {DoClose}");
-    sFlow->state = LAST_ACK;
-    break;
-  case SYN_SENT:
-  case CLOSING:
-// Send RST if application closes in SYN_SENT and CLOSING
-    NS_LOG_INFO("DoClose -> Socket src/des (" << sFlow->sAddr << ":" << sFlow->sPort << "/" << sFlow->dAddr << ":" << sFlow->m_dPort << ")" << " sFlow->state: " << TcpStateName[sFlow->state]);
-    SendRST(sFlowIdx);
-    CloseAndNotify(sFlowIdx);
-    break;
-  case LISTEN:
-  case LAST_ACK:
-// In these three states, move to CLOSED and tear down the end point
-    CloseAndNotify(sFlowIdx);
-    break;
-  case CLOSED:
-  case FIN_WAIT_1:
-  case FIN_WAIT_2:
-  case TIME_WAIT:
-  default: /* mute compiler */
-//NS_LOG_INFO("DoClose -> DoNotting since subflow's state is " << TcpStateName[sFlow->state] << "(" << sFlow->m_routeId<< ")");
-// Do nothing in these four states
-    break;
-    }
-  return 0;
-}
 
 int
 MpTcpSocketBase::Close(void)

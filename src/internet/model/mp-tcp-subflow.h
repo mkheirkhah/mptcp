@@ -79,7 +79,7 @@ protected:
   virtual uint32_t
   GetInitialCwnd(void) const;
 
-  virtual void SendEmptyPacket(uint8_t flags);
+
 
   virtual Ptr<TcpSocketBase>
   Fork(void); // Call CopyObject<> to clone me
@@ -120,8 +120,15 @@ protected:
   virtual uint32_t BytesInFlight();  // Return total bytes in flight of a subflow
   virtual uint32_t AvailableWindow();
 
+  // Transfer operation
+  virtual void SendEmptyPacket(uint8_t flags);
+
   // Buffer management
   bool FindPacketFromUnOrdered();
+
+  // Helper Function
+  // TODO MK: We don't need to call this on every packet. I guess we can use m_boundnetdevice instead. However, possibly a new function called SetBoundNetDevice() would appropriate to have in order to find Netdevice related to source IP where it can be get from RouteOutput() at Connect().
+  Ptr<NetDevice> FindOutputNetDevice(Ipv4Address); // Find Netdevice object of specific IP address.
   //------------------------------
 
   uint16_t m_routeId;           // Subflow's ID (TODO remove ?)
