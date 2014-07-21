@@ -198,8 +198,8 @@ def build(bld):
         'model/mp-tcp-typedefs.cc',
         'model/tcp-options.cc',
         'model/mp-tcp-subflow.cc',
-        'model/mp-tcp-olia.cc'
-        #'model/mp-tcp-path-manager.cc',
+        'model/mp-tcp-olia.cc',
+        'model/mp-tcp-id-manager.cc'
         ]
 
     internet_test = bld.create_ns3_module_test_library('internet')
@@ -324,8 +324,7 @@ def build(bld):
         'model/mp-tcp-socket-factory-impl.h', # matt
         'model/mp-tcp-cc.h',                  # matt
         'model/mp-tcp-olia.h',                # matt
-
-        #'model/mp-tcp-path-manager.h' # matt
+        'model/mp-tcp-id-manager.h'           # matt
         # 'model/mp-tcp-path-manager-ndiff.h' # matt
        ]
 

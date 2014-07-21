@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <iostream>
 #include <fstream>
+#include <map>
 #include "ns3/abort.h"
 #include "ns3/log.h"
 #include "ns3/string.h"
@@ -163,20 +164,50 @@ MpTcpSocketBase::GetRemoteKey(uint32_t& remoteKey) const
 void
 MpTcpSocketBase::SetAddAddrCallback(Callback<bool, Ptr<Socket>, Address, uint8_t> addAddrCb)
 {
-  NS_LOG_FUNCTION (this << &addAddr);
+  NS_LOG_FUNCTION (this << &addAddrCb);
 
-  m_onAddAddr = addAddr;
+  m_onAddAddr = addAddrCb;
 }
 
+//MpTcpAddressInfo info
+// Address info
 void
-MpTcpSocketBase::NotifyAddAddr(MpTcpAddressInfo info)
+MpTcpSocketBase::NotifyAddAddr(Address address)
 {
   if (!m_onAddAddr.IsNull())
   {
-    // TODO user should not have to deal with MpTcpAddressInfo
-    m_onAddAddr (this, info.first, info.second);
+    // TODO user should not have to deal with MpTcpAddressInfo , info.second
+    m_onAddAddr (this, address, 0);
   }
 }
+
+
+uint8_t
+MpTcpSocketBase::AddLocalAddr(const Ipv4Address& address)
+{
+  //TODO should be able to improve AddrId allocation to allow for more choices
+  // converts Static into member function ? add a modulo in case we add too many local addr ?
+  static uint8_t addrId = 0;
+  addrId++;
+
+  std::pair< std::map<Ipv4Address,uint8_t>::iterator , bool > result = m_localAddresses.insert( std::make_pair(address, addrId) );
+//  std::map<Ipv4Address,uint8_t>::iterator it = m_localAddresses.find( address );
+//  if( ! result.second)
+//  {
+    return result.first->second;
+//  }
+//  return
+}
+
+
+bool
+MpTcpSocketBase::RemLocalAddr(Ipv4Address address)
+{
+//  std::map<Ipv4Address,uint8_t>::iterator  it
+  int res = m_localAddresses.erase( address );
+  return (res != 0);
+}
+
 
 
 /** Configure the endpoint to a local address. Called by Connect() if Bind() didn't specify one. */
@@ -301,7 +332,8 @@ MpTcpSocketBase::ReadOptions(uint8_t sFlowIdx, Ptr<Packet> pkt, const TcpHeader&
 //          addrInfo->ipv4Addr = ((OptAddAddress *) opt)->addr;
 
           //TODO support port
-          if( m_remotePathIdManager->AddAddr(true, addrId, ((OptAddAddress *) opt)->addr, 0 ) )
+          // Convert en address
+          if( m_remotePathIdManager->AddRemoteAddr( addrId, ((OptAddAddress *) opt)->addr, 0 ) )
           {
 //            TxAddr = true;
 // bool remote //new local
@@ -323,8 +355,8 @@ MpTcpSocketBase::ReadOptions(uint8_t sFlowIdx, Ptr<Packet> pkt, const TcpHeader&
          **/
          // TODO look for subflow matching that addr and remove it
          // Also remove from pathManager
-         m_remote
-         RemoveRemoteAddr( ((OptAddAddress *) opt)->addrID );
+//         m_remote
+         m_remotePathIdManager->RemRemoteAddr( ((OptAddAddress *) opt)->addrID );
 
         }
       else if (opt->optName == OPT_DSN)

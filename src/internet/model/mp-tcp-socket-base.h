@@ -13,6 +13,7 @@
 //#include "ns3/mp-tcp-path-manager.h"
 #include "ns3/gnuplot.h"
 #include "mp-tcp-subflow.h"
+#include "ns3/mp-tcp-id-manager.h"
 
 using namespace std;
 namespace ns3
@@ -158,7 +159,8 @@ protected: // protected methods
   Will notify callback on ADD_ADDR reception
   **/
   void SetAddAddrCallback(Callback<bool, Ptr<Socket>, Address, uint8_t> );
-  void NotifyAddAddr(MpTcpAddressInfo);
+
+  void NotifyAddAddr(Address address);
   void NotifyRemAddr(uint8_t addrId);
 
 
@@ -327,6 +329,9 @@ protected: // protected variables
   DataBuffer *sendingBuffer;
   DataBuffer *recvingBuffer;
 
+  std::map<Ipv4Address,uint8_t> m_localAddresses;
+
+
   // TODO make private ? check what it does
   // should be able to rmeove one
   bool client;
@@ -338,10 +343,10 @@ private:
   uint32_t m_remoteKey; //!< Store remote host token
 
 private:
-//  bool
-//  AddLocalAddr(bool remote, uint8_t addrId, const Address& address, uint16_t port);
-//  bool
-  RemAddr(bool remote, uint8_t addrId);
+// CloseSubflow
+  uint8_t AddLocalAddr(const Ipv4Address& address);
+
+  bool RemLocalAddr(Ipv4Address);
 
 
 };

@@ -1,10 +1,13 @@
 
 #include "ns3/mp-tcp-olia.h"
+#include "ns3/log.h"
+
 
 
 
 namespace ns3 {
 
+NS_LOG_COMPONENT_DEFINE("MpTcpCCOlia");
 
 uint32_t
 MpTcpCCOlia::GetSSThresh(void) const

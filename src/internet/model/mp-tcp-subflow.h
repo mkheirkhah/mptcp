@@ -55,7 +55,8 @@ public:
   virtual int
   Connect(const Address &address);      // Setup endpoint and call ProcessAction() to connect
 
-  virtual void AdvertiseAddress(uint8_t addrId, Address , uint16_t port);
+//  uint8_t addrId,
+  virtual void AdvertiseAddress(Ipv4Address , uint16_t port);
 
   /**
   Master socket is the first to initiate the connection, thus it will use

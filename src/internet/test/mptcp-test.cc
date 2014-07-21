@@ -58,6 +58,8 @@
 #include "ns3/applications-module.h"
 #include "ns3/network-module.h"
 #include "ns3/tcp-newreno.h"
+#include "ns3/point-to-point-module.h"
+//#include "ns3/point-to-point-channel.h"
 #include <string>
 
 NS_LOG_COMPONENT_DEFINE ("MpTcpTestSuite");
@@ -76,7 +78,29 @@ we should try not to add to internet dependancies ['bridge', 'mpi', 'network', '
 typedef TcpNewReno SocketToBeTested;
 
 
+      #if 0
+      // TODO That should go into a helper
+      // Object from L3 to access to routing protocol, Interfaces and NetDevices and so on.
+      Ptr<Ipv4L3Protocol> ipv4 = m_node->GetObject<Ipv4L3Protocol>();
+      for (uint32_t i = 0; i < ipv4->GetNInterfaces(); i++)
+        {
+          //Ptr<NetDevice> device = m_node->GetDevice(i);
+          Ptr<Ipv4Interface> interface = ipv4->GetInterface(i);
+          Ipv4InterfaceAddress interfaceAddr = interface->GetAddress(0);
 
+          // Skip the loop-back
+          if (interfaceAddr.GetLocal() == Ipv4Address::GetLoopback())
+            continue;
+
+          addrInfo = new MpTcpAddressInfo();
+          addrInfo->addrID = i;
+          addrInfo->ipv4Addr = interfaceAddr.GetLocal();
+          addrInfo->mask = interfaceAddr.GetMask();
+      header.AddOptADDR(OPT_ADDR, addrInfo->addrID, addrInfo->ipv4Addr);
+      olen += 6;
+          m_localAddrs.insert(m_localAddrs.end(), addrInfo);
+        }
+      #endif
 
 /**
 Provide basic functions to generate a topology (or outsource them ?)
@@ -92,7 +116,9 @@ public:
 protected:
   virtual void SetupNodes();
 
-  virtual void SetupDefaultSim (Ptr<Node> n0, Ptr<Node> n1, int nbOfParallelLinks);
+  virtual void SetupDefaultSim (
+//      Ptr<Node> n0, Ptr<Node> n1, int nbOfParallelLinks
+      );
 //private:
   virtual void DoSetup(void);
   virtual void DoRun(void) = 0;
@@ -142,6 +168,7 @@ MpTcpTestCase::~MpTcpTestCase()
 {
 }
 
+void
 MpTcpTestCase::SetupNodes()
 {
 
@@ -162,7 +189,7 @@ MpTcpTestCase::SetupNodes()
     devClient->SetDataRate( DataRate ("5Mb/s")  );
     devClient->SetAddress(Mac48Address::Allocate ());
     devClient->SetQueue (CreateObject<DropTailQueue> ());
-    m_client->AddDevice( device );
+    m_client->AddDevice( devClient );
 
       // Server
 //      for(int j = 0; j < m_nbInterfacesServer; j++ )
@@ -173,10 +200,10 @@ MpTcpTestCase::SetupNodes()
         devServer->SetQueue (CreateObject<DropTailQueue> ());
 
         // Attach
-        m_server->AddDevice( device );
+        m_server->AddDevice( devServer );
 
         // TODO attach link
-        Ptr<PointToPointChannel> channel = CreateObject<PointToPointChannel>()
+        Ptr<PointToPointChannel> channel = CreateObject<PointToPointChannel>();
         devServer->Attach( channel );
         devClient->Attach( channel );
 
@@ -186,7 +213,7 @@ MpTcpTestCase::SetupNodes()
 
         std::stringstream netAddr;
         netAddr << "10." << i << ".1.0";
-        addressHelper.SetBase ( netAddr.str() , "255.255.0.0");
+        addressHelper.SetBase ( netAddr.str().c_str() , "255.255.0.0");
         addressHelper.Assign( devicesContainer );
 //      }
 
@@ -273,7 +300,7 @@ MpTcpTestCase::SetupDefaultSim (void)
   InternetStackHelper stackHelper;
   NetDeviceContainer devices;
   Ipv4AddressHelper addressHelper;  //!< To install
-
+#if 0
 
 
 //  nodes.Create(2);
@@ -286,7 +313,7 @@ MpTcpTestCase::SetupDefaultSim (void)
 
   // Creates netdevices in nodes, can I install it several times ?
   devices = pointToPointHelper.Install(nodes);
-
+#endif
   stackHelper.Install( m_client );
   stackHelper.Install( m_server );
 
@@ -307,14 +334,14 @@ MpTcpTestCase::SetupDefaultSim (void)
 // lSocket
 
 // Should work too ?! more straightforward ! TODO try
-// Ptr<MpTcpSocketBase> serverSock =  Socket::CreateSocket (n0n1.Get (0),  MpTcpSocketFactory::GetTypeId ());
+ Ptr<Socket> serverSock =  Socket::CreateSocket ( m_server,  MpTcpSocketFactory::GetTypeId ());
   Ptr<MpTcpSocketFactoryImpl> sockFactory0 = CreateObject<MpTcpSocketFactoryImpl> ();
   sockFactory0->SetTcp(m_server->GetObject<TcpL4Protocol> ());
-
-  m_server->AggregateObject(sockFactory0);
+//
+//  m_server->AggregateObject(sockFactory0);
 //  Ptr<SocketFactory> sockFactory1 = m_client->GetObject<MpTcpSocketFactory> ();
 
-  Ptr<Socket> serverSock = sockFactory0->CreateSocket ();
+//  Ptr<MpTcpSocketBase> serverSock = sockFactory0->CreateSocket ();
   Ptr<Socket> clientSock = sockFactory0->CreateSocket ();
 
   serverSock->Bind(serverLocalAddr);
