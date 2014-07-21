@@ -43,7 +43,7 @@ uint32_t Delay = 0.5;
 Time cDelay = MilliSeconds(Delay);
 double LossRate = 0.0;
 double dtq = 100;
-static const uint32_t totalTxBytes = 5000000;
+static const uint32_t totalTxBytes = 10000000;
 static const uint32_t sendBufSize = 53600;
 static uint32_t currentTxBytes = 0;
 static const double simDuration = 1000.0;
@@ -106,6 +106,8 @@ main(int argc, char *argv[])
 {
   /* Uncoupled_TCPs, Linked_Increases, RTT_Compensator, Fully_Coupled */
   Config::SetDefault ("ns3::MpTcpSocketBase::CongestionControl", StringValue("Uncoupled_TCPs"));
+  Config::SetDefault ("ns3::MpTcpSocketBase::PathManagement", StringValue("NdiffPorts"));
+  Config::SetDefault ("ns3::MpTcpSocketBase::MaxSubflows", UintegerValue(8));
   Config::SetDefault ("ns3::DropTailQueue::MaxPackets", UintegerValue(dtq));
   Config::SetDefault ("ns3::Ipv4GlobalRouting::FlowEcmpRouting", BooleanValue (true));
   // TCP stuff
@@ -115,9 +117,9 @@ main(int argc, char *argv[])
 
   LogComponentEnable("MpTcpNewReno", LOG_LEVEL_ALL);
 //  LogComponentEnable("MpTcpSocketBase", LOG_ALL);
-  LogComponentEnable("Ipv4GlobalRouting", LOG_DEBUG);
+//  LogComponentEnable("Ipv4GlobalRouting", LOG_DEBUG);
 //  LogComponentEnable("MpTcpSocketBase", LOG_WARN);
-//  LogComponentEnable("MpTcpSocketBase", LOG_ALL);
+  LogComponentEnable("MpTcpSocketBase", LOG_INFO);
 //  LogComponentEnable("TcpL4Protocol", LOG_WARN);
 //  LogComponentEnable("TcpHeader", LOG_ALL);
 //  LogComponentEnable("Packet", LOG_ALL);
@@ -151,7 +153,7 @@ main(int argc, char *argv[])
   NS_LOG_INFO("Create channel");
   PointToPointHelper p2p;
   p2p.SetDeviceAttribute("DataRate", StringValue("100Mbps"));
-  p2p.SetChannelAttribute("Delay", StringValue("0.01ms"));
+  p2p.SetChannelAttribute("Delay", StringValue("1ms"));
   NetDeviceContainer d0d1 = p2p.Install(n0n1);
   NetDeviceContainer d1d2 = p2p.Install(n1n2);
   NetDeviceContainer d1d3 = p2p.Install(n1n3);

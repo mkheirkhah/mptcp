@@ -97,7 +97,7 @@ protected: // protected methods
   void CompleteFork(Ptr<Packet> p, const TcpHeader& h, const Address& fromAddress, const Address& toAddress);
   void AdvertiseAvailableAddresses(); // Advertise all addresses to the peer, including the already established address.
   bool InitiateSubflows();            // Initiate new subflows when FullMesh mode is active
-  bool InitiateSubflows(uint32_t maxSubflows); // Initiate new subflows when nDiffPorts is active
+  bool InitiateNSubflows(); // Initiate new subflows when nDiffPorts is active
 
   // Transfer operations
   void ForwardUp(Ptr<Packet> p, Ipv4Header header, uint16_t port, Ptr<Ipv4Interface> interface);
