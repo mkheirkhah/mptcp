@@ -30,12 +30,12 @@ NS_LOG_COMPONENT_DEFINE ("Ipv4AddressHelper");
 
 namespace ns3 {
 
-Ipv4AddressHelper::Ipv4AddressHelper () 
+Ipv4AddressHelper::Ipv4AddressHelper ()
 {
   NS_LOG_FUNCTION_NOARGS ();
 
 //
-// Set the default values to an illegal state.  Do this so the client is 
+// Set the default values to an illegal state.  Do this so the client is
 // forced to think at least briefly about what addresses get used and what
 // is going on here.
 //
@@ -48,7 +48,7 @@ Ipv4AddressHelper::Ipv4AddressHelper ()
 }
 
 Ipv4AddressHelper::Ipv4AddressHelper (
-  const Ipv4Address network, 
+  const Ipv4Address network,
   const Ipv4Mask    mask,
   const Ipv4Address address)
 {
@@ -58,7 +58,7 @@ Ipv4AddressHelper::Ipv4AddressHelper (
 
 void
 Ipv4AddressHelper::SetBase (
-  const Ipv4Address network, 
+  const Ipv4Address network,
   const Ipv4Mask mask,
   const Ipv4Address address)
 {
@@ -135,29 +135,38 @@ Ipv4AddressHelper::Assign (const NetDeviceContainer &c)
   for (uint32_t i = 0; i < c.GetN (); ++i) {
       Ptr<NetDevice> device = c.Get (i);
 
-      Ptr<Node> node = device->GetNode ();
-      NS_ASSERT_MSG (node, "Ipv4AddressHelper::Assign(): NetDevice is not not associated "
-                     "with any node -> fail");
-
-      Ptr<Ipv4> ipv4 = node->GetObject<Ipv4> ();
-      NS_ASSERT_MSG (ipv4, "Ipv4AddressHelper::Assign(): NetDevice is associated"
-                     " with a node without IPv4 stack installed -> fail "
-                     "(maybe need to use InternetStackHelper?)");
-
-      int32_t interface = ipv4->GetInterfaceForDevice (device);
-      if (interface == -1)
-        {
-          interface = ipv4->AddInterface (device);
-        }
-      NS_ASSERT_MSG (interface >= 0, "Ipv4AddressHelper::Assign(): "
-                     "Interface index not found");
-
-      Ipv4InterfaceAddress ipv4Addr = Ipv4InterfaceAddress (NewAddress (), m_mask);
-      ipv4->AddAddress (interface, ipv4Addr);
-      ipv4->SetMetric (interface, 1);
-      ipv4->SetUp (interface);
-      retval.Add (ipv4, interface);
+      retval.Add( Assign(device) );
     }
+  return retval;
+}
+
+Ipv4InterfaceContainer
+Ipv4AddressHelper::Assign (const Ptr<NetDevice> &device)
+{
+  Ipv4InterfaceContainer retval;
+
+  Ptr<Node> node = device->GetNode ();
+  NS_ASSERT_MSG (node, "Ipv4AddressHelper::Assign(): NetDevice is not not associated "
+                   "with any node -> fail");
+
+  Ptr<Ipv4> ipv4 = node->GetObject<Ipv4> ();
+  NS_ASSERT_MSG (ipv4, "Ipv4AddressHelper::Assign(): NetDevice is associated"
+                 " with a node without IPv4 stack installed -> fail "
+                 "(maybe need to use InternetStackHelper?)");
+
+  int32_t interface = ipv4->GetInterfaceForDevice (device);
+  if (interface == -1)
+    {
+      interface = ipv4->AddInterface (device);
+    }
+  NS_ASSERT_MSG (interface >= 0, "Ipv4AddressHelper::Assign(): "
+                 "Interface index not found");
+
+  Ipv4InterfaceAddress ipv4Addr = Ipv4InterfaceAddress (NewAddress (), m_mask);
+  ipv4->AddAddress (interface, ipv4Addr);
+  ipv4->SetMetric (interface, 1);
+  ipv4->SetUp (interface);
+  retval.Add (ipv4, interface);
   return retval;
 }
 
