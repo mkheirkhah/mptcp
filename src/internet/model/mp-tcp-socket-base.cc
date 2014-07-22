@@ -56,13 +56,14 @@ MpTcpSocketBase::GetTypeId(void)
 }
 
 // TODO remove ? or create anotherone for copy/fork ?
-MpTcpSocketBase::MpTcpSocketBase()
-  //: TcpSocketBase()
-{
-  NS_LOG_FUNCTION(this);
-}
+//MpTcpSocketBase::MpTcpSocketBase() :
+//  TcpSocketBase(),
+//    m_subflows(0)
+//{
+//  NS_LOG_FUNCTION(this);
+//}
 
-MpTcpSocketBase::MpTcpSocketBase(Ptr<Node> node) :
+MpTcpSocketBase::MpTcpSocketBase() :
   TcpSocketBase(),
     m_subflows(0)
 //    ,
@@ -76,10 +77,12 @@ MpTcpSocketBase::MpTcpSocketBase(Ptr<Node> node) :
 //        false), server(false), remoteRecvWnd(1), m_segmentSize(0), nextTxSequence(1), nextRxSequence(1)
 {
   NS_LOG_FUNCTION(this);
-  m_node = node;
-  m_tcp = node->GetObject<TcpL4Protocol>(); // TODO check return value ?
-  NS_ASSERT( m_tcp );
+//  m_node = node;
+//  m_tcp = node->GetObject<TcpL4Protocol>(); // TODO check return value ?
+//  NS_ASSERT( m_tcp );
 
+  // TODO no need to use ptr, could be made a member variable
+  m_remotePathIdManager = CreateObject<MpTcpPathIdManager>();
   mpSendState = MP_NONE;
   mpRecvState = MP_NONE;
   m_mpEnabled = false;
@@ -161,24 +164,39 @@ MpTcpSocketBase::GetRemoteKey(uint32_t& remoteKey) const
 //}
 
 
-void
-MpTcpSocketBase::SetAddAddrCallback(Callback<bool, Ptr<Socket>, Address, uint8_t> addAddrCb)
-{
-  NS_LOG_FUNCTION (this << &addAddrCb);
-
-  m_onAddAddr = addAddrCb;
-}
+//void
+//MpTcpSocketBase::SetAddAddrCallback(Callback<bool, Ptr<Socket>, Address, uint8_t> addAddrCb)
+//{
+//  NS_LOG_FUNCTION (this << &addAddrCb);
+//
+//  m_onAddAddr = addAddrCb;
+//}
 
 //MpTcpAddressInfo info
 // Address info
 void
-MpTcpSocketBase::NotifyAddAddr(Address address)
+MpTcpSocketBase::NotifyRemoteAddAddr(Address address)
 {
-  if (!m_onAddAddr.IsNull())
+
+  if (!m_onRemoteAddAddr.IsNull())
   {
     // TODO user should not have to deal with MpTcpAddressInfo , info.second
-    m_onAddAddr (this, address, 0);
+    m_onRemoteAddAddr (this, address, 0);
   }
+}
+
+std::vector<MpTcpSubFlow>::size_type
+MpTcpSocketBase::GetCreatedSubFlowNumber() const
+{
+  return m_subflows.size();
+}
+
+  //std::vector<MpTcpSubFlow>::size_ uint8
+Ptr<MpTcpSubFlow>
+MpTcpSocketBase::GetSubFlow(uint8_t id)
+{
+//  NS_ASSERT()
+  return m_subflows[id];
 }
 
 
@@ -189,6 +207,8 @@ MpTcpSocketBase::AddLocalAddr(const Ipv4Address& address)
   // converts Static into member function ? add a modulo in case we add too many local addr ?
   static uint8_t addrId = 0;
   addrId++;
+
+  // TODO check if it's owned by the node ? or not ?
 
   std::pair< std::map<Ipv4Address,uint8_t>::iterator , bool > result = m_localAddresses.insert( std::make_pair(address, addrId) );
 //  std::map<Ipv4Address,uint8_t>::iterator it = m_localAddresses.find( address );
@@ -1328,7 +1348,7 @@ MpTcpSocketBase::DiscardUpTo(uint8_t sFlowIdx, uint32_t ack)
 }
 // .....................................................................................................
 uint8_t
-MpTcpSocketBase::GetMaxSubFlowNumber()
+MpTcpSocketBase::GetMaxSubFlowNumber() const
 {
   return m_maxSubflows;
 }
@@ -1405,7 +1425,7 @@ MpTcpSocketBase::CreateSubflow(const Address& srcAddr, const Address& dstAddr)
 {
 
 //  bool masterSocket = false;
-
+  // TODO ajouter la limite du nb de sous flots ?
   // Checker que ca existe pas déjà ?
   // create subflow
   if( IsConnected() )
@@ -1431,7 +1451,11 @@ MpTcpSocketBase::CreateSubflow(const Address& srcAddr, const Address& dstAddr)
 
   //
 //  sFlow->Bind
-  sFlow->Connect( dstAddr);
+  if(!sFlow->Connect( dstAddr) )
+  {
+    NS_LOG_ERROR("Could not connect subflow");
+    return -ERROR_INVAL;
+  }
 
   m_subflows.push_back( sFlow );  //subflows.insert(subflows.end(), sFlow);
   m_tcp->m_sockets.push_back(this);
@@ -1567,7 +1591,7 @@ MpTcpSocketBase::Connect(const Address &address)
 }
 
 
-/** Inhereted from Socket class: Bind socket to an end-point in MpTcpL4Protocol */
+/** Inherited from Socket class: Bind socket to an end-point in MpTcpL4Protocol */
 int
 MpTcpSocketBase::Bind()
 {
@@ -1636,7 +1660,9 @@ MpTcpSocketBase::Bind(const Address &address)
       m_endPoint = m_tcp->Allocate(ipv4, port);
     }
   else
+  {
     NS_LOG_ERROR("Bind to specific add:port has failed!");
+  }
 
   //m_tcp->m_sockets.push_back(this); // we don't need it for now
   NS_LOG_LOGIC("MpTcpSocketBase:Bind(addr) " << this << " got an endpoint " << m_endPoint << " localAddr " << m_endPoint->GetLocalAddress() << ":" << m_endPoint->GetLocalPort() << " RemoteAddr " << m_endPoint->GetPeerAddress() << ":"<< m_endPoint->GetPeerPort());
@@ -2383,6 +2409,25 @@ MpTcpSocketBase::InitiateSubflows()
   return true;
 }
 
+
+void
+MpTcpSocketBase::GetAllAdvertisedDestinations(std::vector<InetSocketAddress>& cont)
+{
+  NS_ASSERT(m_remotePathIdManager);
+  m_remotePathIdManager->GetAllAdvertisedDestinations(cont);
+}
+
+
+void
+MpTcpSocketBase::SetNewAddrCallback(Callback<bool, Ptr<Socket>, Address, uint8_t> remoteAddAddrCb,
+                          Callback<void, uint8_t> remoteRemAddrCb)
+
+{
+  //
+  m_onRemoteAddAddr = remoteAddAddrCb;
+  m_onAddrDeletion = remoteRemAddrCb;
+}
+
 void
 MpTcpSocketBase::calculateTotalCWND()
 {
@@ -2515,36 +2560,18 @@ MpTcpSocketBase::DupAck(uint8_t sFlowIdx, DSNMapping* ptrDSN)
 //    };
 }
 
-std::string
-MpTcpSocketBase::PrintCC(uint32_t cc)
-{
-  switch (cc)
-    {
-  case 0:
-    return "Uncoupled"; //0
-    break;
-  case 1:
-    return "Linked_Increases"; //1
-    break;
-  case 2:
-    return "Semi-Coupled"; //2
-    break;
-  case 3:
-    return "Fully_Coupled"; //3
-    break;
-  default:
-    return "Unknown";
-    break;
-    }
-}
+
 
 std::string
 MpTcpSocketBase::GeneratePlotDetail(void)
 {
 
   std::stringstream detail;
-  detail << "CC:" << PrintCC(AlgoCC) << "  sF:" << m_subflows.size() << " C:" << LinkCapacity / 1000 << "Kbps  RTT:" << RTT << "Ms  D:"
-      << totalBytes / 1000 << "Kb  dtQ(" << lostRate << ")  MSS:" << m_segmentSize << "B";
+  detail
+        << "  sF:" << m_subflows.size() << " C:" << LinkCapacity / 1000 << "Kbps  RTT:" << RTT << "Ms  D:"
+      << totalBytes / 1000
+      << "Kb"
+      << "MSS:" << m_segmentSize << "B";
   return detail.str();
 }
 
@@ -3531,69 +3558,6 @@ MpTcpSocketBase::CloseMultipathConnection()
   return closed;
 }
 
-void
-MpTcpSocketBase::AdvertiseAvailableAddresses()
-{
-  #if 0
-  NS_LOG_FUNCTION(m_node->GetId());
-  if (m_mpEnabled == true)
-    {
-      // there is at least one subflow
-      Ptr<MpTcpSubFlow> sFlow = m_subflows[0];
-      NS_ASSERT(sFlow!=0);
-
-      // Change the MPTCP send state to MP_ADDADDR
-      mpSendState = MP_ADDADDR;
-      MpTcpAddressInfo * addrInfo;
-      Ptr<Packet> pkt = Create<Packet>();
-
-      TcpHeader header;
-      header.SetFlags(TcpHeader::ACK);
-      header.SetSequenceNumber(SequenceNumber32(sFlow->TxSeqNumber));
-      header.SetAckNumber(SequenceNumber32(sFlow->RxSeqNumber));
-      header.SetSourcePort(m_localPort); // m_endPoint->GetLocalPort()
-      header.SetDestinationPort(m_remotePort);
-      uint8_t hlen = 0;
-      uint8_t olen = 0;
-
-      // Object from L3 to access to routing protocol, Interfaces and NetDevices and so on.
-      Ptr<Ipv4L3Protocol> ipv4 = m_node->GetObject<Ipv4L3Protocol>();
-      for (uint32_t i = 0; i < ipv4->GetNInterfaces(); i++)
-        {
-          //Ptr<NetDevice> device = m_node->GetDevice(i);
-          Ptr<Ipv4Interface> interface = ipv4->GetInterface(i);
-          Ipv4InterfaceAddress interfaceAddr = interface->GetAddress(0);
-
-          // Skip the loop-back
-          if (interfaceAddr.GetLocal() == Ipv4Address::GetLoopback())
-            continue;
-
-          addrInfo = new MpTcpAddressInfo();
-          addrInfo->addrID = i;
-          addrInfo->ipv4Addr = interfaceAddr.GetLocal();
-          addrInfo->mask = interfaceAddr.GetMask();
-          header.AddOptADDR(OPT_ADDR, addrInfo->addrID, addrInfo->ipv4Addr);
-          olen += 6;
-          m_localAddrs.insert(m_localAddrs.end(), addrInfo);
-        }
-      uint8_t plen = (4 - (olen % 4)) % 4;
-      header.SetWindowSize(AdvertisedWindowSize());
-      olen = (olen + plen) / 4;
-      hlen = 5 + olen;
-      header.SetLength(hlen);
-      header.SetOptionsLength(olen);
-      header.SetPaddingLength(plen);
-
-      //m_tcp->SendPacket(pkt, header, m_endPoint->GetLocalAddress(), m_remoteAddress);
-      m_tcp->SendPacket(pkt, header, m_localAddress, m_remoteAddress, FindOutputNetDevice(m_localAddress));
-      NS_LOG_INFO("AdvertiseAvailableAddresses-> "<< header);
-    }
-  else
-    {
-      NS_FATAL_ERROR("Need to be Looked...");
-    }
-  #endif
-}
 
 bool
 MpTcpSocketBase::IsThereRoute(Ipv4Address src, Ipv4Address dst)
@@ -3614,7 +3578,7 @@ MpTcpSocketBase::IsThereRoute(Ipv4Address src, Ipv4Address dst)
       int32_t interface = ipv4->GetInterfaceForAddress(src);        // Morteza uses sign integers
       Ptr<Ipv4Interface> v4Interface = ipv4->GetRealInterfaceForAddress(src);
       Ptr<NetDevice> v4NetDevice = v4Interface->GetDevice();
-      //PrintIpv4AddressFromIpv4Interface(v4Interface, interface);
+
       NS_ASSERT_MSG(interface != -1, "There is no interface object for the the src address");
       // Get NetDevice from Interface via ns3::Ipv4::GetNetDevice(uint32_t interface);
       Ptr<NetDevice> oif = ipv4->GetNetDevice(interface);
@@ -3635,25 +3599,29 @@ MpTcpSocketBase::IsThereRoute(Ipv4Address src, Ipv4Address dst)
   return found;
 }
 
-void
-MpTcpSocketBase::PrintIpv4AddressFromIpv4Interface(Ptr<Ipv4Interface> interface, int32_t indexOfInterface)
-{
-  NS_LOG_FUNCTION_NOARGS();
+//void
+//MpTcpSocketBase::PrintIpv4AddressFromIpv4Interface(Ptr<Ipv4Interface> interface, int32_t indexOfInterface)
+//{
+//  NS_LOG_FUNCTION_NOARGS();
+//
+//  for (uint32_t i = 0; i < interface->GetNAddresses(); i++)
+//    {
+//
+//      NS_LOG_INFO("Node(" << interface->GetDevice()->GetNode()->GetId() << ") Interface(" << indexOfInterface << ") Ipv4Index(" << i << ")" << " Ipv4Address(" << interface->GetAddress(i).GetLocal()<< ")");
+//
+//    }
+//}
 
-  for (uint32_t i = 0; i < interface->GetNAddresses(); i++)
-    {
-
-      NS_LOG_INFO("Node(" << interface->GetDevice()->GetNode()->GetId() << ") Interface(" << indexOfInterface << ") Ipv4Index(" << i << ")" << " Ipv4Address(" << interface->GetAddress(i).GetLocal()<< ")");
-
-    }
-}
-
+/**
+Used many times, may be worth registering the NetDevice in a subflow member ?
+**/
 Ptr<NetDevice>
 MpTcpSocketBase::FindOutputNetDevice(Ipv4Address src)
 {
 
   Ptr<Ipv4L3Protocol> ipv4 = m_node->GetObject<Ipv4L3Protocol>();
   uint32_t oInterface = ipv4->GetInterfaceForAddress(src);
+//  Ptr<Ipv4Interface> GetRealInterfaceForAddress()
   Ptr<NetDevice> oNetDevice = ipv4->GetNetDevice(oInterface);
 
 //  Ptr<Ipv4Interface> interface = ipv4->GetRealInterfaceForAddress(src);
@@ -3664,27 +3632,29 @@ MpTcpSocketBase::FindOutputNetDevice(Ipv4Address src)
 }
 
 
-// TODO we should not need this ? remove
+/**
+
+**/
 bool
 MpTcpSocketBase::IsLocalAddress(Ipv4Address addr)
 {
-  NS_LOG_ERROR(this << "might be a bug since function not implemanted" << addr);
+  NS_LOG_ERROR(this << "IsLocalAddressd" << addr);
 
- #if 0
+
   bool found = false;
-  MpTcpAddressInfo * pAddrInfo;
-  for (uint32_t i = 0; i < m_localAddrs.size(); i++)
-    {
-      pAddrInfo = m_localAddrs[i];
-      if (pAddrInfo->ipv4Addr == addr)
-        {
-          found = true;
-          break;
-        }
-    }
+
+//  MpTcpAddressInfo * pAddrInfo;
+//  for (uint32_t i = 0; i < m_localAddrs.size(); i++)
+//    {
+//      pAddrInfo = m_localAddrs[i];
+//      if (pAddrInfo->ipv4Addr == addr)
+//        {
+//          found = true;
+//          break;
+//        }
+//    }
     return found;
-    #endif
-  return true;
+
 }
 
 //void
@@ -3764,23 +3734,8 @@ MpTcpSocketBase::GetTxAvailable()
   return sendingBuffer->FreeSpaceSize();
 }
 
-void
-MpTcpSocketBase::SetSourceAddress(Ipv4Address src)
-{
-  NS_LOG_FUNCTION_NOARGS();
-  m_localAddress = src;
-  if (m_endPoint != 0)
-    {
-      m_endPoint->SetLocalAddress(src);
-    }
-}
 
-Ipv4Address
-MpTcpSocketBase::GetSourceAddress()
-{
-  NS_LOG_FUNCTION_NOARGS();
-  return m_localAddress;
-}
+
 
 uint8_t
 MpTcpSocketBase::LookupByAddrs(Ipv4Address src, Ipv4Address dst)

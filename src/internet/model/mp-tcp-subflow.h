@@ -63,6 +63,7 @@ public:
   MP_CAPABLE instead of MP_JOIN
   **/
   virtual bool IsMaster() const;
+  virtual bool BackupSubflow() const;
 
   virtual uint32_t GetLocalToken() const;
   virtual uint32_t GetRemoteToken() const;
@@ -174,7 +175,8 @@ protected:
   Ptr<MpTcpSocketBase> m_metaSocket;
 
 private:
-  bool m_masterSocket;
+  bool m_backupSubflow;
+//  bool m_masterSocket;
   uint32_t m_localToken;  //!< Store local host token, generated during the 3-way handshake
   uint32_t m_remoteToken; //!< Store remote host token
 

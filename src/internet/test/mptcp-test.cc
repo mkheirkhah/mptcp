@@ -78,30 +78,6 @@ we should try not to add to internet dependancies ['bridge', 'mpi', 'network', '
 typedef TcpNewReno SocketToBeTested;
 
 
-      #if 0
-      // TODO That should go into a helper
-      // Object from L3 to access to routing protocol, Interfaces and NetDevices and so on.
-      Ptr<Ipv4L3Protocol> ipv4 = m_node->GetObject<Ipv4L3Protocol>();
-      for (uint32_t i = 0; i < ipv4->GetNInterfaces(); i++)
-        {
-          //Ptr<NetDevice> device = m_node->GetDevice(i);
-          Ptr<Ipv4Interface> interface = ipv4->GetInterface(i);
-          Ipv4InterfaceAddress interfaceAddr = interface->GetAddress(0);
-
-          // Skip the loop-back
-          if (interfaceAddr.GetLocal() == Ipv4Address::GetLoopback())
-            continue;
-
-          addrInfo = new MpTcpAddressInfo();
-          addrInfo->addrID = i;
-          addrInfo->ipv4Addr = interfaceAddr.GetLocal();
-          addrInfo->mask = interfaceAddr.GetMask();
-      header.AddOptADDR(OPT_ADDR, addrInfo->addrID, addrInfo->ipv4Addr);
-      olen += 6;
-          m_localAddrs.insert(m_localAddrs.end(), addrInfo);
-        }
-      #endif
-
 /**
 Provide basic functions to generate a topology (or outsource them ?)
 
@@ -113,14 +89,16 @@ public:
   MpTcpTestCase(std::string name);
   virtual ~MpTcpTestCase ();
 
+//  virtual void AdvertiseAllAddressesOfNode();
+
 protected:
-  virtual void SetupNodes();
+  virtual void CreateNodes();
 
   virtual void SetupDefaultSim (
 //      Ptr<Node> n0, Ptr<Node> n1, int nbOfParallelLinks
       );
 //private:
-  virtual void DoSetup(void);
+  virtual void DoSetup(void) = 0;
   virtual void DoRun(void) = 0;
   virtual void DoTeardown (void);
 
@@ -136,9 +114,104 @@ protected:
   uint8_t m_nbInterfacesServer;
 
   Ptr<Node> m_client;
+  Ptr<MpTcpSocketBase> m_clientSock;
   Ptr<Node> m_server;
+  Ptr<MpTcpSocketBase> m_serverSock;
 };
 
+
+
+void getAllIpsOfANode(Ptr<Node> node, std::vector<Ipv4Address>& addr )
+{
+  NS_ASSERT(node);
+
+  // TODO That should go into a helper
+  // Object from L3 to access to routing protocol, Interfaces and NetDevices and so on.
+  Ptr<Ipv4L3Protocol> ipv4 = node->GetObject<Ipv4L3Protocol>();
+
+  for (uint32_t i = 0; i < ipv4->GetNInterfaces(); i++)
+  {
+      //Ptr<NetDevice> device = m_node->GetDevice(i);
+      // Pourrait y avoir plusieurs IPs sur l'interface
+      Ptr<Ipv4Interface> interface = ipv4->GetInterface(i);
+      for( uint32_t j = 0; j < interface->GetNAddresses(); j++ )
+      {
+        Ipv4InterfaceAddress interfaceAddr = interface->GetAddress(j);
+
+
+        // Skip the loop-back
+        if (interfaceAddr.GetLocal() == Ipv4Address::GetLoopback())
+          continue;
+
+
+        addr.push_back( interfaceAddr.GetLocal() );
+      }
+
+
+
+
+  }
+}
+
+/**
+
+
+**/
+class PathEventTracker
+{
+public:
+  PathEventTracker();
+  ~PathEventTracker() {}
+
+
+};
+
+PathEventTracker::PathEventTracker()
+{
+}
+
+/**
+can be kept global ? MpTcpTestCase
+, std::vector<uint16_t> ports
+**/
+void AdvertiseAllAddresses(Ptr<MpTcpSocketBase> mptcp)
+{
+  NS_ASSERT(mptcp);
+
+  Ptr<Node> m_node = mptcp->GetNode();
+      // Il peut en avoir plusieurs ?
+//      Ptr<MpTcpSocketBase> mptcp = m_node->GetObject<MpTcpSocketBase>();
+//      if(!mptcp)
+//      {
+//        NS_LOG_ERROR("This node has no MPTCP socket");
+//        return;
+//      }
+//      else
+      if (!mptcp->IsConnected())
+      {
+        NS_LOG_ERROR("This node has no established MPTCP connection");
+        return;
+      }
+
+      std::vector<Ipv4Address> addresses;
+
+      getAllIpsOfANode( m_node, addresses);
+
+      for(std::vector<Ipv4Address>::const_iterator i = addresses.begin(); i != addresses.end(); i++ )
+      {
+
+        mptcp->GetSubFlow(0)->AdvertiseAddress( *i, 0 );
+      }
+
+
+}
+
+
+//class MpTcpTestCase : public MpTcpTestCase
+//{
+//public:
+//
+//}
 
 /**
 Number of interfaces per node
@@ -146,13 +219,29 @@ Number of interfaces per node
 class MpTcpAddressTestCase : public MpTcpTestCase
 {
 public:
-  MpTcpAddressTestCase();
+  /* Depending on the test */
+  typedef enum {
+  TEST0,
+  TEST1
+  } TestType;
+
+  MpTcpAddressTestCase(TestType testType);
   virtual ~MpTcpAddressTestCase () {}
 
+  virtual void DoSetup();
+
+//  virtual Ptr<Node> CreateMonohomedNode(uint8_t nbOfInterfaces);
+//  virtual Ptr<Node> CreateNode(uint8_t nbOfInterfaces);
+
+  void AdvertiseAllAvailableAddresses();
+//  void AdvertiseThenRemoveAllAdvertisedAddresses();
+//  void AdvertiseThenCreateRemoveAllAdvertisedAddresses();
+//  void CreateNsubflows();
+//  void CreateFullmesh();
 
 private:
   virtual void DoRun(void);
-
+  TestType m_testType;
 };
 
 MpTcpTestCase::MpTcpTestCase(std::string name) :
@@ -168,15 +257,39 @@ MpTcpTestCase::~MpTcpTestCase()
 {
 }
 
+//Ptr<Node>
+//MpTcpTestCase::CreateNode(uint8_t nbOfInterfaces)
+//{
+//  Ptr<Node> node = CreateObject<Node>();
+//  for(int i = 0; i < m_nbInterfacesClient; i++ )
+//  {
+//    Ptr<PointToPointNetDevice> devClient = CreateObject<PointToPointNetDevice>();
+//    devClient->SetDataRate( DataRate ("5Mb/s")  );
+//    devClient->SetAddress(Mac48Address::Allocate ());
+//    devClient->SetQueue (CreateObject<DropTailQueue> ());
+//    node->AddDevice( devClient );
+//  }
+//}
+
 void
-MpTcpTestCase::SetupNodes()
+MpTcpTestCase::CreateNodes()
 {
+  Config::SetDefault("ns3::TcpL4Protocol::SocketType",
+			             TypeIdValue (MpTcpSocketBase::GetTypeId()));
+//  Config::SetDefault ("ns3::TcpSocket::SegmentSize", UintegerValue (1000));
+//  Config::SetDefault ("ns3::TcpSocket::DelAckCount", UintegerValue (1));
+//  Config::SetDefault ("ns3::DropTailQueue::MaxPackets", UintegerValue (20));
 
+
+  uint16_t port = 50000;
   Ipv4AddressHelper addressHelper;  //!< To install
-
+  InternetStackHelper stackHelper;
 
   m_client = CreateObject<Node>();
   m_server = CreateObject<Node>();
+
+  stackHelper.Install(m_client);
+  stackHelper.Install(m_server);
 
 
   //PointToPointStarHelper
@@ -207,35 +320,105 @@ MpTcpTestCase::SetupNodes()
         devServer->Attach( channel );
         devClient->Attach( channel );
 
-        NetDeviceContainer devicesContainer;
-        devicesContainer.Add(devClient);
-        devicesContainer.Add(devServer);
+//        NetDeviceContainer devicesContainer;
+//        devicesContainer.Add(devClient);
+//        devicesContainer.Add(devServer);
 
         std::stringstream netAddr;
         netAddr << "10." << i << ".1.0";
-        addressHelper.SetBase ( netAddr.str().c_str() , "255.255.0.0");
-        addressHelper.Assign( devicesContainer );
+        addressHelper.SetBase ( netAddr.str().c_str() , "255.255.255.0");
+        addressHelper.Assign( devServer );
+//        addressHelper.Assign( devServer );
+
+//        devServer->GetIfIndex( );
+//
+//        addressHelper.NewAddress();
 //      }
-
-
+    //)
+      std::vector<Ipv4Address> temp;
+      getAllIpsOfANode(m_server, temp);
+      NS_TEST_ASSERT_MSG_EQ( temp.size(), 32 , "should be 2");
   }
+
+//  #if 0
+  /**
+  TODO later
+  **/
+
+  /////////////////////////////////////////////
+  // 1st way of creating a socket
+  /////////////////////////////////////////////
+  Ptr<Socket> serverSock =  m_server->GetObject<TcpL4Protocol>()->CreateSocket();
+  m_serverSock = DynamicCast<MpTcpSocketBase>( serverSock );
+  NS_LOG_UNCOND("m_serverSock" << m_serverSock);
+
+
+  /////////////////////////////////////////////
+  // 2nd way of creating an MPTCP socket
+  /////////////////////////////////////////////
+  Ptr<MpTcpSocketFactoryImpl> sockFactory0 = CreateObject<MpTcpSocketFactoryImpl> ();
+  sockFactory0->SetTcp( m_client->GetObject<TcpL4Protocol> () );
+  //CreateObject<MpTcpSocketFactoryImpl>()
+  m_client->AggregateObject( sockFactory0 );
+  Ptr<Socket> clientSock = Socket::CreateSocket ( m_client,  MpTcpSocketFactoryImpl::GetTypeId ());
+  m_clientSock = DynamicCast<MpTcpSocketBase>( clientSock );
+  NS_LOG_UNCOND("m_clientSock" << m_clientSock);
+// Config::SetDefault
+
+
+//  Ptr<Socket> serverSock = sockFactory0->CreateSocket ();
+//  NS_LOG_UNCOND("serverSock" << serverSock);
+
+
+//  #endif
+//sockFactory0->SetTcp( m_server->GetObject<TcpL4Protocol> () );
+//  m_serverSock = CreateObject<MpTcpSocketBase>();
+//  m_clientSock = CreateObject<MpTcpSocketBase>();
+
+
+
+
+
+
+
+  InetSocketAddress serverLocalAddr (Ipv4Address::GetAny (), port);
+  //
+  m_serverSock->Bind(serverLocalAddr);
+  m_serverSock->Listen();
+//  m_serverSock->SetAcceptCallback (MakeNullCallback<bool, Ptr< Socket >, const Address &> (),
+//                             MakeCallback (&MpTcpTestCase::ServerHandleConnectionCreated,this)
+//                             );
+
+
+//Program received signal SIGSEGV, Segmentation fault.
+//0x00007ffff319addc in ns3::TcpL4Protocol::Allocate (this=0x0)
+//    at ../src/internet/model/tcp-l4-protocol.cc:203
+//203	  return m_endPoints->Allocate();
+
+  m_clientSock->Bind(); // is that one useful ?
+
+  m_clientSock->SetRecvCallback (MakeCallback (&MpTcpTestCase::SourceHandleRecv, this));
+  m_clientSock->SetSendCallback (MakeCallback (&MpTcpTestCase::SourceHandleSend, this));
+
+
+//  m_clientSock->Connect( serverRemoteAddr  );
+
+
+  // Here I should create the sockets
+//  m_clientSock = DynamicCast<MpTcpSocketBase>(clientSock);
 
   // Server
 //  for(int i = 0; i < m_nbInterfacesServer; i++ )
-//  {
-//    Ptr<PointToPointNetDevice> device = CreateObject<PointToPointNetDevice>();
-//    device->SetDataRate( DataRate ("5Mb/s") );
-//    // Attach
-//    m_server->AddDevice( device );
-//
-//  }
 
   // TODO create interfaces for each node
 }
 
-MpTcpAddressTestCase::MpTcpAddressTestCase() : MpTcpTestCase("Mptcp address handling")
+MpTcpAddressTestCase::MpTcpAddressTestCase(TestType testType) :
+        MpTcpTestCase("Mptcp address handling"),
+        m_testType(testType)
 {
   NS_LOG_LOGIC (this);
+  m_testType = testType;
 }
 
 //MpTcpAddressTestCase::~MpTcpAddressTestCase()
@@ -244,10 +427,23 @@ MpTcpAddressTestCase::MpTcpAddressTestCase() : MpTcpTestCase("Mptcp address hand
 //}
 
 void
-MpTcpTestCase::DoSetup()
+MpTcpAddressTestCase::DoSetup()
 {
-  SetupNodes();
+  CreateNodes();
+  NS_ASSERT_MSG(m_serverSock, "Server socket non-existing");
 
+
+  switch(m_testType)
+  {
+    // Single device with several Ips
+    case TEST0:
+//      m_serverSock->SetAcceptCallback (MakeNullCallback<bool, Ptr< Socket >, const Address &> (),
+//                             MakeCallback (&MpTcpAddressTestCase::ServerHandleConnectionCreated,this)
+//                             );
+      break;
+    default:
+      break;
+  }
 }
 
 
@@ -273,6 +469,22 @@ MpTcpAddressTestCase::DoRun (void)
 //  SetupDefaultSim();
   Simulator::Run();
 
+  switch(m_testType)
+  {
+    case 0:
+      {
+        std::vector<InetSocketAddress> advertisedInet;
+        std::vector<Ipv4Address> serverAddresses;
+        getAllIpsOfANode(m_server, serverAddresses);
+        m_clientSock->GetAllAdvertisedDestinations(advertisedInet);
+        NS_TEST_EXPECT_MSG_EQ ( advertisedInet.size(), serverAddresses.size() ,"Number of seen ADD_ADDR should be equal to the number of IPs of the server" );
+      }
+      break;
+    case 1:
+    default:
+      break;
+  }
+
   NS_LOG_LOGIC("Simulation ended");
 
   NS_TEST_EXPECT_MSG_EQ (0, 1, "This test must fail (not ready)");
@@ -292,6 +504,8 @@ MpTcpTestCase::SetupDefaultSim (void)
 //  const char* netmask = "255.255.255.0";
 //  const char* ipaddr0 = "192.168.1.1";
 //  const char* ipaddr1 = "192.168.1.2";
+#if 0
+
   uint16_t port = 50000;
 
 
@@ -300,7 +514,6 @@ MpTcpTestCase::SetupDefaultSim (void)
   InternetStackHelper stackHelper;
   NetDeviceContainer devices;
   Ipv4AddressHelper addressHelper;  //!< To install
-#if 0
 
 
 //  nodes.Create(2);
@@ -313,7 +526,7 @@ MpTcpTestCase::SetupDefaultSim (void)
 
   // Creates netdevices in nodes, can I install it several times ?
   devices = pointToPointHelper.Install(nodes);
-#endif
+
   stackHelper.Install( m_client );
   stackHelper.Install( m_server );
 
@@ -347,7 +560,8 @@ MpTcpTestCase::SetupDefaultSim (void)
   serverSock->Bind(serverLocalAddr);
   serverSock->Listen();
   serverSock->SetAcceptCallback (MakeNullCallback<bool, Ptr< Socket >, const Address &> (),
-                             MakeCallback (&MpTcpTestCase::ServerHandleConnectionCreated,this));
+                             MakeCallback (&MpTcpTestCase::ServerHandleConnectionCreated,this)
+                             );
 
 
 // 1 cb on add/1 on remove from remote side
@@ -360,7 +574,8 @@ MpTcpTestCase::SetupDefaultSim (void)
   //  m_server->GetObject<Ipv4>()->GetAddress(0,0).GetLocal()
 
 
-
+  Ptr<MpTcpSocketBase> clientSock2 = DynamicCast<MpTcpSocketBase>(clientSock);
+//  clientSock2->SetNewAddrCallback();
 
   clientSock->SetRecvCallback (MakeCallback (&MpTcpTestCase::SourceHandleRecv, this));
   clientSock->SetSendCallback (MakeCallback (&MpTcpTestCase::SourceHandleSend, this));
@@ -368,8 +583,8 @@ MpTcpTestCase::SetupDefaultSim (void)
 
   clientSock->Connect( serverRemoteAddr  );
 //  clientSock->AdvertiseAvailableAddresses();
+  #endif
 }
-
 
 /*
 Todo this one is important: should be called first
@@ -378,6 +593,11 @@ void
 MpTcpTestCase::ServerHandleConnectionCreated (Ptr<Socket> s, const Address & addr)
 {
   NS_LOG_UNCOND("CALLBACK CALLLED !!! Server ServerHandleConnectionCreated ");
+
+  // TODO advertise all addresses to client
+  Ptr<MpTcpSocketBase> mptcp = DynamicCast<MpTcpSocketBase>(s);
+  AdvertiseAllAddresses(mptcp);
+
 //
 //  s->SetRecvCallback (MakeCallback (&TcpTestCase::ServerHandleRecv, this));
 //  s->SetSendCallback (MakeCallback (&TcpTestCase::ServerHandleSend, this));
@@ -426,7 +646,7 @@ public:
     // 2) source write size, 3) source read size
     // 4) server write size, and 5) server read size
     // with units of bytes
-    AddTestCase (new MpTcpAddressTestCase(), TestCase::QUICK);
+    AddTestCase (new MpTcpAddressTestCase(MpTcpAddressTestCase::TEST0), TestCase::QUICK);
 //    AddTestCase (new MpTcpTestCase (13, 1, 1, 1, 1, false), TestCase::QUICK);
 //    AddTestCase (new MpTcpTestCase (100000, 100, 50, 100, 20, false), TestCase::QUICK);
 //

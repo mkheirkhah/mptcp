@@ -1,12 +1,16 @@
 #include "mp-tcp-socket-factory-impl.h"
+#include "tcp-socket-factory.h"
 #include "ns3/ptr.h"
 #include "tcp-l4-protocol.h"
 #include "ns3/socket.h"
 #include "ns3/assert.h"
-//#include "mp-tcp-socket-base.h"
+#include "mp-tcp-socket-base.h"
 
 namespace ns3
 {
+
+
+//TypeId GetTypeId (void);
 
 MpTcpSocketFactoryImpl::MpTcpSocketFactoryImpl() :
     m_mptcp(0)
@@ -19,13 +23,16 @@ MpTcpSocketFactoryImpl::~MpTcpSocketFactoryImpl()
 }
 
 void
-MpTcpSocketFactoryImpl::SetTcp(Ptr<TcpL4Protocol> mptcp){
+MpTcpSocketFactoryImpl::SetTcp(Ptr<TcpL4Protocol> mptcp)
+{
   m_mptcp = mptcp;
 }
 
 Ptr<Socket>
-MpTcpSocketFactoryImpl::CreateSocket(void){
-  return m_mptcp->CreateSocket();
+MpTcpSocketFactoryImpl::CreateSocket(void)
+{
+//  CreateObject()
+  return m_mptcp->CreateSocket( MpTcpSocketBase::GetTypeId() );
 }
 
 void

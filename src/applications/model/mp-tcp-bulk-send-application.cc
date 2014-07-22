@@ -31,6 +31,7 @@
 #include "ns3/uinteger.h"
 #include "ns3/trace-source-accessor.h"
 #include "ns3/tcp-socket-factory.h"
+#include "ns3/tcp-l4-protocol.h"
 #include "mp-tcp-bulk-send-application.h"
 
 NS_LOG_COMPONENT_DEFINE ("MpTcpBulkSendApplication");
@@ -132,7 +133,9 @@ void MpTcpBulkSendApplication::StartApplication (void) // Called at time specifi
   // Create the socket if not already
   if (!m_socket)
     {
-      m_socket = CreateObject<MpTcpSocketBase>(GetNode()); //m_socket = Socket::CreateSocket (GetNode (), m_tid);
+//      m_socket = CreateObject<MpTcpSocketBase>(GetNode());
+//      m_socket = DynamicCast<MpTcpSocketBase>( Socket::CreateSocket (GetNode (), MpTcpSocketBase::) );
+      m_socket = DynamicCast<MpTcpSocketBase>( GetNode ()->GetObject<TcpL4Protocol>()->CreateSocket(  MpTcpSocketBase::GetTypeId() ) );
       m_socket->Bind();
       int result = m_socket->Connect(m_peer);
       if (result == 0)

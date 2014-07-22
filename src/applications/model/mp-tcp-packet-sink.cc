@@ -33,6 +33,7 @@
 #include "ns3/trace-source-accessor.h"
 #include "ns3/udp-socket-factory.h"
 #include "ns3/mp-tcp-packet-sink.h"
+#include "ns3/tcp-l4-protocol.h"
 
 using namespace std;
 
@@ -101,7 +102,9 @@ MpTcpPacketSink::StartApplication()    // Called at time specified by Start
     {
       size = 2000;
       buf = new uint8_t[size];
-      m_socket = CreateObject<MpTcpSocketBase>(GetNode()); //m_socket = Socket::CreateSocket (GetNode(), m_tid);
+//      m_socket = CreateObject<MpTcpSocketBase>(GetNode()); //
+//      m_socket = Socket::CreateSocket (GetNode(), MpTcpSocketBase::GetTypeId() );
+      m_socket = DynamicCast<MpTcpSocketBase>( GetNode ()->GetObject<TcpL4Protocol>()->CreateSocket(  MpTcpSocketBase::GetTypeId() ) );
       m_socket->Bind(m_local);
       m_socket->Listen();
       NS_LOG_LOGIC("StartApplication -> MptcpPacketSink got an listening socket " << m_socket << " binded to addrs:port  " << InetSocketAddress::ConvertFrom(m_local).GetIpv4() << ":" << InetSocketAddress::ConvertFrom(m_local).GetPort());

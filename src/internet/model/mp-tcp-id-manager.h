@@ -49,6 +49,11 @@ public:
   Add callback
   **/
 
+  virtual void GetAllAdvertisedDestinations(std::vector<InetSocketAddress> addresses);
+
+  // TODO move callbacks here + local address Mgmt ?
+protected:
+  friend class MpTcpSocketBase;
   /**
   Can force the ID with which to register
   //    const Ipv4Address& address, uint16_t port = 0

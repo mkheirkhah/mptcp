@@ -138,6 +138,25 @@ MpTcpPathIdManager::RemRemoteAddr(uint8_t addrId)
 }
 
 
+
+void
+MpTcpPathIdManager::GetAllAdvertisedDestinations(std::vector<InetSocketAddress> addresses)
+{
+  addresses.clear();
+  for(MpTcpAddressContainer::iterator externIt = m_addrs.begin(); externIt != m_addrs.end(); externIt++)
+  {
+    std::vector<uint16_t>& portList = externIt->second.second;
+
+    for( std::vector<uint16_t>::iterator internIt = portList.begin(); internIt != portList.end() ;internIt++ )
+    {
+      // ip / port
+      addresses.push_back( InetSocketAddress( externIt->second.first, *internIt) );
+    }
+  }
+
+}
+
+
 #if 0
 void
 MpTcpSocketBase::SetAddAddrCallback(Callback<bool, Ptr<Socket>, Address, uint8_t> addAddr)

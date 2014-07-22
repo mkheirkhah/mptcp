@@ -21,7 +21,11 @@ public:
   virtual uint32_t
   GetInitialCwnd(void) const = 0;
 
+  /**
 
+  **/
+  virtual const char*
+  GetName(void) const = 0;
 };
 
 

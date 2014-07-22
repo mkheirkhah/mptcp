@@ -39,7 +39,7 @@ public: // public methods
 
   static TypeId GetTypeId(void);
   MpTcpSocketBase();
-  MpTcpSocketBase(Ptr<Node> node);
+//  MpTcpSocketBase(Ptr<Node> node);
   virtual ~MpTcpSocketBase();
 
 
@@ -68,21 +68,22 @@ public: // public methods
   uint32_t Recv(uint8_t* buf, uint32_t size); // Receive data from receiveing buffer - TcpRxBuffe API need to be used in future!
   void allocateSendingBuffer(uint32_t size);  // Can be removed now as SetSndBufSize() is implemented instead!
   void allocateRecvingBuffer(uint32_t size);  // Can be removed now as SetRcvBufSize() is implemented instead!
+
   void SetMaxSubFlowNumber(uint8_t num);      // Max number of subflows a sender can initiate
-  uint8_t GetMaxSubFlowNumber();
-  void SetSourceAddress(Ipv4Address src);     // Explicitly specified the source IP address
-  Ipv4Address GetSourceAddress();
+  uint8_t GetMaxSubFlowNumber() const;
+  std::vector<MpTcpSubFlow>::size_type GetCreatedSubFlowNumber() const;
+  // uint8
+  Ptr<MpTcpSubFlow> GetSubFlow(uint8_t);
 
   // Setter for congestion Control and data distribution algorithm
   void SetCongestionCtrlAlgo(CongestionCtrl_t ccalgo);  // This would be used by attribute system for setting congestion control
   void SetDataDistribAlgo(DataDistribAlgo_t ddalgo);    // Round Robin is only algorithms used.
 
 //  void SetPathManager(Ptr<MpTcpPathManager>);
-  //
+  // InetSocketAddress
   int CreateSubflow(const Address& srcAddr, const Address& dstAddr);
+
   // Path management related functions
-//  void AdvertiseAddress(); //
-  void AdvertiseAvailableAddresses(); // Advertise all addresses to the peer, including the already established address.
 
   virtual int GenerateToken(uint32_t& token ) const;
 
@@ -91,9 +92,23 @@ public: // public methods
   TODO bool ?
   **/
   int GetRemoteKey(uint32_t& remoteKey) const;
-  uint32_t
-  GetLocalKey() const;
+  uint32_t GetLocalKey() const;
 
+    /**
+  For now it looks there is no way to know that an ip interface went up so we will assume until
+  further notice that IPs of the client don't change.
+  -1st callback called on receiving an ADD_ADDR
+  -2nd callback called on receiving REM_ADDR
+  (TODO this class should automatically register)
+  **/
+  void SetNewAddrCallback(Callback<bool, Ptr<Socket>, Address, uint8_t> remoteAddAddrCb,
+                          Callback<void, uint8_t> remoteRemAddrCb);
+
+  /**
+  **/
+//  virtual void GetAllAdvertisedSources(std::vector<InetSocketAddress> addresses);
+
+  void GetAllAdvertisedDestinations(std::vector<InetSocketAddress>& );
 public: // public variables
 
   // TODO move back to protected/private later on
@@ -101,11 +116,10 @@ public: // public variables
 
   // Evaluation & plotting parameters and containers
 //  int mod;    // available in parent TODO remove
-  int MSS;    // Maximum Segment Size
+  int MSS;    // Maximum Segment Size GetSegSize ?
   int LinkCapacity; // ?
   int totalBytes; // ?
   double RTT; //
-  double lostRate;  // rename to lossRate ?
   double TimeScale;
   uint32_t pAck;
   GnuplotCollection gnu;
@@ -155,17 +169,17 @@ protected: // protected methods
 //  bool AddLocalAddress(uint8_t&, Port);
 // Should generate an Id
 
-  /**
-  Will notify callback on ADD_ADDR reception
-  **/
-  void SetAddAddrCallback(Callback<bool, Ptr<Socket>, Address, uint8_t> );
 
-  void NotifyAddAddr(Address address);
-  void NotifyRemAddr(uint8_t addrId);
+//  void SetAddrEventCallback(Callback<bool, Ptr<Socket>, Address, uint8_t> remoteAddAddrCb,
+//                          Callback<void, uint8_t> remoteRemAddrCb);
+
+  void NotifyRemoteAddAddr(Address address);
+  void NotifyRemoteRemAddr(uint8_t addrId);
 
 
   void
   ConnectionSucceeded(void); // Schedule-friendly wrapper for Socket::NotifyConnectionSucceeded()
+
 
 
   // Transfer operations
@@ -246,14 +260,17 @@ protected: // protected methods
   uint8_t getSubflowToUse();  // Called by SendPendingData() to get a subflow based on round robin algorithm
 
   bool IsThereRoute(Ipv4Address src, Ipv4Address dst);     // Called by InitiateSubflow & LookupByAddrs and Connect to check whether there is route between a pair of addresses.
+
+  /**
+  When advertising an IP, we need to check if the IP belongs to the node
+  **/
   bool IsLocalAddress(Ipv4Address addr);
   Ptr<NetDevice> FindOutputNetDevice(Ipv4Address);         // Find Netdevice object of specific IP address.
   DSNMapping* getAckedSegment(uint8_t sFlowIdx, uint32_t ack);
   DSNMapping* getSegmentOfACK(uint8_t sFlowIdx, uint32_t ack);
 
   // Helper functions -> evaluation and debugging
-  void PrintIpv4AddressFromIpv4Interface(Ptr<Ipv4Interface>, int32_t);
-  std::string PrintCC(uint32_t cc);
+//  void PrintIpv4AddressFromIpv4Interface(Ptr<Ipv4Interface>, int32_t);
   void getQueuePkt(Ipv4Address addr);
 
 
@@ -280,12 +297,16 @@ protected: // protected variables
   Ipv4Address        m_remoteAddress;
   uint16_t           m_localPort;
   uint16_t           m_remotePort;
+
   uint8_t            m_currentSublow; // master socket ??? to remove
 
   std::vector<Ptr<MpTcpSubFlow> > m_subflows;
 
   //Ptr<MpTcpPathManager> m_pathManager;
-  Callback<bool, Ptr<Socket>, Address, uint8_t > m_onAddAddr;  // return true to create a subflow
+  Callback<bool, Ptr<Socket>, Address, uint8_t > m_onRemoteAddAddr;  //!< return true to create a subflow
+//  Callback<bool, Ptr<Socket>, Address, uint8_t > m_onNewLocalIp;  //!< return true to create a subflow
+  Callback<void, uint8_t > m_onAddrDeletion;// return true to create a subflow
+
 //  Callback<void, const MpTcpAddressInfo& > m_onRemAddr;
 
 //  virtual void OnAddAddress(MpTcpAddressInfo);
@@ -296,8 +317,7 @@ protected: // protected variables
   MpStates_t mpSendState;   //!< TODO to remove (useless)
   MpStates_t mpRecvState;   //!< TODO to remove (useless)
   bool m_mpEnabled;   //!< True if remote host is MPTCP compliant
-//  bool mpTokenRegister; //!< TODO remove
-//  bool m_addrAdvertised;  //!< TODO remove
+
 
 //  uint32_t m_unOrdMaxSize;  //!< Looks like it can be removed safely ?
   uint8_t  m_maxSubflows; //!< Max number of subflows
@@ -329,7 +349,7 @@ protected: // protected variables
   DataBuffer *sendingBuffer;
   DataBuffer *recvingBuffer;
 
-  std::map<Ipv4Address,uint8_t> m_localAddresses;
+  std::map<Ipv4Address,uint8_t> m_localAddresses; //!< Associate every local IP with an unique identifier
 
 
   // TODO make private ? check what it does

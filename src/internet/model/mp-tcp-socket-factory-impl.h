@@ -1,6 +1,7 @@
 #ifndef MP_TCP_SOCKET_FACTORY_IMPL_H
 #define MP_TCP_SOCKET_FACTORY_IMPL_H
 
+//#include "tcp-socket-factory.h"
 #include "mp-tcp-socket-factory.h"
 
 namespace ns3
@@ -15,6 +16,8 @@ public:
   virtual ~MpTcpSocketFactoryImpl();
   void SetTcp(Ptr<TcpL4Protocol>);
   virtual Ptr<Socket> CreateSocket();
+
+//    static TypeId GetTypeId (void);
 
 protected:
   virtual void DoDispose();

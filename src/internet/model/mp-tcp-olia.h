@@ -21,6 +21,11 @@ public:
   GetInitialCwnd(void) const;
 
   virtual uint8_t getSubflowToUse();  // Called by SendPendingData() to get a subflow based on round robin algorithm
+
+  virtual const char*
+  GetName(void) const {
+    return "OLIA";
+  };
 };
 
 

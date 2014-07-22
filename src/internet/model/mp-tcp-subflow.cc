@@ -366,6 +366,7 @@ MpTcpSubFlow::MpTcpSubFlow(Ptr<MpTcpSocketBase> metaSocket
 
 
     m_metaSocket(metaSocket),
+    m_backupSubflow(false),
     m_localToken(0),
     m_remoteToken(0)
 {
@@ -426,6 +427,13 @@ MpTcpSubFlow::IsMaster() const
 
   // is that enough ?
   return (m_metaSocket->m_subflows.size() == 1);
+}
+
+
+bool
+MpTcpSubFlow::BackupSubflow() const
+{
+  return m_backupSubflow;
 }
 
 /**
