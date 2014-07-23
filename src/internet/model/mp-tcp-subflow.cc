@@ -81,13 +81,17 @@ MpTcpSubFlow::GetInitialCwnd(void) const
 uint32_t
 MpTcpSubFlow::GetLocalToken() const
 {
-  return m_localToken;
+  NS_LOG_ERROR("Not implemented yet");
+  // TODO
+//  ( Sha1Hash ( m_metaSocket->GetLocalKey() ) >> 32)  << 32;
+  return 0;
 }
 
 uint32_t
 MpTcpSubFlow::GetRemoteToken() const
 {
-  return m_remoteToken;
+  NS_LOG_ERROR("Not implemented yet");
+  return 0;
 }
 
 // TODO should improve parent's one once SOCIS code gets merged
@@ -157,14 +161,14 @@ MpTcpSubFlow::SendEmptyPacket(uint8_t flags)
     )
     {
 //      mpSendState = MP_MPC;                  // This state means MP_MPC is sent
-      m_localToken = rand() % 1000 + 1;        // Random Local Token
-      header.AddOptMPC(OPT_MPCAPABLE, m_localToken); // Adding MP_CAPABLE & Token to TCP option (5 Bytes)
+      m_localNonce = rand() % 1000 + 1;        // Random Local Token
+      header.AddOptMPC(OPT_MPCAPABLE, m_localNonce); // Adding MP_CAPABLE & Token to TCP option (5 Bytes)
       olen += 5;
-      m_tcp->m_TokenMap[m_localToken] = m_endPoint;       //m_tcp->m_TokenMap.insert(std::make_pair(m_localToken, m_endPoint))
+      m_tcp->m_TokenMap[m_localNonce] = m_endPoint;       //m_tcp->m_TokenMap.insert(std::make_pair(m_localNonce, m_endPoint))
       NS_LOG_INFO("("
 //            << (int)sFlow->m_routeId
-            << ") SendEmptyPacket -> m_localToken is mapped to connection endpoint -> "
-            << m_localToken << " -> " << m_endPoint
+            << ") SendEmptyPacket -> m_localNonce is mapped to connection endpoint -> "
+            << m_localNonce << " -> " << m_endPoint
             << " TokenMapsSize: "<< m_tcp->m_TokenMap.size());
 
     }
@@ -336,7 +340,7 @@ MpTcpSubFlow::MpTcpSubFlow(const MpTcpSubFlow& sock)
   : TcpSocketBase(sock),
 //  m_cWnd(sock.m_cWnd),
   m_ssThresh(sock.m_ssThresh),
-  m_localToken(sock.m_localToken),
+  m_localNonce(sock.m_localNonce),
   m_remoteToken(sock.m_remoteToken)
   // TODO
 //    m_initialCWnd (sock.m_initialCWnd),
@@ -367,7 +371,7 @@ MpTcpSubFlow::MpTcpSubFlow(Ptr<MpTcpSocketBase> metaSocket
 
     m_metaSocket(metaSocket),
     m_backupSubflow(false),
-    m_localToken(0),
+    m_localNonce(0),
     m_remoteToken(0)
 {
   NS_ASSERT( m_metaSocket );
@@ -509,6 +513,12 @@ MpTcpSubFlow::AdvertiseAddress(Ipv4Address addr, uint16_t port)
       NS_LOG_INFO("Advertise  Addresses-> "<< header);
 }
 
+
+void
+MpTcpSubFlow::StopAdvertisingAddress(Ipv4Address)
+{
+  // TODO factor some code with AdvertiseAddress ?
+}
 
 bool
 MpTcpSubFlow::Finished(void)

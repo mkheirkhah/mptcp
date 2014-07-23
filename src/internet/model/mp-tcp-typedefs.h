@@ -19,7 +19,6 @@
 #include "ns3/ipv4-end-point.h"
 #include "ns3/ipv4-address.h"
 
-using namespace std;
 
 namespace ns3
 {
@@ -102,7 +101,7 @@ public:
   DataBuffer();
   DataBuffer(uint32_t size);
   ~DataBuffer();
-  queue<uint8_t> buffer;
+  std::queue<uint8_t> buffer;
   uint32_t bufMaxSize;
   uint32_t Add(uint8_t* buf, uint32_t size);
   uint32_t Retrieve(uint8_t* buf, uint32_t size);

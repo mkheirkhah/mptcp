@@ -71,9 +71,10 @@ public: // public methods
 
   void SetMaxSubFlowNumber(uint8_t num);      // Max number of subflows a sender can initiate
   uint8_t GetMaxSubFlowNumber() const;
-  std::vector<MpTcpSubFlow>::size_type GetCreatedSubFlowNumber() const;
+  std::vector<MpTcpSubFlow>::size_type GetNSubflows() const;
   // uint8
   Ptr<MpTcpSubFlow> GetSubFlow(uint8_t);
+
 
   // Setter for congestion Control and data distribution algorithm
   void SetCongestionCtrlAlgo(CongestionCtrl_t ccalgo);  // This would be used by attribute system for setting congestion control
@@ -286,11 +287,6 @@ protected: // protected methods
 
 protected: // protected variables
 
-  // MPTCP connection parameters
-  Ptr<Node>          m_node;
-//  Ipv4EndPoint*      m_endPoint;    // TODO could remove since its parent already defines it
-//  Ptr<TcpL4Protocol> m_mptcp;       //? what is this ? use m_tcp from parent socket
-
 
   // TODO remove
   Ipv4Address        m_localAddress;
@@ -302,7 +298,6 @@ protected: // protected variables
 
   std::vector<Ptr<MpTcpSubFlow> > m_subflows;
 
-  //Ptr<MpTcpPathManager> m_pathManager;
   Callback<bool, Ptr<Socket>, Address, uint8_t > m_onRemoteAddAddr;  //!< return true to create a subflow
 //  Callback<bool, Ptr<Socket>, Address, uint8_t > m_onNewLocalIp;  //!< return true to create a subflow
   Callback<void, uint8_t > m_onAddrDeletion;// return true to create a subflow
@@ -320,7 +315,7 @@ protected: // protected variables
 
 
 //  uint32_t m_unOrdMaxSize;  //!< Looks like it can be removed safely ?
-  uint8_t  m_maxSubflows; //!< Max number of subflows
+
   uint8_t  m_lastUsedsFlowIdx;  //!< TODO remove ? part of the scheduler
 
   Ptr<MpTcpPathIdManager> m_remotePathIdManager;  //!< Keep track of advertised ADDR id advertised by remote endhost

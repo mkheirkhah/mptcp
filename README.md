@@ -8,10 +8,10 @@ How to launch the MPTCP testsuite ?
 ======
 To run the test suite with logging messages:
 NS_LOG="MpTcpTestSuite=*|prefix_func:Socket=*:*=error|warn" ./waf --run "test-runner --suite=mptcp"or (more complete)
-NS_LOG="MpTcpTestSuite=*|prefix_func:Socket=*:MpTcpSocketBase:*=error|warn" ./waf --run "test-runner --suite=mptcp"
+NS_LOG="MpTcpTestSuite=*|prefix_func:Socket=*:MpTcpSocketBase:*=error|warn" ./waf --run "test-runner --verbose --suite=mptcp"
 
 In case you want to run it with gdb:
-NS_LOG="MpTcpTestSuite=*|prefix_func:Socket=*:MpTcpSocketBase:*=error|warn" ./waf --command-template="gdb %s" --run "test-runner"
+NS_LOG="MpTcpTestSuite=*|prefix_func:Socket=*:MpTcpSocketBase:*=error|warn" ./waf --command-template="gdb %s --args --suite=mptcp" --run "test-runner"
 
 How to configure waf for prototyping
 ======

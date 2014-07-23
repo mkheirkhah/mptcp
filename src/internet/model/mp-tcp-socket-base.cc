@@ -44,10 +44,6 @@ MpTcpSocketBase::GetTypeId(void)
       .AddAttribute("SchedulingAlgorithm", "Algorithm for data distribution between m_subflows", EnumValue(Round_Robin),
           MakeEnumAccessor(&MpTcpSocketBase::SetDataDistribAlgo),
           MakeEnumChecker(Round_Robin, "Round_Robin"))
-      .AddAttribute("MaxSubflows","Maximum number of subflows per each mptcp connection",
-          UintegerValue(255),
-          MakeUintegerAccessor(&MpTcpSocketBase::m_maxSubflows),
-          MakeUintegerChecker<uint8_t>())
       .AddAttribute("Subflows", "The list of subflows associated to this protocol.",
           ObjectVectorValue(),
           MakeObjectVectorAccessor(&MpTcpSocketBase::m_subflows),
@@ -136,7 +132,7 @@ MpTcpSocketBase::~MpTcpSocketBase(void)
     }
   m_tcp = 0;
   CancelAllSubflowTimers();
-  NS_LOG_INFO(Simulator::Now().GetSeconds() << " ["<< this << "] ~MpTcpSocketBase -> m_node: " << m_node << " m_tcp: " << m_tcp << " m_endPoint: " << m_endPoint);
+//  NS_LOG_INFO(Simulator::Now().GetSeconds() << " ["<< this << "] ~MpTcpSocketBase ->" << m_tcp << " m_endPoint: " << m_endPoint);
 }
 
 uint32_t
@@ -186,7 +182,7 @@ MpTcpSocketBase::NotifyRemoteAddAddr(Address address)
 }
 
 std::vector<MpTcpSubFlow>::size_type
-MpTcpSocketBase::GetCreatedSubFlowNumber() const
+MpTcpSocketBase::GetNSubflows() const
 {
   return m_subflows.size();
 }
@@ -235,7 +231,7 @@ int
 MpTcpSocketBase::SetupEndpoint()
 {
   NS_LOG_FUNCTION (this);
-  Ptr<Ipv4> ipv4 = m_node->GetObject<Ipv4>();
+  Ptr<Ipv4> ipv4 = GetNode()->GetObject<Ipv4>();
   NS_ASSERT(ipv4 != 0);
   if (ipv4->GetRoutingProtocol() == 0)
     {
@@ -526,7 +522,7 @@ void
 MpTcpSocketBase::ProcessListen(uint8_t sFlowIdx, Ptr<Packet> packet, const TcpHeader& mptcpHeader, const Address& fromAddress,
     const Address& toAddress)
 {
-  NS_LOG_FUNCTION (m_node->GetId() << mptcpHeader);
+  NS_LOG_FUNCTION (GetNode()->GetId() << mptcpHeader);
   uint8_t tcpflags = mptcpHeader.GetFlags() & ~(TcpHeader::PSH | TcpHeader::URG);
   Ptr<MpTcpSubFlow> sFlow = m_subflows[sFlowIdx];
   /*
@@ -1156,13 +1152,15 @@ MpTcpSocketBase::SendDataPacket(uint8_t sFlowIdx, uint32_t size, bool withAck)
     }
   else
     {
+      //Socket::()
+      //BindToNetDevice
       Ptr<NetDevice> netDevice = FindOutputNetDevice(sFlow->sAddr);
-      m_tcp->SendPacket(p, header, sFlow->sAddr, sFlow->dAddr, netDevice);
+      m_tcp->SendPacket(p, header, sFlow->sAddr, sFlow->dAddr, sFlow->GetBoundNetDevice() );
       if (!guard)
         sFlow->PktCount++;
       uint32_t tmp = (((sFlow->TxSeqNumber + packetSize) - sFlow->initialSequnceNumber) / sFlow->GetSegSize()) % mod;
       sFlow->DATA.push_back(make_pair(Simulator::Now().GetSeconds(), tmp));
-    }NS_LOG_WARN(Simulator::Now().GetSeconds() << " ["<< m_node->GetId()<< "] SendDataPacket->  " << header <<" dSize: " << packetSize<< " sFlow: " << sFlow->m_routeId);
+    }NS_LOG_WARN(Simulator::Now().GetSeconds() << " ["<< GetNode()->GetId()<< "] SendDataPacket->  " << header <<" dSize: " << packetSize<< " sFlow: " << sFlow->m_routeId);
 
   // Do some updates.....
   sFlow->rtt->SentSeq(SequenceNumber32(sFlow->TxSeqNumber), packetSize); // Notify the RTT of a data packet sent
@@ -1346,18 +1344,7 @@ MpTcpSocketBase::DiscardUpTo(uint8_t sFlowIdx, uint32_t ack)
       current = next;
     }
 }
-// .....................................................................................................
-uint8_t
-MpTcpSocketBase::GetMaxSubFlowNumber() const
-{
-  return m_maxSubflows;
-}
 
-void
-MpTcpSocketBase::SetMaxSubFlowNumber(uint8_t num)
-{
-  m_maxSubflows = num;
-}
 //...........................................................................................
 // Following implementation has derived from tcp-reno implementation
 //...........................................................................................
@@ -1448,7 +1435,8 @@ MpTcpSocketBase::CreateSubflow(const Address& srcAddr, const Address& dstAddr)
 
 
   Ptr<MpTcpSubFlow> sFlow = CreateObject<MpTcpSubFlow>(this);
-
+  // TODO find associated device and bind to it
+//  sFlow->BindToNetDevice
   //
 //  sFlow->Bind
   if(!sFlow->Connect( dstAddr) )
@@ -2001,7 +1989,7 @@ MpTcpSocketBase::NewACK(uint8_t sFlowIdx, const TcpHeader& mptcpHeader, TcpOptio
 {
   Ptr<MpTcpSubFlow> sFlow = m_subflows[sFlowIdx];
   uint32_t ack = (mptcpHeader.GetAckNumber()).GetValue();
-  NS_LOG_LOGIC ("[" << m_node->GetId()<< "]" << " Cancelled ReTxTimeout event which was set to expire at " << (Simulator::Now () + Simulator::GetDelayLeft (sFlow->retxEvent)).GetSeconds ());
+  NS_LOG_LOGIC ("[" << GetNode()->GetId()<< "]" << " Cancelled ReTxTimeout event which was set to expire at " << (Simulator::Now () + Simulator::GetDelayLeft (sFlow->retxEvent)).GetSeconds ());
 
   // On recieving a "New" ack we restart retransmission timer .. RFC 2988
   sFlow->retxEvent.Cancel();
@@ -2264,7 +2252,7 @@ MpTcpSocketBase::ForwardUp(Ptr<Packet> p, Ipv4Header header, uint16_t port, Ptr<
   // Accepted sockets being dealt with from here.......
   // LookupByAddrs of src and destination.
   uint8_t sFlowIdx = LookupByAddrs(m_localAddress, m_remoteAddress); //m_endPoint->GetPeerAddress());
-  NS_ASSERT_MSG((sFlowIdx < m_maxSubflows), "Subflow number should be smaller than MaxNumOfSubflows");
+//  NS_ASSERT_MSG((sFlowIdx < m_maxSubflows), "Subflow number should be smaller than MaxNumOfSubflows");
 
   Ptr<MpTcpSubFlow> sFlow = m_subflows[sFlowIdx];
 
@@ -3566,7 +3554,7 @@ MpTcpSocketBase::IsThereRoute(Ipv4Address src, Ipv4Address dst)
   bool found = false;
   // Look up the source address
 //  Ptr<Ipv4> ipv4 = m_node->GetObject<Ipv4>();
-  Ptr<Ipv4L3Protocol> ipv4 = m_node->GetObject<Ipv4L3Protocol>();
+  Ptr<Ipv4L3Protocol> ipv4 = GetNode()->GetObject<Ipv4L3Protocol>();
   if (ipv4->GetRoutingProtocol() != 0)
     {
       Ipv4Header l3Header;
@@ -3619,7 +3607,7 @@ Ptr<NetDevice>
 MpTcpSocketBase::FindOutputNetDevice(Ipv4Address src)
 {
 
-  Ptr<Ipv4L3Protocol> ipv4 = m_node->GetObject<Ipv4L3Protocol>();
+  Ptr<Ipv4L3Protocol> ipv4 = GetNode()->GetObject<Ipv4L3Protocol>();
   uint32_t oInterface = ipv4->GetInterfaceForAddress(src);
 //  Ptr<Ipv4Interface> GetRealInterfaceForAddress()
   Ptr<NetDevice> oNetDevice = ipv4->GetNetDevice(oInterface);
@@ -3742,7 +3730,7 @@ MpTcpSocketBase::LookupByAddrs(Ipv4Address src, Ipv4Address dst)
 {
   NS_LOG_FUNCTION(this);
   Ptr<MpTcpSubFlow> sFlow = 0;
-  uint8_t sFlowIdx = m_maxSubflows;
+  uint8_t sFlowIdx = 42;
 
   if (IsThereRoute(src, dst) == false)
     {
@@ -3767,7 +3755,8 @@ MpTcpSocketBase::LookupByAddrs(Ipv4Address src, Ipv4Address dst)
         }
     }
   // When subflow is not find or is not exist...
-  if (!(sFlowIdx < m_maxSubflows))
+//  if (!(sFlowIdx < m_maxSubflows))
+  if (!(sFlowIdx < GetNSubflows()))
     {
       NS_LOG_DEBUG("LookupByAddrs -> Either subflow(0) or create new one");
       if (m_connected == false && m_subflows.size() == 1)
@@ -3808,7 +3797,8 @@ MpTcpSocketBase::LookupByAddrs(Ipv4Address src, Ipv4Address dst)
                   "This normally would not occurs since MPTCP connection can have subflow only when two sides advertise their addresses!");
             }
         }
-    }NS_LOG_DEBUG("LookupByAddrs -> TotalSubflows{" << m_subflows.size() <<"} (src,dst) = (" << src << "," << dst << "). Forwarded to (" << (int) sFlowIdx << ")");
+    }
+  NS_LOG_DEBUG("LookupByAddrs -> TotalSubflows{" << GetNSubflows() <<"} (src,dst) = (" << src << "," << dst << "). Forwarded to (" << (int) sFlowIdx << ")");
   return sFlowIdx;
 }
 
