@@ -48,7 +48,24 @@ void
 MpTcpSubFlow::DupAck(const TcpHeader& t, uint32_t count)
 {
   NS_LOG_DEBUG("DupAck ignored as specified in RFC");
+//  if( count > 3)
+
 }
+
+
+// TODO check with parent's
+void
+MpTcpSubFlow::CancelAllTimers()
+{
+  NS_LOG_FUNCTION();
+  //(int) sFlowIdx
+  retxEvent.Cancel();
+  m_lastAckEvent.Cancel();
+  m_timewaitEvent.Cancel();
+  NS_LOG_LOGIC( "CancelAllTimers");
+}
+
+
 
 void
 MpTcpSubFlow::SetSSThresh(uint32_t threshold)
@@ -78,21 +95,36 @@ MpTcpSubFlow::GetInitialCwnd(void) const
 }
 
 
+// Ideally this should be a sha1 but hey ns3 is for prototyping !
 uint32_t
 MpTcpSubFlow::GetLocalToken() const
 {
-  NS_LOG_ERROR("Not implemented yet");
+//  NS_LOG_ERROR("Not implemented yet");
   // TODO
-//  ( Sha1Hash ( m_metaSocket->GetLocalKey() ) >> 32)  << 32;
-  return 0;
+  return m_metaSocket->GetLocalKey() >> 32 ;
 }
 
 uint32_t
 MpTcpSubFlow::GetRemoteToken() const
 {
-  NS_LOG_ERROR("Not implemented yet");
-  return 0;
+//  NS_LOG_ERROR("Not implemented yet");
+  return m_metaSocket->GetLocalKey() >> 32 ;
+
 }
+
+
+void
+MpTcpSubFlow::CloseAndNotify(void)
+{
+
+  if(TcpSocketBase::CloseAndNotify())
+  {
+    // TODO should notify metasocket
+//    m_metaSocket
+  }
+
+}
+
 
 // TODO should improve parent's one once SOCIS code gets merged
 void
@@ -381,7 +413,6 @@ MpTcpSubFlow::MpTcpSubFlow(Ptr<MpTcpSocketBase> metaSocket
   // TODO use/create function to generate initial random number seq
   TxSeqNumber = rand() % 1000;
   RxSeqNumber = 0;
-  bandwidth = 0;
   cwnd = 0;
 
   maxSeqNb = TxSeqNumber - 1;
@@ -406,15 +437,7 @@ MpTcpSubFlow::MpTcpSubFlow(Ptr<MpTcpSocketBase> metaSocket
 
 MpTcpSubFlow::~MpTcpSubFlow()
 {
-  m_endPoint = 0;
-  m_routeId = 0;
-  sAddr = Ipv4Address::GetZero();
-  oif = 0;
-  state = CLOSED;
-  bandwidth = 0;
-  cwnd = 0;
-  maxSeqNb = 0;
-  highestAck = 0;
+
   for (std::list<DSNMapping *>::iterator it = m_mapDSN.begin(); it != m_mapDSN.end(); ++it)
     {
       DSNMapping * ptrDSN = *it;
@@ -469,56 +492,89 @@ MpTcpSubFlow::AdvertiseAddress(Ipv4Address addr, uint16_t port)
   // TODO check subflow is established !!
   uint8_t addrId = m_metaSocket->AddLocalAddr(addr);
 
-      // there is at least one subflow
-//      Ptr<MpTcpSubFlow> sFlow = subflows[0];
-//      NS_ASSERT(sFlow!=0);
 
-      // Change the MPTCP send state to MP_ADDADDR
-//      mpSendState = MP_ADDADDR;
+  // Change the MPTCP send state to MP_ADDADDR
 //      MpTcpAddressInfo * addrInfo;
-      Ptr<Packet> pkt = Create<Packet>();
+  Ptr<Packet> pkt = Create<Packet>();
 
-      TcpHeader header;
-      header.SetFlags(TcpHeader::ACK);
-//      header.SetSequenceNumber(SequenceNumber32(sFlow->TxSeqNumber));
-      header.SetSequenceNumber(SequenceNumber32(TxSeqNumber));
-//      header.SetAckNumber(SequenceNumber32(sFlow->RxSeqNumber));
-      header.SetAckNumber(SequenceNumber32(RxSeqNumber));
-
-//      header.SetSourcePort(sPort); // m_endPoint->GetLocalPort()
-      header.SetSourcePort( m_endPoint->GetLocalPort() ); // m_endPoint->GetLocalPort()
-      header.SetDestinationPort(m_dPort);
-      uint8_t hlen = 0;
-      uint8_t olen = 0;
+  TcpHeader header;
+  header.SetFlags(TcpHeader::ACK);
+  header.SetSequenceNumber(SequenceNumber32(TxSeqNumber));
+  header.SetAckNumber(SequenceNumber32(RxSeqNumber));
+  header.SetSourcePort( m_endPoint->GetLocalPort() ); // m_endPoint->GetLocalPort()
+  header.SetDestinationPort(m_dPort);
+  uint8_t hlen = 0;
+  uint8_t olen = 0;
 
 
 //      IPv4Address;;ConvertFrom ( addr );
 
-      header.AddOptADDR(OPT_ADDR, addrId, Ipv4Address::ConvertFrom ( addr ) );
-      olen += 6;
+  header.AddOptADDR(OPT_ADDR, addrId, Ipv4Address::ConvertFrom ( addr ) );
+  olen += 6;
 
-      uint8_t plen = (4 - (olen % 4)) % 4;
-      header.SetWindowSize(AdvertisedWindowSize());
-      olen = (olen + plen) / 4;
-      hlen = 5 + olen;
-      header.SetLength(hlen);
-      header.SetOptionsLength(olen);
-      header.SetPaddingLength(plen);
+  uint8_t plen = (4 - (olen % 4)) % 4;
+  header.SetWindowSize(AdvertisedWindowSize());
+  olen = (olen + plen) / 4;
+  hlen = 5 + olen;
+  header.SetLength(hlen);
+  header.SetOptionsLength(olen);
+  header.SetPaddingLength(plen);
 
 
-      m_tcp->SendPacket(pkt, header, m_endPoint->GetLocalAddress(), m_endPoint->GetPeerAddress());
-      // we 've got to rely on
+  m_tcp->SendPacket(pkt, header, m_endPoint->GetLocalAddress(), m_endPoint->GetPeerAddress());
+  // we 've got to rely on
 
 //      this->SendPacket(pkt, header, m_localAddress, m_remoteAddress, FindOutputNetDevice(m_localAddress) );
-      NS_LOG_INFO("Advertise  Addresses-> "<< header);
+  NS_LOG_INFO("Advertise  Addresses-> "<< header);
 }
 
 
-void
-MpTcpSubFlow::StopAdvertisingAddress(Ipv4Address)
+bool
+MpTcpSubFlow::StopAdvertisingAddress(Ipv4Address address)
 {
   // TODO factor some code with AdvertiseAddress ?
+  // TODO check subflow is established !!
+  uint8_t addrId = 0;
+//  addrId  = m_metaSocket->RemLocalAddr(addr);
+  uint8_t m_metaSocket->FindLocalAddrId(address,addrId);
+
+  // Change the MPTCP send state to MP_ADDADDR
+//      MpTcpAddressInfo * addrInfo;
+  Ptr<Packet> pkt = Create<Packet>();
+
+  TcpHeader header;
+  header.SetFlags(TcpHeader::ACK);
+  header.SetSequenceNumber(SequenceNumber32(TxSeqNumber));
+  header.SetAckNumber(SequenceNumber32(RxSeqNumber));
+  header.SetSourcePort( m_endPoint->GetLocalPort() ); // m_endPoint->GetLocalPort()
+  header.SetDestinationPort(m_dPort);
+  uint8_t hlen = 0;
+  uint8_t olen = 0;
+
+
+//      IPv4Address;;ConvertFrom ( addr );
+
+  header.AddOptREMADR(OPT_REMADR, addrId );
+  olen += 6;
+
+  uint8_t plen = (4 - (olen % 4)) % 4;
+  header.SetWindowSize(AdvertisedWindowSize());
+  olen = (olen + plen) / 4;
+  hlen = 5 + olen;
+  header.SetLength(hlen);
+  header.SetOptionsLength(olen);
+  header.SetPaddingLength(plen);
+
+
+  m_tcp->SendPacket(pkt, header, m_endPoint->GetLocalAddress(), m_endPoint->GetPeerAddress());
+  // we 've got to rely on
+
+//      this->SendPacket(pkt, header, m_localAddress, m_remoteAddress, FindOutputNetDevice(m_localAddress) );
+  NS_LOG_INFO("Advertise  Addresses-> "<< header);
+  return true;
 }
+
+
 
 bool
 MpTcpSubFlow::Finished(void)

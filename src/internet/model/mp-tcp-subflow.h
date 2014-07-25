@@ -26,6 +26,7 @@
 #include "ns3/ipv4-address.h"
 #include "ns3/tcp-socket-base.h"
 #include "ns3/tcp-header.h"
+#include "ns3/mp-tcp-typedefs.h"
 
 using namespace std;
 
@@ -43,9 +44,9 @@ public:
   /**
   the metasocket is the socket the application is talking to.
   Every subflow is linked to that socket.
+  \param The metasocket it is linked to
   **/
-  MpTcpSubFlow(Ptr<MpTcpSocketBase> metaSocket
-      );
+  MpTcpSubFlow(Ptr<MpTcpSocketBase> metaSocket);
 
   MpTcpSubFlow(const MpTcpSubFlow&);
 
@@ -63,10 +64,11 @@ public:
   virtual void AdvertiseAddress(Ipv4Address , uint16_t port);
 
   /**
-  \brief Send a REM_ADDR for the specific
+  \brief Send a REM_ADDR for the specific address.
   \see AdvertiseAddress
+  \return false if no id associated with the address which likely means it was never advertised in the first place
   */
-  virtual void StopAdvertisingAddress(Ipv4Address);
+  virtual bool StopAdvertisingAddress(Ipv4Address);
 
 
   /**
@@ -113,10 +115,17 @@ protected:
   virtual Ptr<TcpSocketBase>
   Fork(void); // Call CopyObject<> to clone me
 
+
+  void
+  CloseAndNotify(void);
+
   virtual void
   DupAck(const TcpHeader& t, uint32_t count); // Received dupack
 
-
+  /* TODO should be able to use parent's one little by little
+  */
+  virtual void
+  CancelAllTimers(void); // Cancel all timer when endpoint is deleted
 
   virtual void AddDSNMapping(uint8_t sFlowIdx, uint64_t dSeqNum, uint16_t dLvlLen, uint32_t sflowSeqNum, uint32_t ack, Ptr<Packet> pkt);
   virtual void StartTracing(string traced);
@@ -154,7 +163,6 @@ protected:
    uint32_t m_ssThresh;          //!< Slow start threshold
   uint32_t maxSeqNb;          // Highest sequence number of a sent byte. Equal to (TxSeqNumber - 1) until a retransmission occurs
   uint32_t highestAck;        // Highest received ACK for the subflow level sequence number
-  uint64_t bandwidth;         // Link's bandwidth
   uint32_t m_initialCWnd;     // Initial cWnd value
   SequenceNumber32 m_recover; // Previous highest Tx seqNb for fast recovery
   uint32_t m_retxThresh;      // Fast Retransmit threshold
@@ -162,9 +170,13 @@ protected:
   bool m_limitedTx;           // perform limited transmit
   uint32_t m_dupAckCount;     // DupACK counter
   Ipv4EndPoint* m_endPoint;   // L4 stack object
-  std::list<DSNMapping *> m_mapDSN;  // List of all sent packets
-  std::multiset<double> measuredRTT;
+
+  // Use Ptr here so that we don't have to unallocate memory manually ?
+  std::list<DSNMapping *> m_mapDSN;  //!< List of all sent packets
+
+  // parent should provide it ?
   Ptr<RttMeanDeviation> rtt;  // RTT calculator
+  std::multiset<double> measuredRTT;
   Time m_lastMeasuredRtt;       // Last measured RTT, used for plotting
   uint32_t TxSeqNumber;       // Subflow's next expected sequence number to send
   uint32_t RxSeqNumber;       // Subflow's next expected sequence number to receive

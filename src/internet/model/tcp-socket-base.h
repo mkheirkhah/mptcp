@@ -248,7 +248,7 @@ protected:
   SendDataPacket(SequenceNumber32 seq, uint32_t maxSize, bool withAck); // Send a data packet
   virtual void
   SendEmptyPacket(uint8_t flags); // Send a empty packet that carries a flag, e.g. ACK
-  void
+  virtual void
   SendRST(void); // Send reset and tear down this socket
   bool
   OutOfRange(SequenceNumber32 head, SequenceNumber32 tail) const; // Check if a sequence number range is within the rx window
@@ -268,7 +268,7 @@ protected:
   PeerClose(Ptr<Packet>, const TcpHeader&); // Received a FIN from peer, notify rx buffer
   void
   DoPeerClose(void); // FIN is in sequence, notify app and respond with a FIN
-  void
+  virtual void
   CancelAllTimers(void); // Cancel all timer when endpoint is deleted
   void
   TimeWait(void);  // Move from CLOSING or FIN_WAIT_2 to TIME_WAIT state

@@ -140,7 +140,7 @@ MpTcpPathIdManager::RemRemoteAddr(uint8_t addrId)
 
 
 void
-MpTcpPathIdManager::GetAllAdvertisedDestinations(std::vector<InetSocketAddress> addresses)
+MpTcpPathIdManager::GetAllAdvertisedDestinations(std::vector<InetSocketAddress>& addresses)
 {
   addresses.clear();
   for(MpTcpAddressContainer::iterator externIt = m_addrs.begin(); externIt != m_addrs.end(); externIt++)

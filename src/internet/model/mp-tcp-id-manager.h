@@ -27,7 +27,13 @@ namespace ns3
 
 
 /**
-TODO setup callbacks in order to know if we shall accept the addition
+* TODO setup callbacks in order to know if we shall accept the addition
+* \brief The MPTCP path manager tracks ADD_ADDR/REM_ADDR in case the user wants to later open new subflows.
+* It is possible to use callbacks from the MPTCP metasocket to be notified in case of a new ADD_ADDR.
+* Thus it is possible to immediately create the desired subflows
+*
+* There should be a testsuite to
+* \class MpTcpPathIdManager
 **/
 class MpTcpPathIdManager : public Object
 {
@@ -36,6 +42,7 @@ public:
 
 
   MpTcpPathIdManager();
+
   virtual ~MpTcpPathIdManager();
 
   /**
@@ -46,12 +53,15 @@ public:
 //  virtual bool RemLocalAddr(Ipv4Address addr);
 
   /**
-  Add callback
+  \param addresses
+  \warning Don't forget to clear the vector first !
   **/
 
-  virtual void GetAllAdvertisedDestinations(std::vector<InetSocketAddress> addresses);
+  virtual void GetAllAdvertisedDestinations(std::vector<InetSocketAddress>& addresses);
 
   // TODO move callbacks here + local address Mgmt ?
+
+
 protected:
   friend class MpTcpSocketBase;
   /**

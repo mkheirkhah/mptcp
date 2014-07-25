@@ -611,7 +611,7 @@ MpTcpAddressTestCase::DoRun (void)
         {
           // Attemps to
           bool res = false;
-//          m_serverSock->GetSubFlow(0)->StopAdvertisingAddress( Ipv4Address("42.42.42.42")   );
+          res = m_serverSock->GetSubFlow(0)->StopAdvertisingAddress( Ipv4Address("42.42.42.42")   );
           NS_TEST_ASSERT_MSG_EQ( res, false, "Should not be able to remove an unregistered address");
 
 

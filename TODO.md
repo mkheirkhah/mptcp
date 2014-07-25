@@ -15,7 +15,7 @@ Generic:
 * add the possibility of setting priorities, ie the ability for a subflow to act as backup
 * implement callback support : need to change ns3 ? (matt)
 Morteza: the reason is mptcp subflows would be created in middle of run time, so no way to can hook them in configuration time. This partially being solved in MpTcpSubflow by calling to StartTracing() and then CwndTracer().I can recall there was bug in m_socket which prevent socket to fire call back at all :-)
-
+* Replace DataBuffer by TcpRxBuffer/TcpTxBuffer ? is that even possible ?
 
 Requests for ns3;
 * add an IsConnected member to TcpSocketBase ?

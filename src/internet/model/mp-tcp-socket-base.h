@@ -14,6 +14,7 @@
 #include "ns3/gnuplot.h"
 #include "mp-tcp-subflow.h"
 #include "ns3/mp-tcp-id-manager.h"
+#include "ns3/mp-tcp-cc.h"
 
 using namespace std;
 namespace ns3
@@ -92,8 +93,12 @@ public: // public methods
   \return 0 In case of success
   TODO bool ?
   **/
-  int GetRemoteKey(uint32_t& remoteKey) const;
-  uint32_t GetLocalKey() const;
+  int GetRemoteKey(uint64_t& remoteKey) const;
+
+  /**
+  \brief Generated during
+  */
+  uint64_t GetLocalKey() const;
 
     /**
   For now it looks there is no way to know that an ip interface went up so we will assume until
@@ -110,20 +115,20 @@ public: // public methods
 //  virtual void GetAllAdvertisedSources(std::vector<InetSocketAddress> addresses);
 
   void GetAllAdvertisedDestinations(std::vector<InetSocketAddress>& );
+
 public: // public variables
 
   // TODO move back to protected/private later on
 
 
   // Evaluation & plotting parameters and containers
-//  int mod;    // available in parent TODO remove
-  int MSS;    // Maximum Segment Size GetSegSize ?
-  int LinkCapacity; // ?
-  int totalBytes; // ?
-  double RTT; //
+//  int MSS;    // Maximum Segment Size : use GetSegSize instead
+//  double RTT; //
+
+  // Apparently used for plotting. I guess this should go outside, into helpers maybe ?
   double TimeScale;
-  uint32_t pAck;
-  GnuplotCollection gnu;
+
+  GnuplotCollection gnu;  //!< plotting
   std::list<uint32_t> sampleList;
 
   // TODO remove in favor of parents' ?
@@ -162,7 +167,7 @@ protected: // protected methods
   void CompleteFork(Ptr<Packet> p, const TcpHeader& h, const Address& fromAddress, const Address& toAddress);
 
   // TODO remove should be done by helper instead
-  bool InitiateSubflows();            // Initiate new subflows
+//  bool InitiateSubflows();            // Initiate new subflows
 
   /**
   Fails if
@@ -266,7 +271,8 @@ protected: // protected methods
   When advertising an IP, we need to check if the IP belongs to the node
   **/
   bool IsLocalAddress(Ipv4Address addr);
-  Ptr<NetDevice> FindOutputNetDevice(Ipv4Address);         // Find Netdevice object of specific IP address.
+   // Find Netdevice object of specific IP address.
+  Ptr<NetDevice> FindOutputNetDevice(Ipv4Address);
   DSNMapping* getAckedSegment(uint8_t sFlowIdx, uint32_t ack);
   DSNMapping* getSegmentOfACK(uint8_t sFlowIdx, uint32_t ack);
 
@@ -309,19 +315,19 @@ protected: // protected variables
 
 
   // MultiPath related parameters
-  MpStates_t mpSendState;   //!< TODO to remove (useless)
-  MpStates_t mpRecvState;   //!< TODO to remove (useless)
+//  MpStates_t mpSendState;   //!< TODO to remove (useless)
+//  MpStates_t mpRecvState;   //!< TODO to remove (useless)
   bool m_mpEnabled;   //!< True if remote host is MPTCP compliant
 
 
 //  uint32_t m_unOrdMaxSize;  //!< Looks like it can be removed safely ?
 
-  uint8_t  m_lastUsedsFlowIdx;  //!< TODO remove ? part of the scheduler
+
 
   Ptr<MpTcpPathIdManager> m_remotePathIdManager;  //!< Keep track of advertised ADDR id advertised by remote endhost
 
 
-  std::list<DSNMapping *> m_unOrdered;  // buffer that hold the out of sequence received packet
+  std::list<DSNMapping *> m_unOrdered;  //!< buffer that hold the out of sequence received packet
 
 
   // Congestion control
@@ -329,8 +335,9 @@ protected: // protected variables
   double alpha;
   uint32_t m_totalCwnd;
 
-  CongestionCtrl_t AlgoCC;       // Algorithm for Congestion Control
-  DataDistribAlgo_t distribAlgo; // Algorithm for Data Distribution
+  Ptr<MpTcpCongestionControl> m_algoCC;  //!<  Algorithm for Congestion Control
+//  CongestionCtrl_t AlgoCC;       // Algorithm for Congestion Control
+//  DataDistribAlgo_t m_distribAlgo; // Algorithm for Data Distribution
 
   // Window management variables node->GetObject<TcpL4Protocol>();
   uint32_t m_ssThresh;           // Slow start threshold
@@ -353,15 +360,15 @@ protected: // protected variables
   bool server;
 
 private:
-  // TODO rename into m_localKey uint64_t and move tokens into subflow (maybe not even needed)
-  uint32_t m_localKey;  //!< Store local host token, generated during the 3-way handshake
-  uint32_t m_remoteKey; //!< Store remote host token
+  // TODO rename into m_localKey  and move tokens into subflow (maybe not even needed)
+  uint64_t m_localKey;  //!< Store local host token, generated during the 3-way handshake
+  uint64_t m_remoteKey; //!< Store remote host token
 
 private:
 // CloseSubflow
   uint8_t AddLocalAddr(const Ipv4Address& address);
 
-  bool RemLocalAddr(Ipv4Address);
+  bool RemLocalAddr(Ipv4Address,uint8_t&);
 
 
 };

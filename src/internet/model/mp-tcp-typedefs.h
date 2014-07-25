@@ -27,6 +27,7 @@ namespace ns3
 MP kinds
 TODO remove ?
 **/
+#if 0
 typedef enum
 {
   MP_NONE,        // 0
@@ -34,6 +35,7 @@ typedef enum
   MP_ADDADDR,        // 2
   MP_JOIN
 } MpStates_t;
+#endif
 
 typedef enum
 {
@@ -43,6 +45,7 @@ typedef enum
   Fully_Coupled         // 3
 } CongestionCtrl_t;
 
+// TODO to remove, replaced by external callback/class
 typedef enum
 {
   Round_Robin
@@ -59,28 +62,42 @@ typedef enum
   Congestion_Avoidance,
 } Phase_t;
 
-typedef enum
-{
-  NO_ACTION,
-  ADDR_TX,
-  INIT_SUBFLOWS
-} MpActions_t;
+//typedef enum
+//{
+//  NO_ACTION,
+//  ADDR_TX,
+//  INIT_SUBFLOWS
+//} MpActions_t;
 
+/**
+
+**/
 class DSNMapping
 {
 public:
-  DSNMapping();
+  // TODO remove that constructor ? since never used
+//  DSNMapping();
+  /**
+  **/
   DSNMapping(uint8_t sFlowIdx, uint64_t dSeqNum, uint16_t dLvlLen, uint32_t sflowSeqNum, uint32_t ack, Ptr<Packet> pkt);
+
   //DSNMapping (const DSNMapping &res);
   virtual ~DSNMapping();
   bool operator <(const DSNMapping& rhs) const;
-  uint64_t dataSeqNumber;
-  uint16_t dataLevelLength;
-  uint32_t subflowSeqNumber;
-  uint32_t acknowledgement;
-  uint32_t dupAckCount;
-  uint8_t subflowIndex;
-  uint8_t *packet;
+
+  // TODO replace with SequenceNumber32 class ?
+  uint64_t dataSeqNumber;   //!<
+  uint16_t dataLevelLength; //!<
+  uint32_t subflowSeqNumber;  //!<
+  uint32_t acknowledgement; //!<
+  uint32_t dupAckCount; //!<
+
+  /* If DSN mappings are registered in the subflow, then it becomes useless ? unless it is referenced by meta
+  looks like it, in case meta needs to resend data. But then the subflowIndex must be always valid wich is not true
+  in the current implementation
+  */
+  uint8_t subflowIndex; //!<
+  uint8_t *packet;      //!<
 };
 
 /*
