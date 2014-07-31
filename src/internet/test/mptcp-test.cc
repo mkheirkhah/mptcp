@@ -212,7 +212,7 @@ void AdvertiseAllAddresses(Ptr<MpTcpSocketBase> mptcp)
 
   for(std::vector<Ipv4Address>::const_iterator i = addresses.begin(); i != addresses.end(); i++ )
   {
-    mptcp->GetSubFlow(0)->AdvertiseAddress( *i, 0 );
+    mptcp->GetSubflow(0)->AdvertiseAddress( *i, 0 );
   }
 
 
@@ -611,7 +611,7 @@ MpTcpAddressTestCase::DoRun (void)
         {
           // Attemps to
           bool res = false;
-          res = m_serverSock->GetSubFlow(0)->StopAdvertisingAddress( Ipv4Address("42.42.42.42")   );
+          res = m_serverSock->GetSubflow(0)->StopAdvertisingAddress( Ipv4Address("42.42.42.42")   );
           NS_TEST_ASSERT_MSG_EQ( res, false, "Should not be able to remove an unregistered address");
 
 

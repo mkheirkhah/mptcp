@@ -18,7 +18,8 @@
 #include "ns3/tcp-socket.h"
 #include "ns3/ipv4-end-point.h"
 #include "ns3/ipv4-address.h"
-
+#include "ns3/tcp-tx-buffer.h"
+#include "ns3/tcp-rx-buffer.h"
 
 namespace ns3
 {
@@ -40,7 +41,7 @@ typedef enum
 typedef enum
 {
   Uncoupled_TCPs,       // 0
-  Linked_Increases,     // 1
+  Linked_Increases,     // 1 also called coupled
   RTT_Compensator,      // 2
   Fully_Coupled         // 3
 } CongestionCtrl_t;
@@ -69,8 +70,26 @@ typedef enum
 //  INIT_SUBFLOWS
 //} MpActions_t;
 
-/**
 
+
+/**
+TODO rename later into DSNMapping
+*/
+class MpTcpMapping
+{
+public:
+  MpTcpMapping();
+  virtual ~MpTcpMapping();
+
+  SequenceNumber32 m_dataSeqNumber;   //!< MPTCP level
+  SequenceNumber32 m_subflowSeqNumber;  //!<
+  uint16_t m_size;  //!< mapping length / size
+
+};
+
+
+/**
+TODO remove
 **/
 class DSNMapping
 {
@@ -79,27 +98,32 @@ public:
 //  DSNMapping();
   /**
   **/
-  DSNMapping(uint8_t sFlowIdx, uint64_t dSeqNum, uint16_t dLvlLen, uint32_t sflowSeqNum, uint32_t ack, Ptr<Packet> pkt);
+  DSNMapping(
+    uint8_t sFlowIdx,
+  uint64_t dSeqNum, uint16_t dLvlLen, uint32_t sflowSeqNum, uint32_t ack, Ptr<Packet> pkt
+    );
 
   //DSNMapping (const DSNMapping &res);
   virtual ~DSNMapping();
   bool operator <(const DSNMapping& rhs) const;
 
   // TODO replace with SequenceNumber32 class ?
-  uint64_t dataSeqNumber;   //!<
+  uint64_t dataSeqNumber;   //!< DATA ACK (MPTCP level)
   uint16_t dataLevelLength; //!<
-  uint32_t subflowSeqNumber;  //!<
+  uint32_t subflowSeqNumber;  //!< Subflow
   uint32_t acknowledgement; //!<
   uint32_t dupAckCount; //!<
 
   /* If DSN mappings are registered in the subflow, then it becomes useless ? unless it is referenced by meta
   looks like it, in case meta needs to resend data. But then the subflowIndex must be always valid wich is not true
-  in the current implementation
+  in the current implementation.
   */
-  uint8_t subflowIndex; //!<
+  uint8_t subflowIndex; //!< Used twice
   uint8_t *packet;      //!<
 };
 
+//typedef std::list<DSNMapping*> MappingList;
+typedef std::list<MpTcpMapping> MappingList;
 /*
 class MpTcpAddressInfo
 {
@@ -112,6 +136,23 @@ public:
 };
 */
 
+
+
+class MpTcpTxBuffer : public TcpTxBuffer
+{
+  protected:
+    //Ajouter les mappings
+};
+
+class MpTcpRxBuffer : public TcpRxBuffer
+{
+};
+
+/**
+\todo replace with TcpRxBuffer etc... TcpTxBuffer ? why not Extend ?
+MpTcpTxBuffer ?
+
+*/
 class DataBuffer
 {
 public:

@@ -3,23 +3,19 @@
 #include "ns3/simulator.h"
 #include "ns3/log.h"
 
+
 NS_LOG_COMPONENT_DEFINE("MpTcpTypeDefs");
 
 namespace ns3
 {
 
-DSNMapping::DSNMapping()
-{
-  subflowIndex = 255;
-  acknowledgement = 0;
-  dataSeqNumber = 0;
-  dataLevelLength = 0;
-  subflowSeqNumber = 0;
-  dupAckCount = 0;
-  packet = 0;
-}
 
-DSNMapping::DSNMapping(uint8_t sFlowIdx, uint64_t dSeqNum, uint16_t dLvlLen, uint32_t sflowSeqNum, uint32_t ack, Ptr<Packet> pkt)
+DSNMapping::DSNMapping(
+  uint8_t sFlowIdx
+  , uint64_t dSeqNum, uint16_t dLvlLen, uint32_t sflowSeqNum,
+  uint32_t ack,
+  Ptr<Packet> pkt
+  )
 {
   subflowIndex = sFlowIdx;
   dataSeqNumber = dSeqNum;
@@ -58,6 +54,9 @@ DSNMapping::operator <(const DSNMapping& rhs) const
 {
   return this->dataSeqNumber < rhs.dataSeqNumber;
 }
+
+
+
 
 DataBuffer::DataBuffer()
 {

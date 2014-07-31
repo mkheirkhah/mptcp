@@ -222,7 +222,7 @@ protected:
   // Helper functions: Connection set up
   int
   SetupCallback(void);        // Common part of the two Bind(), i.e. set callback and remembering local addr:port
-  int
+  virtual int
   DoConnect(void);            // Sending a SYN packet to make a connection if the state allows
   void
   ConnectionSucceeded(void); // Schedule-friendly wrapper for Socket::NotifyConnectionSucceeded()
@@ -230,7 +230,7 @@ protected:
   SetupEndpoint(void);        // Configure m_endpoint for local addr for given remote addr
   int
   SetupEndpoint6(void);       // Configure m_endpoint6 for local addr for given remote addr
-  void
+  virtual void
   CompleteFork(Ptr<Packet>, const TcpHeader&, const Address& fromAddress, const Address& toAdress);
 
   // Helper functions: Transfer operation
@@ -244,7 +244,7 @@ protected:
   DoForwardUp(Ptr<Packet> packet, Ipv6Address saddr, Ipv6Address daddr, uint16_t port); // Ipv6 version
   bool
   SendPendingData(bool withAck = false); // Send as much as the window allows
-  uint32_t
+  virtual uint32_t
   SendDataPacket(SequenceNumber32 seq, uint32_t maxSize, bool withAck); // Send a data packet
   virtual void
   SendEmptyPacket(uint8_t flags); // Send a empty packet that carries a flag, e.g. ACK
@@ -256,7 +256,7 @@ protected:
   // Helper functions: Connection close
   int
   DoClose(void); // Close a socket by sending RST, FIN, or FIN+ACK, depend on the current state
-  void
+  virtual void
   CloseAndNotify(void); // To CLOSED state, notify upper layer, and deallocate end point
   void
   Destroy(void); // Kill this socket by zeroing its attributes
@@ -360,11 +360,15 @@ protected:
   Ptr<RttEstimator> m_rtt;
 
   // Rx and Tx buffer management
+public: //temporary
   TracedValue<SequenceNumber32> m_nextTxSequence; //< Next seqnum to be sent (SND.NXT), ReTx pushes it back
   TracedValue<SequenceNumber32> m_highTxMark;     //< Highest seqno ever sent, regardless of ReTx
+
+
   TcpRxBuffer m_rxBuffer;       //< Rx buffer (reordering buffer)
   TcpTxBuffer m_txBuffer;       //< Tx buffer
 
+protected:
   // State-related attributes
   TracedValue<TcpStates_t> m_state;         //< TCP state
   enum SocketErrno m_errno;         //< Socket error code

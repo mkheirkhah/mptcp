@@ -199,6 +199,8 @@ def build(bld):
         'model/tcp-options.cc',
         'model/mp-tcp-subflow.cc',
         'model/mp-tcp-olia.cc',
+        'model/mp-tcp-cc.cc',
+        'model/mp-tcp-scheduler-round-robin.cc',
         'model/mp-tcp-id-manager.cc'
         ]
 
@@ -324,7 +326,9 @@ def build(bld):
         'model/mp-tcp-socket-factory-impl.h', # matt
         'model/mp-tcp-cc.h',                  # matt
         'model/mp-tcp-olia.h',                # matt
-        'model/mp-tcp-id-manager.h'           # matt
+        'model/mp-tcp-id-manager.h'  ,         # matt
+        'model/mp-tcp-scheduler.h',           # matt
+        'model/mp-tcp-scheduler-round-robin.h',           # matt
         # 'model/mp-tcp-path-manager-ndiff.h' # matt
        ]
 

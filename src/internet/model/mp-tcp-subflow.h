@@ -34,7 +34,9 @@ namespace ns3{
 
 class MpTcpSocketBase;
 
-
+/**
+ * \class MpTcpSubFlow
+*/
 class MpTcpSubFlow : public TcpSocketBase
 {
 public:
@@ -52,8 +54,8 @@ public:
 
   virtual ~MpTcpSubFlow();
 
-  virtual int
-  Connect(const Address &address);      // Setup endpoint and call ProcessAction() to connect
+//  virtual int
+//  Connect(const Address &address);      // Setup endpoint and call ProcessAction() to connect
 
 //  uint8_t addrId,
   /**
@@ -97,9 +99,44 @@ public:
   */
   virtual uint32_t GetRemoteToken() const;
 
+  /**
+  TODO some options should be forwarded to the meta socket
+  */
+//  bool ReadOptions(Ptr<Packet> pkt, const TcpHeader& mptcpHeader);
+
+  // TODO ? Moved from meta
+  //  void ProcessListen  (uint8_t sFlowIdx, Ptr<Packet>, const TcpHeader&, const Address&, const Address&);
+
+
+  /**
+  \return Value advertised by the meta socket
+  */
+  virtual uint16_t
+  AdvertisedWindowSize(void);
+
+
+  /**
+
+  */
+  bool GetMappingForSegment( SequenceNumber32 ack, MpTcpMapping& );
+//  MpTcpMapping getSegmentOfACK( uint32_t ack);
+
+
 protected:
   friend class MpTcpSocketBase;
 
+
+  /**
+  TODO mvoe to TcpSocketBase. Split  SendDataPacket into several functions ?
+  */
+  void
+  GenerateDataPacketHeader(TcpHeader& header, SequenceNumber32 seq, uint32_t maxSize, bool withAck);
+
+  virtual void
+  CloseAndNotify(void);
+
+  virtual void
+  DiscardMappingsUpTo(uint32_t ack);
 
   virtual void
   SetSSThresh(uint32_t threshold);
@@ -110,14 +147,30 @@ protected:
   virtual uint32_t
   GetInitialCwnd(void) const;
 
-  virtual void SendEmptyPacket(uint8_t flags);
+  virtual void
+  ReceivedAck(Ptr<Packet>, const TcpHeader&); // Received an ACK packet
+  virtual void
+  ReceivedData(Ptr<Packet>, const TcpHeader&);
+  uint32_t
+  SendDataPacket(SequenceNumber32 seq, uint32_t maxSize, bool withAck); // Send a data packet
+
+  /**
+  * Like send, but pass on the global seq number associated with
+  * \see Send
+  **/
+  virtual int
+  SendMapping(Ptr<Packet> p, SequenceNumber32 seq);
+
+  /**
+  This one overridesprevious one, adding MPTCP options when needed
+  */
+  virtual void
+  SendEmptyPacket(uint8_t flags);
 
   virtual Ptr<TcpSocketBase>
   Fork(void); // Call CopyObject<> to clone me
 
 
-  void
-  CloseAndNotify(void);
 
   virtual void
   DupAck(const TcpHeader& t, uint32_t count); // Received dupack
@@ -127,68 +180,72 @@ protected:
   virtual void
   CancelAllTimers(void); // Cancel all timer when endpoint is deleted
 
-  virtual void AddDSNMapping(uint8_t sFlowIdx, uint64_t dSeqNum, uint16_t dLvlLen, uint32_t sflowSeqNum, uint32_t ack, Ptr<Packet> pkt);
-  virtual void StartTracing(string traced);
+//  virtual void AddDSNMapping(uint8_t sFlowIdx, uint64_t dSeqNum, uint16_t dLvlLen, uint32_t sflowSeqNum, uint32_t ack, Ptr<Packet> pkt);
+//  virtual void StartTracing(string traced);
   virtual void CwndTracer(uint32_t oldval, uint32_t newval);
-  virtual void SetFinSequence(const SequenceNumber32& s);
-  virtual bool Finished();
+
+//  virtual void SetFinSequence(const SequenceNumber32& s);
+//  virtual bool Finished();
   DSNMapping *GetunAckPkt();
 
 
-  uint16_t m_routeId;           // Subflow's ID (TODO remove ?)
+  uint16_t m_routeId;   //!< Subflow's ID (TODO rename into subflowId ). Position of this subflow in MetaSock's subflows std::vector
 
-  // TODO remove in favor of m_state
-  TcpStates_t state;          // Subflow's connection state
+  // TODO remove
+//  TcpStates_t state;          // Subflow's connection state
+//  Ipv4Address sAddr;          // Source Ip address
+//  uint16_t sPort;             // Source port
+//  Ipv4Address dAddr;          // Destination address
+//  uint16_t m_dPort;             // Destination port
 
-  Ipv4Address sAddr;          // Source Ip address
-  uint16_t sPort;             // Source port
-  Ipv4Address dAddr;          // Destination address
-  uint16_t m_dPort;             // Destination port
-  uint32_t oif;               // interface related to the subflow's sAddr
-  EventId retxEvent;          // Retransmission timer
-  EventId m_lastAckEvent;     // Timer for last ACK
-  EventId m_timewaitEvent;    // Timer for closing connection at sender side
-  // TODO replace by m_segmentSize
-//  uint32_t MSS;               // Maximum Segment Size
+//  EventId m_retxEvent;          // Retransmission timer
+//  EventId m_lastAckEvent;     // Timer for last ACK
+//  EventId m_timewaitEvent;    // Timer for closing connection at sender side
 
 
-//  uint32_t cnCount; // TODO remove, use parent's one          // Count of remaining connection retries
-//  uint32_t cnRetries;  same       // Number of connection retries before giving up
+
 
   // TODO replace by parent's m_
-  Time     cnTimeout;         // Timeout for connection retry
+//  Time     m_cnTimeout;         // Timeout for connection retry
   TracedValue<uint32_t> cwnd; // Congestion window (in bytes)
 
 
-   uint32_t m_ssThresh;          //!< Slow start threshold
-  uint32_t maxSeqNb;          // Highest sequence number of a sent byte. Equal to (TxSeqNumber - 1) until a retransmission occurs
-  uint32_t highestAck;        // Highest received ACK for the subflow level sequence number
-  uint32_t m_initialCWnd;     // Initial cWnd value
+    //
+  // TODO remove those in favor or parent's m_nextTxSequence, & m_highTxMark
+//  uint32_t TxSeqNumber;       // Subflow's next expected sequence number to send
+//  uint32_t RxSeqNumber;       // Subflow's next expected sequence number to receive
+
+  uint32_t m_ssThresh;          //!< Slow start threshold
+//  uint32_t maxSeqNb;          // Highest sequence number of a sent byte. Equal to (TxSeqNumber - 1) until a retransmission occurs
+//  uint32_t highestAck;        // Highest received ACK for the subflow level sequence number
+  uint32_t m_initialCWnd;     //!< Initial cWnd value
   SequenceNumber32 m_recover; // Previous highest Tx seqNb for fast recovery
   uint32_t m_retxThresh;      // Fast Retransmit threshold
   bool m_inFastRec;           // Currently in fast recovery
   bool m_limitedTx;           // perform limited transmit
-  uint32_t m_dupAckCount;     // DupACK counter
-  Ipv4EndPoint* m_endPoint;   // L4 stack object
+//  uint32_t m_dupAckCount;     // DupACK counter TO REMOVE exist in parent
+//  Ipv4EndPoint* m_endPoint;   // L4 stack object TO REMOVE exist in parent
 
   // Use Ptr here so that we don't have to unallocate memory manually ?
   std::list<DSNMapping *> m_mapDSN;  //!< List of all sent packets
+  std::list<MpTcpMapping> m_mappings;  //!< List of all sent packets
 
   // parent should provide it ?
   Ptr<RttMeanDeviation> rtt;  // RTT calculator
   std::multiset<double> measuredRTT;
   Time m_lastMeasuredRtt;       // Last measured RTT, used for plotting
-  uint32_t TxSeqNumber;       // Subflow's next expected sequence number to send
-  uint32_t RxSeqNumber;       // Subflow's next expected sequence number to receive
-  uint64_t PktCount;          // number of sent packets
-  uint32_t initialSequnceNumber; // Plotting
+
+
+
+//  uint64_t PktCount;          // number of sent packets
+//  uint32_t initialSequnceNumber; // Plotting
   bool m_gotFin;              // Whether FIN is received
-  SequenceNumber32 m_finSeq;  // SeqNb of received FIN
+//  SequenceNumber32 m_finSeq;  // SeqNb of received FIN
 
 
 //    uint32_t m_m_ssThresh;           // Slow start threshold
 
-  //plotting
+  //plotting check with parents ?
   vector<pair<double, uint32_t> > cwndTracer;
   vector<pair<double, double> > ssthreshtrack;
   vector<pair<double, double> > CWNDtrack;
@@ -209,6 +266,9 @@ protected:
 
 protected:
   Ptr<MpTcpSocketBase> m_metaSocket;
+
+
+//private:
 
 private:
   bool m_backupSubflow;
