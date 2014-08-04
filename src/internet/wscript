@@ -201,7 +201,13 @@ def build(bld):
         'model/mp-tcp-olia.cc',
         'model/mp-tcp-cc.cc',
         'model/mp-tcp-scheduler-round-robin.cc',
-        'model/mp-tcp-id-manager.cc'
+        'model/mp-tcp-id-manager.cc',
+        'model/tcp-option.cc',
+        'model/tcp-option-mptcp.cc',
+        'model/tcp-option-nop.cc',
+        'model/tcp-option-end.cc',
+        'model/tcp-option-ts.cc',
+        'model/tcp-option-winscale.cc',
         ]
 
     internet_test = bld.create_ns3_module_test_library('internet')
@@ -323,6 +329,7 @@ def build(bld):
         'model/mp-tcp-typedefs.h',          # Morteza Kheirkhah
         'model/tcp-options.h',              # Morteza Kheirkhah
         'model/mp-tcp-subflow.h',           # Morteza Kheirkhah
+        'model/tcp-option.h', # matt
         'model/mp-tcp-socket-factory-impl.h', # matt
         'model/mp-tcp-cc.h',                  # matt
         'model/mp-tcp-olia.h',                # matt
@@ -330,6 +337,12 @@ def build(bld):
         'model/mp-tcp-scheduler.h',           # matt
         'model/mp-tcp-scheduler-round-robin.h',           # matt
         # 'model/mp-tcp-path-manager-ndiff.h' # matt
+        'model/tcp-option.h',
+        'model/tcp-option-mptcp.h',
+        'model/tcp-option-nop.h',
+        'model/tcp-option-end.h',
+        'model/tcp-option-ts.h',
+        'model/tcp-option-winscale.h',
        ]
 
     if bld.env['NSC_ENABLED']:

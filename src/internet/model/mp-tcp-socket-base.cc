@@ -3738,23 +3738,14 @@ MpTcpSocketBase::BytesInFlight()
 
 //  Ptr<MpTcpSubFlow> sFlow = m_subflows[sFlowIdx];
 //  return sFlow->maxSeqNb - sFlow->highestAck;        //m_highTxMark - m_highestRxAck;
-return total;
+  return total;
 }
 
 // TODO buggy ?
 uint16_t
 MpTcpSocketBase::AdvertisedWindowSize()
 {
-  //NS_LOG_FUNCTION_NOARGS();
-//  uint16_t window = 0;
-  /*
-   if( m_recvingBuffer != 0 )
-   window = m_recvingBuffer->FreeSpaceSize ();
-   */
-//  window = 65535;
-//  return window;
-//  return (uint16_t) 65535;
-//  std::min(m_cRwnd.Get )
+  NS_LOG_FUNCTION(this);
   return TcpSocketBase::AdvertisedWindowSize();
 }
 
@@ -3887,7 +3878,7 @@ MpTcpSocketBase::CalculateTotalCWND()
       if (m_subflows[i]->m_inFastRec)
         totalCwnd += m_subflows[i]->GetSSThresh();
       else
-        totalCwnd += m_subflows[i]->cwnd.Get();          // Should be this all the time
+        totalCwnd += m_subflows[i]->m_cWnd.Get();          // Should be this all the time
     }
 
     return totalCwnd;

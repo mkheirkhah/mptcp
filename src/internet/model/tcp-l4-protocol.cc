@@ -359,31 +359,31 @@ TcpL4Protocol::Receive(Ptr<Packet> packet, Ipv4Header const &ipHeader, Ptr<Ipv4I
   //
   // MPTCP related modification----------------------------
   // Extract MPTCP options if there is any
-  vector<TcpOptions*> options = tcpHeader.GetOptions();
-  uint8_t flags = tcpHeader.GetFlags();
-  bool hasSyn = flags & TcpHeader::SYN;
-  TcpOptions *opt;
-  uint32_t Token;
-  for (uint32_t j = 0; j < options.size(); j++)
-    {
-      opt = options[j];
-      if ((opt->optName == OPT_MPCAPABLE) && hasSyn)
-        { // In this case the endpoint with destination port and token value of zero need to be find.
-          NS_LOG_INFO("TcpL4Protocol::Receive -> OPT_MPCAPABLE -> Do NOTTING");
-        }
-      else if ((opt->optName == OPT_JOIN) && hasSyn)
-        { // In this case there should be endPoint with this token, so look for a match on all endpoints.
-          Token = ((OptJoinConnection *) opt)->receiverToken;
-          TokenMaps::iterator it;
-          it = m_TokenMap.find(Token);
-          if (it != m_TokenMap.end())
-            {
-              NS_LOG_INFO("TcpL4Protocol::Receive -> OPT_JOIN -> Token " << Token << " has find forwardup to it");
-              ((*it).second)->ForwardUp(packet, ipHeader, srcPort, incomingInterface);
-              return IpL4Protocol::RX_OK;
-            }
-        }
-    }
+//  vector<TcpOptions*> options = tcpHeader.GetOptions();
+//  uint8_t flags = tcpHeader.GetFlags();
+//  bool hasSyn = flags & TcpHeader::SYN;
+//  TcpOptions *opt;
+//  uint32_t Token;
+//  for (uint32_t j = 0; j < options.size(); j++)
+//    {
+//      opt = options[j];
+//      if ((opt->optName == OPT_MPCAPABLE) && hasSyn)
+//        { // In this case the endpoint with destination port and token value of zero need to be find.
+//          NS_LOG_INFO("TcpL4Protocol::Receive -> OPT_MPCAPABLE -> Do NOTTING");
+//        }
+//      else if ((opt->optName == OPT_JOIN) && hasSyn)
+//        { // In this case there should be endPoint with this token, so look for a match on all endpoints.
+//          Token = ((OptJoinConnection *) opt)->receiverToken;
+//          TokenMaps::iterator it;
+//          it = m_TokenMap.find(Token);
+//          if (it != m_TokenMap.end())
+//            {
+//              NS_LOG_INFO("TcpL4Protocol::Receive -> OPT_JOIN -> Token " << Token << " has find forwardup to it");
+//              ((*it).second)->ForwardUp(packet, ipHeader, srcPort, incomingInterface);
+//              return IpL4Protocol::RX_OK;
+//            }
+//        }
+//    }
   //---------------------------------------------------------
   NS_LOG_LOGIC ("TcpL4Protocol " << this
       << " receiving seq " << tcpHeader.GetSequenceNumber ()
@@ -637,8 +637,9 @@ TcpL4Protocol::SendPacket(Ptr<Packet> packet, const TcpHeader &outgoing, Ipv4Add
   NS_LOG_DEBUG("SendPacket -> PacketSize Before tcpHeader is added to the packet" << packet->GetSize());
   packet->AddHeader(outgoingHeader);
   NS_LOG_DEBUG("SendPacket -> PacketSize After tcpHeader is added to the packet" << packet->GetSize()
-      << " padding: " << (int)outgoingHeader.GetPaddingLength()
-      << " option: " << (int)outgoingHeader.GetOptionsLength());
+//      << " padding: " << (int)outgoingHeader.GetPaddingLength()
+//      << " option: " << (int)outgoingHeader.GetOptionsLength()
+      );
 
   Ptr<Ipv4> ipv4 = m_node->GetObject<Ipv4>();
   if (ipv4 != 0)

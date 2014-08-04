@@ -264,7 +264,7 @@ protected:
   Destroy6(void); // Kill this socket by zeroing its attributes
   void
   DeallocateEndPoint(void); // Deallocate m_endPoint
-  void
+  virtual void
   PeerClose(Ptr<Packet>, const TcpHeader&); // Received a FIN from peer, notify rx buffer
   void
   DoPeerClose(void); // FIN is in sequence, notify app and respond with a FIN

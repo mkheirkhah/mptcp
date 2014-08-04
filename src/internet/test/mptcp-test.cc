@@ -335,7 +335,7 @@ void
 MpTcpTestCase::CreateNodes()
 {
   Config::SetDefault("ns3::TcpL4Protocol::SocketType",
-			             TypeIdValue (MpTcpSocketBase::GetTypeId()));
+			             TypeIdValue (MpTcpCCOlia::GetTypeId()));
 //  Config::SetDefault ("ns3::TcpSocket::SegmentSize", UintegerValue (1000));
 //  Config::SetDefault ("ns3::TcpSocket::DelAckCount", UintegerValue (1));
 //  Config::SetDefault ("ns3::DropTailQueue::MaxPackets", UintegerValue (20));

@@ -5,6 +5,7 @@
 #include "ns3/socket.h"
 #include "ns3/assert.h"
 #include "mp-tcp-socket-base.h"
+#include "ns3/mp-tcp-olia.h"
 
 namespace ns3
 {
@@ -32,7 +33,7 @@ Ptr<Socket>
 MpTcpSocketFactoryImpl::CreateSocket(void)
 {
 //  CreateObject()
-  return m_mptcp->CreateSocket( MpTcpSocketBase::GetTypeId() );
+  return m_mptcp->CreateSocket( MpTcpCCOlia::GetTypeId() );
 }
 
 void

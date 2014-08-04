@@ -71,7 +71,35 @@ public: // public methods
 //  virtual int Connect(Ipv4Address servAddr, uint16_t servPort);
 
   virtual int Listen(void);
-  virtual int Close(void);                    // Close by app: Kill socket upon tx buffer emptied
+
+  /**
+  RFC 6824:
+   - When an application calls close() on a socket, this indicates that it
+   has no more data to send; for regular TCP, this would result in a FIN
+   on the connection.  For MPTCP, an equivalent mechanism is needed, and
+   this is referred to as the DATA_FIN.
+
+   - A DATA_FIN has the semantics and behavior as a regular TCP FIN, but
+   at the connection level.  Notably, it is only DATA_ACKed once all
+   data has been successfully received at the connection level
+  */
+  virtual int Close(void);
+
+  /**
+  RFC 6824
+  - If all subflows have
+   been closed with a FIN exchange, but no DATA_FIN has been received
+   and acknowledged, the MPTCP connection is treated as closed only
+   after a timeout.  This implies that an implementation will have
+   TIME_WAIT states at both the subflow and connection levels (see
+   Appendix C).  This permits "break-before-make" scenarios where
+   connectivity is lost on all subflows before a new one can be re-
+   established.
+  */
+  virtual void
+  PeerClose(Ptr<Packet>, const TcpHeader&); // Received a FIN from peer, notify rx buffer
+
+
 //  virtual int Close(uint8_t sFlowIdx);        // Closing subflow...
 //  uint32_t GetTxAvailable();                  // Return available space in sending buffer to application
 

@@ -31,7 +31,7 @@ MpTcpSubFlow::GetTypeId(void)
       .SetParent<TcpSocketBase>()
       .AddTraceSource("cWindow",
           "The congestion control window to trace.",
-           MakeTraceSourceAccessor(&MpTcpSubFlow::cwnd));
+           MakeTraceSourceAccessor(&MpTcpSubFlow::m_cWnd));
   return tid;
 }
 
@@ -186,11 +186,13 @@ MpTcpSubFlow::SendEmptyPacket(uint8_t flags)
 
   if (((m_state == SYN_SENT) || (m_state == SYN_RCVD )))
     {
+      TcpOptionMpTcpCapable option;
+      header.AppendOption( option );
+//      m_localNonce = rand() % 1000 + 1;        // Random Local Token
+//      header.AddOptMPC(OPT_MPCAPABLE, m_localNonce); // Adding MP_CAPABLE & Token to TCP option (5 Bytes)
+//      olen += 5;
+//      m_tcp->m_TokenMap[m_localNonce] = m_endPoint;       //m_tcp->m_TokenMap.insert(std::make_pair(m_localNonce, m_endPoint))
 
-      m_localNonce = rand() % 1000 + 1;        // Random Local Token
-      header.AddOptMPC(OPT_MPCAPABLE, m_localNonce); // Adding MP_CAPABLE & Token to TCP option (5 Bytes)
-      olen += 5;
-      m_tcp->m_TokenMap[m_localNonce] = m_endPoint;       //m_tcp->m_TokenMap.insert(std::make_pair(m_localNonce, m_endPoint))
       NS_LOG_INFO("("
 //            << (int)sFlow->m_routeId
             << ") SendEmptyPacket -> m_localNonce is mapped to connection endpoint -> "
@@ -381,7 +383,7 @@ MpTcpSubFlow::Connect(const Address &address)
 // Does this constructor even make sense ? no ? to remove ?
 MpTcpSubFlow::MpTcpSubFlow(const MpTcpSubFlow& sock)
   : TcpSocketBase(sock),
-//  m_cWnd(sock.m_cWnd),
+  m_cWnd(sock.m_cWnd),
   m_ssThresh(sock.m_ssThresh),
   m_localNonce(sock.m_localNonce),
   m_remoteToken(sock.m_remoteToken)
@@ -425,7 +427,7 @@ MpTcpSubFlow::MpTcpSubFlow(Ptr<MpTcpSocketBase> metaSocket
 //  TxSeqNumber = rand() % 1000;
 //  RxSeqNumber = 0;
 
-  cwnd = 0;
+//  cwnd = 0;
 
 //  maxSeqNb = TxSeqNumber - 1;
 //  highestAck = 0;

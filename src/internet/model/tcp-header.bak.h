@@ -23,15 +23,17 @@
 
 #include <stdint.h>
 #include "ns3/header.h"
-#include "ns3/tcp-option.h"
 #include "ns3/buffer.h"
 #include "ns3/tcp-socket-factory.h"
 #include "ns3/ipv4-address.h"
 #include "ns3/ipv6-address.h"
 #include "ns3/sequence-number.h"
+#include "tcp-options.h"
 
-namespace ns3 {
+using namespace std;
 
+namespace ns3
+{
 /**
  * \ingroup tcp
  * \brief Header for the Transmission Control Protocol
@@ -44,135 +46,120 @@ namespace ns3 {
 class TcpHeader : public Header
 {
 public:
-  TcpHeader ();
-  virtual ~TcpHeader ();
+  TcpHeader();
+  TcpHeader(const TcpHeader &res);
+  //TcpHeader Copy();
 
+  virtual
+  ~TcpHeader();
+
+  // MultiPath related options-----------------
+  bool AddOptMPC(TcpOption_t optName, uint32_t TxToken); // MultiPath TCP related methods
+  bool AddOptJOIN(TcpOption_t optName, uint32_t RxToken, uint8_t addrID);   // Join Connection Option
+  bool AddOptADDR(TcpOption_t optName, uint8_t addrID, Ipv4Address addr);// Add address Option
+  bool AddOptDSN(TcpOption_t optName, uint64_t dSeqNum, uint16_t dLevelLength, uint32_t sfSeqNum); // Data Sequence Mapping Option
+  bool AddOptREMADR(TcpOption_t optName, uint8_t addrID);   // Remove address Option
+  bool AddOptTT(TcpOption_t optName, uint64_t tsval, uint64_t tsecr); // TCP TimesTamp Option
+  bool AddOptDSACK(TcpOption_t optName, OptDSACK *opt); // DSACK Option
+  void SetOptionsLength(uint8_t length);
+  void SetPaddingLength(uint8_t length);
+  uint8_t GetOptionsLength() const;
+  uint8_t GetPaddingLength() const;
+  uint8_t TcpOptionToUint(TcpOption_t opt) const;
+  TcpOption_t UintToTcpOption(uint8_t kind) const;
+  vector<TcpOptions*> GetOptions(void) const;
+  void SetOptions(vector<TcpOptions*> opt);
+  //--------------------------------------------
   /**
    * \brief Enable checksum calculation for TCP
    *
-   * \todo currently has no effect
+   * \to do currently has no effect
    */
-  void EnableChecksums (void);
-
+  void
+  EnableChecksums(void);
 //Setters
-
-/**
- * \brief Set the source port
- * \param port The source port for this TcpHeader
- */
-  void SetSourcePort (uint16_t port);
-
   /**
-   * \brief Set the destination port
+   * \param port The source port for this TcpHeader
+   */
+  void
+  SetSourcePort(uint16_t port);
+  /**
    * \param port the destination port for this TcpHeader
    */
-  void SetDestinationPort (uint16_t port);
-
+  void
+  SetDestinationPort(uint16_t port);
   /**
-   * \brief Set the sequence Number
    * \param sequenceNumber the sequence number for this TcpHeader
    */
-  void SetSequenceNumber (SequenceNumber32 sequenceNumber);
-
+  void
+  SetSequenceNumber(SequenceNumber32 sequenceNumber);
   /**
-   * \brief Set the ACK number
    * \param ackNumber the ACK number for this TcpHeader
    */
-  void SetAckNumber (SequenceNumber32 ackNumber);
-
+  void
+  SetAckNumber(SequenceNumber32 ackNumber);
   /**
-   * \brief Set the length of the header
    * \param length the length of this TcpHeader
    */
-  void SetLength (uint8_t length);
-
+  void
+  SetLength(uint8_t length);
   /**
-   * \brief Set flags of the header
    * \param flags the flags for this TcpHeader
    */
-  void SetFlags (uint8_t flags);
-
+  void
+  SetFlags(uint8_t flags);
   /**
-   * \brief Set the window size
    * \param windowSize the window size for this TcpHeader
    */
-  void SetWindowSize (uint16_t windowSize);
-
+  void
+  SetWindowSize(uint16_t windowSize);
   /**
-   * \brief Set the urgent pointer
    * \param urgentPointer the urgent pointer for this TcpHeader
    */
-  void SetUrgentPointer (uint16_t urgentPointer);
+  void
+  SetUrgentPointer(uint16_t urgentPointer);
 
 //Getters
-
- /**
-  * \brief Get the source port
-  * \return The source port for this TcpHeader
-  */
-  uint16_t GetSourcePort () const;
-
   /**
-   * \brief Get the destination port
+   * \return The source port for this TcpHeader
+   */
+  uint16_t
+  GetSourcePort() const;
+  /**
    * \return the destination port for this TcpHeader
    */
-  uint16_t GetDestinationPort () const;
-
+  uint16_t
+  GetDestinationPort() const;
   /**
-   * \brief Get the sequence number
    * \return the sequence number for this TcpHeader
    */
-  SequenceNumber32 GetSequenceNumber () const;
-
+  SequenceNumber32
+  GetSequenceNumber() const;
   /**
-   * \brief Get the ACK number
    * \return the ACK number for this TcpHeader
    */
-  SequenceNumber32 GetAckNumber () const;
-
+  SequenceNumber32
+  GetAckNumber() const;
   /**
-   * \brief Get the length
    * \return the length of this TcpHeader
    */
-  uint8_t GetLength () const;
-
+  uint8_t
+  GetLength() const;
   /**
-   * \brief Get the flags
    * \return the flags for this TcpHeader
    */
-  uint8_t GetFlags () const;
-
+  uint8_t
+  GetFlags() const;
   /**
-   * \brief Get the window size
    * \return the window size for this TcpHeader
    */
-  uint16_t GetWindowSize () const;
-
+  uint16_t
+  GetWindowSize() const;
   /**
-   * \brief Get the urgent pointer
    * \return the urgent pointer for this TcpHeader
    */
-  uint16_t GetUrgentPointer () const;
-
-  /**
-   * \brief Get the option specified
-   * \param kind the option to retrieve
-   * \return Whether the header contains a specific kind of option, or 0
-   */
-  Ptr<TcpOption> GetOption (uint8_t kind) const;
-
-  /**
-   * \brief Check if the header has the option specified
-   * \param kind Option to check for
-   * \return true if the header has the option, false otherwise
-   */
-  bool HasOption (uint8_t kind) const;
-
-  /**
-   * \brief Append an option to the TCP header
-   * \param option The option to append
-   */
-  void AppendOption (Ptr<TcpOption> option);
+  uint16_t
+  GetUrgentPointer() const;
 
   /**
    * \brief Initialize the TCP checksum.
@@ -188,9 +175,8 @@ public:
    *        IP packet.
    *
    */
-  void InitializeChecksum (Ipv4Address source,
-                           Ipv4Address destination,
-                           uint8_t protocol);
+  void
+  InitializeChecksum(Ipv4Address source, Ipv4Address destination, uint8_t protocol);
 
   /**
    * \brief Initialize the TCP checksum.
@@ -206,9 +192,8 @@ public:
    *        IP packet.
    *
    */
-  void InitializeChecksum (Ipv6Address source,
-                           Ipv6Address destination,
-                           uint8_t protocol);
+  void
+  InitializeChecksum(Ipv6Address source, Ipv6Address destination, uint8_t protocol);
 
   /**
    * \brief Initialize the TCP checksum.
@@ -224,32 +209,40 @@ public:
    *        IP packet.
    *
    */
-  void InitializeChecksum (Address source,
-                           Address destination,
-                           uint8_t protocol);
+  void
+  InitializeChecksum(Address source, Address destination, uint8_t protocol);
 
   /**
    * \brief TCP flag field values
    */
-  typedef enum { NONE = 0, FIN = 1, SYN = 2, RST = 4, PSH = 8, ACK = 16,
-                 URG = 32, ECE = 64, CWR = 128} Flags_t;
+  typedef enum
+  {
+    NONE = 0, FIN = 1, SYN = 2, RST = 4, PSH = 8, ACK = 16, URG = 32, ECE = 64, CWR = 128
+  } Flags_t;
 
   /**
    * \brief Get the type ID.
    * \return the object TypeId
    */
-  static TypeId GetTypeId (void);
-  virtual TypeId GetInstanceTypeId (void) const;
-  virtual void Print (std::ostream &os) const;
-  virtual uint32_t GetSerializedSize (void) const;
-  virtual void Serialize (Buffer::Iterator start) const;
-  virtual uint32_t Deserialize (Buffer::Iterator start);
+  static TypeId
+  GetTypeId(void);
+  virtual TypeId
+  GetInstanceTypeId(void) const;
+  virtual void
+  Print(std::ostream &os) const;
+  virtual uint32_t
+  GetSerializedSize(void) const;
+  virtual void
+  Serialize(Buffer::Iterator start) const;
+  virtual uint32_t
+  Deserialize(Buffer::Iterator start);
 
   /**
    * \brief Is the TCP checksum correct ?
    * \returns true if the checksum is correct, false otherwise.
    */
-  bool IsChecksumOk (void) const;
+  bool
+  IsChecksumOk(void) const;
 
 private:
   /**
@@ -257,7 +250,8 @@ private:
    * \param size packet size
    * \returns the checksum
    */
-  uint16_t CalculateHeaderChecksum (uint16_t size) const;
+  uint16_t
+  CalculateHeaderChecksum(uint16_t size) const;
   uint16_t m_sourcePort;        //!< Source port
   uint16_t m_destinationPort;   //!< Destination port
   SequenceNumber32 m_sequenceNumber;  //!< Sequence number
@@ -274,9 +268,12 @@ private:
   bool m_calcChecksum;    //!< Flag to calculate checksum
   bool m_goodChecksum;    //!< Flag to indicate that checksum is correct
 
-
-  typedef std::list< Ptr<TcpOption> > TcpOptionList; //!< List of TcpOption
-  TcpOptionList m_options; //!< TcpOption present in the header
+  // MPTCP related variables------------
+  std::vector<TcpOptions*> m_option;
+  uint8_t oLen;
+  uint8_t pLen;
+  bool original;
+  //------------------------------------
 };
 
 } // namespace ns3

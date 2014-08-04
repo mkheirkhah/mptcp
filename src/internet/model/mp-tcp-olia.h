@@ -20,11 +20,14 @@ static struct tcp_congestion_ops mptcp_olia = {
 	.set_state	= mptcp_olia_set_state,
 	.min_cwnd	= tcp_reno_min_cwnd,
 };
-**/
+
+* \ingroup mptcp
+*/
 class MpTcpCCOlia : public MpTcpSocketBase
 {
 
 public:
+  static TypeId GetTypeId (void);
 
   MpTcpCCOlia();
   MpTcpCCOlia(const MpTcpCCOlia& sock);

@@ -201,8 +201,8 @@ protected:
 //  EventId m_timewaitEvent;    // Timer for closing connection at sender side
 
 
-  // TODO replace by parent's m_
-  TracedValue<uint32_t> cwnd; // Congestion window (in bytes)
+  // TODO replace by parent's m_ m_cWnd
+  TracedValue<uint32_t> m_cWnd; // Congestion window (in bytes)
 
 
   uint32_t m_ssThresh;          //!< Slow start threshold
