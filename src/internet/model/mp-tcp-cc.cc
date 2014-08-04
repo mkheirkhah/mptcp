@@ -5,6 +5,10 @@ namespace ns3
 {
 
 
+MpTcpCongestionControl::MpTcpCongestionControl()
+{
+
+}
 
 //void
 //MpTcpSocketBase::calculateTotalCWND()

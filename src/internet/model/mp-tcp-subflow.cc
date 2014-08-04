@@ -174,6 +174,7 @@ MpTcpSubFlow::SendEmptyPacket(uint8_t flags)
       }
       else
       {
+        //TODO use ComputeTx ... member
           // Exponential backoff of connection time out
           int backoffCount = 0x1 << (m_cnRetries - m_cnCount);
           RTO = Seconds(m_cnTimeout.GetSeconds() * backoffCount);
@@ -405,8 +406,8 @@ MpTcpSubFlow::MpTcpSubFlow(Ptr<MpTcpSocketBase> metaSocket
 //    dAddr(Ipv4Address::GetZero()),
 //    m_dPort(0),
 //    oif(0), // outputinterface
-    m_ssThresh(65535),  // retrieve from meta CC
-    m_mapDSN(0),
+    m_ssThresh(65535),  // retrieve from meta CC set in parent's ?
+//    m_mapDSN(0),
     m_lastMeasuredRtt(Seconds(0.0)),
      // TODO move out to MpTcpCControl
 
@@ -825,6 +826,19 @@ MpTcpSubFlow::SendDataPacket(SequenceNumber32 seq, uint32_t maxSize, bool withAc
   #endif
 }
 
+
+// TODO inspect
+void
+MpTcpSubFlow::Retransmit(void)
+{
+  TcpSocketBase::Retransmit();
+
+  // pass on mapping
+  m_metaSocket->OnSubflowRetransmit( this );
+
+  // TODO change window ?
+}
+
 /*
 This function is useless as prototyped in TcpSocketBase :(
 */
@@ -1194,6 +1208,13 @@ uint16_t
 MpTcpSubFlow::AdvertisedWindowSize(void)
 {
   return m_metaSocket->AdvertisedWindowSize();
+}
+
+
+void
+MpTcpSubFlow::ReceivedAck(Ptr<Packet>, const TcpHeader&)
+{
+
 }
 
 

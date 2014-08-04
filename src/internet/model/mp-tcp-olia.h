@@ -21,12 +21,13 @@ static struct tcp_congestion_ops mptcp_olia = {
 	.min_cwnd	= tcp_reno_min_cwnd,
 };
 **/
-class MpTcpCCOlia : public MpTcpCongestionControl
+class MpTcpCCOlia : public MpTcpSocketBase
 {
 
 public:
 
   MpTcpCCOlia();
+  MpTcpCCOlia(const MpTcpCCOlia& sock);
   virtual ~MpTcpCCOlia();
 
   virtual uint32_t
@@ -35,12 +36,15 @@ public:
   virtual uint32_t
   GetInitialCwnd(void) const;
 
+
+  virtual Ptr<MpTcpSocketBase> MpTcpFork(void);
+//  virtual Ptr<TcpSocketBase> Fork(void);
   // transform into a callback ?
   // Callback<Ptr<MpTcpSubFlow>, Ptr<MpTcpSocketBase>, Ptr<MpTcpCongestionControl> >
   //Ptr<MpTcpSubFlow>
 
   // Called by SendPendingData() to get a subflow based on round robin algorithm
-  virtual int GeneratePartition(Ptr<MpTcpSocketBase> metaSock);
+//  virtual int GeneratePartition(Ptr<MpTcpSocketBase> metaSock);
 
   virtual const char*
   GetName(void) const {

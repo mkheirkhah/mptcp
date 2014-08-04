@@ -38,6 +38,11 @@ TODO rename in MetaSocket ?
 This is the MPTCP meta socket the application talks with
 this socket. New subflows, as well as the first one (the master
 socket) are linked to this meta socket.
+
+Every data transfer happens on a subflow. Following the linux kernel from UCL (http://multipath-tcp.org) convention,
+the first established subflow is called the "master" subflow.
+As such many inherited (protected) functions are overriden & left empty.
+
 **/
 class MpTcpSocketBase : public TcpSocketBase
 {
@@ -63,22 +68,22 @@ public: // public methods
   virtual int Connect(const Address &address);
 
   // TODO to remove there is no equivalent in parent's class
-  virtual int Connect(Ipv4Address servAddr, uint16_t servPort);
+//  virtual int Connect(Ipv4Address servAddr, uint16_t servPort);
 
   virtual int Listen(void);
   virtual int Close(void);                    // Close by app: Kill socket upon tx buffer emptied
-  virtual int Close(uint8_t sFlowIdx);        // Closing subflow...
-  uint32_t GetTxAvailable();                  // Return available space in sending buffer to application
+//  virtual int Close(uint8_t sFlowIdx);        // Closing subflow...
+//  uint32_t GetTxAvailable();                  // Return available space in sending buffer to application
 
   /**
   TcpTxBuffer API need to be used in future!
   This would called SendPendingData() - TcpTxBuffer API need to be used in future!
   */
   bool SendBufferedData();
-  int FillBuffer(uint8_t* buf, uint32_t size);// Fill sending buffer with data - TcpTxBuffer API need to be used in future!
-  uint32_t Recv(uint8_t* buf, uint32_t size); // Receive data from receiveing buffer - TcpRxBuffe API need to be used in future!
-  void allocateSendingBuffer(uint32_t size);  // Can be removed now as SetSndBufSize() is implemented instead!
-  void allocateRecvingBuffer(uint32_t size);  // Can be removed now as SetRcvBufSize() is implemented instead!
+//  int FillBuffer(uint8_t* buf, uint32_t size);// Fill sending buffer with data - TcpTxBuffer API need to be used in future!
+//  uint32_t Recv(uint8_t* buf, uint32_t size); // Receive data from receiveing buffer - TcpRxBuffe API need to be used in future!
+//  void allocateSendingBuffer(uint32_t size);  // Can be removed now as SetSndBufSize() is implemented instead!
+//  void allocateRecvingBuffer(uint32_t size);  // Can be removed now as SetRcvBufSize() is implemented instead!
 
 
 
@@ -156,14 +161,14 @@ public: // public variables
   std::list<uint32_t> sampleList;
 
   // TODO remove in favor of parents' ?
-  vector<pair<double, double> > totalCWNDtrack;
-  vector<pair<double, double> > reTxTrack;
-  vector<pair<double, double> > timeOutTrack;
-  vector<pair<double, double> > PartialAck;
-  vector<pair<double, double> > FullAck;
-  vector<pair<double, double> > DupAcks;
-  vector<pair<double, double> > PacketDrop;
-  vector<pair<double, double> > TxQueue;
+  std::vector<pair<double, double> > totalCWNDtrack;
+  std::vector<pair<double, double> > reTxTrack;
+  std::vector<pair<double, double> > timeOutTrack;
+  std::vector<pair<double, double> > PartialAck;
+  std::vector<pair<double, double> > FullAck;
+  std::vector<pair<double, double> > DupAcks;
+  std::vector<pair<double, double> > PacketDrop;
+  std::vector<pair<double, double> > TxQueue;
 
 protected: // protected methods
 
@@ -174,10 +179,11 @@ protected: // protected methods
 //  virtual int SetLocalToken(uint32_t token) const;
 
   // Implementing some inherited methods from ns3::TcpSocket. No need to comment them!
-  virtual void SetSndBufSize (uint32_t size);
-  virtual uint32_t GetSndBufSize (void) const;
-  virtual void SetRcvBufSize (uint32_t size);
-  virtual uint32_t GetRcvBufSize (void) const;
+//  virtual void SetSndBufSize (uint32_t size);
+//  virtual uint32_t GetSndBufSize (void) const;
+//  virtual void SetRcvBufSize (uint32_t size);
+//  virtual uint32_t GetRcvBufSize (void) const;
+
   virtual void SetSSThresh(uint32_t threshold);
   virtual uint32_t GetSSThresh(void) const;
   virtual void SetInitialCwnd(uint32_t cwnd);
@@ -293,6 +299,11 @@ protected: // protected methods
   // Manage data Tx/Rx
   virtual Ptr<TcpSocketBase> Fork(void);
 
+  /**
+  */
+  virtual Ptr<MpTcpSocketBase> MpTcpFork(void) = 0;
+
+  virtual void Retransmit();
   // TODO see if we can remove/override parents
   virtual void ReceivedAck ( Ptr<Packet>, const TcpHeader&); // Received an ACK packet
   virtual void ReceivedData ( Ptr<Packet>, const TcpHeader&); // Recv of a data, put into buffer, call L7 to get it if necessary
@@ -303,23 +314,54 @@ protected: // protected methods
 //  virtual bool ReadOptions (uint8_t sFlowIdx, Ptr<Packet> pkt, const TcpHeader&); // Read option from incoming packets
 //  virtual bool ReadOptions (Ptr<Packet> pkt, const TcpHeader&); // Read option from incoming packets (Listening Socket only)
   virtual void DupAck(const TcpHeader& t, uint32_t count);  // Not in operation, it's pure virtual function from TcpSocketBase
-  void DupAck(uint8_t sFlowIdx, DSNMapping * ptrDSN);       // Congestion control algorithms -> loss recovery
+//  void DupAck(uint8_t sFlowIdx, DSNMapping * ptrDSN);       // Congestion control algorithms -> loss recovery
 //  void NewACK(uint8_t sFlowIdx, const TcpHeader&, TcpOptions* opt);
 //  void NewAckNewReno(uint8_t sFlowIdx, const TcpHeader&, TcpOptions* opt);
 //  void DoRetransmit (uint8_t sFlowIdx);
 //  void DoRetransmit (uint8_t sFlowIdx, DSNMapping* ptrDSN);
 //  void SetReTxTimeout(uint8_t sFlowIdx);
-//  void ReTxTimeout(uint8_t sFlowIdx);
-  void Retransmit(uint8_t sFlowIdx);
+
+  /**
+  * @return
+  */
+
+  /**
+  */
+// virtual  GenerateMappings = 0
+
+  /**
+  * @brief
+  * @return
+  */
+  Time ComputeReTxTimeoutForSubflow( Ptr<MpTcpSubFlow> );
+
+
+
+  //////////////////////////////////////////////////////////////////
+  ////  Here follows a list of MPTCP specific *callbacks* triggered by subflows
+  ////  on certain events
+
+  /**
+   * @param
+   * @param mapping
+   add count param ?
+  */
+  virtual void OnSubflowDupack(Ptr<MpTcpSubFlow> sf, MpTcpMapping mapping);
+  virtual void OnSubflowRetransmit(Ptr<MpTcpSubFlow> sf) ;
+
 //  void LastAckTimeout(uint8_t sFlowIdx);
 
 
+  /**
+   *  inherited from parent: update buffers
+   * @brief Called from subflows when they receive DATA-ACK. For now calls parent fct
+   */
   virtual void
-  NewAck(SequenceNumber32 const& seq);
+  NewAck(SequenceNumber32 const& dataLevelSeq);
 
   // Re-ordering buffer
-  bool StoreUnOrderedData(DSNMapping *ptr);
-  void ReadUnOrderedData();
+//  bool StoreUnOrderedData(DSNMapping *ptr);
+//  void ReadUnOrderedData();
 
   /**
   Looks for unordered packets
@@ -327,8 +369,8 @@ protected: // protected methods
 //  bool FindPacketFromUnOrdered(uint8_t sFlowIdx);
 
   // Congestion control
-  void OpenCWND(uint8_t sFlowIdx, uint32_t ackedBytes);
-  void ReduceCWND(uint8_t sFlowIdx, DSNMapping* ptrDSN);
+//  void OpenCWND(uint8_t sFlowIdx, uint32_t ackedBytes);
+//  void ReduceCWND(uint8_t sFlowIdx, DSNMapping* ptrDSN);
 
 
   // Helper functions -> main operations
@@ -341,7 +383,8 @@ protected: // protected methods
   bool IsThereRoute(Ipv4Address src, Ipv4Address dst);     // Called by InitiateSubflow & LookupByAddrs and Connect to check whether there is route between a pair of addresses.
 
   /**
-  When advertising an IP, we need to check if the IP belongs to the node
+  When advertising an IP, we need to check if the IP belongs to the node.
+  Never used so far & not implemented
   **/
   bool IsLocalAddress(Ipv4Address addr);
 
@@ -351,12 +394,12 @@ protected: // protected methods
   Ptr<NetDevice> FindOutputNetDevice(Ipv4Address);
 
 
-  DSNMapping* getAckedSegment(uint8_t sFlowIdx, uint32_t ack);
-  DSNMapping* getSegmentOfACK(uint8_t sFlowIdx, uint32_t ack);
+//  DSNMapping* getAckedSegment(uint8_t sFlowIdx, uint32_t ack);
+//  DSNMapping* getSegmentOfACK(uint8_t sFlowIdx, uint32_t ack);
 
   // Helper functions -> evaluation and debugging
 //  void PrintIpv4AddressFromIpv4Interface(Ptr<Ipv4Interface>, int32_t);
-  void getQueuePkt(Ipv4Address addr);
+//  void getQueuePkt(Ipv4Address addr);
 
 
   // Helper functions -> plotting
@@ -371,16 +414,8 @@ protected: // protected methods
 
 protected: // protected variables
 
-
-  // TODO remove
-//  Ipv4Address        m_localAddress;
-//  Ipv4Address        m_remoteAddress;
-//  uint16_t           m_localPort;
-//  uint16_t           m_remotePort;
-
-//  uint8_t            m_currentSublow; // master socket ??? to remove
-
-  std::vector<Ptr<MpTcpSubFlow> > m_subflows;
+  typedef std::vector<Ptr<MpTcpSubFlow> > SubflowList;
+  SubflowList m_subflows;
 
   Callback<bool, Ptr<Socket>, Address, uint8_t > m_onRemoteAddAddr;  //!< return true to create a subflow
 //  Callback<bool, Ptr<Socket>, Address, uint8_t > m_onNewLocalIp;  //!< return true to create a subflow
@@ -391,29 +426,17 @@ protected: // protected variables
 //  virtual void OnAddAddress(MpTcpAddressInfo);
 //  virtual void OnRemAddress();
 
-
-  // MultiPath related parameters
-//  MpStates_t mpSendState;   //!< TODO to remove (useless)
-//  MpStates_t mpRecvState;   //!< TODO to remove (useless)
   bool m_mpEnabled;   //!< True if remote host is MPTCP compliant
-
-
-//  uint32_t m_unOrdMaxSize;  //!< Looks like it can be removed safely ?
-
 
 
   Ptr<MpTcpPathIdManager> m_remotePathIdManager;  //!< Keep track of advertised ADDR id advertised by remote endhost
 
-
-  MappingList m_unOrdered;  //!< buffer that hold the out of sequence received packet
-
+//  MappingList m_unOrdered;  //!< buffer that hold the out of sequence received packet
 
   // Congestion control
-
   Ptr<MpTcpSchedulerRoundRobin> m_scheduler;  //!<
   Ptr<MpTcpCongestionControl> m_algoCC;  //!<  Algorithm for Congestion Control
-//  CongestionCtrl_t AlgoCC;       // Algorithm for Congestion Control
-//  DataDistribAlgo_t m_distribAlgo; // Algorithm for Data Distribution
+
 
   // Window management variables node->GetObject<TcpL4Protocol>();
   uint32_t m_ssThresh;           // Slow start threshold
@@ -427,18 +450,16 @@ protected: // protected variables
 
   // Buffer management
   // Parent names for buffers are m_rxBuffer & m_txBuffer
-  DataBuffer *
-  // TcpTxBuffer
-  m_sendingBuffer;
-  DataBuffer *
-  m_recvingBuffer;
+//  DataBuffer *
+//  m_sendingBuffer;
+//  DataBuffer *
+//  m_recvingBuffer;
 
   std::map<Ipv4Address,uint8_t> m_localAddresses; //!< Associate every local IP with an unique identifier
 
 
   // TODO make private ? check what it does
   // should be able to rmeove one
-//  bool client;
   bool m_server;
 
 private:

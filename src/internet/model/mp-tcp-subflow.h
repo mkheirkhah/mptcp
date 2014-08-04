@@ -114,6 +114,10 @@ public:
   virtual uint16_t
   AdvertisedWindowSize(void);
 
+  /**
+  */
+  virtual void
+  Retransmit(void);
 
   /**
 
@@ -186,34 +190,20 @@ protected:
 
 //  virtual void SetFinSequence(const SequenceNumber32& s);
 //  virtual bool Finished();
-  DSNMapping *GetunAckPkt();
+//  DSNMapping *GetunAckPkt();
 
 
   uint16_t m_routeId;   //!< Subflow's ID (TODO rename into subflowId ). Position of this subflow in MetaSock's subflows std::vector
 
-  // TODO remove
-//  TcpStates_t state;          // Subflow's connection state
-//  Ipv4Address sAddr;          // Source Ip address
-//  uint16_t sPort;             // Source port
-//  Ipv4Address dAddr;          // Destination address
-//  uint16_t m_dPort;             // Destination port
 
 //  EventId m_retxEvent;          // Retransmission timer
 //  EventId m_lastAckEvent;     // Timer for last ACK
 //  EventId m_timewaitEvent;    // Timer for closing connection at sender side
 
 
-
-
   // TODO replace by parent's m_
-//  Time     m_cnTimeout;         // Timeout for connection retry
   TracedValue<uint32_t> cwnd; // Congestion window (in bytes)
 
-
-    //
-  // TODO remove those in favor or parent's m_nextTxSequence, & m_highTxMark
-//  uint32_t TxSeqNumber;       // Subflow's next expected sequence number to send
-//  uint32_t RxSeqNumber;       // Subflow's next expected sequence number to receive
 
   uint32_t m_ssThresh;          //!< Slow start threshold
 //  uint32_t maxSeqNb;          // Highest sequence number of a sent byte. Equal to (TxSeqNumber - 1) until a retransmission occurs
@@ -224,10 +214,9 @@ protected:
   bool m_inFastRec;           // Currently in fast recovery
   bool m_limitedTx;           // perform limited transmit
 //  uint32_t m_dupAckCount;     // DupACK counter TO REMOVE exist in parent
-//  Ipv4EndPoint* m_endPoint;   // L4 stack object TO REMOVE exist in parent
 
   // Use Ptr here so that we don't have to unallocate memory manually ?
-  std::list<DSNMapping *> m_mapDSN;  //!< List of all sent packets
+//  std::list<DSNMapping *> m_mapDSN;  //!< List of all sent packets
   std::list<MpTcpMapping> m_mappings;  //!< List of all sent packets
 
   // parent should provide it ?
@@ -236,9 +225,6 @@ protected:
   Time m_lastMeasuredRtt;       // Last measured RTT, used for plotting
 
 
-
-//  uint64_t PktCount;          // number of sent packets
-//  uint32_t initialSequnceNumber; // Plotting
   bool m_gotFin;              // Whether FIN is received
 //  SequenceNumber32 m_finSeq;  // SeqNb of received FIN
 
@@ -272,7 +258,7 @@ protected:
 
 private:
   bool m_backupSubflow;
-//  bool m_masterSocket;
+
   uint32_t m_localNonce;  //!< Store local host token, generated during the 3-way handshake
   uint32_t m_remoteToken; //!< Store remote host token
 

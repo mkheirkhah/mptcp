@@ -177,6 +177,8 @@ void MpTcpBulkSendApplication::SendData (void)
   NS_LOG_FUNCTION (this);
   NS_LOG_DEBUG("m_totBytes: " << m_totBytes << " maxByte: " << m_maxBytes << " GetTxAvailable: " << m_socket->GetTxAvailable() << " SendSize: " << m_sendSize);
 
+    NS_LOG_ERROR("Not implemented !!");
+  #if 0
   while (m_totBytes < m_maxBytes && m_socket->GetTxAvailable())
     { // Time to send more new data into MPTCP socket buffer
       uint32_t toSend = m_sendSize;
@@ -194,6 +196,7 @@ void MpTcpBulkSendApplication::SendData (void)
       m_socket->Close();
       //m_connected = false;
     }
+  #endif
 }
 
 void MpTcpBulkSendApplication::ConnectionSucceeded (Ptr<Socket> socket)

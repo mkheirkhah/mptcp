@@ -29,3 +29,5 @@ use "/NodeList/[i]/DeviceList/[i]" ?
 * add a LossEstimator to Tcp ?
 * In functions SendEmptyPacket etc... allow to pass an option reader,option adder
 * Create buffer with 64bit sequence numbers
+* move RTO management away from RTT estimator (m_rto) with everything in it: setminrto/setmaxrto
+* private function to set variables that are plotted. This way can't forget about updating their values

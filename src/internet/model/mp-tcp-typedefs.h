@@ -74,12 +74,14 @@ typedef enum
 
 /**
 TODO rename later into DSNMapping
+if we were in C++11 could be a tuple
 */
 class MpTcpMapping
 {
 public:
   MpTcpMapping();
-  virtual ~MpTcpMapping();
+  MpTcpMapping( SequenceNumber32  dataSeqNb, uint16_t mappingSize);
+  virtual ~MpTcpMapping() {};
 
   SequenceNumber32 m_dataSeqNumber;   //!< MPTCP level
   SequenceNumber32 m_subflowSeqNumber;  //!<
@@ -87,10 +89,12 @@ public:
 
 };
 
+typedef std::list<MpTcpMapping> MappingList;
 
 /**
 TODO remove
 **/
+#if 0
 class DSNMapping
 {
 public:
@@ -123,7 +127,7 @@ public:
 };
 
 //typedef std::list<DSNMapping*> MappingList;
-typedef std::list<MpTcpMapping> MappingList;
+
 /*
 class MpTcpAddressInfo
 {
@@ -170,6 +174,7 @@ public:
   uint32_t PendingData();
   uint32_t FreeSpaceSize();
 };
+#endif
 
 } //namespace ns3
 #endif //MP_TCP_TYPEDEFS_H

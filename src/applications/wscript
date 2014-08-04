@@ -27,11 +27,13 @@ def build(bld):
         'helper/udp-echo-helper.cc',
         'helper/v4ping-helper.cc',
         'helper/radvd-helper.cc',
-        'model/mp-tcp-packet-sink.cc',
-        'model/mp-tcp-bulk-send-application.cc',
-        'helper/mp-tcp-packet-sink-helper.cc',
-        'helper/mp-tcp-bulk-send-helper.cc',
-        
+        # TODO should be able to use TCP applications for now
+        # when using more paths, will repair these files
+        #'model/mp-tcp-packet-sink.cc',
+        #'model/mp-tcp-bulk-send-application.cc',
+        #'helper/mp-tcp-packet-sink-helper.cc',
+        #'helper/mp-tcp-bulk-send-helper.cc',
+
         ]
 
     applications_test = bld.create_ns3_module_test_library('applications')

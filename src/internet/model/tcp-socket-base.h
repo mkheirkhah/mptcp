@@ -312,6 +312,10 @@ protected:
   EstimateRtt(const TcpHeader&); // RTT accounting
   virtual void
   NewAck(SequenceNumber32 const& seq); // Update buffers w.r.t. ACK
+
+  /**
+   * @param count
+  */
   virtual void
   DupAck(const TcpHeader& t, uint32_t count) = 0; // Received dupack
   virtual void

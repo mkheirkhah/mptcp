@@ -9,7 +9,24 @@ NS_LOG_COMPONENT_DEFINE("MpTcpTypeDefs");
 namespace ns3
 {
 
+MpTcpMapping::MpTcpMapping() :
+  m_dataSeqNumber(0),
+  m_subflowSeqNumber(0),
+  m_size(0)
+{
 
+}
+
+//SequenceNumber32 subflowSeqNb
+MpTcpMapping::MpTcpMapping( SequenceNumber32  dataSeqNb, uint16_t mappingSize) :
+  m_dataSeqNumber(dataSeqNb),
+  m_size(mappingSize)
+  {
+  }
+
+
+
+#if 0
 DSNMapping::DSNMapping(
   uint8_t sFlowIdx
   , uint64_t dSeqNum, uint16_t dLvlLen, uint32_t sflowSeqNum,
@@ -191,7 +208,7 @@ DataBuffer::Full()
 {
   return (bufMaxSize == (uint32_t) buffer.size()); //( freeSpaceSize == 0 );
 }
-
+#endif
 /*
 MpTcpAddressInfo::MpTcpAddressInfo() :
     addrID(0), ipv4Addr(Ipv4Address::GetZero()), mask(Ipv4Mask::GetZero())
