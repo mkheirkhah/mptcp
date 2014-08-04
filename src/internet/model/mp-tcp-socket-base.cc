@@ -2496,11 +2496,22 @@ MpTcpSocketBase::ReadUnOrderedData()
 void
 MpTcpSocketBase::OnSubflowDupack(Ptr<MpTcpSubFlow> sf, MpTcpMapping mapping)
 {
+  NS_LOG_LOGIC("Subflow Dupack");
 }
 
 void
 MpTcpSocketBase::OnSubflowRetransmit(Ptr<MpTcpSubFlow> sf)
 {
+  NS_LOG_LOGIC("Subflow retransmit");
+}
+
+
+
+uint32_t
+MpTcpSocketBase::Window()
+{
+  NS_LOG_FUNCTION (this);
+  return std::min( m_rWnd.Get(), m_cWnd.Get() );
 }
 
 Time
@@ -3714,6 +3725,7 @@ MpTcpSocketBase::IsLocalAddress(Ipv4Address addr)
 //    }
 //}
 
+// const
 uint32_t
 MpTcpSocketBase::BytesInFlight()
 {
@@ -3741,7 +3753,9 @@ MpTcpSocketBase::AdvertisedWindowSize()
    */
 //  window = 65535;
 //  return window;
-  return (uint16_t) 65535;
+//  return (uint16_t) 65535;
+//  std::min(m_cRwnd.Get )
+  return TcpSocketBase::AdvertisedWindowSize();
 }
 
 #if 0
@@ -3861,6 +3875,23 @@ MpTcpSocketBase::LookupByAddrs(Ipv4Address src, Ipv4Address dst)
 }
 #endif
 
+
+//const
+uint32_t
+MpTcpSocketBase::CalculateTotalCWND()
+{
+  uint32_t totalCwnd = 0;
+  for (uint32_t i = 0; i < m_subflows.size(); i++)
+    {
+      // fast recovery
+      if (m_subflows[i]->m_inFastRec)
+        totalCwnd += m_subflows[i]->GetSSThresh();
+      else
+        totalCwnd += m_subflows[i]->cwnd.Get();          // Should be this all the time
+    }
+
+    return totalCwnd;
+}
 
 #if 0
 void
@@ -4062,17 +4093,17 @@ MpTcpSocketBase::OpenCWND(uint8_t sFlowIdx, uint32_t ackedBytes)
 //{
 //  return m_subflows[sFlowIdx];
 //}
-
-void
-MpTcpSocketBase::SetCongestionCtrlAlgo(Ptr<MpTcpCongestionControl> ccalgo)
-{
-//  AlgoCC = ccalgo;
-  NS_ASSERT( ccalgo);
-
-  // TODO change connection should not have started
-  NS_ASSERT_MSG( m_state != CLOSED  , "test" );
-  m_algoCC = ccalgo;
-}
+//
+//void
+//MpTcpSocketBase::SetCongestionCtrlAlgo(Ptr<MpTcpCongestionControl> ccalgo)
+//{
+////  AlgoCC = ccalgo;
+//  NS_ASSERT( ccalgo);
+//
+//  // TODO change connection should not have started
+//  NS_ASSERT_MSG( m_state != CLOSED  , "test" );
+//  m_algoCC = ccalgo;
+//}
 
 
 //DSNMapping*

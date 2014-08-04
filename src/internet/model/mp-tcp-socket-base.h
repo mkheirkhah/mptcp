@@ -290,7 +290,13 @@ protected: // protected methods
   virtual uint32_t
   BytesInFlight();  // Return total bytes in flight of a subflow
 
-  uint16_t
+  //const
+  virtual uint32_t CalculateTotalCWND();
+
+
+  virtual uint32_t
+  Window();
+  virtual uint16_t
   AdvertisedWindowSize();
 
   // TODO remove
@@ -298,6 +304,7 @@ protected: // protected methods
 
   // Manage data Tx/Rx
   virtual Ptr<TcpSocketBase> Fork(void);
+
 
   /**
   */
@@ -435,7 +442,7 @@ protected: // protected variables
 
   // Congestion control
   Ptr<MpTcpSchedulerRoundRobin> m_scheduler;  //!<
-  Ptr<MpTcpCongestionControl> m_algoCC;  //!<  Algorithm for Congestion Control
+//  Ptr<MpTcpCongestionControl> m_algoCC;  //!<  Algorithm for Congestion Control
 
 
   // Window management variables node->GetObject<TcpL4Protocol>();
@@ -444,16 +451,12 @@ protected: // protected variables
   uint32_t remoteRecvWnd;        // Flow control window at remote side TODO rename ?
   uint32_t m_segmentSize;          // Segment size
 
+  TracedValue<uint32_t>  m_cWnd;         //< Congestion window
+
+
   // TODO replace with parent's traced values
 //  uint64_t nextTxSequence;       // Next expected sequence number to send in connection level
 //  uint64_t nextRxSequence;       // Next expected sequence number to receive in connection level
-
-  // Buffer management
-  // Parent names for buffers are m_rxBuffer & m_txBuffer
-//  DataBuffer *
-//  m_sendingBuffer;
-//  DataBuffer *
-//  m_recvingBuffer;
 
   std::map<Ipv4Address,uint8_t> m_localAddresses; //!< Associate every local IP with an unique identifier
 
