@@ -39,7 +39,7 @@ http://www.iana.org/assignments/tcp-parameters/tcp-parameters.xhtml
 0x7 	MP_FASTCLOSE 	Fast Close
 0xf 	(PRIVATE) 	Private Use within controlled testbe
  */
-
+// TODO rename to MpTcpSubType
   enum SubType {
     MP_CAPABLE,
     MP_JOIN,
@@ -52,6 +52,18 @@ http://www.iana.org/assignments/tcp-parameters/tcp-parameters.xhtml
   };
 
 // TODO transofrmer en template
+/**
+ * \class TcpOptionMpTcp
+                           1                   2                   3
+       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+      +---------------+---------------+-------+-----------------------+
+      |     Kind      |    Length     |Subtype|                       |
+      +---------------+---------------+-------+                       |
+      |                     Subtype-specific data                     |
+      |                       (variable length)                       |
+      +---------------------------------------------------------------+
+
+*/
 template<unsigned int SUBTYPE>
 class TcpOptionMpTcp : public TcpOption
 {
@@ -64,54 +76,62 @@ public:
 
 
 
-  static TypeId GetTypeId (void)
-  {
-    static TypeId tid = TypeId ("ns3::TcpOptionMpTcp")
-      .SetParent<TcpOption> ()
-  //    .AddConstructor<TcpOptionMpTcp> ()
-    ;
-    return tid;
+
+  virtual void
+  Print (std::ostream &os) const {
+    NS_ASSERT_MSG(false, " You should override TcpOptionMpTcp::Print function");
+    os << "MPTCP option. You should override";
   }
 
 
-  virtual TypeId GetInstanceTypeId (void) const
-{
-  return GetTypeId ();
-}
-  virtual void Print (std::ostream &os) const {
-  }
-  virtual void Serialize (Buffer::Iterator start) const
+  virtual void
+  Serialize (Buffer::Iterator start) const = 0;
+
+
+  virtual void
+  SerializeRef (Buffer::Iterator& start) const
   {
-    Buffer::Iterator i = start;
+    Buffer::Iterator& i = start;
     i.WriteU8 (GetKind ()); // Kind
-    i.WriteU8 (2); // Length
+    i.WriteU8 ( GetLength() ); // Length
+
 
     // TODO may be an error otherwise here !
 
-    i.WriteU8 ( ( (GetSubType() << 4 ) && 0xf0) + (GetLength() && 0x0f)  ); // Subtype TODO should write U4 only
+//    i.WriteU8 ( ( (GetSubType() << 4 ) && 0xf0) ); // Subtype TODO should write U4 only
     //i.WriteU8 ( GetLength() ); // Subtype TODO should write U4 only
 
   }
 
   virtual uint32_t Deserialize (Buffer::Iterator start)
-{
-  Buffer::Iterator i = start;
-  uint8_t size = i.ReadU8 ();
-  NS_ASSERT (size == 2);
-  return 2;
-}
-
-  virtual uint8_t GetLength (void) const {
+  {
+    Buffer::Iterator i = start;
+    uint8_t size = i.ReadU8 ();
+    NS_ASSERT (size == 2);
     return 2;
-  };
+  }
 
-  virtual uint8_t GetKind (void) const
+  /*
+  TODO make purely virtual ? but would need to pass
+  Buffer::Iterator as a reference
+  */
+  virtual uint8_t
+  GetLength (void) const =0;
+//  {
+//    return 2;
+//  };
+
+  /**
+   \return TCP option type
+  */
+  virtual uint8_t
+  GetKind (void) const
   {
     /* TODO ideally would refer to the enum in TcpOption::
     Hardcoded here to keep patch self-contained
     */
-  return 30;
-}
+    return 30;
+  }
 
 
   virtual uint32_t GetSerializedSize (void) const
@@ -148,7 +168,7 @@ The MP_CAPABLE option is carried on the SYN, SYN/ACK, and ACK packets
 class TcpOptionMpTcpCapable : public TcpOptionMpTcp<MP_CAPABLE>
 {
 public:
-  TcpOptionMpTcpCapable(uint64_t senderKey);
+  TcpOptionMpTcpCapable();
   virtual ~TcpOptionMpTcpCapable ();
 
   enum SubTypes
@@ -157,6 +177,23 @@ public:
     CRYPTO
   };
 
+//  static TypeId GetTypeId (void)
+//  {
+//    static TypeId tid = TypeId ("ns3::TcpOptionMpTcpCapable")
+//      .SetParent<TcpOption> ()
+//  //    .AddConstructor<TcpOptionMpTcp> ()
+//    ;
+//    return tid;
+//  }
+//
+//
+//  virtual TypeId GetInstanceTypeId (void) const
+//{
+//  return GetTypeId ();
+//}
+
+  virtual void SetSenderKey(uint64_t senderKey);
+  virtual void SetRemoteKey(uint64_t remoteKey);
 
   virtual void Print (std::ostream &os) const;
   virtual void Serialize (Buffer::Iterator start) const;
@@ -165,7 +202,7 @@ public:
   virtual uint8_t GetLength (void) const;
 
 protected:
-    uint8_t m_version; //!< MPTCP version (4 bytes
+  uint8_t m_version; //!< MPTCP version (4 bytes
 
   /*
 A: The leftmost bit, labeled "A", SHOULD be set to 1 to indicate
@@ -182,13 +219,15 @@ A: The leftmost bit, labeled "A", SHOULD be set to 1 to indicate
 
     //! Keys may be less than 64 bits
     uint64_t m_senderKey;
-    uint64_t m_receiverKey;
+    uint64_t m_remoteKey;
 };
 
 
 
 /**
+
   MP_JOIN subtype:
+  -For Initial SYN
       +---------------+---------------+-------+-----+-+---------------+
       |     Kind      |  Length = 12  |Subtype|     |B|   Address ID  |
       +---------------+---------------+-------+-----+-+---------------+
@@ -196,17 +235,101 @@ A: The leftmost bit, labeled "A", SHOULD be set to 1 to indicate
       +---------------------------------------------------------------+
       |                Sender's Random Number (32 bits)               |
       +---------------------------------------------------------------+
+
+      Figure 5: Join Connection (MP_JOIN) Option (for Initial SYN)
 **/
-class TcpOptionMpTcpJoin : public TcpOptionMpTcp<MP_JOIN>
+class TcpOptionMpTcpJoinInitialSyn : public TcpOptionMpTcp<MP_JOIN>
 {
 
 public:
 
+  TcpOptionMpTcpJoinInitialSyn();
+  virtual ~TcpOptionMpTcpJoinInitialSyn();
+
+  // Setters
+  virtual void SetPeerToken(uint32_t token) { m_peerToken = token; }
+  virtual void SetLocalToken(uint32_t token) { m_localToken = token; }
+
+  // Getters
+  virtual uint32_t GetPeerToken() const { return m_peerToken; }
+  virtual uint32_t GetLocalToken() const { return m_localToken; }
+  virtual uint8_t GetAddressId() const { return m_addressId; }
 
   virtual void Print (std::ostream &os) const;
   virtual void Serialize (Buffer::Iterator start) const;
   virtual uint32_t Deserialize (Buffer::Iterator start);
   virtual uint8_t GetLength (void) const;
+
+protected:
+  uint8_t m_addressId;    //!< Mandatory
+  uint32_t m_peerToken;
+  uint32_t m_localToken;
+
+};
+
+
+/**
+                           1                   2                   3
+       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+      +---------------+---------------+-------+-----+-+---------------+
+      |     Kind      |  Length = 16  |Subtype|     |B|   Address ID  |
+      +---------------+---------------+-------+-----+-+---------------+
+      |                                                               |
+      |                Sender's Truncated HMAC (64 bits)              |
+      |                                                               |
+      +---------------------------------------------------------------+
+      |                Sender's Random Number (32 bits)               |
+      +---------------------------------------------------------------+
+
+    Figure 6: Join Connection (MP_JOIN) Option (for Responding SYN/ACK)
+*/
+class TcpOptionMpTcpJoinSynReceived : public TcpOptionMpTcp<MP_JOIN>
+{
+
+public:
+
+  TcpOptionMpTcpJoinSynReceived();
+  virtual ~TcpOptionMpTcpJoinSynReceived();
+
+  virtual void Print (std::ostream &os) const;
+  virtual void Serialize (Buffer::Iterator start) const;
+  virtual uint32_t Deserialize (Buffer::Iterator start);
+  virtual uint8_t GetLength (void) const;
+
+protected:
+  uint8_t m_pathId;
+  uint32_t m_receiverToken;
+  uint32_t m_senderToken;
+
+};
+/**
+                           1                   2                   3
+       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+      +---------------+---------------+-------+-----------------------+
+      |     Kind      |  Length = 24  |Subtype|      (reserved)       |
+      +---------------+---------------+-------+-----------------------+
+      |                                                               |
+      |                                                               |
+      |                   Sender's HMAC (160 bits)                    |
+      |                                                               |
+      |                                                               |
+      +---------------------------------------------------------------+
+
+        Figure 7: Join Connection (MP_JOIN) Option (for Third ACK)
+*/
+class TcpOptionMpTcpJoinSynAckReceived : public TcpOptionMpTcp<MP_JOIN>
+{
+
+public:
+
+  TcpOptionMpTcpJoinSynAckReceived();
+  virtual ~TcpOptionMpTcpJoinSynAckReceived();
+
+  virtual void Print (std::ostream &os) const;
+  virtual void Serialize (Buffer::Iterator start) const;
+  virtual uint32_t Deserialize (Buffer::Iterator start);
+  virtual uint8_t GetLength (void) const;
+
 protected:
   uint8_t m_pathId;
   uint32_t m_receiverToken;
@@ -214,24 +337,55 @@ protected:
 
 };
 
-#if 0
-class TcpOptionMpTcpDSS : public TcpOptionMpTcp<DSS>
+
+
+/**
+
+                          1                   2                   3
+      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+     +--------------------------------------------------------------+
+     |                                                              |
+     |                Data Sequence Number (8 octets)               |
+     |                                                              |
+     +--------------------------------------------------------------+
+     |              Subflow Sequence Number (4 octets)              |
+     +-------------------------------+------------------------------+
+     |  Data-Level Length (2 octets) |        Zeros (2 octets)      |
+     +-------------------------------+------------------------------+
+*/
+class TcpOptionMpTcpDSN : public TcpOptionMpTcp<DSS>
 {
 
 public:
 
-/**
+  TcpOptionMpTcpDSN();
+  virtual ~TcpOptionMpTcpDSN() {};
 
+  // setter
+  virtual void Configure(uint64_t, uint32_t, uint16_t);
 
-**/
+  // getters
+  virtual uint64_t
+  GetDataSequenceNumber() const { return m_dataSequenceNumber; }
+  virtual uint32_t
+  GetSubflowSequenceNumber() const { return m_subflowSequenceNumber; }
+  virtual uint16_t
+  GetDataLevelLength() const { return m_dataLevelLength; }
+
   virtual void Print (std::ostream &os) const;
   virtual void Serialize (Buffer::Iterator start) const;
   virtual uint32_t Deserialize (Buffer::Iterator start);
   virtual uint8_t GetLength (void) const;
+
 protected:
-}
+  uint64_t m_dataSequenceNumber;
+  uint32_t m_subflowSequenceNumber;
+  uint16_t m_dataLevelLength;
+};
 
-
+/**
+Should be valid for add/rem addr
+*/
 class TcpOptionMpTcpAddAddress : public TcpOptionMpTcp<ADD_ADDR>
 {
 
@@ -245,9 +399,83 @@ public:
   virtual uint32_t Deserialize (Buffer::Iterator start);
   virtual uint8_t GetLength (void) const;
 protected:
-}
-#endif
+  uint8_t m_pathId;
+};
 
+
+class TcpOptionMpTcpRemoveAddress : public TcpOptionMpTcp<ADD_ADDR>
+{
+
+public:
+
+/**
+
+**/
+  virtual void Print (std::ostream &os) const;
+  virtual void Serialize (Buffer::Iterator start) const;
+  virtual uint32_t Deserialize (Buffer::Iterator start);
+  virtual uint8_t GetLength (void) const;
+protected:
+  uint8_t m_pathId;
+};
+
+
+/**
+RFC 6824 a subflow where the
+   receiver has indicated B=1 SHOULD NOT be used to send data unless
+   there are no usable subflows where B=0
+
+                           1                   2                   3
+       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+      +---------------+---------------+-------+-----+-+--------------+
+      |     Kind      |     Length    |Subtype|     |B| AddrID (opt) |
+      +---------------+---------------+-------+-----+-+--------------+
+
+            Figure 11: Change Subflow Priority (MP_PRIO) Option
+
+  Note that the B option is unidirectional so one emitter may ask not to receive data
+  on a subflow while transmitting on it.
+
+  Length may be 3 or 4 (if addrId present).
+
+*/
+class TcpOptionMpTcpChangePriority : public TcpOptionMpTcp<MP_PRIO>
+{
+
+public:
+  TcpOptionMpTcpChangePriority();
+  virtual ~TcpOptionMpTcpChangePriority() {};
+
+
+  virtual void SetAddressId(uint8_t addrId);
+
+  // Helper function : could be inlined
+  virtual bool EmbeddedAddressId() const;
+  virtual bool GetAddressId(uint8_t& addrId) const;
+
+
+  /**
+
+  */
+  virtual void Print (std::ostream &os) const;
+
+  // OK
+  virtual void Serialize (Buffer::Iterator start) const;
+
+  // TODO
+  virtual uint32_t Deserialize (Buffer::Iterator start);
+
+  /** Length may be 3 or 4 (if addrId present)
+  */
+  virtual uint8_t GetLength (void) const;
+
+
+protected:
+  uint8_t m_length;   //!< Length of this option
+
+  uint8_t m_addrId;   //!< May be unset
+  bool m_backupFlag;  //!<
+};
 
 } // namespace ns3
 

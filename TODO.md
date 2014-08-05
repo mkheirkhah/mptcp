@@ -10,13 +10,13 @@ List of tests:
 * Tokens stay the same along the connection
 
 Generic:
-* Remove m_remoteAddress from MpTcpSocketBase. Apparently it is used for multiplexing in tcp-l4-protocol so there might be code to remove here too
 * IPv6 support
 * add the possibility of setting priorities, ie the ability for a subflow to act as backup
 * implement callback support : need to change ns3 ? (matt)
 Morteza: the reason is mptcp subflows would be created in middle of run time, so no way to can hook them in configuration time. This partially being solved in MpTcpSubflow by calling to StartTracing() and then CwndTracer().I can recall there was bug in m_socket which prevent socket to fire call back at all :-)
-* Replace DataBuffer by TcpRxBuffer/TcpTxBuffer ? is that even possible ?
 * when removing a subflow, flip with last one and update Id. Make sure it doesn't provoke any bug
+* let RTO be chosen by meta
+* Rename *Remote* into *Peer*
 
 Requests for ns3;
 * add an IsConnected member to TcpSocketBase ?

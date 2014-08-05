@@ -16,11 +16,13 @@
 #include "ns3/ipv4-end-point.h"
 #include "ipv6-end-point.h" // it is not exported in ns3.19
 #include "ns3/node.h"
+#include "ns3/ptr.h"
+#include "ns3/tcp-option-mptcp.h"
 //#include "ns3/ipv4-address.h"
 
 NS_LOG_COMPONENT_DEFINE("MpTcpSubflow");
 
-namespace ns3{
+namespace ns3 {
 
 NS_OBJECT_ENSURE_REGISTERED(MpTcpSubFlow);
 
@@ -147,8 +149,8 @@ MpTcpSubFlow::SendEmptyPacket(uint8_t flags)
     }
 
   TcpHeader header;
-  uint8_t hlen = 0; // header length ?
-  uint8_t olen = 0; // additionnal header length. wait for SOCIS code
+//  uint8_t hlen = 0; // header length ?
+//  uint8_t olen = 0; // additionnal header length. wait for SOCIS code
 
   header.SetSourcePort( m_endPoint->GetLocalPort());
   header.SetDestinationPort( m_endPoint->GetPeerPort() );
@@ -162,6 +164,7 @@ MpTcpSubFlow::SendEmptyPacket(uint8_t flags)
   bool isAck = flags == TcpHeader::ACK;
 
     // in parent they do   m_rto = m_rtt->RetransmitTimeout();
+  // TODO let meta decide RTO
   Time RTO = rtt->RetransmitTimeout();
   if (hasSyn)
   {
@@ -183,45 +186,61 @@ MpTcpSubFlow::SendEmptyPacket(uint8_t flags)
       }
   }
 
-
+  #if 0
   if (((m_state == SYN_SENT) || (m_state == SYN_RCVD )))
     {
-      TcpOptionMpTcpCapable option;
-      header.AppendOption( option );
+      // if master
+
 //      m_localNonce = rand() % 1000 + 1;        // Random Local Token
 //      header.AddOptMPC(OPT_MPCAPABLE, m_localNonce); // Adding MP_CAPABLE & Token to TCP option (5 Bytes)
 //      olen += 5;
 //      m_tcp->m_TokenMap[m_localNonce] = m_endPoint;       //m_tcp->m_TokenMap.insert(std::make_pair(m_localNonce, m_endPoint))
 
-      NS_LOG_INFO("("
+//      NS_LOG_INFO("("
 //            << (int)sFlow->m_routeId
-            << ") SendEmptyPacket -> m_localNonce is mapped to connection endpoint -> "
-            << m_localNonce << " -> " << m_endPoint
-            << " TokenMapsSize: "<< m_tcp->m_TokenMap.size());
+//            << ") SendEmptyPacket -> m_localNonce is mapped to connection endpoint -> "
+//            << m_localNonce << " -> " << m_endPoint
+//            << " TokenMapsSize: "<< m_tcp->m_TokenMap.size());
 
     }
   else
-
+  #endif
   // if master use MP_CAPABLE
-  if (m_state == SYN_SENT && hasSyn && IsMaster() )
+  if ( ((m_state == SYN_SENT) || (m_state == SYN_RCVD )) && hasSyn)
     {
-      header.AddOptMPC(OPT_MPCAPABLE, GetLocalToken() );       // Adding MP_CAPABLE & Token to TCP option (5 Bytes)
-      olen += 5;
+      if(IsMaster())
+      {
+        uint64_t remoteKey = 0, localKey = 0;
+        // rename remote into Peer
+        m_metaSocket->GetRemoteKey(remoteKey);
+        localKey = m_metaSocket->GetLocalKey();
+
+        Ptr<TcpOptionMpTcpCapable> mpcapableOption = CreateObject<TcpOptionMpTcpCapable>();
+//         ;
+        mpcapableOption.SetRemoteKey( remoteKey );
+        mpcapableOption.SetSenderKey( localKey );
+        header.AppendOption( Ptr<TcpOption>(&mpcapableOption) );
+      }
+      else
+      {
+
+      }
+//      header.AddOptMPC(OPT_MPCAPABLE, GetLocalToken() );       // Adding MP_CAPABLE & Token to TCP option (5 Bytes)
     }
   // Otherwise MP_JOIN
-  else if (m_state == SYN_SENT && hasSyn && !IsMaster())
-    {
-//      NS_ASSERT() TODO check for token/ remote nonce  existence
-      header.AddOptJOIN(OPT_JOIN, GetRemoteToken(), 0); // last param = addrId
-      olen += 6;
-    }
+//  else if (m_state == SYN_SENT && hasSyn && !IsMaster())
+//    {
+////      NS_ASSERT() TODO check for token/ remote nonce  existence
+//      header.AddOptJOIN(OPT_JOIN, GetRemoteToken(), 0); // last param = addrId
+//
+//    }
 
-  uint8_t plen = (4 - (olen % 4)) % 4;
-  olen = (olen + plen) / 4;
-  hlen = 5 + olen;
-  header.SetLength(hlen);
-  header.SetOptionsLength(olen);
-  header.SetPaddingLength(plen);
+//  uint8_t plen = (4 - (olen % 4)) % 4;
+//  olen = (olen + plen) / 4;
+//  hlen = 5 + olen;
+//  header.SetLength(hlen);
+//  header.SetOptionsLength(olen);
+//  header.SetPaddingLength(plen);
 
   //m_metaSocket->FindOutputNetDevice(sAddr)
   m_tcp->SendPacket(p, header, m_endPoint->GetLocalAddress() , m_endPoint->GetPeerAddress(), m_endPoint->GetBoundNetDevice() );
@@ -240,10 +259,9 @@ MpTcpSubFlow::SendEmptyPacket(uint8_t flags)
     }
 
   //if (!isAck)
-  NS_LOG_INFO("("
-//          << (int)sFlowIdx
-          <<") SendEmptyPacket-> "
-          << header <<" Length: "<< (int)header.GetLength());
+//  NS_LOG_INFO("("
+//          <<") SendEmptyPacket-> "
+//          << header <<" Length: "<< (int)header.GetLength());
 }
 
 
@@ -595,11 +613,14 @@ MpTcpSubFlow::SendDataPacket(SequenceNumber32 seq, uint32_t maxSize, bool withAc
 //  Ptr<ListErrorModel> rem = CreateObject<ListErrorModel>();
 //  rem->SetList(sampleList);
 
-  // Add options afterwards if first packet
+  // Add options afterwards if first packet of the mapping
   if(mapping.m_subflowSeqNumber == seq  )
   {
     // Add DSN option
-    header.AddOptDSN(OPT_DSN, mapping.m_dataSeqNumber.GetValue(), mapping.m_size, seq.GetValue() );
+
+    header.AddOptDSN(OPT_DSN,
+    mapping.m_dataSeqNumber.GetValue(), mapping.m_size, seq.GetValue()
+    );
   }
 
 
@@ -934,12 +955,12 @@ MpTcpSubFlow::AdvertiseAddress(Ipv4Address addr, uint16_t port)
   header.SetAckNumber( m_rxBuffer.NextRxSequence() );
   header.SetSourcePort( m_endPoint->GetLocalPort() ); // m_endPoint->GetLocalPort()
   header.SetDestinationPort( m_endPoint->GetPeerPort() );
-  uint8_t hlen = 0;
-  uint8_t olen = 0;
+//  uint8_t hlen = 0;
+//  uint8_t olen = 0;
 
 
 //      IPv4Address;;ConvertFrom ( addr );
-
+  Ptr<MpTcp
   header.AddOptADDR(OPT_ADDR, addrId, Ipv4Address::ConvertFrom ( addr ) );
   olen += 6;
 

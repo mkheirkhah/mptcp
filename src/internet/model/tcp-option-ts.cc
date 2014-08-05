@@ -71,7 +71,7 @@ TcpOptionTS::Serialize (Buffer::Iterator start) const
   i.WriteU8 (10); // Length
   i.WriteHtonU32 (m_timestamp); // Local timestamp
   i.WriteHtonU32 (m_echo); // Echo timestamp
-} 
+}
 
 uint32_t
 TcpOptionTS::Deserialize (Buffer::Iterator start)
