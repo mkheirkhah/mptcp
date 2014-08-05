@@ -217,8 +217,8 @@ MpTcpSubFlow::SendEmptyPacket(uint8_t flags)
 
         Ptr<TcpOptionMpTcpCapable> mpcapableOption = CreateObject<TcpOptionMpTcpCapable>();
 //         ;
-        mpcapableOption.SetRemoteKey( remoteKey );
-        mpcapableOption.SetSenderKey( localKey );
+        mpcapableOption->SetRemoteKey( remoteKey );
+        mpcapableOption->SetSenderKey( localKey );
         header.AppendOption( Ptr<TcpOption>(&mpcapableOption) );
       }
       else

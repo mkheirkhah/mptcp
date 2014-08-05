@@ -152,6 +152,10 @@ protected:
 /**
 The MP_CAPABLE option is carried on the SYN, SYN/ACK, and ACK packets
    that start the first subflow of an MPTCP connection
+   A => checksum required
+   B is for extensibility
+   C to H = crypto algorithms
+
        0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
       +---------------+---------------+-------+-------+---------------+
       |     Kind      |    Length     |Subtype|Version|A|B|C|D|E|F|G|H|
@@ -176,6 +180,13 @@ public:
     CHECKSUM,
     CRYPTO
   };
+  enum CryptoAlgorithms
+  {
+    NONE = 0,
+    HMAC_SHA1 = 1
+
+    // more may come - check the Standard
+  };
 
 //  static TypeId GetTypeId (void)
 //  {
@@ -192,8 +203,22 @@ public:
 //  return GetTypeId ();
 //}
 
+  /**
+  * \ brief For now only version 0 exists
+  */
+  virtual uint8_t GetVersion() const { return 0;}
+  /**
+  Quoting RFC6284 The leftmost bit, labeled "A", SHOULD be set to 1 to indicate "Checksum Required"
+  */
+  virtual bool IsChecksumRequired() const;
+  // setters
   virtual void SetSenderKey(uint64_t senderKey);
   virtual void SetRemoteKey(uint64_t remoteKey);
+
+  virtual uint64_t GetLocalKey() const { return m_senderKey;}
+  virtual uint64_t GetRemoteKey() const { return m_remoteKey;}
+
+  // TODO SetCryptoAlgorithm(
 
   virtual void Print (std::ostream &os) const;
   virtual void Serialize (Buffer::Iterator start) const;
@@ -215,7 +240,8 @@ A: The leftmost bit, labeled "A", SHOULD be set to 1 to indicate
       for crypto algorithm negotiation.
 
 */
-    uint8_t m_flags; //!< 8 bits bitfield (unused for now)
+    uint8_t m_flags;    //!< 8 bits bitfield (unused for now)
+
 
     //! Keys may be less than 64 bits
     uint64_t m_senderKey;

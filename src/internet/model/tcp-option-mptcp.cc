@@ -37,7 +37,10 @@ NS_OBJECT_ENSURE_REGISTERED (TcpOptionMpTcpCapable);
 /////////////////////////////////////////////////////////
 TcpOptionMpTcpCapable::TcpOptionMpTcpCapable()
     : TcpOptionMpTcp<MP_CAPABLE> (),
-    m_version(0),m_flags(0),m_senderKey(0),m_remoteKey(0)
+    m_version(0),
+    m_flags( HMAC_SHA1 ),
+    m_senderKey(0),
+    m_remoteKey(0)
 {
 }
 
@@ -63,20 +66,29 @@ TcpOptionMpTcpCapable::SetRemoteKey(uint64_t remoteKey)
 void
 TcpOptionMpTcpCapable::Print (std::ostream &os) const
 {
-  os << "MP_CAPABLE. version" << ";" << m_version;
+  os << "MP_CAPABLE. version" << m_version
+    << "Flags:" << m_flags
+    << "Sender's Key [" << GetLocalKey() << "]"
+    << "Peer's Key [" << GetPeerKey() << "]"
+    ;
+}
+
+bool
+TcpOptionMpTcpCapable::IsChecksumRequired() const
+{
+  return ( m_flags >> 7);
 }
 
 void
 TcpOptionMpTcpCapable::Serialize (Buffer::Iterator i) const
 {
 //  Buffer::Iterator i = start;
-  TcpOptionMpTcp<MP_CAPABLE>::SerializeRef(start);
+  TcpOptionMpTcp<MP_CAPABLE>::SerializeRef(i);
 
-//  i.WriteU8 (GetKind ()); // Kind
-//  i.WriteU8 (10); // Length
-  i.WriteHtonU32 (m_timestamp); // Local timestamp
-  i.WriteHtonU32 (m_echo); // Echo timestamp
-  // la je continue a sérialiser
+  i.WriteU8 ( (GetSubType () << 4) + (0x0f & GetVersion()) ); // Kind
+  i.WriteU8 ( m_flags ); // Length
+  i.WriteHtonU64( GetLocalKey() );
+  i.WriteHtonU64( GetPeerKey() );
 }
 
 uint32_t
