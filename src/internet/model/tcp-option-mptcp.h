@@ -23,6 +23,8 @@
 #define TCP_OPTION_MPTCP_PERMITTED_H
 
 #include "tcp-option.h"
+#include "mp-tcp-typedefs.h"
+#include <vector>
 
 namespace ns3 {
 
@@ -84,8 +86,8 @@ public:
   }
 
 
-  virtual void
-  Serialize (Buffer::Iterator start) const = 0;
+//  virtual void
+//  Serialize (Buffer::Iterator start) const = 0;
 
 
   virtual void
@@ -103,9 +105,10 @@ public:
 
   }
 
-  virtual uint32_t Deserialize (Buffer::Iterator start)
+  // TODO
+  virtual uint32_t
+  Deserialize (Buffer::Iterator i)
   {
-    Buffer::Iterator i = start;
     uint8_t size = i.ReadU8 ();
     NS_ASSERT (size == 2);
     return 2;
@@ -216,7 +219,7 @@ public:
   virtual void SetRemoteKey(uint64_t remoteKey);
 
   virtual uint64_t GetLocalKey() const { return m_senderKey;}
-  virtual uint64_t GetRemoteKey() const { return m_remoteKey;}
+  virtual uint64_t GetPeerKey() const { return m_remoteKey;}
 
   // TODO SetCryptoAlgorithm(
 
@@ -367,17 +370,17 @@ protected:
 
 /**
 
-                          1                   2                   3
-      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-     +--------------------------------------------------------------+
-     |                                                              |
-     |                Data Sequence Number (8 octets)               |
-     |                                                              |
-     +--------------------------------------------------------------+
-     |              Subflow Sequence Number (4 octets)              |
-     +-------------------------------+------------------------------+
-     |  Data-Level Length (2 octets) |        Zeros (2 octets)      |
-     +-------------------------------+------------------------------+
+                        1                   2                   3
+    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+   +--------------------------------------------------------------+
+   |                                                              |
+   |                Data Sequence Number (8 octets)               |
+   |                                                              |
+   +--------------------------------------------------------------+
+   |              Subflow Sequence Number (4 octets)              |
+   +-------------------------------+------------------------------+
+   |  Data-Level Length (2 octets) |        Zeros (2 octets)      |
+   +-------------------------------+------------------------------+
 */
 class TcpOptionMpTcpDSN : public TcpOptionMpTcp<DSS>
 {
@@ -385,18 +388,20 @@ class TcpOptionMpTcpDSN : public TcpOptionMpTcp<DSS>
 public:
 
   TcpOptionMpTcpDSN();
-  virtual ~TcpOptionMpTcpDSN() {};
+  virtual ~TcpOptionMpTcpDSN();
 
   // setter
-  virtual void Configure(uint64_t, uint32_t, uint16_t);
+  void SetMapping(MpTcpMapping mapping);
+  MpTcpMapping GetMapping( ) const;
+//  virtual void Configure(uint64_t, uint32_t, uint16_t);
 
   // getters
-  virtual uint64_t
-  GetDataSequenceNumber() const { return m_dataSequenceNumber; }
-  virtual uint32_t
-  GetSubflowSequenceNumber() const { return m_subflowSequenceNumber; }
-  virtual uint16_t
-  GetDataLevelLength() const { return m_dataLevelLength; }
+//  virtual uint64_t
+//  GetDataSequenceNumber() const { return m_dataSequenceNumber; }
+//  virtual uint32_t
+//  GetSubflowSequenceNumber() const { return m_subflowSequenceNumber; }
+//  virtual uint16_t
+//  GetDataLevelLength() const { return m_dataLevelLength; }
 
   virtual void Print (std::ostream &os) const;
   virtual void Serialize (Buffer::Iterator start) const;
@@ -404,45 +409,106 @@ public:
   virtual uint8_t GetLength (void) const;
 
 protected:
-  uint64_t m_dataSequenceNumber;
-  uint32_t m_subflowSequenceNumber;
-  uint16_t m_dataLevelLength;
+  MpTcpMapping m_mapping;
+//  uint64_t m_dataSequenceNumber;
+//  uint32_t m_subflowSequenceNumber;
+//  uint16_t m_dataLevelLength;
 };
 
+
+
+
 /**
-Should be valid for add/rem addr
+
+Should be valid for add/rem addr.
+Though the port is optional in the RFC, ns3 implementation always include it, even if
+it's 0.
+                           1                   2                   3
+       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+      +---------------+---------------+-------+-------+---------------+
+      |     Kind      |     Length    |Subtype| IPVer |  Address ID   |
+      +---------------+---------------+-------+-------+---------------+
+      |          Address (IPv4 - 4 octets / IPv6 - 16 octets)         |
+      +-------------------------------+-------------------------------+
+      |   Port (2 octets, optional)   |
+      +-------------------------------+
+
+                 Figure 12: Add Address (ADD_ADDR) Option
 */
 class TcpOptionMpTcpAddAddress : public TcpOptionMpTcp<ADD_ADDR>
 {
 
 public:
 
-/**
+  TcpOptionMpTcpAddAddress();
+  virtual ~TcpOptionMpTcpAddAddress();
 
-**/
+  /**
+  we always send the port, even if it's 0 ?
+
+   "port is specified, MPTCP SHOULD attempt to connect to the specified
+   address on the same port as is already in use by the subflow on which
+   the ADD_ADDR signal was sent"
+  */
+//  virtual bool IsPortEmbedded() ;
+
+  virtual void SetAddress(InetSocketAddress, uint8_t addrId);
+//  virtual void SetAddress(Ipv6Address);
+
+  /**
+  * Only IPv4 is supported
+  * \return IPversion
+  */
+  virtual uint8_t GetAddress( InetSocketAddress& address) const;
+  virtual uint8_t GetAddressId() const;
+//  virtual void IsIpv6() const { return (m_length == 26); };
   virtual void Print (std::ostream &os) const;
   virtual void Serialize (Buffer::Iterator start) const;
   virtual uint32_t Deserialize (Buffer::Iterator start);
   virtual uint8_t GetLength (void) const;
+
 protected:
-  uint8_t m_pathId;
+//  uint8_t m_length;
+
+  uint8_t m_addressVersion; //!< IPver
+  uint8_t m_addrId;
+  uint8_t m_port;
+
+  Ipv4Address m_address;
+  Ipv6Address m_address6; //!< unused
+//  InetSocketAddress m_address;
+//  Inet6SocketAddress  m_address6;
+
+
 };
 
+/**
+                        1                   2                   3
+    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+   +---------------+---------------+-------+-------+---------------+
+   |     Kind      |  Length = 3+n |Subtype|(resvd)|   Address ID  | ...
+   +---------------+---------------+-------+-------+---------------+
+                              (followed by n-1 Address IDs, if required)
 
+          Figure 13: Remove Address (REMOVE_ADDR) Option
+*/
 class TcpOptionMpTcpRemoveAddress : public TcpOptionMpTcp<ADD_ADDR>
 {
 
 public:
+  TcpOptionMpTcpRemoveAddress ();
+  virtual ~TcpOptionMpTcpRemoveAddress ();
 
-/**
+  void GetAddresses(std::vector<uint8_t>& addresses);
+  void AddAddressId( uint8_t );
 
-**/
   virtual void Print (std::ostream &os) const;
   virtual void Serialize (Buffer::Iterator start) const;
   virtual uint32_t Deserialize (Buffer::Iterator start);
   virtual uint8_t GetLength (void) const;
 protected:
-  uint8_t m_pathId;
+//  uint8_t m_length;
+  std::vector<uint8_t> m_addressesId;
 };
 
 

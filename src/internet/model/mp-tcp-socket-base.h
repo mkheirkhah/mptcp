@@ -96,8 +96,8 @@ public: // public methods
    connectivity is lost on all subflows before a new one can be re-
    established.
   */
-  virtual void
-  PeerClose(Ptr<Packet>, const TcpHeader&); // Received a FIN from peer, notify rx buffer
+//  virtual void
+//  PeerClose(Ptr<Packet>, const TcpHeader&); // Received a FIN from peer, notify rx buffer
 
 
 //  virtual int Close(uint8_t sFlowIdx);        // Closing subflow...
@@ -393,6 +393,10 @@ protected: // protected methods
    */
   virtual void
   NewAck(SequenceNumber32 const& dataLevelSeq);
+
+  //
+  virtual void
+  NewAck(SequenceNumber64 const& dataLevelSeq);
 
   // Re-ordering buffer
 //  bool StoreUnOrderedData(DSNMapping *ptr);

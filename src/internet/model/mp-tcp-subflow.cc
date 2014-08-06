@@ -219,7 +219,7 @@ MpTcpSubFlow::SendEmptyPacket(uint8_t flags)
 //         ;
         mpcapableOption->SetRemoteKey( remoteKey );
         mpcapableOption->SetSenderKey( localKey );
-        header.AppendOption( Ptr<TcpOption>(&mpcapableOption) );
+        header.AppendOption( Ptr<TcpOption>(mpcapableOption) );
       }
       else
       {
@@ -503,9 +503,9 @@ MpTcpSubFlow::SendMapping(Ptr<Packet> p, SequenceNumber32 mptcpSeq)
   if(res >= 0)
   {
     MpTcpMapping mapping;
-    mapping.m_dataSeqNumber = mptcpSeq;
-    mapping.m_size = p->GetSize();
-    mapping.m_subflowSeqNumber = nextTxSeq;
+    mapping.Configure( mptcpSeq, p->GetSize() );
+    mapping.MapToSubflowSeqNumber( nextTxSeq );
+
     // record mapping
     m_mappings.push_back( mapping  );
   }
@@ -614,13 +614,15 @@ MpTcpSubFlow::SendDataPacket(SequenceNumber32 seq, uint32_t maxSize, bool withAc
 //  rem->SetList(sampleList);
 
   // Add options afterwards if first packet of the mapping
-  if(mapping.m_subflowSeqNumber == seq  )
+  if(mapping.GetSubflowSequenceNumber() == seq  )
   {
     // Add DSN option
-
-    header.AddOptDSN(OPT_DSN,
-    mapping.m_dataSeqNumber.GetValue(), mapping.m_size, seq.GetValue()
-    );
+    Ptr<TcpOptionMpTcpDSN> dsnOption = Create<TcpOptionMpTcpDSN>();
+    dsnOption->SetMapping( mapping );
+    header.AppendOption( dsnOption );
+//    header.AddOptDSN(OPT_DSN,
+//    mapping.m_dataSeqNumber.GetValue(), mapping.m_size, seq.GetValue()
+//    );
   }
 
 
@@ -955,22 +957,27 @@ MpTcpSubFlow::AdvertiseAddress(Ipv4Address addr, uint16_t port)
   header.SetAckNumber( m_rxBuffer.NextRxSequence() );
   header.SetSourcePort( m_endPoint->GetLocalPort() ); // m_endPoint->GetLocalPort()
   header.SetDestinationPort( m_endPoint->GetPeerPort() );
+  header.SetWindowSize(AdvertisedWindowSize());
 //  uint8_t hlen = 0;
 //  uint8_t olen = 0;
 
 
 //      IPv4Address;;ConvertFrom ( addr );
-  Ptr<MpTcp
-  header.AddOptADDR(OPT_ADDR, addrId, Ipv4Address::ConvertFrom ( addr ) );
-  olen += 6;
+  Ptr<TcpOptionMpTcpAddAddress> addAddrOption = CreateObject<TcpOptionMpTcpAddAddress>();
+  addAddrOption->SetAddress( InetSocketAddress( m_endPoint->GetLocalAddress(),0), addrId );
+//  addAddrOption->SetAddress( m_endPoint->GetLocalAddress() );
 
-  uint8_t plen = (4 - (olen % 4)) % 4;
-  header.SetWindowSize(AdvertisedWindowSize());
-  olen = (olen + plen) / 4;
-  hlen = 5 + olen;
-  header.SetLength(hlen);
-  header.SetOptionsLength(olen);
-  header.SetPaddingLength(plen);
+  header.AppendOption( addAddrOption );
+//  header.AddOptADDR(OPT_ADDR, addrId, Ipv4Address::ConvertFrom ( addr ) );
+//  olen += 6;
+
+//  uint8_t plen = (4 - (olen % 4)) % 4;
+
+//  olen = (olen + plen) / 4;
+//  hlen = 5 + olen;
+//  header.SetLength(hlen);
+//  header.SetOptionsLength(olen);
+//  header.SetPaddingLength(plen);
 
 
   m_tcp->SendPacket(pkt, header, m_endPoint->GetLocalAddress(), m_endPoint->GetPeerAddress());
@@ -1005,22 +1012,15 @@ MpTcpSubFlow::StopAdvertisingAddress(Ipv4Address address)
   header.SetAckNumber( m_rxBuffer.NextRxSequence() );
   header.SetSourcePort( m_endPoint->GetLocalPort() ); // m_endPoint->GetLocalPort()
   header.SetDestinationPort ( m_endPoint->GetPeerPort() );
-  uint8_t hlen = 0;
-  uint8_t olen = 0;
+  header.SetWindowSize(AdvertisedWindowSize());
 
 
 //      IPv4Address;;ConvertFrom ( addr );
+  Ptr<TcpOptionMpTcpRemoveAddress> remOpt = CreateObject<TcpOptionMpTcpRemoveAddress>();
+  remOpt->AddAddressId( addrId );
 
-  header.AddOptREMADR(OPT_REMADR, addrId );
-  olen += 6;
+//  header.AddOptREMADR(OPT_REMADR,  );
 
-  uint8_t plen = (4 - (olen % 4)) % 4;
-  header.SetWindowSize(AdvertisedWindowSize());
-  olen = (olen + plen) / 4;
-  hlen = 5 + olen;
-  header.SetLength(hlen);
-  header.SetOptionsLength(olen);
-  header.SetPaddingLength(plen);
 
 
   m_tcp->SendPacket(pkt, header, m_endPoint->GetLocalAddress(), m_endPoint->GetPeerAddress());
@@ -1082,8 +1082,8 @@ MpTcpSubFlow::GetMappingForSegment( SequenceNumber32 subflowSeqNb, MpTcpMapping&
   for( MappingList::iterator it = m_mappings.begin(); it != m_mappings.end(); it++ )
   {
     // check seq nb is within the DSN range
-    if ( (subflowSeqNb >= it->m_subflowSeqNumber ) &&
-      (subflowSeqNb < it->m_subflowSeqNumber + it->m_size)
+    if ( (subflowSeqNb >= it->GetSubflowSequenceNumber() ) &&
+      (subflowSeqNb < it->GetSubflowSequenceNumber() + it->GetDataLevelLength() )
     )
     {
       mapping = *it;
@@ -1116,12 +1116,12 @@ MpTcpSubFlow::ReceivedData(Ptr<Packet> p, const TcpHeader& mptcpHeader)
 
   // TODO see what we can free in our TxBuffer
 
-  std::vector<TcpOptions*> options = mptcpHeader.GetOptions();
-  TcpOptions* opt;
+//  std::vector<TcpOptions*> options = mptcpHeader.GetOptions();
+//  TcpOptions* opt;
 //  bool stored = true;
 
   MpTcpMapping mapping;
-
+     #if 0
   if( GetMappingForSegment( mptcpHeader.GetSequenceNumber(), mapping) )
   {
 
@@ -1143,7 +1143,7 @@ MpTcpSubFlow::ReceivedData(Ptr<Packet> p, const TcpHeader& mptcpHeader)
 
     } // end of 'for'
 
-          #if 0
+
           if (optDSN->subflowSeqNumber == RxSeqNumber)
             {
               // if in order DSN

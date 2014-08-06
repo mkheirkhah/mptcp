@@ -175,6 +175,9 @@ MpTcpSocketBase::GetSubflow(uint8_t id)
 }
 
 
+
+
+// TODO GetLocalAddr
 uint8_t
 MpTcpSocketBase::AddLocalAddr(const Ipv4Address& address)
 {
@@ -1701,6 +1704,16 @@ MpTcpSocketBase::SendBufferedData()
 //}
 
 
+
+// CAREFUL, note that here it's SequenceNumber64
+void
+MpTcpSocketBase::NewAck(SequenceNumber64 const& dataLevelSeq)
+{
+  //!
+
+}
+
+// TODO call 64bits  version ?
 void
 MpTcpSocketBase::NewAck(SequenceNumber32 const& seq)
 {

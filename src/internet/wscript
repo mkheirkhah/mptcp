@@ -196,7 +196,6 @@ def build(bld):
         'model/ipv6-pmtu-cache.cc',
         'model/mp-tcp-socket-base.cc',
         'model/mp-tcp-typedefs.cc',
-        'model/tcp-options.cc',
         'model/mp-tcp-subflow.cc',
         'model/mp-tcp-olia.cc',
         'model/mp-tcp-cc.cc',
@@ -327,7 +326,7 @@ def build(bld):
         'model/tcp-socket-factory-impl.h',  # Morteza Kheirkhah
         'model/mp-tcp-socket-base.h',       # Morteza Kheirkhah
         'model/mp-tcp-typedefs.h',          # Morteza Kheirkhah
-        'model/tcp-options.h',              # Morteza Kheirkhah
+        #<'model/tcp-options.h',              # Morteza Kheirkhah
         'model/mp-tcp-subflow.h',           # Morteza Kheirkhah
         'model/tcp-option.h', # matt
         'model/mp-tcp-socket-factory-impl.h', # matt

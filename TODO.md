@@ -17,6 +17,7 @@ Morteza: the reason is mptcp subflows would be created in middle of run time, so
 * when removing a subflow, flip with last one and update Id. Make sure it doesn't provoke any bug
 * let RTO be chosen by meta
 * Rename *Remote* into *Peer*
+* On MP_JOIN, register the address ID
 
 Requests for ns3;
 * add an IsConnected member to TcpSocketBase ?
@@ -31,3 +32,4 @@ use "/NodeList/[i]/DeviceList/[i]" ?
 * Create buffer with 64bit sequence numbers
 * move RTO management away from RTT estimator (m_rto) with everything in it: setminrto/setmaxrto
 * private function to set variables that are plotted. This way can't forget about updating their values
+* TcpTxBuffer should be templated to work with SequenceNumber64 too

@@ -73,19 +73,40 @@ typedef enum
 
 
 /**
-TODO rename later into DSNMapping
+TODO rename later into MpTcpDSNMapping
 if we were in C++11 could be a tuple
+
+\todo dataSeqNb should be a uint64_t but that has implications over a lot of code,
+especially TCP buffers so it should be thought out with ns3 people beforehand
 */
 class MpTcpMapping
 {
 public:
   MpTcpMapping();
-  MpTcpMapping( SequenceNumber32  dataSeqNb, uint16_t mappingSize);
+
+  void Configure( SequenceNumber32  dataSeqNb, uint16_t mappingSize);
+  void MapToSubflowSeqNumber( SequenceNumber32 seq) { m_subflowSequenceNumber = seq;}
   virtual ~MpTcpMapping() {};
 
-  SequenceNumber32 m_dataSeqNumber;   //!< MPTCP level
-  SequenceNumber32 m_subflowSeqNumber;  //!<
-  uint16_t m_size;  //!< mapping length / size
+  // getters
+  virtual
+  //uint64_t
+  SequenceNumber32
+  GetDataSequenceNumber() const { return m_dataSequenceNumber; }
+
+  // TODO rename into GetMappedToSubflowSeqNb()
+  virtual SequenceNumber32
+  GetSubflowSequenceNumber() const { return m_subflowSequenceNumber; }
+
+  virtual uint16_t
+  GetDataLevelLength() const { return m_dataLevelLength; }
+
+  // TODO should be SequenceNumber64
+protected:
+//  SequenceNumber64 m_dataSequenceNumber;   //!< MPTCP level
+  SequenceNumber32 m_dataSequenceNumber;   //!< MPTCP level
+  SequenceNumber32 m_subflowSequenceNumber;  //!<
+  uint16_t m_dataLevelLength;  //!< mapping length / size
 
 };
 

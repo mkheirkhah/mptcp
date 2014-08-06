@@ -10,18 +10,21 @@ namespace ns3
 {
 
 MpTcpMapping::MpTcpMapping() :
-  m_dataSeqNumber(0),
-  m_subflowSeqNumber(0),
-  m_size(0)
+  m_dataSequenceNumber(0),
+  m_subflowSequenceNumber(0),
+  m_dataLevelLength(0)
 {
 
 }
 
 //SequenceNumber32 subflowSeqNb
-MpTcpMapping::MpTcpMapping( SequenceNumber32  dataSeqNb, uint16_t mappingSize) :
-  m_dataSeqNumber(dataSeqNb),
-  m_size(mappingSize)
+void
+MpTcpMapping::Configure( SequenceNumber32  dataSeqNb, uint16_t mappingSize)
+//  m_dataSeqNumber(dataSeqNb),
+//  m_size(mappingSize)
   {
+    m_dataSequenceNumber = dataSeqNb;
+    m_dataLevelLength = mappingSize;
   }
 
 
