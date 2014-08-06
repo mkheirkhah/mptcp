@@ -41,7 +41,7 @@ NS_OBJECT_ENSURE_REGISTERED (TcpOptionMpTcpJoinInitialSyn );
 ////////  MP_CAPABLE
 /////////////////////////////////////////////////////////
 TcpOptionMpTcpCapable::TcpOptionMpTcpCapable()
-    : TcpOptionMpTcp<MP_CAPABLE> (),
+    : TcpOptionMpTcp (),
     m_version(0),
     m_flags( HMAC_SHA1 ),
     m_senderKey(0),
@@ -88,7 +88,7 @@ void
 TcpOptionMpTcpCapable::Serialize (Buffer::Iterator i) const
 {
 //  Buffer::Iterator i = start;
-  TcpOptionMpTcp<MP_CAPABLE>::SerializeRef(i);
+  TcpOptionMpTcp::SerializeRef(i);
 
   i.WriteU8 ( (GetSubType () << 4) + (0x0f & GetVersion()) ); // Kind
   i.WriteU8 ( m_flags ); // Length
@@ -99,12 +99,12 @@ TcpOptionMpTcpCapable::Serialize (Buffer::Iterator i) const
 uint32_t
 TcpOptionMpTcpCapable::Deserialize (Buffer::Iterator start)
 {
-  TcpOptionMpTcp<MP_CAPABLE>::Deserialize(start);
+  TcpOptionMpTcp::Deserialize(start);
   return 2;
 }
 
-uint8_t
-TcpOptionMpTcpCapable::GetLength (void) const
+uint32_t
+TcpOptionMpTcpCapable::GetSerializedSize (void) const
 {
     return (2+0);
 }
@@ -137,7 +137,7 @@ TcpOptionMpTcpJoinInitialSyn::Print (std::ostream &os) const
 void
 TcpOptionMpTcpJoinInitialSyn::Serialize (Buffer::Iterator i) const
 {
-  TcpOptionMpTcp<MP_JOIN>::SerializeRef(i);
+  TcpOptionMpTcp::SerializeRef(i);
   i.WriteU8( GetSubType() << 4 );
   i.WriteU8( GetAddressId() );
   i.WriteHtonU32( GetPeerToken() );
@@ -148,15 +148,59 @@ TcpOptionMpTcpJoinInitialSyn::Serialize (Buffer::Iterator i) const
 uint32_t
 TcpOptionMpTcpJoinInitialSyn::Deserialize (Buffer::Iterator start)
 {
-  TcpOptionMpTcp<MP_JOIN>::Deserialize(start);
+  TcpOptionMpTcp::Deserialize(start);
   return 2;
 }
 
 // OK
-uint8_t
-TcpOptionMpTcpJoinInitialSyn::GetLength (void) const
+uint32_t
+TcpOptionMpTcpJoinInitialSyn::GetSerializedSize (void) const
 {
     return 12;
+}
+
+///////////////////////////////////////:
+//// MP_JOIN SYN_ACK
+////
+TcpOptionMpTcpJoinSynReceived::TcpOptionMpTcpJoinSynReceived()
+    : TcpOptionMpTcp (),
+    m_pathId(0),
+    m_receiverToken(0),
+    m_senderToken(0)
+{
+  NS_LOG_FUNCTION(this);
+}
+
+TcpOptionMpTcpJoinSynReceived::~TcpOptionMpTcpJoinSynReceived ()
+{
+}
+
+
+void
+TcpOptionMpTcpJoinSynReceived::Print (std::ostream &os) const
+{
+  os << "MP_Join Initial Syn" << ";" << m_pathId;
+}
+
+void
+TcpOptionMpTcpJoinSynReceived::Serialize (Buffer::Iterator start) const
+{
+  TcpOptionMpTcp::SerializeRef(start);
+
+  // la je continue a sérialiser
+}
+
+uint32_t
+TcpOptionMpTcpJoinSynReceived::Deserialize (Buffer::Iterator start)
+{
+  TcpOptionMpTcp::Deserialize(start);
+  return 2;
+}
+
+uint32_t
+TcpOptionMpTcpJoinSynReceived::GetSerializedSize (void) const
+{
+    return 24;
 }
 
 ///////////////////////////////////////:
@@ -185,7 +229,7 @@ TcpOptionMpTcpJoinSynAckReceived::Print (std::ostream &os) const
 void
 TcpOptionMpTcpJoinSynAckReceived::Serialize (Buffer::Iterator start) const
 {
-  TcpOptionMpTcp<MP_JOIN>::Serialize(start);
+  TcpOptionMpTcp::SerializeRef(start);
 
   // la je continue a sérialiser
 }
@@ -193,15 +237,17 @@ TcpOptionMpTcpJoinSynAckReceived::Serialize (Buffer::Iterator start) const
 uint32_t
 TcpOptionMpTcpJoinSynAckReceived::Deserialize (Buffer::Iterator start)
 {
-  TcpOptionMpTcp<MP_JOIN>::Deserialize(start);
+  TcpOptionMpTcp::Deserialize(start);
   return 2;
 }
 
-uint8_t
-TcpOptionMpTcpJoinSynAckReceived::GetLength (void) const
+uint32_t
+TcpOptionMpTcpJoinSynAckReceived::GetSerializedSize (void) const
 {
     return 24;
 }
+
+
 
 
 
@@ -227,7 +273,7 @@ void
 TcpOptionMpTcpDSN::Serialize (Buffer::Iterator i) const
 {
   //
-  TcpOptionMpTcp<DSS>::SerializeRef(i);
+  TcpOptionMpTcp::SerializeRef(i);
   i.WriteHtonU64( GetMapping().GetDataSequenceNumber().GetValue() );
   i.WriteHtonU32( GetMapping().GetSubflowSequenceNumber().GetValue() );
   i.WriteHtonU16( GetMapping().GetDataLevelLength() );
@@ -245,8 +291,9 @@ TcpOptionMpTcpDSN::GetMapping( ) const
 {
   return m_mapping;
 }
-uint8_t
-TcpOptionMpTcpDSN::GetLength() const
+
+uint32_t
+TcpOptionMpTcpDSN::GetSerializedSize() const
 {
   return 16;
 }
@@ -286,6 +333,10 @@ TcpOptionMpTcpAddAddress::TcpOptionMpTcpAddAddress() :
   NS_LOG_LOGIC(this);
 }
 
+TcpOptionMpTcpAddAddress::~TcpOptionMpTcpAddAddress()
+{
+}
+
 void
 TcpOptionMpTcpAddAddress::SetAddress(InetSocketAddress address, uint8_t addrId)
 {
@@ -309,12 +360,19 @@ void
 TcpOptionMpTcpAddAddress::Print (std::ostream &os) const
 {
   os << "MP ADD_ADDR: " << m_addrId;
-//  if( GetLength() == 4)
+//  if( GetSerializedSize() == 4)
 //  {
 //    os << addrId;
 //  }
 }
 
+void
+TcpOptionMpTcpAddAddress::GetAddress( InetSocketAddress& address) const
+{
+  address.SetIpv4( m_address);
+  address.SetPort( m_port );
+
+}
 
 //virtual uint8_t GetAddress(Address& address) const;
 
@@ -367,7 +425,7 @@ TcpOptionMpTcpAddAddress::Serialize (Buffer::Iterator i) const
 //bool
 //TcpOptionMpTcpAddAddress::EmbeddedAddressId()
 //{
-//  return ( GetLength() == 4);
+//  return ( GetSerializedSize() == 4);
 //}
 
 uint32_t
@@ -376,8 +434,8 @@ TcpOptionMpTcpAddAddress::Deserialize (Buffer::Iterator start)
   return 0;
 }
 
-uint8_t
-TcpOptionMpTcpAddAddress::GetLength (void) const
+uint32_t
+TcpOptionMpTcpAddAddress::GetSerializedSize (void) const
 {
   if(m_addressVersion == 4)
   {
@@ -445,8 +503,8 @@ TcpOptionMpTcpRemoveAddress::Deserialize (Buffer::Iterator start)
   return 0;
 }
 
-uint8_t
-TcpOptionMpTcpRemoveAddress::GetLength (void) const
+uint32_t
+TcpOptionMpTcpRemoveAddress::GetSerializedSize (void) const
 {
   return ( 3 + m_addressesId.size() );
 }
@@ -474,7 +532,7 @@ void
 TcpOptionMpTcpChangePriority::Print (std::ostream &os) const
 {
   os << "MP_Prio: Change priority to " << m_backupFlag;
-  if( GetLength() == 4)
+  if( GetSerializedSize() == 4)
   {
     os << m_addrId;
   }
@@ -514,8 +572,8 @@ TcpOptionMpTcpChangePriority::Deserialize (Buffer::Iterator start)
   return 0;
 }
 
-uint8_t
-TcpOptionMpTcpChangePriority::GetLength (void) const
+uint32_t
+TcpOptionMpTcpChangePriority::GetSerializedSize (void) const
 {
   return m_length;
 }
@@ -524,7 +582,7 @@ TcpOptionMpTcpChangePriority::GetLength (void) const
 bool
 TcpOptionMpTcpChangePriority::EmbeddedAddressId() const
 {
-  return ( GetLength() == 4);
+  return ( GetSerializedSize() == 4);
 }
 
 

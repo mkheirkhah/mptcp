@@ -19,8 +19,8 @@
  * Author: Matthieu Coudron <matthieu.coudron@lip6.fr>
  */
 
-#ifndef TCP_OPTION_MPTCP_PERMITTED_H
-#define TCP_OPTION_MPTCP_PERMITTED_H
+#ifndef TCP_OPTION_MPTCP_H
+#define TCP_OPTION_MPTCP_H
 
 #include "tcp-option.h"
 #include "mp-tcp-typedefs.h"
@@ -86,22 +86,23 @@ public:
   }
 
 
-//  virtual void
-//  Serialize (Buffer::Iterator start) const = 0;
+  virtual void
+  Serialize (Buffer::Iterator start) const = 0;
 
-
+  /** Let children write the subtype since Buffer iterators can't write less than 1 byte
+  */
   virtual void
   SerializeRef (Buffer::Iterator& start) const
   {
     Buffer::Iterator& i = start;
     i.WriteU8 (GetKind ()); // Kind
-    i.WriteU8 ( GetLength() ); // Length
+    i.WriteU8 ( GetSerializedSize() ); // Length
 
 
     // TODO may be an error otherwise here !
 
 //    i.WriteU8 ( ( (GetSubType() << 4 ) && 0xf0) ); // Subtype TODO should write U4 only
-    //i.WriteU8 ( GetLength() ); // Subtype TODO should write U4 only
+    //i.WriteU8 ( GetSerializedSize() ); // Subtype TODO should write U4 only
 
   }
 
@@ -118,8 +119,8 @@ public:
   TODO make purely virtual ? but would need to pass
   Buffer::Iterator as a reference
   */
-  virtual uint8_t
-  GetLength (void) const =0;
+  virtual uint32_t
+  GetSerializedSize (void) const =0;
 //  {
 //    return 2;
 //  };
@@ -137,13 +138,14 @@ public:
   }
 
 
-  virtual uint32_t GetSerializedSize (void) const
-{
-  return 2;
-}
+//  virtual uint32_t GetSerializedSize (void) const
+//{
+//  return 2;
+//}
 
 
-  virtual uint8_t GetSubType (void) const {
+  virtual uint8_t
+  GetSubType (void) const {
     return SUBTYPE;
   };
 
@@ -224,10 +226,12 @@ public:
   // TODO SetCryptoAlgorithm(
 
   virtual void Print (std::ostream &os) const;
+
+  // OK
   virtual void Serialize (Buffer::Iterator start) const;
   virtual uint32_t Deserialize (Buffer::Iterator start);
 
-  virtual uint8_t GetLength (void) const;
+  virtual uint32_t GetSerializedSize (void) const;
 
 protected:
   uint8_t m_version; //!< MPTCP version (4 bytes
@@ -285,9 +289,10 @@ public:
   virtual uint8_t GetAddressId() const { return m_addressId; }
 
   virtual void Print (std::ostream &os) const;
+  // Ok
   virtual void Serialize (Buffer::Iterator start) const;
   virtual uint32_t Deserialize (Buffer::Iterator start);
-  virtual uint8_t GetLength (void) const;
+  virtual uint32_t GetSerializedSize (void) const;
 
 protected:
   uint8_t m_addressId;    //!< Mandatory
@@ -323,7 +328,7 @@ public:
   virtual void Print (std::ostream &os) const;
   virtual void Serialize (Buffer::Iterator start) const;
   virtual uint32_t Deserialize (Buffer::Iterator start);
-  virtual uint8_t GetLength (void) const;
+  virtual uint32_t GetSerializedSize (void) const;
 
 protected:
   uint8_t m_pathId;
@@ -355,9 +360,9 @@ public:
   virtual ~TcpOptionMpTcpJoinSynAckReceived();
 
   virtual void Print (std::ostream &os) const;
-  virtual void Serialize (Buffer::Iterator start) const;
+  virtual void Serialize (Buffer::Iterator ) const;
   virtual uint32_t Deserialize (Buffer::Iterator start);
-  virtual uint8_t GetLength (void) const;
+  virtual uint32_t GetSerializedSize (void) const;
 
 protected:
   uint8_t m_pathId;
@@ -404,9 +409,10 @@ public:
 //  GetDataLevelLength() const { return m_dataLevelLength; }
 
   virtual void Print (std::ostream &os) const;
-  virtual void Serialize (Buffer::Iterator start) const;
+  // OK
+  virtual void Serialize (Buffer::Iterator ) const;
   virtual uint32_t Deserialize (Buffer::Iterator start);
-  virtual uint8_t GetLength (void) const;
+  virtual uint32_t GetSerializedSize (void) const;
 
 protected:
   MpTcpMapping m_mapping;
@@ -459,13 +465,14 @@ public:
   * Only IPv4 is supported
   * \return IPversion
   */
-  virtual uint8_t GetAddress( InetSocketAddress& address) const;
+  virtual void GetAddress( InetSocketAddress& address) const;
   virtual uint8_t GetAddressId() const;
 //  virtual void IsIpv6() const { return (m_length == 26); };
   virtual void Print (std::ostream &os) const;
+  //ok
   virtual void Serialize (Buffer::Iterator start) const;
   virtual uint32_t Deserialize (Buffer::Iterator start);
-  virtual uint8_t GetLength (void) const;
+  virtual uint32_t GetSerializedSize (void) const;
 
 protected:
 //  uint8_t m_length;
@@ -492,7 +499,7 @@ protected:
 
           Figure 13: Remove Address (REMOVE_ADDR) Option
 */
-class TcpOptionMpTcpRemoveAddress : public TcpOptionMpTcp<ADD_ADDR>
+class TcpOptionMpTcpRemoveAddress : public TcpOptionMpTcp<REMOVE_ADDR>
 {
 
 public:
@@ -503,9 +510,10 @@ public:
   void AddAddressId( uint8_t );
 
   virtual void Print (std::ostream &os) const;
+  // OK
   virtual void Serialize (Buffer::Iterator start) const;
   virtual uint32_t Deserialize (Buffer::Iterator start);
-  virtual uint8_t GetLength (void) const;
+  virtual uint32_t GetSerializedSize (void) const;
 protected:
 //  uint8_t m_length;
   std::vector<uint8_t> m_addressesId;
@@ -559,7 +567,7 @@ public:
 
   /** Length may be 3 or 4 (if addrId present)
   */
-  virtual uint8_t GetLength (void) const;
+  virtual uint32_t GetSerializedSize (void) const;
 
 
 protected:
