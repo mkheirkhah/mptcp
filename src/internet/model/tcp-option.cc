@@ -27,6 +27,7 @@
 #include "tcp-option-sack.h"
 #include "tcp-option-ts.h"
 #include "tcp-option-snack.h"
+//#include "tcp-option-mptcp.h"
 
 #include "ns3/type-id.h"
 
@@ -82,14 +83,20 @@ TcpOption::CreateOption (uint8_t kind)
       { TcpOption::WINSCALE,  TcpOptionWinScale::GetTypeId () }
     };
 
-  for (unsigned int i=0; i < sizeof(toTid)/sizeof(kindToTid); ++i)
-    {
-      if (toTid[i].kind == kind)
+      for (unsigned int i=0; i < sizeof(toTid)/sizeof(kindToTid); ++i)
         {
-          objectFactory.SetTypeId(toTid[i].tid);
-          return objectFactory.Create<TcpOption> ();
+          if (toTid[i].kind == kind)
+            {
+                // Might be a hack
+
+              else
+              {
+                objectFactory.SetTypeId(toTid[i].tid);
+                return objectFactory.Create<TcpOption> ();
+              }
+            }
         }
-    }
+
 
   return 0;
 }

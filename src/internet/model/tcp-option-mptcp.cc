@@ -45,12 +45,15 @@ TcpOptionMpTcpCapable::TcpOptionMpTcpCapable()
     m_version(0),
     m_flags( HMAC_SHA1 ),
     m_senderKey(0),
-    m_remoteKey(0)
+    m_remoteKey(0),
+    m_length(12)
 {
+  NS_LOG_FUNCTION(this);
 }
 
 TcpOptionMpTcpCapable::~TcpOptionMpTcpCapable ()
 {
+  NS_LOG_FUNCTION(this);
 }
 
 
@@ -65,6 +68,7 @@ void
 TcpOptionMpTcpCapable::SetRemoteKey(uint64_t remoteKey)
 {
   NS_LOG_FUNCTION(this);
+  m_length = 20;
   m_remoteKey = remoteKey;
 }
 
@@ -73,9 +77,11 @@ TcpOptionMpTcpCapable::Print (std::ostream &os) const
 {
   os << "MP_CAPABLE. version" << m_version
     << "Flags:" << m_flags
-    << "Sender's Key [" << GetLocalKey() << "]"
-    << "Peer's Key [" << GetPeerKey() << "]"
-    ;
+    << "Sender's Key [" << GetLocalKey() << "]";
+  if( HasPeerKey() )
+  {
+    os  << "Peer's Key [" << GetPeerKey() << "]";
+  }
 }
 
 bool
@@ -99,15 +105,28 @@ TcpOptionMpTcpCapable::Serialize (Buffer::Iterator i) const
 uint32_t
 TcpOptionMpTcpCapable::Deserialize (Buffer::Iterator start)
 {
-  TcpOptionMpTcp::Deserialize(start);
-  return 2;
+
+  uint8_t length =  i.ReadU8( );
+  NS_ASSERT( length == 12 || length == 20);
+
+
+//  uint32_t length = TcpOptionMpTcp::DeserializeSize(start);
+
+//  switch(subType)
+//  {
+//    case MP_CAPABLE:
+//
+//  }
+
 }
 
 uint32_t
 TcpOptionMpTcpCapable::GetSerializedSize (void) const
 {
-    return (2+0);
+  // 12 ou 20
+    return (m_length);
 }
+
 
 
 
@@ -158,6 +177,9 @@ TcpOptionMpTcpJoinInitialSyn::GetSerializedSize (void) const
 {
     return 12;
 }
+
+
+
 
 ///////////////////////////////////////:
 //// MP_JOIN SYN_ACK

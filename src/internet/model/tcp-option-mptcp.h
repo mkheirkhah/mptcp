@@ -53,6 +53,9 @@ http://www.iana.org/assignments/tcp-parameters/tcp-parameters.xhtml
     MP_FASTCLOSE
   };
 
+
+class TcpOptionMpTcpCapable;
+
 // TODO transofrmer en template
 /**
  * \class TcpOptionMpTcp
@@ -65,6 +68,7 @@ http://www.iana.org/assignments/tcp-parameters/tcp-parameters.xhtml
       |                       (variable length)                       |
       +---------------------------------------------------------------+
 
+TODO should be composed ?
 */
 template<unsigned int SUBTYPE>
 class TcpOptionMpTcp : public TcpOption
@@ -74,9 +78,29 @@ public:
   TcpOptionMpTcp () : TcpOption () {};
   virtual ~TcpOptionMpTcp () {};
 
+// Prevents compilation & useless for now
+//  TypeId
+//  GetTypeId (void)
+//  {
+//    static TypeId tid = TypeId ("ns3::TcpOptionMpTcp")
+//      .SetParent<TcpOption> ()
+////      .AddConstructor<TcpOptionMSS> ()
+//    ;
+//    return tid;
+//  }
+//
+//  TypeId
+//  GetInstanceTypeId (void) const
+//  {
+//    return GetTypeId ();
+//  }
 
 
+static Ptr<TcpOption> CreateOption(uint8_t kind)
+{
+  return CreateObject<TcpOptionMpTcpCapable>();
 
+}
 
 
   virtual void
@@ -92,9 +116,9 @@ public:
   /** Let children write the subtype since Buffer iterators can't write less than 1 byte
   */
   virtual void
-  SerializeRef (Buffer::Iterator& start) const
+  SerializeRef (Buffer::Iterator& i) const
   {
-    Buffer::Iterator& i = start;
+//    Buffer::Iterator& i = start;
     i.WriteU8 (GetKind ()); // Kind
     i.WriteU8 ( GetSerializedSize() ); // Length
 
@@ -106,13 +130,24 @@ public:
 
   }
 
+  // TODO later
+  // Assume in subclasses that
+//  virtual uint32_t
+//  Deserialize (Buffer::Iterator i)
+//  {
+    // Devrait etre appelé par createOption avec l'itereateur qui commence sur la
+    // longueur
+//    uint8_t subType = i.ReadU8( );
+
+//    Deserialize()
+//  }
+
+
   // TODO
   virtual uint32_t
-  Deserialize (Buffer::Iterator i)
+  DeserializeSize (Buffer::Iterator& i)
   {
-    uint8_t size = i.ReadU8 ();
-    NS_ASSERT (size == 2);
-    return 2;
+    return i.ReadU8 ();
   }
 
   /*
@@ -134,7 +169,7 @@ public:
     /* TODO ideally would refer to the enum in TcpOption::
     Hardcoded here to keep patch self-contained
     */
-    return 30;
+    return TcpOption::MPTCP;
   }
 
 
@@ -220,6 +255,9 @@ public:
   virtual void SetSenderKey(uint64_t senderKey);
   virtual void SetRemoteKey(uint64_t remoteKey);
 
+
+  virtual bool HasPeerKey() const { return GetSerializedSize() == 20; };
+
   virtual uint64_t GetLocalKey() const { return m_senderKey;}
   virtual uint64_t GetPeerKey() const { return m_remoteKey;}
 
@@ -253,6 +291,8 @@ A: The leftmost bit, labeled "A", SHOULD be set to 1 to indicate
     //! Keys may be less than 64 bits
     uint64_t m_senderKey;
     uint64_t m_remoteKey;
+
+    uint32_t m_length;
 };
 
 

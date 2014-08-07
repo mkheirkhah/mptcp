@@ -49,11 +49,15 @@ public:
       SACK_PERM = 4,
       SACK = 5,
       TS = 8,
-      SNACK = 21
+      SNACK = 21,
+      MPTCP = 30
   };
 
   virtual void Print (std::ostream &os) const = 0;
   virtual void Serialize (Buffer::Iterator start) const = 0;
+
+  // Assume type is known, subclasses should
+  // assume is of correct type
   virtual uint32_t Deserialize (Buffer::Iterator start) = 0;
 
   virtual uint8_t GetKind (void) const = 0; // Get the `kind' (as in RFC793) of this option

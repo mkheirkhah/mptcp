@@ -23,6 +23,7 @@
 #include "tcp-header.h"
 #include "ns3/buffer.h"
 #include "ns3/address-utils.h"
+#include "ns3/tcp-option-mptcp.h"
 
 namespace ns3 {
 
@@ -368,8 +369,24 @@ TcpHeader::Deserialize (Buffer::Iterator start)
   while (optionLen)
     {
       uint8_t kind = i.ReadU8 ();
-      Ptr<TcpOption> op = TcpOption::CreateOption (kind);
 
+      /** ~HACK by MATT
+      * the other option would be to merge all MPTCP options into a single one
+      * It would not be OOP but component base paradigm. Why not ? less understandable ?
+      */
+      if( kind == TcpOption::MPTCP)
+      {
+        // Should read length and subtype then create adequate Option
+        // revert back the iterator after length
+        uint8_t length= i.ReadU8();
+        uint8_t subtype = i.ReadU8() >> 4;
+        i.Prev(); // Go backward one byte
+        Ptr<TcpOption> op = MpTcpOption::CreateOption();
+      }
+      else
+      {
+        Ptr<TcpOption> op = TcpOption::CreateOption (kind);
+      }
       optionLen -= op->Deserialize (i);
       i.Next (op->GetSerializedSize () - 1);
 
