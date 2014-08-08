@@ -6,7 +6,7 @@
 # All modules can be enabled by choosing 'all_modules'.
 #modules_enabled = ['all_modules']
 # point-to-point-layout needs to be included for netanim but why do I have netanim compilated ?
-modules_enabled = ['bridge','mpi','network','internet','core','point-to-point','applications','csma','wifi','flow-monitor','test','point-to-point-layout', 'aodv']
+modules_enabled = ['bridge','mpi','network','internet','core','point-to-point','applications','csma','wifi','flow-monitor','test','point-to-point-layout']
 
 # Set this equal to true if you want examples to be run.
 examples_enabled = False
