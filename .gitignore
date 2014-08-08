@@ -3,6 +3,7 @@
 /.lock-waf_darwin_build
 *.pyc
 *.png
+mptcp.depend
 *.plt
 *.xml
 *.layout
