@@ -56,7 +56,7 @@ http://www.iana.org/assignments/tcp-parameters/tcp-parameters.xhtml
 
 class TcpOptionMpTcpCapable;
 
-// TODO transofrmer en template
+
 /**
  * \class TcpOptionMpTcp
                            1                   2                   3
@@ -69,87 +69,22 @@ class TcpOptionMpTcpCapable;
       +---------------------------------------------------------------+
 
 TODO should be composed ?
+TODO rename to TcpOptionMpTcp and the other ones as TcpOptionMpTcpDerivatives/SubTyped
 */
-template<unsigned int SUBTYPE>
-class TcpOptionMpTcp : public TcpOption
+class TcpOptionMpTcpMain : public TcpOption
 {
 public:
-
-  TcpOptionMpTcp () : TcpOption () {};
-  virtual ~TcpOptionMpTcp () {};
-
-// Prevents compilation & useless for now
-//  TypeId
-//  GetTypeId (void)
-//  {
-//    static TypeId tid = TypeId ("ns3::TcpOptionMpTcp")
-//      .SetParent<TcpOption> ()
-////      .AddConstructor<TcpOptionMSS> ()
-//    ;
-//    return tid;
-//  }
-//
-//  TypeId
-//  GetInstanceTypeId (void) const
-//  {
-//    return GetTypeId ();
-//  }
-
-
-static Ptr<TcpOption> CreateOption(uint8_t kind)
-{
-  return CreateObject<TcpOptionMpTcpCapable>();
-
-}
+  TcpOptionMpTcpMain();
+  virtual ~TcpOptionMpTcpMain();
 
 
   virtual void
   Print (std::ostream &os) const {
     NS_ASSERT_MSG(false, " You should override TcpOptionMpTcp::Print function");
-    os << "MPTCP option. You should override";
+//    os << "MPTCP option. You should override";
   }
 
-
-  virtual void
-  Serialize (Buffer::Iterator start) const = 0;
-
-  /** Let children write the subtype since Buffer iterators can't write less than 1 byte
-  */
-  virtual void
-  SerializeRef (Buffer::Iterator& i) const
-  {
-//    Buffer::Iterator& i = start;
-    i.WriteU8 (GetKind ()); // Kind
-    i.WriteU8 ( GetSerializedSize() ); // Length
-
-
-    // TODO may be an error otherwise here !
-
-//    i.WriteU8 ( ( (GetSubType() << 4 ) && 0xf0) ); // Subtype TODO should write U4 only
-    //i.WriteU8 ( GetSerializedSize() ); // Subtype TODO should write U4 only
-
-  }
-
-  // TODO later
-  // Assume in subclasses that
-//  virtual uint32_t
-//  Deserialize (Buffer::Iterator i)
-//  {
-    // Devrait etre appelé par createOption avec l'itereateur qui commence sur la
-    // longueur
-//    uint8_t subType = i.ReadU8( );
-
-//    Deserialize()
-//  }
-
-
-  // TODO
-  virtual uint32_t
-  DeserializeSize (Buffer::Iterator& i)
-  {
-    return i.ReadU8 ();
-  }
-
+  static Ptr<TcpOption> CreateOption(uint8_t kind);
   /*
   TODO make purely virtual ? but would need to pass
   Buffer::Iterator as a reference
@@ -173,10 +108,44 @@ static Ptr<TcpOption> CreateOption(uint8_t kind)
   }
 
 
-//  virtual uint32_t GetSerializedSize (void) const
-//{
-//  return 2;
-//}
+  virtual void
+  Serialize (Buffer::Iterator start) const = 0;
+
+
+
+  /**
+  *
+  * \return length of the option
+  */
+  virtual uint32_t
+  StartDeserializing (Buffer::Iterator& i)
+  {
+     return i.ReadU8 ();
+  }
+
+  virtual uint8_t
+  GetSubType (void) const = 0;
+
+protected:
+  /**
+  Serialize TCP option type & length of the option
+  Let children write the subtype since Buffer iterators
+  can't write less than 1 byte
+  should be  called by children
+  */
+  virtual void
+  SerializeRef (Buffer::Iterator& i) const;
+};
+// TODO transofrmer en template
+
+template<unsigned int SUBTYPE>
+class TcpOptionMpTcp : public TcpOptionMpTcpMain
+{
+public:
+
+  TcpOptionMpTcp () : TcpOptionMpTcpMain () {};
+  virtual ~TcpOptionMpTcp () {};
+
 
 
   virtual uint8_t
@@ -184,7 +153,6 @@ static Ptr<TcpOption> CreateOption(uint8_t kind)
     return SUBTYPE;
   };
 
-protected:
 
 };
 
@@ -242,7 +210,7 @@ public:
 //{
 //  return GetTypeId ();
 //}
-
+  bool operator==(const TcpOptionMpTcpCapable&) const;
   /**
   * \ brief For now only version 0 exists
   */
@@ -264,6 +232,10 @@ public:
   // TODO SetCryptoAlgorithm(
 
   virtual void Print (std::ostream &os) const;
+//  void operator<<(std::ostream &os) const
+//  {
+//    Print(os);
+//  }
 
   // OK
   virtual void Serialize (Buffer::Iterator start) const;
@@ -414,18 +386,22 @@ protected:
 
 
 /**
+                          1                   2                   3
+      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+     +---------------+---------------+-------+----------------------+
+     |     Kind      |    Length     |Subtype| (reserved) |F|m|M|a|A|
+     +---------------+---------------+-------+----------------------+
+     |           Data ACK (4 or 8 octets, depending on flags)       |
+     +--------------------------------------------------------------+
+     |   Data sequence number (4 or 8 octets, depending on flags)   |
+     +--------------------------------------------------------------+
+     |              Subflow Sequence Number (4 octets)              |
+     +-------------------------------+------------------------------+
+     |  Data-Level Length (2 octets) |      Checksum (2 octets)     |
+     +-------------------------------+------------------------------+
 
-                        1                   2                   3
-    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-   +--------------------------------------------------------------+
-   |                                                              |
-   |                Data Sequence Number (8 octets)               |
-   |                                                              |
-   +--------------------------------------------------------------+
-   |              Subflow Sequence Number (4 octets)              |
-   +-------------------------------+------------------------------+
-   |  Data-Level Length (2 octets) |        Zeros (2 octets)      |
-   +-------------------------------+------------------------------+
+                Figure 9: Data Sequence Signal (DSS) Option
+
 */
 class TcpOptionMpTcpDSN : public TcpOptionMpTcp<DSS>
 {
@@ -468,7 +444,7 @@ protected:
 
 Should be valid for add/rem addr.
 Though the port is optional in the RFC, ns3 implementation always include it, even if
-it's 0.
+it's 0 for the sake of simplicity.
                            1                   2                   3
        0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
       +---------------+---------------+-------+-------+---------------+
@@ -501,6 +477,7 @@ public:
   virtual void SetAddress(InetSocketAddress, uint8_t addrId);
 //  virtual void SetAddress(Ipv6Address);
 
+  virtual bool operator==(const TcpOptionMpTcpAddAddress&) const;
   /**
   * Only IPv4 is supported
   * \return IPversion
@@ -549,6 +526,8 @@ public:
   void GetAddresses(std::vector<uint8_t>& addresses);
   void AddAddressId( uint8_t );
 
+
+  virtual bool operator==(const TcpOptionMpTcpRemoveAddress&) const;
   virtual void Print (std::ostream &os) const;
   // OK
   virtual void Serialize (Buffer::Iterator start) const;
@@ -586,13 +565,16 @@ public:
   TcpOptionMpTcpChangePriority();
   virtual ~TcpOptionMpTcpChangePriority() {};
 
-
+  virtual void SetBackupFlag(bool value) { m_backupFlag = value; }
   virtual void SetAddressId(uint8_t addrId);
 
   // Helper function : could be inlined
   virtual bool EmbeddedAddressId() const;
   virtual bool GetAddressId(uint8_t& addrId) const;
 
+  virtual bool GetPriority() const { return m_backupFlag;};
+
+  virtual bool operator==(const TcpOptionMpTcpChangePriority& ) const;
 
   /**
 

@@ -33,3 +33,5 @@ use "/NodeList/[i]/DeviceList/[i]" ?
 * move RTO management away from RTT estimator (m_rto) with everything in it: setminrto/setmaxrto
 * private function to set variables that are plotted. This way can't forget about updating their values
 * TcpTxBuffer should be templated to work with SequenceNumber64 too
+* In X::GetTypeId(), SetParent<X> makes runner hangs
+* need to define each component with a new name ? best way would be to allow REGEX on test name

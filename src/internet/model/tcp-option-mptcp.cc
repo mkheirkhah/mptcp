@@ -36,6 +36,52 @@ NS_OBJECT_ENSURE_REGISTERED (TcpOptionMpTcpRemoveAddress );
 NS_OBJECT_ENSURE_REGISTERED (TcpOptionMpTcpJoinInitialSyn );
 
 
+/////////////////////////////////////////////////////////
+////////  Base for MPTCP options
+/////////////////////////////////////////////////////////
+TcpOptionMpTcpMain::TcpOptionMpTcpMain() :
+  TcpOption()
+{
+
+}
+
+
+TcpOptionMpTcpMain::~TcpOptionMpTcpMain()
+{
+
+}
+
+Ptr<TcpOption>
+TcpOptionMpTcpMain::CreateOption(uint8_t subtype)
+{
+  switch(subtype)
+  {
+    case MP_CAPABLE:
+      return CreateObject<TcpOptionMpTcpCapable>();
+
+    default:
+      NS_ASSERT_MSG(false,"Unsupported MPTCP suboption");
+  };
+
+  return 0;
+}
+
+void
+TcpOptionMpTcpMain::SerializeRef (Buffer::Iterator& i) const
+{
+//    Buffer::Iterator& i = start;
+    i.WriteU8 (GetKind ()); // Kind
+    i.WriteU8 ( GetSerializedSize() ); // Length
+
+
+    // TODO may be an error otherwise here !
+
+//    i.WriteU8 ( ( (GetSubType() << 4 ) && 0xf0) ); // Subtype TODO should write U4 only
+    //i.WriteU8 ( GetSerializedSize() ); // Subtype TODO should write U4 only
+
+}
+
+
 
 /////////////////////////////////////////////////////////
 ////////  MP_CAPABLE
@@ -54,6 +100,13 @@ TcpOptionMpTcpCapable::TcpOptionMpTcpCapable()
 TcpOptionMpTcpCapable::~TcpOptionMpTcpCapable ()
 {
   NS_LOG_FUNCTION(this);
+}
+
+
+bool
+TcpOptionMpTcpCapable::operator==(const TcpOptionMpTcpCapable& opt) const
+{
+  return (GetPeerKey() == opt.GetPeerKey() && GetLocalKey() == opt.GetLocalKey() );
 }
 
 
@@ -99,31 +152,38 @@ TcpOptionMpTcpCapable::Serialize (Buffer::Iterator i) const
   i.WriteU8 ( (GetSubType () << 4) + (0x0f & GetVersion()) ); // Kind
   i.WriteU8 ( m_flags ); // Length
   i.WriteHtonU64( GetLocalKey() );
-  i.WriteHtonU64( GetPeerKey() );
+  if( HasPeerKey() )
+  {
+    i.WriteHtonU64( GetPeerKey() );
+  }
 }
 
 uint32_t
-TcpOptionMpTcpCapable::Deserialize (Buffer::Iterator start)
+TcpOptionMpTcpCapable::Deserialize (Buffer::Iterator i)
 {
 
-  uint8_t length =  i.ReadU8( );
-  NS_ASSERT( length == 12 || length == 20);
+  uint32_t length =  (uint32_t)i.ReadU8( );
 
+  NS_ASSERT( length == 12 || length == 20 );
+  //NS_ABORT_UNLESS
 
-//  uint32_t length = TcpOptionMpTcp::DeserializeSize(start);
+  uint8_t subtype_and_version = i.ReadU8();
+  NS_ASSERT( subtype_and_version >> 4 == GetSubType()  );
+  m_flags = i.ReadU8();
 
-//  switch(subType)
-//  {
-//    case MP_CAPABLE:
-//
-//  }
+  SetSenderKey( i.ReadNtohU64() );
 
+  if( length == 20)
+  {
+    SetRemoteKey( i.ReadNtohU64() );
+  }
+  return length;
 }
 
 uint32_t
 TcpOptionMpTcpCapable::GetSerializedSize (void) const
 {
-  // 12 ou 20
+  // 12 or 20
     return (m_length);
 }
 
@@ -167,7 +227,7 @@ TcpOptionMpTcpJoinInitialSyn::Serialize (Buffer::Iterator i) const
 uint32_t
 TcpOptionMpTcpJoinInitialSyn::Deserialize (Buffer::Iterator start)
 {
-  TcpOptionMpTcp::Deserialize(start);
+//  TcpOptionMpTcp::Deserialize(start);
   return 2;
 }
 
@@ -215,7 +275,7 @@ TcpOptionMpTcpJoinSynReceived::Serialize (Buffer::Iterator start) const
 uint32_t
 TcpOptionMpTcpJoinSynReceived::Deserialize (Buffer::Iterator start)
 {
-  TcpOptionMpTcp::Deserialize(start);
+//  TcpOptionMpTcp::Deserialize(start);
   return 2;
 }
 
@@ -259,7 +319,7 @@ TcpOptionMpTcpJoinSynAckReceived::Serialize (Buffer::Iterator start) const
 uint32_t
 TcpOptionMpTcpJoinSynAckReceived::Deserialize (Buffer::Iterator start)
 {
-  TcpOptionMpTcp::Deserialize(start);
+//  TcpOptionMpTcp::Deserialize(start);
   return 2;
 }
 
@@ -288,18 +348,7 @@ TcpOptionMpTcpDSN::TcpOptionMpTcpDSN() :
 
 TcpOptionMpTcpDSN::~TcpOptionMpTcpDSN()
 {
-
-}
-
-void
-TcpOptionMpTcpDSN::Serialize (Buffer::Iterator i) const
-{
-  //
-  TcpOptionMpTcp::SerializeRef(i);
-  i.WriteHtonU64( GetMapping().GetDataSequenceNumber().GetValue() );
-  i.WriteHtonU32( GetMapping().GetSubflowSequenceNumber().GetValue() );
-  i.WriteHtonU16( GetMapping().GetDataLevelLength() );
-  i.WriteHtonU16( 0 );  // Padding
+  NS_LOG_FUNCTION(this);
 }
 
 void
@@ -326,9 +375,38 @@ TcpOptionMpTcpDSN::Print(std::ostream& os) const
   os << "MPTCP option DSN mapping";
 }
 
-uint32_t
-TcpOptionMpTcpDSN::Deserialize (Buffer::Iterator start)
+
+void
+TcpOptionMpTcpDSN::Serialize (Buffer::Iterator i) const
 {
+  //
+  TcpOptionMpTcp::SerializeRef(i);
+  i.WriteHtonU64( GetMapping().GetDataSequenceNumber().GetValue() );
+  i.WriteHtonU32( GetMapping().GetSubflowSequenceNumber().GetValue() );
+  i.WriteHtonU16( GetMapping().GetDataLevelLength() );
+  i.WriteHtonU16( 0 );  // Padding
+}
+
+
+uint32_t
+TcpOptionMpTcpDSN::Deserialize (Buffer::Iterator i)
+{
+//  uint32_t length =  (uint32_t)i.ReadU8( );
+
+//  NS_ASSERT( length == 20);
+//
+//  uint8_t subtype_and_version = i.ReadU8();
+//  NS_ASSERT( subtype_and_version >> 4 == GetSubType()  );
+//  m_flags = i.ReadU8();
+//
+//  SetSenderKey( i.ReadNtohU64() );
+//
+//  if( length == 20)
+//  {
+//    SetRemoteKey( i.ReadNtohU64() );
+//  }
+//  return length;
+
   return 0;
 }
 
@@ -451,21 +529,57 @@ TcpOptionMpTcpAddAddress::Serialize (Buffer::Iterator i) const
 //}
 
 uint32_t
-TcpOptionMpTcpAddAddress::Deserialize (Buffer::Iterator start)
+TcpOptionMpTcpAddAddress::Deserialize (Buffer::Iterator i)
 {
-  return 0;
+  uint32_t length =  (uint32_t)i.ReadU8( );
+
+  NS_ASSERT( length == 10
+//      || length == 8
+//      || length == 20
+      || length==22
+      );
+  //NS_ABORT_UNLESS
+
+  uint8_t subtype_and_ipversion = i.ReadU8();
+  NS_ASSERT( subtype_and_ipversion >> 4 == GetSubType()  );
+
+  m_addressVersion = subtype_and_ipversion  & 0x0f;
+  NS_ASSERT_MSG(m_addressVersion == 4 || m_addressVersion == 6, "Unsupported address version");
+
+  m_addrId =  i.ReadU8();
+
+//  SetSenderKey( i.ReadNtohU64() );
+
+  if( m_addressVersion == 4)
+  {
+    m_address.Set ( i.ReadNtohU32() );
+  }
+  else
+  {
+    // ipv6
+//    m_address6.Set( );
+  }
+  return length;
 }
+
 
 uint32_t
 TcpOptionMpTcpAddAddress::GetSerializedSize (void) const
 {
   if(m_addressVersion == 4)
   {
-    return 4;
+    return (Has) 10;
   }
 
   NS_ASSERT_MSG(m_addressVersion == 6,"Wrong IP version. Maybe you didn't set an address to the MPTCP ADD_ADDR option ?");
-  return 6;
+  return 22;
+}
+
+
+bool
+TcpOptionMpTcpAddAddress::operator==(const TcpOptionMpTcpAddAddress& address) const
+{
+
 }
 
 
@@ -520,9 +634,26 @@ TcpOptionMpTcpRemoveAddress::Serialize (Buffer::Iterator i) const
 }
 
 uint32_t
-TcpOptionMpTcpRemoveAddress::Deserialize (Buffer::Iterator start)
+TcpOptionMpTcpRemoveAddress::Deserialize (Buffer::Iterator i)
 {
-  return 0;
+  uint32_t length =  (uint32_t)i.ReadU8( );
+
+  NS_ASSERT_MSG( length > 3,"You probably forgot to add AddrId to the MPTCP Remove option");
+  //NS_ABORT_UNLESS
+
+  uint8_t subtype_and_resvd = i.ReadU8();
+  NS_ASSERT( subtype_and_resvd >> 4 == GetSubType()  );
+//  m_flags = i.ReadU8();
+//
+//  SetSenderKey( i.ReadNtohU64() );
+  m_addressesId.clear();
+  for(uint32_t j = 3; j < length; ++j)
+  {
+    m_addressesId.push_back( i.ReadU8() );
+  }
+
+  return length;
+
 }
 
 uint32_t
@@ -535,6 +666,13 @@ void
 TcpOptionMpTcpRemoveAddress::Print (std::ostream &os) const
 {
   os << "REMOVE_ADDR option ";
+
+}
+
+bool
+TcpOptionMpTcpRemoveAddress::operator==(const TcpOptionMpTcpRemoveAddress& opt) const
+{
+  return (m_addressesId == opt.m_addressesId);
 
 }
 
@@ -580,6 +718,7 @@ TcpOptionMpTcpChangePriority::GetAddressId(uint8_t& addrId) const
 void
 TcpOptionMpTcpChangePriority::Serialize (Buffer::Iterator i) const
 {
+  NS_LOG_INFO("Serializing");
 //  Buffer::Iterator i = start;
   TcpOptionMpTcp::SerializeRef(i);
 
@@ -588,10 +727,27 @@ TcpOptionMpTcpChangePriority::Serialize (Buffer::Iterator i) const
     i.WriteU8( m_addrId );
 }
 
+
 uint32_t
-TcpOptionMpTcpChangePriority::Deserialize (Buffer::Iterator start)
+TcpOptionMpTcpChangePriority::Deserialize (Buffer::Iterator i)
 {
-  return 0;
+  NS_LOG_INFO("Deserializing");
+
+  uint32_t length =  (uint32_t)i.ReadU8( );
+
+  NS_ASSERT( length == 3 || length == 4 );
+  //NS_ABORT_UNLESS
+
+  uint8_t subtype_and_backup = i.ReadU8();
+  NS_ASSERT( subtype_and_backup >> 4 == GetSubType()  );
+  m_backupFlag = subtype_and_backup & 0x0f;
+
+  if( length == 4)
+  {
+    SetAddressId( i.ReadU8() );
+  }
+
+  return m_length;
 }
 
 uint32_t
@@ -607,6 +763,16 @@ TcpOptionMpTcpChangePriority::EmbeddedAddressId() const
   return ( GetSerializedSize() == 4);
 }
 
+bool
+TcpOptionMpTcpChangePriority::operator==(const TcpOptionMpTcpChangePriority& opt) const
+{
+
+  return (
+    GetPriority() == opt.GetPriority()
+//    && GetAddressId() ==
+    && m_addrId == opt.m_addrId
+    );
+}
 
 
 #if 0

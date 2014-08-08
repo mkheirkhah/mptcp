@@ -44,47 +44,107 @@
 //#include "ns3/point-to-point-channel.h"
 #include <string>
 
-NS_LOG_COMPONENT_DEFINE ("MpTcpTestSuite");
+NS_LOG_COMPONENT_DEFINE ("MpTcpOptionsTestSuite");
 
 using namespace ns3;
+
+
+template<class T>
+class TcpOptionMpTcpTestCase : public TestCase
+{
+public:
+    TcpOptionMpTcpTestCase(T configuredOption,std::string desc) : TestCase(desc)
+    {
+        NS_LOG_FUNCTION(this);
+        m_option = configuredOption;
+    }
+
+    virtual ~TcpOptionMpTcpTestCase()
+    {
+        NS_LOG_FUNCTION(this);
+    }
+
+    virtual void TestSerialize(void)
+    {
+        NS_LOG_INFO( "option.GetSerializedSize ():" << m_option.GetSerializedSize () );
+        m_buffer.AddAtStart ( m_option.GetSerializedSize ());
+        m_option.Serialize( m_buffer.Begin() );
+
+
+    };
+
+    virtual void TestDeserialize(void)
+    {
+        T option;
+        Buffer::Iterator start = m_buffer.Begin ();
+        uint8_t kind = start.ReadU8 ();
+
+
+
+        NS_TEST_EXPECT_MSG_EQ (kind, TcpOption::MPTCP, "Option number does not match MPTCP sequence number");
+
+
+        uint32_t read = option.Deserialize( start );
+
+        NS_TEST_EXPECT_MSG_EQ ( read, option.GetSerializedSize(), "PcapDiff(file, file) must always be false");
+
+        bool res= (m_option == option);
+        NS_TEST_EXPECT_MSG_EQ ( res,true, "Option loaded after serializing/deserializing are not equal. you should investigate ");
+    };
+
+
+    virtual void DoRun(void)
+    {
+        TestSerialize();
+        TestDeserialize();
+    }
+
+    T m_option;
+    Buffer m_buffer;
+};
 
 /**
 this tests MPTCP (de)serializing options by generating pcap files and
 comparing them to reference pcap files.
 */
-class MpTcpOptionTestCase : public TestCase
+#if 0
+class TcpOptionMpTcpCapableTestCase : public TcpOptionMpTcpTestCase<TcpOptionMpTcpCapable>
 {
-  MpTcpOptionTestCase();
-  virtual ~MpTcpOptionTestCase();
+public:
 
-  virtual void DoSetup(void) = 0;
-  virtual void DoRun(void) = 0;
+    // TestSerialize/ TestDeserialize
+  TcpOptionMpTcpCapableTestCase();
+  virtual ~TcpOptionMpTcpCapableTestCase();
+
+  virtual void DoSetup(void);
+  virtual void DoRun(void);
   virtual void DoTeardown (void);
 
 };
 
 
-MpTcpOptionTestCase::MpTcpOptionTestCase() : TestCase("MptcpOption")
+TcpOptionMpTcpCapableTestCase::TcpOptionMpTcpCapableTestCase() :
+    TestCase("mptcp-option-mpcapable")
 {
     NS_LOG_FUNCTION(this);
 }
 
 
-MpTcpOptionTestCase::~MpTcpOptionTestCase()
+TcpOptionMpTcpCapableTestCase::~TcpOptionMpTcpCapableTestCase()
 {
-
+    NS_LOG_FUNCTION(this);
 }
 
 
 void
-MpTcpOptionTestCase::DoSetup(void)
+TcpOptionMpTcpCapableTestCase::DoSetup(void)
 {
     NS_LOG_INFO("Setup of MPTCP options test");
 }
 
 
 void
-MpTcpOptionTestCase::DoRun(void)
+TcpOptionMpTcpCapableTestCase::DoRun(void)
 {
     // Generate TcpHeader
 //    Ipv4Header ipHeader;
@@ -97,26 +157,30 @@ MpTcpOptionTestCase::DoRun(void)
 //  h.SetDestinationPort(2);
 //  h.SetWindowSize(10);
 
-    Buffer buffer;
+    ///////////////////////////////////////////////////
+    /////    TestSerialize
+    /////
+    Buffer m_buffer;
 //    Ptr<TcpOptionMpTcpCapable> option = Create<TcpOptionMpTcpCapable>();
     TcpOptionMpTcpCapable option, option2;
     option.SetSenderKey(1);
     option.SetRemoteKey(2);
 
-    m_buffer.AddAtStart (opt.GetSerializedSize ());
+    NS_LOG_INFO( "option.GetSerializedSize ():" << option.GetSerializedSize () );
+    m_buffer.AddAtStart ( option.GetSerializedSize ());
 
-    opt.Serialize (m_buffer.Begin ());
+    option.Serialize ( m_buffer.Begin () );
 
-    h.Serialize( buffer.Begin() );
-    TcpOptionTS opt;
+//    h.Serialize( buffer.Begin() );
+//    TcpOptionTS opt;
 
     Buffer::Iterator start = m_buffer.Begin ();
     uint8_t kind = start.ReadU8 ();
 
-    NS_TEST_EXPECT_MSG_EQ (kind, TcpOption::TS, "Different kind found");
+    NS_TEST_EXPECT_MSG_EQ (kind, TcpOption::MPTCP, "Different kind found");
 
-    opt.Deserialize (start);
-    uint32_t read = option2.Deserialize( buffer.Begin() );
+//    option2.Deserialize (start);
+    uint32_t read = option2.Deserialize( start );
 
     NS_TEST_EXPECT_MSG_EQ ( read, option.GetSerializedSize(), "PcapDiff(file, file) must always be false");
     NS_TEST_EXPECT_MSG_EQ ( option.GetLocalKey(), option2.GetLocalKey(), "Keys should be identic");
@@ -140,8 +204,93 @@ MpTcpOptionTestCase::DoRun(void)
 
 
 void
-MpTcpOptionTestCase::DoTeardown(void)
+TcpOptionMpTcpCapableTestCase::DoTeardown(void)
 {
 
 }
+#endif // 0
 
+static class TcpOptionMpTcpTestSuite : public TestSuite
+{
+public:
+ TcpOptionMpTcpTestSuite ()
+ : TestSuite ("mptcp-option", UNIT)
+ {
+//    for (uint8_t i=0; i< 40; i += 10)
+//    {
+        ////////////////////////////////////////////////
+        //// MP CAPABLE
+        ////
+        TcpOptionMpTcpCapable mpc,mpc2;
+        mpc.SetRemoteKey(42);
+        mpc.SetSenderKey(232323);
+        AddTestCase(
+            new TcpOptionMpTcpTestCase<TcpOptionMpTcpCapable> (mpc,"MP_CAPABLE with Sender & Peer keys both set"),
+            QUICK
+            );
+
+       mpc2.SetSenderKey(3);
+        AddTestCase(
+            new TcpOptionMpTcpTestCase<TcpOptionMpTcpCapable> (mpc2,"MP_CAPABLE with only sender Key set"),
+            QUICK
+            );
+
+
+
+        ////////////////////////////////////////////////
+        //// MP PRIORITY
+        ////
+        TcpOptionMpTcpChangePriority prio,prio2;
+
+        prio.SetAddressId(3);
+        AddTestCase(
+            new TcpOptionMpTcpTestCase<TcpOptionMpTcpChangePriority> (prio,"Change priority for a different address"),
+            QUICK
+            );
+
+
+
+        prio.SetBackupFlag(true);
+        AddTestCase(
+            new TcpOptionMpTcpTestCase<TcpOptionMpTcpChangePriority> (prio2,"Change priority for current address with backup flag ons"),
+            QUICK
+            );
+
+        ////////////////////////////////////////////////
+        //// MP REMOVE_ADDRESS
+        ////
+        TcpOptionMpTcpRemoveAddress rem;
+         for (uint8_t i=0; i<15; ++i)
+         {
+            TcpOptionMpTcpRemoveAddress rem2;
+
+            rem.AddAddressId(i);
+            rem2.AddAddressId(i);
+
+            AddTestCase(
+                new TcpOptionMpTcpTestCase<TcpOptionMpTcpRemoveAddress> (rem,"With X addresses"),
+                QUICK
+                );
+
+            AddTestCase(
+                new TcpOptionMpTcpTestCase<TcpOptionMpTcpRemoveAddress> (rem2,"With 1 address"),
+                QUICK
+                );
+
+     }
+
+//     Ptr<UniformRandomVariable> x = CreateObject<UniformRandomVariable> ();
+//
+//     for (uint32_t i=0; i<1000; ++i)
+//     {
+//         AddTestCase (new TcpOptionTSTestCase ("Testing serialization of random "
+//         "values for timestamp",
+//         x->GetInteger (),
+//         x->GetInteger ()), TestCase::QUICK);
+//     }
+
+ }
+
+
+
+} g_TcpOptionTestSuite;

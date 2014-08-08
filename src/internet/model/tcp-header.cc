@@ -374,18 +374,20 @@ TcpHeader::Deserialize (Buffer::Iterator start)
       * the other option would be to merge all MPTCP options into a single one
       * It would not be OOP but component base paradigm. Why not ? less understandable ?
       */
+      Ptr<TcpOption> op;
       if( kind == TcpOption::MPTCP)
       {
         // Should read length and subtype then create adequate Option
         // revert back the iterator after length
-        uint8_t length= i.ReadU8();
+//        uint8_t length =
+        i.ReadU8();
         uint8_t subtype = i.ReadU8() >> 4;
-        i.Prev(); // Go backward one byte
-        Ptr<TcpOption> op = MpTcpOption::CreateOption();
+        i.Prev(2); // Go backward 2 bytes (length)
+        op = TcpOptionMpTcpMain::CreateOption(subtype);
       }
       else
       {
-        Ptr<TcpOption> op = TcpOption::CreateOption (kind);
+        op = TcpOption::CreateOption (kind);
       }
       optionLen -= op->Deserialize (i);
       i.Next (op->GetSerializedSize () - 1);

@@ -87,13 +87,8 @@ TcpOption::CreateOption (uint8_t kind)
         {
           if (toTid[i].kind == kind)
             {
-                // Might be a hack
-
-              else
-              {
                 objectFactory.SetTypeId(toTid[i].tid);
                 return objectFactory.Create<TcpOption> ();
-              }
             }
         }
 

@@ -15,8 +15,8 @@ NS_OBJECT_ENSURE_REGISTERED (MpTcpCCOlia);
 TypeId
 MpTcpCCOlia::GetTypeId (void)
 {
-  static TypeId tid = TypeId ("ns3::TcpNewReno")
-    .SetParent<MpTcpCCOlia> ()
+  static TypeId tid = TypeId ("ns3::MpTcpCCOlia")
+    .SetParent<MpTcpSocketBase> ()
     .AddConstructor<MpTcpCCOlia> ()
 //    .AddAttribute ("ReTxThreshold", "Threshold for fast retransmit",
 //                    UintegerValue (3),
@@ -26,9 +26,9 @@ MpTcpCCOlia::GetTypeId (void)
 //		    BooleanValue (false),
 //		    MakeBooleanAccessor (&TcpNewReno::m_limitedTx),
 //		    MakeBooleanChecker ())
-    .AddTraceSource ("CongestionWindow",
-                     "The TCP connection's congestion window",
-                     MakeTraceSourceAccessor (&MpTcpCCOlia::m_cWnd))
+//    .AddTraceSource ("CongestionWindow",
+//                     "The TCP connection's congestion window",
+//                     MakeTraceSourceAccessor (&MpTcpCCOlia::m_cWnd))
   ;
   return tid;
 }
