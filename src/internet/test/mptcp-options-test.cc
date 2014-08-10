@@ -99,6 +99,7 @@ public:
         TestDeserialize();
     }
 
+protected:
     T m_option;
     Buffer m_buffer;
 };
@@ -218,6 +219,7 @@ public:
  {
 //    for (uint8_t i=0; i< 40; i += 10)
 //    {
+#if 0
         ////////////////////////////////////////////////
         //// MP CAPABLE
         ////
@@ -236,7 +238,7 @@ public:
             );
 
 
-
+#endif
         ////////////////////////////////////////////////
         //// MP PRIORITY
         ////
@@ -248,7 +250,7 @@ public:
             QUICK
             );
 
-
+#if 0
 
         prio.SetBackupFlag(true);
         AddTestCase(
@@ -259,6 +261,7 @@ public:
         ////////////////////////////////////////////////
         //// MP REMOVE_ADDRESS
         ////
+        // TODO generate random/real  addresses  with IPv4 helper ?
         TcpOptionMpTcpRemoveAddress rem;
          for (uint8_t i=0; i<15; ++i)
          {
@@ -279,6 +282,79 @@ public:
 
      }
 
+
+        ////////////////////////////////////////////////
+        //// MP ADD_ADDRESS
+        ////
+        TcpOptionMpTcpAddAddress add;
+        add.SetAddress( InetSocketAddress( "123.24.23.32"), 8 );
+
+
+//        add2.SetAddress( InetSocketAddress( "ffe2::1"), 4 );
+
+        AddTestCase(
+                new TcpOptionMpTcpTestCase<TcpOptionMpTcpAddAddress> (add,"AddAddress IPv4"),
+                QUICK
+                );
+
+
+        ////////////////////////////////////////////////
+        //// MP
+        ////
+        TcpOptionMpTcpDSN dsn,dsn2,dsn3;
+        MpTcpMapping mapping;
+        mapping.Configure( SequenceNumber32(54),32);
+        mapping.MapToSubflowSeqNumber( SequenceNumber32(40));
+
+
+        dsn.SetMapping(mapping);
+
+
+        AddTestCase(
+                new TcpOptionMpTcpTestCase<TcpOptionMpTcpDSN> (dsn,"DSN mapping only"),
+                QUICK
+                );
+
+        dsn2.SetDataAck(3210);
+        AddTestCase(
+                new TcpOptionMpTcpTestCase<TcpOptionMpTcpDSN> (dsn2,"DataAck only"),
+                QUICK
+                );
+
+        dsn.SetDataAck(45000);
+        AddTestCase(
+                new TcpOptionMpTcpTestCase<TcpOptionMpTcpDSN> (dsn,"DataAck + DSN mapping"),
+                QUICK
+                );
+
+
+        ////////////////////////////////////////////////
+        //// MP TcpOptionMpTcpJoinInitialSyn
+        ////
+        TcpOptionMpTcpJoinInitialSyn syn,syn2;
+        syn.SetAddressId(4);
+        syn.SetPeerToken(5323);
+        AddTestCase(
+                new TcpOptionMpTcpTestCase<TcpOptionMpTcpJoinInitialSyn> ( syn, "MP_JOIN Syn"),
+                QUICK
+                );
+
+
+
+        ////////////////////////////////////////////////
+        //// MP TcpOptionMpTcpJoinSynReceived
+        ////
+        TcpOptionMpTcpJoinSynReceived jsr, jsr2;
+        jsr.SetAddressId(4);
+        jsr.SetTruncatedHmac( 522323 );
+        AddTestCase(
+                new TcpOptionMpTcpTestCase<TcpOptionMpTcpJoinSynReceived> ( jsr, "MP_JOIN Syn Received"),
+                QUICK
+                );
+
+
+
+
 //     Ptr<UniformRandomVariable> x = CreateObject<UniformRandomVariable> ();
 //
 //     for (uint32_t i=0; i<1000; ++i)
@@ -288,8 +364,9 @@ public:
 //         x->GetInteger (),
 //         x->GetInteger ()), TestCase::QUICK);
 //     }
-
+    #endif
  }
+
 
 
 

@@ -13,6 +13,7 @@ NS_LOG="MpTcpTestSuite=*|prefix_func:Socket=*:MpTcpSocketBase:*=error|warn" ./wa
 In case you want to run it with gdb:
 NS_LOG="MpTcpTestSuite=*|prefix_func:Socket=*:MpTcpSocketBase:*=error|warn" ./waf --run test-runner --command-template="gdb --args %s --suite=mptcp"
 
+There is also a 2nd testsuite called "mptcp-option"
 
 How to configure waf for prototyping
 ======

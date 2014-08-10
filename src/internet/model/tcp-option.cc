@@ -50,7 +50,7 @@ TypeId
 TcpOption::GetTypeId (void)
 {
   static TypeId tid = TypeId ("ns3::TcpOption")
-    .SetParent<Object> ()
+//    .SetParent<Object> ()
   ;
   return tid;
 }

@@ -101,6 +101,8 @@ public:
   virtual uint16_t
   GetDataLevelLength() const { return m_dataLevelLength; }
 
+  virtual bool operator==( const MpTcpMapping&) const;
+
   // TODO should be SequenceNumber64
 protected:
 //  SequenceNumber64 m_dataSequenceNumber;   //!< MPTCP level

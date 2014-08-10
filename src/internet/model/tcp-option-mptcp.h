@@ -24,6 +24,7 @@
 
 #include "tcp-option.h"
 #include "mp-tcp-typedefs.h"
+#include "ns3/log.h"
 #include <vector>
 
 namespace ns3 {
@@ -78,22 +79,21 @@ public:
   virtual ~TcpOptionMpTcpMain();
 
 
+  static TypeId GetTypeId (void);
+
+  virtual TypeId GetInstanceTypeId (void) const;
+
   virtual void
-  Print (std::ostream &os) const {
+  Print (std::ostream &os) const
+  {
     NS_ASSERT_MSG(false, " You should override TcpOptionMpTcp::Print function");
 //    os << "MPTCP option. You should override";
   }
 
   static Ptr<TcpOption> CreateOption(uint8_t kind);
-  /*
-  TODO make purely virtual ? but would need to pass
-  Buffer::Iterator as a reference
-  */
+
   virtual uint32_t
   GetSerializedSize (void) const =0;
-//  {
-//    return 2;
-//  };
 
   /**
    \return TCP option type
@@ -117,11 +117,11 @@ public:
   *
   * \return length of the option
   */
-  virtual uint32_t
-  StartDeserializing (Buffer::Iterator& i)
-  {
-     return i.ReadU8 ();
-  }
+//  virtual uint32_t
+//  StartDeserializing (Buffer::Iterator& i)
+//  {
+//     return i.ReadU8 ();
+//  }
 
   virtual uint8_t
   GetSubType (void) const = 0;
@@ -143,10 +143,27 @@ class TcpOptionMpTcp : public TcpOptionMpTcpMain
 {
 public:
 
-  TcpOptionMpTcp () : TcpOptionMpTcpMain () {};
-  virtual ~TcpOptionMpTcp () {};
+  TcpOptionMpTcp () : TcpOptionMpTcpMain ()
+  {
+    // can't use arguments since would compel to declare a logging component
+//    NS_LOG_FUNCTION_NOARGS();
+  };
+  virtual ~TcpOptionMpTcp () {
+//    NS_LOG_FUNCTION_NOARGS();
+  };
 
+  static TypeId GetTypeId (void)
+  {
+  static TypeId tid = TypeId ("ns3::TcpOptionMpTcp")
+    .SetParent<TcpOptionMpTcpMain> ()
+      ;
+    return tid;
+  }
 
+  virtual TypeId GetInstanceTypeId (void) const
+  {
+    return GetTypeId();
+  }
 
   virtual uint8_t
   GetSubType (void) const {
@@ -196,20 +213,6 @@ public:
     // more may come - check the Standard
   };
 
-//  static TypeId GetTypeId (void)
-//  {
-//    static TypeId tid = TypeId ("ns3::TcpOptionMpTcpCapable")
-//      .SetParent<TcpOption> ()
-//  //    .AddConstructor<TcpOptionMpTcp> ()
-//    ;
-//    return tid;
-//  }
-//
-//
-//  virtual TypeId GetInstanceTypeId (void) const
-//{
-//  return GetTypeId ();
-//}
   bool operator==(const TcpOptionMpTcpCapable&) const;
   /**
   * \ brief For now only version 0 exists
@@ -270,7 +273,7 @@ A: The leftmost bit, labeled "A", SHOULD be set to 1 to indicate
 
 
 /**
-
+  TODO allow to set back up flag
   MP_JOIN subtype:
   -For Initial SYN
       +---------------+---------------+-------+-----+-+---------------+
@@ -291,14 +294,18 @@ public:
   TcpOptionMpTcpJoinInitialSyn();
   virtual ~TcpOptionMpTcpJoinInitialSyn();
 
+  virtual bool operator==(const TcpOptionMpTcpJoinInitialSyn&) const;
+
   // Setters
   virtual void SetPeerToken(uint32_t token) { m_peerToken = token; }
-  virtual void SetLocalToken(uint32_t token) { m_localToken = token; }
+//  virtual void SetLocalToken(uint32_t token) { m_localToken = token; }
 
+//  virtual void SetBackupFlag
   // Getters
   virtual uint32_t GetPeerToken() const { return m_peerToken; }
-  virtual uint32_t GetLocalToken() const { return m_localToken; }
+//  virtual uint32_t GetLocalToken() const { return m_localToken; }
   virtual uint8_t GetAddressId() const { return m_addressId; }
+  virtual void SetAddressId(uint8_t addrId) { m_addressId =  addrId; }
 
   virtual void Print (std::ostream &os) const;
   // Ok
@@ -308,13 +315,14 @@ public:
 
 protected:
   uint8_t m_addressId;    //!< Mandatory
+  uint8_t m_flags;
   uint32_t m_peerToken;
-  uint32_t m_localToken;
-
+  uint32_t m_nonce;  //!< Rename to *nonce* . Should be a random number
 };
 
 
 /**
+TODO negociate the random part
                            1                   2                   3
        0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
       +---------------+---------------+-------+-----+-+---------------+
@@ -337,15 +345,29 @@ public:
   TcpOptionMpTcpJoinSynReceived();
   virtual ~TcpOptionMpTcpJoinSynReceived();
 
+  virtual bool operator==(const TcpOptionMpTcpJoinSynReceived&) const;
+
+  // Setters
+  virtual void SetTruncatedHmac(uint64_t ) ;
+
+  // Getters
+  virtual uint64_t GetTruncatedHmac() const { return m_truncatedHmac; };
+  virtual uint64_t GetNonce() const { return m_nonce; };
+
+  virtual uint8_t GetAddressId() const { return m_addressId; }
+  virtual void SetAddressId(uint8_t addrId) { m_addressId =  addrId; }
+
   virtual void Print (std::ostream &os) const;
   virtual void Serialize (Buffer::Iterator start) const;
   virtual uint32_t Deserialize (Buffer::Iterator start);
   virtual uint32_t GetSerializedSize (void) const;
 
 protected:
-  uint8_t m_pathId;
-  uint32_t m_receiverToken;
-  uint32_t m_senderToken;
+  uint8_t m_addressId;
+  uint8_t m_flags;
+
+  uint64_t m_truncatedHmac;
+  uint32_t m_nonce;
 
 };
 /**
@@ -371,21 +393,34 @@ public:
   TcpOptionMpTcpJoinSynAckReceived();
   virtual ~TcpOptionMpTcpJoinSynAckReceived();
 
+  virtual bool operator==(const TcpOptionMpTcpJoinSynAckReceived&) const;
+
+  virtual const uint8_t* GetHmac() const { return &m_hmac[0];};
   virtual void Print (std::ostream &os) const;
   virtual void Serialize (Buffer::Iterator ) const;
   virtual uint32_t Deserialize (Buffer::Iterator start);
   virtual uint32_t GetSerializedSize (void) const;
 
 protected:
-  uint8_t m_pathId;
-  uint32_t m_receiverToken;
-  uint32_t m_senderToken;
+  uint8_t m_hmac[20]; // should amount to the 160 bits
+//  uint8_t m_pathId;
+//  uint32_t m_receiverToken;
+//  uint32_t m_senderToken;
 
 };
 
 
 
 /**
+
+     The maximum
+   length of this option, with all flags set, is 28 octets.
+For now DataAck always 4 bytes
+For now DSN always 4 bytes
+should be improved to support uint64_t
+
+we don't do the checksum either
+
                           1                   2                   3
       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
      +---------------+---------------+-------+----------------------+
@@ -407,6 +442,17 @@ class TcpOptionMpTcpDSN : public TcpOptionMpTcp<DSS>
 {
 
 public:
+  /**
+
+  */
+  enum FLAG {
+    DataAckPresent  = 1,   //!< matches the "A" in previous packet format
+    DataAckOf8Bytes = 2, //!< a  (should not be used for now)
+    DSNMappingPresent = 4,  //!< M
+    DSNOfEightBytes   = 8,      //!< m  (should not be used for now)
+    DataFin           = 16 //!< F
+
+  };
 
   TcpOptionMpTcpDSN();
   virtual ~TcpOptionMpTcpDSN();
@@ -424,6 +470,12 @@ public:
 //  virtual uint16_t
 //  GetDataLevelLength() const { return m_dataLevelLength; }
 
+  virtual bool operator==(const TcpOptionMpTcpDSN&) const;
+
+
+  virtual void SetDataAck(uint32_t);
+  virtual uint32_t GetDataAck() const { return m_dataAck; };
+
   virtual void Print (std::ostream &os) const;
   // OK
   virtual void Serialize (Buffer::Iterator ) const;
@@ -432,6 +484,9 @@ public:
 
 protected:
   MpTcpMapping m_mapping;
+  uint8_t m_flags;
+//  uint64_t m_dataAck; //!< Can be On 32 bits dependings on the flags
+  uint32_t m_dataAck; //!< Can be On 32 bits dependings on the flags
 //  uint64_t m_dataSequenceNumber;
 //  uint32_t m_subflowSequenceNumber;
 //  uint16_t m_dataLevelLength;
@@ -575,6 +630,11 @@ public:
   virtual bool GetPriority() const { return m_backupFlag;};
 
   virtual bool operator==(const TcpOptionMpTcpChangePriority& ) const;
+
+
+  static TypeId GetTypeId (void);
+
+  virtual TypeId GetInstanceTypeId (void) const;
 
   /**
 

@@ -14,18 +14,30 @@ MpTcpMapping::MpTcpMapping() :
   m_subflowSequenceNumber(0),
   m_dataLevelLength(0)
 {
-
+  NS_LOG_FUNCTION(this);
 }
+
+bool
+MpTcpMapping::operator==( const MpTcpMapping& mapping) const
+{
+  //!
+  return (
+    GetDataLevelLength() == mapping.GetDataLevelLength()
+    && GetDataSequenceNumber() == mapping.GetDataSequenceNumber()
+    && GetDataLevelLength()  == GetDataLevelLength()
+    );
+}
+
 
 //SequenceNumber32 subflowSeqNb
 void
 MpTcpMapping::Configure( SequenceNumber32  dataSeqNb, uint16_t mappingSize)
 //  m_dataSeqNumber(dataSeqNb),
 //  m_size(mappingSize)
-  {
-    m_dataSequenceNumber = dataSeqNb;
-    m_dataLevelLength = mappingSize;
-  }
+{
+  m_dataSequenceNumber = dataSeqNb;
+  m_dataLevelLength = mappingSize;
+}
 
 
 
