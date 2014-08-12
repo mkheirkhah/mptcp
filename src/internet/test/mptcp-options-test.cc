@@ -219,27 +219,27 @@ public:
  {
 //    for (uint8_t i=0; i< 40; i += 10)
 //    {
-#if 0
+
         ////////////////////////////////////////////////
         //// MP CAPABLE
         ////
         Ptr<TcpOptionMpTcpCapable> mpc = CreateObject<TcpOptionMpTcpCapable>(),
                 mpc2 = CreateObject<TcpOptionMpTcpCapable>();
         mpc->SetRemoteKey(42);
-        mpc.SetSenderKey(232323);
+        mpc->SetSenderKey(232323);
         AddTestCase(
             new TcpOptionMpTcpTestCase<TcpOptionMpTcpCapable> (mpc,"MP_CAPABLE with Sender & Peer keys both set"),
             QUICK
             );
 
-       mpc2.SetSenderKey(3);
+       mpc2->SetSenderKey(3);
         AddTestCase(
             new TcpOptionMpTcpTestCase<TcpOptionMpTcpCapable> (mpc2,"MP_CAPABLE with only sender Key set"),
             QUICK
             );
 
 
-#endif
+
         ////////////////////////////////////////////////
         //// MP PRIORITY
         ////
@@ -252,9 +252,9 @@ public:
             QUICK
             );
 
-#if 0
 
-        prio.SetBackupFlag(true);
+
+        prio->SetBackupFlag(true);
         AddTestCase(
             new TcpOptionMpTcpTestCase<TcpOptionMpTcpChangePriority> (prio2,"Change priority for current address with backup flag ons"),
             QUICK
@@ -264,13 +264,13 @@ public:
         //// MP REMOVE_ADDRESS
         ////
         // TODO generate random/real  addresses  with IPv4 helper ?
-        TcpOptionMpTcpRemoveAddress rem;
+        Ptr<TcpOptionMpTcpRemoveAddress> rem = CreateObject<TcpOptionMpTcpRemoveAddress>();
          for (uint8_t i=0; i<15; ++i)
          {
-            TcpOptionMpTcpRemoveAddress rem2;
+            Ptr<TcpOptionMpTcpRemoveAddress> rem2 = CreateObject<TcpOptionMpTcpRemoveAddress>();
 
-            rem.AddAddressId(i);
-            rem2.AddAddressId(i);
+            rem->AddAddressId(i);
+            rem2->AddAddressId(i);
 
             AddTestCase(
                 new TcpOptionMpTcpTestCase<TcpOptionMpTcpRemoveAddress> (rem,"With X addresses"),
@@ -288,8 +288,8 @@ public:
         ////////////////////////////////////////////////
         //// MP ADD_ADDRESS
         ////
-        TcpOptionMpTcpAddAddress add;
-        add.SetAddress( InetSocketAddress( "123.24.23.32"), 8 );
+        Ptr<TcpOptionMpTcpAddAddress> add = CreateObject<TcpOptionMpTcpAddAddress>();
+        add->SetAddress( InetSocketAddress( "123.24.23.32"), 8 );
 
 
 //        add2.SetAddress( InetSocketAddress( "ffe2::1"), 4 );
@@ -303,13 +303,15 @@ public:
         ////////////////////////////////////////////////
         //// MP
         ////
-        TcpOptionMpTcpDSN dsn,dsn2,dsn3;
+        Ptr<TcpOptionMpTcpDSN> dsn = CreateObject<TcpOptionMpTcpDSN>(),
+                dsn2 = CreateObject<TcpOptionMpTcpDSN>(),
+                dsn3 = CreateObject<TcpOptionMpTcpDSN>();
         MpTcpMapping mapping;
         mapping.Configure( SequenceNumber32(54),32);
         mapping.MapToSubflowSeqNumber( SequenceNumber32(40));
 
 
-        dsn.SetMapping(mapping);
+        dsn->SetMapping(mapping);
 
 
         AddTestCase(
@@ -317,13 +319,13 @@ public:
                 QUICK
                 );
 
-        dsn2.SetDataAck(3210);
+        dsn2->SetDataAck(3210);
         AddTestCase(
                 new TcpOptionMpTcpTestCase<TcpOptionMpTcpDSN> (dsn2,"DataAck only"),
                 QUICK
                 );
 
-        dsn.SetDataAck(45000);
+        dsn->SetDataAck(45000);
         AddTestCase(
                 new TcpOptionMpTcpTestCase<TcpOptionMpTcpDSN> (dsn,"DataAck + DSN mapping"),
                 QUICK
@@ -333,9 +335,10 @@ public:
         ////////////////////////////////////////////////
         //// MP TcpOptionMpTcpJoinInitialSyn
         ////
-        TcpOptionMpTcpJoinInitialSyn syn,syn2;
-        syn.SetAddressId(4);
-        syn.SetPeerToken(5323);
+        Ptr<TcpOptionMpTcpJoinInitialSyn> syn = CreateObject<TcpOptionMpTcpJoinInitialSyn>(),
+                    syn2 = CreateObject<TcpOptionMpTcpJoinInitialSyn>();
+        syn->SetAddressId(4);
+        syn->SetPeerToken(5323);
         AddTestCase(
                 new TcpOptionMpTcpTestCase<TcpOptionMpTcpJoinInitialSyn> ( syn, "MP_JOIN Syn"),
                 QUICK
@@ -346,9 +349,10 @@ public:
         ////////////////////////////////////////////////
         //// MP TcpOptionMpTcpJoinSynReceived
         ////
-        TcpOptionMpTcpJoinSynReceived jsr, jsr2;
-        jsr.SetAddressId(4);
-        jsr.SetTruncatedHmac( 522323 );
+        Ptr<TcpOptionMpTcpJoinSynReceived> jsr = CreateObject<TcpOptionMpTcpJoinSynReceived>(),
+            jsr2 = CreateObject<TcpOptionMpTcpJoinSynReceived>();
+        jsr->SetAddressId(4);
+        jsr->SetTruncatedHmac( 522323 );
         AddTestCase(
                 new TcpOptionMpTcpTestCase<TcpOptionMpTcpJoinSynReceived> ( jsr, "MP_JOIN Syn Received"),
                 QUICK
@@ -356,6 +360,16 @@ public:
 
 
 
+        ////////////////////////////////////////////////
+        //// MP TcpOptionMpTcpJoinSynReceived
+        ////
+        Ptr<TcpOptionMpTcpJoinSynAckReceived> jsar = CreateObject<TcpOptionMpTcpJoinSynAckReceived>();
+        uint8_t hmac[20] = {3,0};
+        jsar->SetHmac( hmac  );
+        AddTestCase(
+                new TcpOptionMpTcpTestCase<TcpOptionMpTcpJoinSynAckReceived> ( jsar, "MP_JOIN SynAck Received"),
+                QUICK
+                );
 
 //     Ptr<UniformRandomVariable> x = CreateObject<UniformRandomVariable> ();
 //
@@ -366,7 +380,7 @@ public:
 //         x->GetInteger (),
 //         x->GetInteger ()), TestCase::QUICK);
 //     }
-    #endif
+
  }
 
 

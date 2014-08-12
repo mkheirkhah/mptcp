@@ -62,7 +62,7 @@ TcpOptionMpTcpMain::GetTypeId (void)
     //
 //    .AddConstructor<TcpOptionMpTcpMain> ()
   ;
-  NS_LOG_UNCOND("TcpOptionMpTcpMain::GetTypeId called !");
+//  NS_LOG_UNCOND("TcpOptionMpTcpMain::GetTypeId called !");
   return tid;
 }
 
@@ -70,7 +70,7 @@ TcpOptionMpTcpMain::GetTypeId (void)
 TypeId
 TcpOptionMpTcpMain::GetInstanceTypeId (void) const
 {
-  NS_LOG_UNCOND("TcpOptionMpTcpMain::GetInstanceTypeId called");
+//  NS_LOG_UNCOND("TcpOptionMpTcpMain::GetInstanceTypeId called");
   return GetTypeId ();
 }
 
@@ -390,6 +390,15 @@ TcpOptionMpTcpJoinSynAckReceived::~TcpOptionMpTcpJoinSynAckReceived ()
   NS_LOG_FUNCTION(this); // Use this ?
 }
 
+
+void
+TcpOptionMpTcpJoinSynAckReceived::SetHmac(uint8_t hmac[20])
+{
+  //
+  std::copy(hmac, hmac+20,m_hmac);
+}
+
+
 bool
 TcpOptionMpTcpJoinSynAckReceived::operator==(const TcpOptionMpTcpJoinSynAckReceived&) const
 {
@@ -412,7 +421,7 @@ TcpOptionMpTcpJoinSynAckReceived::Serialize (Buffer::Iterator i) const
   i.WriteU8( 0 ); // Reserved
 
   // TODO write sender's HMAC
-  i.Write(&m_hmac[0],160);
+  i.Write(&m_hmac[0], 20);
 //  i.WriteHtonU64( 0  );
 //  i.WriteHtonU64( 0  );
 //  i.WriteHtonU32( 0 );
@@ -432,7 +441,7 @@ TcpOptionMpTcpJoinSynAckReceived::Deserialize (Buffer::Iterator i)
   i.ReadU8(); // reserved
 
   // Retrieve HMAC
-  i.Read( &m_hmac[0],160);
+  i.Read( &m_hmac[0], 20);
 //  i.ReadNtohU64();
 //  i.ReadNtohU64();
 //  i.ReadNtohU32();
@@ -503,7 +512,7 @@ TcpOptionMpTcpDSN::GetSerializedSize() const
     if( m_flags & DSNOfEightBytes)  length += 4;
   }
 
-  NS_LOG_UNCOND( "size " << length);
+//  NS_LOG_UNCOND( "size " << length);
 
   return length;
 }

@@ -396,6 +396,9 @@ public:
   virtual bool operator==(const TcpOptionMpTcpJoinSynAckReceived&) const;
 
   virtual const uint8_t* GetHmac() const { return &m_hmac[0];};
+  virtual void SetHmac(uint8_t hmac[20]) ;
+
+
   virtual void Print (std::ostream &os) const;
   virtual void Serialize (Buffer::Iterator ) const;
   virtual uint32_t Deserialize (Buffer::Iterator start);
