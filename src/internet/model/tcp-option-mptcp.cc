@@ -34,9 +34,9 @@ namespace ns3 {
 //NS_OBJECT_ENSURE_REGISTERED (TcpOptionMpTcpAddAddress );
 //NS_OBJECT_ENSURE_REGISTERED (TcpOptionMpTcpRemoveAddress );
 //NS_OBJECT_ENSURE_REGISTERED (TcpOptionMpTcpJoinInitialSyn );
-NS_OBJECT_ENSURE_REGISTERED (TcpOptionMpTcpChangePriority );
-NS_OBJECT_ENSURE_REGISTERED (TcpOptionMpTcpMain );
-NS_OBJECT_ENSURE_REGISTERED (TcpOptionMpTcp<DSS> );
+//NS_OBJECT_ENSURE_REGISTERED ( TcpOptionMpTcpChangePriority );
+NS_OBJECT_ENSURE_REGISTERED ( TcpOptionMpTcpMain );
+//NS_OBJECT_ENSURE_REGISTERED (TcpOptionMpTcp<DSS> );
 
 
 /////////////////////////////////////////////////////////
@@ -59,8 +59,10 @@ TcpOptionMpTcpMain::GetTypeId (void)
 {
   static TypeId tid = TypeId ("ns3::TcpOptionMpTcpMain")
     .SetParent<TcpOption> ()
-//    .AddConstructor<TcpOptionMpTcp> ()
+    //
+//    .AddConstructor<TcpOptionMpTcpMain> ()
   ;
+  NS_LOG_UNCOND("TcpOptionMpTcpMain::GetTypeId called !");
   return tid;
 }
 
@@ -68,6 +70,7 @@ TcpOptionMpTcpMain::GetTypeId (void)
 TypeId
 TcpOptionMpTcpMain::GetInstanceTypeId (void) const
 {
+  NS_LOG_UNCOND("TcpOptionMpTcpMain::GetInstanceTypeId called");
   return GetTypeId ();
 }
 
@@ -924,6 +927,7 @@ TcpOptionMpTcpChangePriority::TcpOptionMpTcpChangePriority() :
   m_addrId(0),
   m_backupFlag(false)
 {
+  NS_LOG_FUNCTION(this);
 }
 
 void
@@ -995,23 +999,23 @@ TcpOptionMpTcpChangePriority::GetSerializedSize (void) const
 }
 
 
-
-TypeId
-TcpOptionMpTcpChangePriority::GetTypeId (void)
-{
-  static TypeId tid = TypeId ("ns3::TcpOptionMpTcpChangePriority")
-//    .SetParent<TcpOptionMpTcpMain> ()
-    .SetParent<TcpOptionMpTcpMain> ()
-//    .AddConstructor<TcpOptionMpTcpMain> ()
-  ;
-  return tid;
-}
-
-TypeId
-TcpOptionMpTcpChangePriority::GetInstanceTypeId (void) const
-{
-  return GetTypeId ();
-}
+//
+//TypeId
+//TcpOptionMpTcpChangePriority::GetTypeId (void)
+//{
+//  static TypeId tid = TypeId ("ns3::TcpOptionMpTcpChangePriority")
+////    .SetParent<TcpOptionMpTcpMain> ()
+//    .SetParent<TcpOptionMpTcp> ()
+//    .AddConstructor<TcpOptionMpTcpChangePriority> ()
+//  ;
+//  return tid;
+//}
+//
+//TypeId
+//TcpOptionMpTcpChangePriority::GetInstanceTypeId (void) const
+//{
+//  return GetTypeId ();
+//}
 
 
 bool

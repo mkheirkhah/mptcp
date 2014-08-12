@@ -152,18 +152,18 @@ public:
 //    NS_LOG_FUNCTION_NOARGS();
   };
 
-  static TypeId GetTypeId (void)
-  {
-  static TypeId tid = TypeId ("ns3::TcpOptionMpTcp")
-    .SetParent<TcpOptionMpTcpMain> ()
-      ;
-    return tid;
-  }
-
-  virtual TypeId GetInstanceTypeId (void) const
-  {
-    return GetTypeId();
-  }
+//  static TypeId GetTypeId (void)
+//  {
+//  static TypeId tid = TypeId ("ns3::TcpOptionMpTcp")
+//    .SetParent<TcpOptionMpTcpMain> ()
+//      ;
+//    return tid;
+//  }
+//
+//  virtual TypeId GetInstanceTypeId (void) const
+//  {
+//    return GetTypeId();
+//  }
 
   virtual uint8_t
   GetSubType (void) const {
@@ -632,9 +632,8 @@ public:
   virtual bool operator==(const TcpOptionMpTcpChangePriority& ) const;
 
 
-  static TypeId GetTypeId (void);
-
-  virtual TypeId GetInstanceTypeId (void) const;
+//  static TypeId GetTypeId (void);
+//  virtual TypeId GetInstanceTypeId (void) const;
 
   /**
 
@@ -653,6 +652,23 @@ public:
 
 
 protected:
+private:
+
+  /**
+   * \brief Copy constructor
+   *
+   * Defined and unimplemented to avoid misuse
+   */
+  TcpOptionMpTcpChangePriority (const TcpOptionMpTcpChangePriority&);
+
+  /**
+   * \brief Copy constructor
+   *
+   * Defined and unimplemented to avoid misuse
+   * \returns
+   */
+  TcpOptionMpTcpChangePriority& operator= (const TcpOptionMpTcpChangePriority&);
+
   uint8_t m_length;   //!< Length of this option
 
   uint8_t m_addrId;   //!< May be unset

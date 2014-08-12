@@ -43,7 +43,7 @@ GetObjectIid (void)
   return tid;
 }
 
-TypeId 
+TypeId
 ObjectBase::GetTypeId (void)
 {
   NS_LOG_FUNCTION_NOARGS ();
@@ -51,7 +51,7 @@ ObjectBase::GetTypeId (void)
   return tid;
 }
 
-ObjectBase::~ObjectBase () 
+ObjectBase::~ObjectBase ()
 {
   NS_LOG_FUNCTION (this);
 }
@@ -70,7 +70,8 @@ ObjectBase::ConstructSelf (const AttributeConstructionList &attributes)
   TypeId tid = GetInstanceTypeId ();
   do {
       // loop over all attributes in object type
-      NS_LOG_DEBUG ("construct tid="<<tid.GetName ()<<", params="<<tid.GetAttributeN ());
+      NS_LOG_DEBUG ("construct tid="<<tid.GetName () );
+      NS_LOG_DEBUG (", params="<<tid.GetAttributeN ());
       for (uint32_t i = 0; i < tid.GetAttributeN (); i++)
         {
           struct TypeId::AttributeInformation info = tid.GetAttribute(i);
@@ -93,7 +94,7 @@ ObjectBase::ConstructSelf (const AttributeConstructionList &attributes)
                   found = true;
                   continue;
                 }
-            }              
+            }
           if (!found)
             {
               // No matching attribute value so we try to look at the env var.
@@ -138,12 +139,13 @@ ObjectBase::ConstructSelf (const AttributeConstructionList &attributes)
             }
         }
       tid = tid.GetParent ();
+      NS_LOG_DEBUG("Parent is tid "<< tid.GetUid() );
     } while (tid != ObjectBase::GetTypeId ());
   NotifyConstructionCompleted ();
 }
 
 bool
-ObjectBase::DoSet (Ptr<const AttributeAccessor> accessor, 
+ObjectBase::DoSet (Ptr<const AttributeAccessor> accessor,
                    Ptr<const AttributeChecker> checker,
                    const AttributeValue &value)
 {
@@ -177,7 +179,7 @@ ObjectBase::SetAttribute (std::string name, const AttributeValue &value)
       NS_FATAL_ERROR ("Attribute name="<<name<<" could not be set for this object: tid="<<tid.GetName ());
     }
 }
-bool 
+bool
 ObjectBase::SetAttributeFailSafe (std::string name, const AttributeValue &value)
 {
   NS_LOG_FUNCTION (this << name << &value);
@@ -205,7 +207,7 @@ ObjectBase::GetAttribute (std::string name, AttributeValue &value) const
     {
       NS_FATAL_ERROR ("Attribute name="<<name<<" does not exist for this object: tid="<<tid.GetName ());
     }
-  if (!(info.flags & TypeId::ATTR_GET) || 
+  if (!(info.flags & TypeId::ATTR_GET) ||
       !info.accessor->HasGetter ())
     {
       NS_FATAL_ERROR ("Attribute name="<<name<<" is not gettable for this object: tid="<<tid.GetName ());
@@ -265,7 +267,7 @@ ObjectBase::GetAttributeFailSafe (std::string name, AttributeValue &value) const
   return true;
 }
 
-bool 
+bool
 ObjectBase::TraceConnectWithoutContext (std::string name, const CallbackBase &cb)
 {
   NS_LOG_FUNCTION (this << name << &cb);
@@ -278,7 +280,7 @@ ObjectBase::TraceConnectWithoutContext (std::string name, const CallbackBase &cb
   bool ok = accessor->ConnectWithoutContext (this, cb);
   return ok;
 }
-bool 
+bool
 ObjectBase::TraceConnect (std::string name, std::string context, const CallbackBase &cb)
 {
   NS_LOG_FUNCTION (this << name << context << &cb);
@@ -291,7 +293,7 @@ ObjectBase::TraceConnect (std::string name, std::string context, const CallbackB
   bool ok = accessor->Connect (this, context, cb);
   return ok;
 }
-bool 
+bool
 ObjectBase::TraceDisconnectWithoutContext (std::string name, const CallbackBase &cb)
 {
   NS_LOG_FUNCTION (this << name << &cb);
@@ -304,7 +306,7 @@ ObjectBase::TraceDisconnectWithoutContext (std::string name, const CallbackBase 
   bool ok = accessor->DisconnectWithoutContext (this, cb);
   return ok;
 }
-bool 
+bool
 ObjectBase::TraceDisconnect (std::string name, std::string context, const CallbackBase &cb)
 {
   NS_LOG_FUNCTION (this << name << context << &cb);

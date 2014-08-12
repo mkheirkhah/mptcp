@@ -53,7 +53,7 @@ template<class T>
 class TcpOptionMpTcpTestCase : public TestCase
 {
 public:
-    TcpOptionMpTcpTestCase(T configuredOption,std::string desc) : TestCase(desc)
+    TcpOptionMpTcpTestCase(Ptr<T> configuredOption,std::string desc) : TestCase(desc)
     {
         NS_LOG_FUNCTION(this);
         m_option = configuredOption;
@@ -66,9 +66,9 @@ public:
 
     virtual void TestSerialize(void)
     {
-        NS_LOG_INFO( "option.GetSerializedSize ():" << m_option.GetSerializedSize () );
-        m_buffer.AddAtStart ( m_option.GetSerializedSize ());
-        m_option.Serialize( m_buffer.Begin() );
+        NS_LOG_INFO( "option.GetSerializedSize ():" << m_option->GetSerializedSize () );
+        m_buffer.AddAtStart ( m_option->GetSerializedSize ());
+        m_option->Serialize( m_buffer.Begin() );
 
 
     };
@@ -88,7 +88,7 @@ public:
 
         NS_TEST_EXPECT_MSG_EQ ( read, option.GetSerializedSize(), "PcapDiff(file, file) must always be false");
 
-        bool res= (m_option == option);
+        bool res= (*m_option == option);
         NS_TEST_EXPECT_MSG_EQ ( res,true, "Option loaded after serializing/deserializing are not equal. you should investigate ");
     };
 
@@ -100,7 +100,7 @@ public:
     }
 
 protected:
-    T m_option;
+    Ptr<T> m_option;
     Buffer m_buffer;
 };
 
@@ -223,8 +223,9 @@ public:
         ////////////////////////////////////////////////
         //// MP CAPABLE
         ////
-        TcpOptionMpTcpCapable mpc,mpc2;
-        mpc.SetRemoteKey(42);
+        Ptr<TcpOptionMpTcpCapable> mpc = CreateObject<TcpOptionMpTcpCapable>(),
+                mpc2 = CreateObject<TcpOptionMpTcpCapable>();
+        mpc->SetRemoteKey(42);
         mpc.SetSenderKey(232323);
         AddTestCase(
             new TcpOptionMpTcpTestCase<TcpOptionMpTcpCapable> (mpc,"MP_CAPABLE with Sender & Peer keys both set"),
@@ -242,9 +243,10 @@ public:
         ////////////////////////////////////////////////
         //// MP PRIORITY
         ////
-        TcpOptionMpTcpChangePriority prio,prio2;
+        Ptr<TcpOptionMpTcpChangePriority> prio = CreateObject<TcpOptionMpTcpChangePriority>() ,
+                prio2 = CreateObject<TcpOptionMpTcpChangePriority>();
 
-        prio.SetAddressId(3);
+        prio->SetAddressId(3);
         AddTestCase(
             new TcpOptionMpTcpTestCase<TcpOptionMpTcpChangePriority> (prio,"Change priority for a different address"),
             QUICK
