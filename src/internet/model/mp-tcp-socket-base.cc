@@ -1444,7 +1444,7 @@ MpTcpSocketBase::CreateSubflow(
 //  }
 
 
-  m_subflows.push_back( sFlow );  //subflows.insert(subflows.end(), sFlow);
+  m_subflows.push_back( sFlow );
   // TODO set id of the Flow
   sFlow->m_routeId = m_subflows.size() - 1;
   // Should not be needed since bind register socket
@@ -1464,8 +1464,12 @@ MpTcpSocketBase::DoConnect(void)
     {
       // send a SYN packet and change state into SYN_SENT
       Ptr<MpTcpSubFlow> sFlow = CreateSubflow( m_endPoint->GetLocalAddress() );
-
-      NS_ASSERT(sFlow->Connect( m_endPoint->GetPeerAddress() ) );
+      int ret = sFlow->Connect( m_endPoint->GetPeerAddress() );
+      if(ret != 0)
+      {
+        return ret;
+      }
+//      NS_ASSERT( );
 
 //      SendEmptyPacket(TcpHeader::SYN);
 //      NS_LOG_INFO (TcpStateName[m_state] << " -> SYN_SENT");
@@ -1477,6 +1481,7 @@ MpTcpSocketBase::DoConnect(void)
       // TODO
 //      SendRST();
 //      CloseAndNotify();
+      NS_LOG_UNCOND("Time wait");
     }
   return 0;
 
@@ -1602,13 +1607,8 @@ int
 MpTcpSocketBase::Connect(const Address &address)
 {
   NS_LOG_FUNCTION ( this << address );
-  // TODO could be removed and rely on parent's m_endPoint instead
-
-//  InetSocketAddress transport = InetSocketAddress::ConvertFrom(address);
-//  m_remoteAddress = ; // MPTCP Connection remoteAddress
-//  m_remotePort = ; // MPTCP Connection remotePort
-return TcpSocketBase::Connect(address);
-//  return Connect(transport.GetIpv4(), transport.GetPort() );
+  // this should call our own DoConnect
+  return TcpSocketBase::Connect(address);
 }
 
 
@@ -1638,13 +1638,8 @@ MpTcpSocketBase::SetupCallback()
       return -1;
     }
   // set the call backs method
-  m_endPoint->SetRxCallback(MakeCallback(&MpTcpSocketBase::ForwardUp, Ptr<MpTcpSocketBase>(this)));
-  m_endPoint->SetDestroyCallback(MakeCallback(&MpTcpSocketBase::Destroy, Ptr<MpTcpSocketBase>(this)));
-
-  // Setup local add:port of this mptcp endpoint.
-//  m_localAddress = m_endPoint->GetLocalAddress();
-//  m_localPort = m_endPoint->GetLocalPort();
-
+//  m_endPoint->SetRxCallback(MakeCallback(&MpTcpSocketBase::ForwardUp, Ptr<MpTcpSocketBase>(this)));
+//  m_endPoint->SetDestroyCallback(MakeCallback(&MpTcpSocketBase::Destroy, Ptr<MpTcpSocketBase>(this)));
   return 0;
 }
 

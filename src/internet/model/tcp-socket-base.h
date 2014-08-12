@@ -244,12 +244,46 @@ protected:
   DoForwardUp(Ptr<Packet> packet, Ipv6Address saddr, Ipv6Address daddr, uint16_t port); // Ipv6 version
   bool
   SendPendingData(bool withAck = false); // Send as much as the window allows
+
+
+  ///////////////////////////////////
+  ////  HACK by Matt
+  ///////////////////////////////////
+
+  virtual void
+  GenerateEmptyPacketHeader(TcpHeader& header, uint8_t flags);
+
+  // TODO pass on data
+  virtual void
+  GenerateDataPacketHeader(TcpHeader& header, uint8_t flags);
+
+  virtual void
+  SendEmptyPacket(TcpHeader header);
+
   virtual uint32_t
-  SendDataPacket(SequenceNumber32 seq, uint32_t maxSize, bool withAck); // Send a data packet
+  SendDataPacket(TcpHeader header, SequenceNumber32 seq, uint32_t maxSize);
+
+  // this one should be private
+private:
+  // pacekt can be null ?
+  virtual void
+  SendPacket(TcpHeader header, Ptr<Packet> p);
+
+public:
+  ///////////////////////////////////
+  ////  End of HACK by Matt
+  ///////////////////////////////////
+
+
+//  virtual uint32_t
+//  SendDataPacket(SequenceNumber32 seq, uint32_t maxSize, bool withAck); // Send a data packet
   virtual void
   SendEmptyPacket(uint8_t flags); // Send a empty packet that carries a flag, e.g. ACK
+
   virtual void
   SendRST(void); // Send reset and tear down this socket
+
+
   bool
   OutOfRange(SequenceNumber32 head, SequenceNumber32 tail) const; // Check if a sequence number range is within the rx window
 

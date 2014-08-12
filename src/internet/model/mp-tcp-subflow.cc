@@ -166,6 +166,11 @@ MpTcpSubFlow::SendEmptyPacket(uint8_t flags)
     // in parent they do   m_rto = m_rtt->RetransmitTimeout();
   // TODO let meta decide RTO
   Time RTO = rtt->RetransmitTimeout();
+
+
+  /////////////////////////////////////////////////
+  //// if there is a SYN
+  ////
   if (hasSyn)
   {
       if (m_cnCount == 0)
@@ -266,19 +271,54 @@ MpTcpSubFlow::SendEmptyPacket(uint8_t flags)
 
 
 
-#if 0
+
 int
 MpTcpSubFlow::DoConnect()
 {
+  NS_LOG_FUNCTION (this);
 
+  // A new connection is allowed only if this socket does not have a connection
+  if (m_state == CLOSED || m_state == LISTEN || m_state == SYN_SENT || m_state == LAST_ACK || m_state == CLOSE_WAIT)
+    { // send a SYN packet and change state into SYN_SENT
+      TcpHeader header;
+      GenerateEmptyPacketHeader(header,TcpHeader::SYN);
+
+      if( IsMaster() )
+      {
+        Ptr<TcpOptionMpTcpCapable> mpc =  CreateObject<TcpOptionMpTcpCapable>();
+        mpc->SetSenderKey( m_metaSocket->GetLocalKey() );
+        header.AppendOption( mpc );
+      }
+      else
+      {
+        // Join option
+        Ptr<TcpOptionMpTcpJoinInitialSyn> join =  CreateObject<TcpOptionMpTcpJoinInitialSyn>();
+        //TODO retrieve from meta
+        join->SetLocalToken(0);
+        join->SetPeerToken(0);
+//        join->set
+        header.AppendOption( join );
+      }
+      SendEmptyPacket(header);
+
+      NS_LOG_INFO (TcpStateName[m_state] << " -> SYN_SENT");
+      m_state = SYN_SENT;
+    }
+  else if (m_state != TIME_WAIT)
+    { // In states SYN_RCVD, ESTABLISHED, FIN_WAIT_1, FIN_WAIT_2, and CLOSING, an connection
+      // exists. We send RST, tear down everything, and close this socket.
+      SendRST();
+      CloseAndNotify();
+    }
+  return 0;
 }
 
+#if
 int
 MpTcpSubFlow::Connect(const Address &address)
 {
   InetSocketAddress transport = InetSocketAddress::ConvertFrom(address);
-//  dAddr   = transport.GetIpv4(); // MPTCP Connection remoteAddress
-//  m_dPort = transport.GetPort(); // MPTCP Connection remotePort
+
 
   // Should depend on if it's first or not
   NS_LOG_FUNCTION(this );
@@ -288,10 +328,6 @@ MpTcpSubFlow::Connect(const Address &address)
 //  Ptr<MpTcpSubFlow> sFlow = CreateObject<MpTcpSubFlow>(this);
   // TODO en fait il ne devrait pas y avoir de m_routeId
 //  sFlow->m_routeId = (m_subflows.empty()  ? 0 : m_subflows.back()->m_routeId + 1);
-//  dAddr = servAddr;    // Assigned subflow destination address
-//  m_dPort = servPort;  // Assigned subflow destination port
-//  m_remoteAddress = servAddr; // MPTCP Connection's remote address
-//  m_remotePort = servPort;    // MPTCP Connection's remote port
 
 
   // Following is a duplicate of parent's connect

@@ -1441,11 +1441,251 @@ TcpSocketBase::Destroy6(void)
   CancelAllTimers();
 }
 
+void
+TcpSocketBase::GenerateEmptyPacketHeader(TcpHeader& header, uint8_t flags)
+{
+  NS_LOG_FUNCTION (this << (uint32_t)flags);
+//  Ptr<Packet> p = Create<Packet>();
+//  TcpHeader header;
+  SequenceNumber32 s = m_nextTxSequence;
+
+
+  if (m_endPoint == 0 && m_endPoint6 == 0)
+    {
+      NS_LOG_WARN ("Failed to send empty packet due to null endpoint");
+      return;
+    }
+
+  header.SetFlags(flags);
+  header.SetSequenceNumber(s);
+  header.SetAckNumber(m_rxBuffer.NextRxSequence());
+  if (m_endPoint != 0)
+    {
+      header.SetSourcePort(m_endPoint->GetLocalPort());
+      header.SetDestinationPort(m_endPoint->GetPeerPort());
+    }
+  else
+    {
+      header.SetSourcePort(m_endPoint6->GetLocalPort());
+      header.SetDestinationPort(m_endPoint6->GetPeerPort());
+    }
+
+}
+
+void
+TcpSocketBase::SendEmptyPacket(uint8_t flags)
+{
+  TcpHeader header;
+  GenerateEmptyPacketHeader(header,flags);
+  Ptr<Packet> p = CreateObject<Packet>();
+  SendPacket(header,p);
+
+}
+
+void
+TcpSocketBase::SendEmptyPacket(TcpHeader header)
+{
+
+  SendPacket(header, p );
+//    SequenceNumber32 s = m_nextTxSequence;
+//
+//  if (m_endPoint == 0 && m_endPoint6 == 0)
+//    {
+//      NS_LOG_WARN ("Failed to send empty packet due to null endpoint");
+//      return;
+//    }
+//  if (flags & TcpHeader::FIN)
+//    {
+//      flags |= TcpHeader::ACK;
+//    }
+//  else if (m_state == FIN_WAIT_1 || m_state == LAST_ACK || m_state == CLOSING)
+//    {
+//      ++s;
+//    }
+
+//  header.SetWindowSize(AdvertisedWindowSize());
+}
+
+void
+TcpSocketBase::SendPacket(TcpHeader header, Ptr<Packet> p)
+{
+  // Check dest/src/seq nb are ok
+  NS_ASSERT( header.GetAckNumber() == m_rxBuffer.NextRxSequence());
+//  NS_ASSERT( header.GetAckNumber() == m_rxBuffer.NextRxSequence());
+  int flags = header.GetFlags();
+
+  if (m_endPoint != 0)
+    {
+      NS_ASSERT( header.GetSourcePort() == m_endPoint->GetLocalPort() );
+      NS_ASSERT( header.GetDestinationPort() == m_endPoint->GetPeerPort() );
+    }
+  else
+    {
+      NS_ASSERT( header.GetSourcePort() == m_endPoint6->GetLocalPort() );
+      NS_ASSERT( header.GetDestinationPort() == m_endPoint6->GetPeerPort() );
+    }
+
+  if (flags & TcpHeader::FIN)
+    {
+      // why this ? ack ?
+      flags |= TcpHeader::ACK;
+    }
+  else if (m_state == FIN_WAIT_1 || m_state == LAST_ACK || m_state == CLOSING)
+    {
+      ++s;
+    }
+
+  header.SetWindowSize(AdvertisedWindowSize());
+//  AddOptions(header);
+  m_rto = m_rtt->RetransmitTimeout();
+  bool hasSyn = flags & TcpHeader::SYN;
+  bool hasFin = flags & TcpHeader::FIN;
+  bool isAck = flags == TcpHeader::ACK;
+  if (hasSyn)
+    {
+      if (m_cnCount == 0)
+        { // No more connection retries, give up
+          NS_LOG_LOGIC ("Connection failed.");
+          CloseAndNotify();
+          return;
+        }
+      else
+        { // Exponential backoff of connection time out
+          int backoffCount = 0x1 << (m_cnRetries - m_cnCount);
+          m_rto = m_cnTimeout * backoffCount;
+          m_cnCount--;
+        }
+    }
+  if (m_endPoint != 0)
+    {
+      m_tcp->SendPacket(p, header, m_endPoint->GetLocalAddress(), m_endPoint->GetPeerAddress(), m_boundnetdevice);
+    }
+  else
+    {
+      m_tcp->SendPacket(p, header, m_endPoint6->GetLocalAddress(), m_endPoint6->GetPeerAddress(), m_boundnetdevice);
+    }
+
+  if (flags & TcpHeader::ACK)
+    { // If sending an ACK, cancel the delay ACK as well
+      m_delAckEvent.Cancel();
+      m_delAckCount = 0;
+    }
+  if (m_retxEvent.IsExpired() && (hasSyn || hasFin) && !isAck)
+    { // Retransmit SYN / SYN+ACK / FIN / FIN+ACK to guard against lost
+      NS_LOG_LOGIC ("Schedule retransmission timeout at time "
+          << Simulator::Now ().GetSeconds () << " to expire at time "
+          << (Simulator::Now () + m_rto.Get ()).GetSeconds ()
+          );
+      m_retxEvent = Simulator::Schedule(m_rto, &TcpSocketBase::SendEmptyPacket, this, (uint8_t)flags);
+    }
+}
+
+
+
+
+/** Extract at most maxSize bytes from the TxBuffer at sequence seq, add the
+ TCP header, and send to TcpL4Protocol */
+//uint32_t
+//TcpSocketBase::SendDataPacket(SequenceNumber32 seq, uint32_t maxSize, bool withAck)
+//{
+//  NS_LOG_FUNCTION (this << seq << maxSize << withAck);  //NS_LOG_INFO("SendDataPacket -> SeqNb: " << seq);
+//  Ptr<Packet> p = m_txBuffer.CopyFromSequence(maxSize, seq);
+//  uint32_t sz = p->GetSize(); // Size of packet
+//  uint8_t flags = withAck ? TcpHeader::ACK : 0;
+//  uint32_t remainingData = m_txBuffer.SizeFromSequence(seq + SequenceNumber32(sz));
+//  // TODO move that to SendPacket
+//  if (m_closeOnEmpty && (remainingData == 0))
+//    {
+//      flags |= TcpHeader::FIN;
+//      if (m_state == ESTABLISHED)
+//        { // On active close: I am the first one to send FIN
+//          NS_LOG_INFO ("ESTABLISHED -> FIN_WAIT_1");
+//          m_state = FIN_WAIT_1;
+//        }
+//      else if (m_state == CLOSE_WAIT)
+//        { // On passive close: Peer sent me FIN already
+//          NS_LOG_INFO ("CLOSE_WAIT -> LAST_ACK");
+//          m_state = LAST_ACK;
+//        }
+//    }
+//
+//
+//  GeneratePacketHeader();
+//  TcpHeader header;
+//  header.SetFlags(flags);
+//  header.SetSequenceNumber(seq);
+//  header.SetAckNumber(m_rxBuffer.NextRxSequence());
+//  if (m_endPoint)
+//    {
+//      header.SetSourcePort(m_endPoint->GetLocalPort());
+//      header.SetDestinationPort(m_endPoint->GetPeerPort());
+//    }
+//  else
+//    {
+//      header.SetSourcePort(m_endPoint6->GetLocalPort());
+//      header.SetDestinationPort(m_endPoint6->GetPeerPort());
+//    }
+//  header.SetWindowSize(AdvertisedWindowSize());
+//  AddOptions(header);
+//  if (m_retxEvent.IsExpired())
+//    { // Schedule retransmit
+//      m_rto = m_rtt->RetransmitTimeout();
+//      NS_LOG_LOGIC (this << " SendDataPacket Schedule ReTxTimeout at time " <<
+//          Simulator::Now ().GetSeconds () << " to expire at time " <<
+//          (Simulator::Now () + m_rto.Get ()).GetSeconds () );
+//      m_retxEvent = Simulator::Schedule(m_rto, &TcpSocketBase::ReTxTimeout, this);
+//    }NS_LOG_LOGIC ("Send packet via TcpL4Protocol with flags 0x" << std::hex << static_cast<uint32_t> (flags) << std::dec);
+//
+////  std::list < uint32_t > sampleList;
+////  // 4 drops on 3rd RTT
+////  sampleList.push_back(16);
+////  sampleList.push_back(20);
+////  sampleList.push_back(21);
+////
+////  // Add list to ListErrorModel object
+////  Ptr<ListErrorModel> rem = CreateObject<ListErrorModel>();
+////  rem->SetList(sampleList);
+//
+//  // Packet should be drop
+//  if (IsCorrupt(p))
+//    {
+//      uint32_t tmp = (((seq.GetValue() + sz) - initialSeqNb) / m_segmentSize) % mod;
+//      DROP.push_back(std::make_pair(Simulator::Now().GetSeconds(), tmp));
+//    }
+//  // Packet should be sent
+//  else
+//    {
+//      if (m_endPoint)
+//        {
+//          m_tcp->SendPacket(p, header, m_endPoint->GetLocalAddress(), m_endPoint->GetPeerAddress(), m_boundnetdevice);
+//          uint32_t tmp = (((seq.GetValue() + sz) - initialSeqNb) / m_segmentSize) % mod;
+//          DATA.push_back(std::make_pair(Simulator::Now().GetSeconds(), tmp));
+//        }
+//      else
+//        {
+//          m_tcp->SendPacket(p, header, m_endPoint6->GetLocalAddress(), m_endPoint6->GetPeerAddress(), m_boundnetdevice);
+//        }
+//    }
+//  m_rtt->SentSeq(seq, sz);       // notify the RTT
+//  // Notify the application of the data being sent unless this is a retransmit
+//  if (seq == m_nextTxSequence)
+//    {
+//      Simulator::ScheduleNow(&TcpSocketBase::NotifyDataSent, this, sz);
+//    }
+//  // Update highTxMark
+//  m_highTxMark = std::max(seq + sz, m_highTxMark.Get());
+//  NS_LOG_DEBUG("DataPacket -----> " << header);
+//  return sz;
+//}
+
+#if 0
+// The original one
 /** Send an empty packet with specified TCP flags */
 void
 TcpSocketBase::SendEmptyPacket(uint8_t flags)
 {
   NS_LOG_FUNCTION (this << (uint32_t)flags);
+
   Ptr<Packet> p = Create<Packet>();
   TcpHeader header;
   SequenceNumber32 s = m_nextTxSequence;
@@ -1521,6 +1761,99 @@ TcpSocketBase::SendEmptyPacket(uint8_t flags)
 
   NS_LOG_DEBUG("SendEmptyPacket -> " << header);
 }
+
+/** Extract at most maxSize bytes from the TxBuffer at sequence seq, add the
+ TCP header, and send to TcpL4Protocol */
+uint32_t
+TcpSocketBase::SendDataPacket(SequenceNumber32 seq, uint32_t maxSize, bool withAck)
+{
+  NS_LOG_FUNCTION (this << seq << maxSize << withAck);  //NS_LOG_INFO("SendDataPacket -> SeqNb: " << seq);
+  Ptr<Packet> p = m_txBuffer.CopyFromSequence(maxSize, seq);
+  uint32_t sz = p->GetSize(); // Size of packet
+  uint8_t flags = withAck ? TcpHeader::ACK : 0;
+  uint32_t remainingData = m_txBuffer.SizeFromSequence(seq + SequenceNumber32(sz));
+  // TODO move that to SendPacket
+  if (m_closeOnEmpty && (remainingData == 0))
+    {
+      flags |= TcpHeader::FIN;
+      if (m_state == ESTABLISHED)
+        { // On active close: I am the first one to send FIN
+          NS_LOG_INFO ("ESTABLISHED -> FIN_WAIT_1");
+          m_state = FIN_WAIT_1;
+        }
+      else if (m_state == CLOSE_WAIT)
+        { // On passive close: Peer sent me FIN already
+          NS_LOG_INFO ("CLOSE_WAIT -> LAST_ACK");
+          m_state = LAST_ACK;
+        }
+    }
+  TcpHeader header;
+  header.SetFlags(flags);
+  header.SetSequenceNumber(seq);
+  header.SetAckNumber(m_rxBuffer.NextRxSequence());
+  if (m_endPoint)
+    {
+      header.SetSourcePort(m_endPoint->GetLocalPort());
+      header.SetDestinationPort(m_endPoint->GetPeerPort());
+    }
+  else
+    {
+      header.SetSourcePort(m_endPoint6->GetLocalPort());
+      header.SetDestinationPort(m_endPoint6->GetPeerPort());
+    }
+  header.SetWindowSize(AdvertisedWindowSize());
+  AddOptions(header);
+  if (m_retxEvent.IsExpired())
+    { // Schedule retransmit
+      m_rto = m_rtt->RetransmitTimeout();
+      NS_LOG_LOGIC (this << " SendDataPacket Schedule ReTxTimeout at time " <<
+          Simulator::Now ().GetSeconds () << " to expire at time " <<
+          (Simulator::Now () + m_rto.Get ()).GetSeconds () );
+      m_retxEvent = Simulator::Schedule(m_rto, &TcpSocketBase::ReTxTimeout, this);
+    }NS_LOG_LOGIC ("Send packet via TcpL4Protocol with flags 0x" << std::hex << static_cast<uint32_t> (flags) << std::dec);
+
+//  std::list < uint32_t > sampleList;
+//  // 4 drops on 3rd RTT
+//  sampleList.push_back(16);
+//  sampleList.push_back(20);
+//  sampleList.push_back(21);
+//
+//  // Add list to ListErrorModel object
+//  Ptr<ListErrorModel> rem = CreateObject<ListErrorModel>();
+//  rem->SetList(sampleList);
+
+  // Packet should be drop
+  if (IsCorrupt(p))
+    {
+      uint32_t tmp = (((seq.GetValue() + sz) - initialSeqNb) / m_segmentSize) % mod;
+      DROP.push_back(std::make_pair(Simulator::Now().GetSeconds(), tmp));
+    }
+  // Packet should be sent
+  else
+    {
+      if (m_endPoint)
+        {
+          m_tcp->SendPacket(p, header, m_endPoint->GetLocalAddress(), m_endPoint->GetPeerAddress(), m_boundnetdevice);
+          uint32_t tmp = (((seq.GetValue() + sz) - initialSeqNb) / m_segmentSize) % mod;
+          DATA.push_back(std::make_pair(Simulator::Now().GetSeconds(), tmp));
+        }
+      else
+        {
+          m_tcp->SendPacket(p, header, m_endPoint6->GetLocalAddress(), m_endPoint6->GetPeerAddress(), m_boundnetdevice);
+        }
+    }
+  m_rtt->SentSeq(seq, sz);       // notify the RTT
+  // Notify the application of the data being sent unless this is a retransmit
+  if (seq == m_nextTxSequence)
+    {
+      Simulator::ScheduleNow(&TcpSocketBase::NotifyDataSent, this, sz);
+    }
+  // Update highTxMark
+  m_highTxMark = std::max(seq + sz, m_highTxMark.Get());
+  NS_LOG_DEBUG("DataPacket -----> " << header);
+  return sz;
+}
+#endif
 
 /** This function closes the endpoint completely. Called upon RST_TX action. */
 void
@@ -1666,96 +1999,7 @@ TcpSocketBase::ConnectionSucceeded()
     }
 }
 
-/** Extract at most maxSize bytes from the TxBuffer at sequence seq, add the
- TCP header, and send to TcpL4Protocol */
-uint32_t
-TcpSocketBase::SendDataPacket(SequenceNumber32 seq, uint32_t maxSize, bool withAck)
-{
-  NS_LOG_FUNCTION (this << seq << maxSize << withAck);  //NS_LOG_INFO("SendDataPacket -> SeqNb: " << seq);
-  Ptr<Packet> p = m_txBuffer.CopyFromSequence(maxSize, seq);
-  uint32_t sz = p->GetSize(); // Size of packet
-  uint8_t flags = withAck ? TcpHeader::ACK : 0;
-  uint32_t remainingData = m_txBuffer.SizeFromSequence(seq + SequenceNumber32(sz));
-  if (m_closeOnEmpty && (remainingData == 0))
-    {
-      flags |= TcpHeader::FIN;
-      if (m_state == ESTABLISHED)
-        { // On active close: I am the first one to send FIN
-          NS_LOG_INFO ("ESTABLISHED -> FIN_WAIT_1");
-          m_state = FIN_WAIT_1;
-        }
-      else if (m_state == CLOSE_WAIT)
-        { // On passive close: Peer sent me FIN already
-          NS_LOG_INFO ("CLOSE_WAIT -> LAST_ACK");
-          m_state = LAST_ACK;
-        }
-    }
-  TcpHeader header;
-  header.SetFlags(flags);
-  header.SetSequenceNumber(seq);
-  header.SetAckNumber(m_rxBuffer.NextRxSequence());
-  if (m_endPoint)
-    {
-      header.SetSourcePort(m_endPoint->GetLocalPort());
-      header.SetDestinationPort(m_endPoint->GetPeerPort());
-    }
-  else
-    {
-      header.SetSourcePort(m_endPoint6->GetLocalPort());
-      header.SetDestinationPort(m_endPoint6->GetPeerPort());
-    }
-  header.SetWindowSize(AdvertisedWindowSize());
-  AddOptions(header);
-  if (m_retxEvent.IsExpired())
-    { // Schedule retransmit
-      m_rto = m_rtt->RetransmitTimeout();
-      NS_LOG_LOGIC (this << " SendDataPacket Schedule ReTxTimeout at time " <<
-          Simulator::Now ().GetSeconds () << " to expire at time " <<
-          (Simulator::Now () + m_rto.Get ()).GetSeconds () );
-      m_retxEvent = Simulator::Schedule(m_rto, &TcpSocketBase::ReTxTimeout, this);
-    }NS_LOG_LOGIC ("Send packet via TcpL4Protocol with flags 0x" << std::hex << static_cast<uint32_t> (flags) << std::dec);
 
-//  std::list < uint32_t > sampleList;
-//  // 4 drops on 3rd RTT
-//  sampleList.push_back(16);
-//  sampleList.push_back(20);
-//  sampleList.push_back(21);
-//
-//  // Add list to ListErrorModel object
-//  Ptr<ListErrorModel> rem = CreateObject<ListErrorModel>();
-//  rem->SetList(sampleList);
-
-  // Packet should be drop
-  if (IsCorrupt(p))
-    {
-      uint32_t tmp = (((seq.GetValue() + sz) - initialSeqNb) / m_segmentSize) % mod;
-      DROP.push_back(std::make_pair(Simulator::Now().GetSeconds(), tmp));
-    }
-  // Packet should be sent
-  else
-    {
-      if (m_endPoint)
-        {
-          m_tcp->SendPacket(p, header, m_endPoint->GetLocalAddress(), m_endPoint->GetPeerAddress(), m_boundnetdevice);
-          uint32_t tmp = (((seq.GetValue() + sz) - initialSeqNb) / m_segmentSize) % mod;
-          DATA.push_back(std::make_pair(Simulator::Now().GetSeconds(), tmp));
-        }
-      else
-        {
-          m_tcp->SendPacket(p, header, m_endPoint6->GetLocalAddress(), m_endPoint6->GetPeerAddress(), m_boundnetdevice);
-        }
-    }
-  m_rtt->SentSeq(seq, sz);       // notify the RTT
-  // Notify the application of the data being sent unless this is a retransmit
-  if (seq == m_nextTxSequence)
-    {
-      Simulator::ScheduleNow(&TcpSocketBase::NotifyDataSent, this, sz);
-    }
-  // Update highTxMark
-  m_highTxMark = std::max(seq + sz, m_highTxMark.Get());
-  NS_LOG_DEBUG("DataPacket -----> " << header);
-  return sz;
-}
 
 bool
 TcpSocketBase::IsCorrupt(Ptr<Packet> p)
