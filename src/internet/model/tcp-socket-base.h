@@ -254,14 +254,18 @@ protected:
   GenerateEmptyPacketHeader(TcpHeader& header, uint8_t flags);
 
   // TODO pass on data
-  virtual void
-  GenerateDataPacketHeader(TcpHeader& header, uint8_t flags);
+  /**
+  SendPacket should be called straightaway
+  uint8_t flags,
+  **/
+//  virtual void
+//  GenerateDataPacketHeader(TcpHeader& header, SequenceNumber32 seq, bool withAck);
 
   virtual void
   SendEmptyPacket(TcpHeader header);
 
   virtual uint32_t
-  SendDataPacket(TcpHeader header, SequenceNumber32 seq, uint32_t maxSize);
+  SendDataPacket(TcpHeader header,SequenceNumber32 seq,uint32_t maxSize);
 
   // this one should be private
 private:
@@ -275,8 +279,8 @@ public:
   ///////////////////////////////////
 
 
-//  virtual uint32_t
-//  SendDataPacket(SequenceNumber32 seq, uint32_t maxSize, bool withAck); // Send a data packet
+  virtual uint32_t
+  SendDataPacket(SequenceNumber32 seq, uint32_t maxSize, bool withAck); // Send a data packet
   virtual void
   SendEmptyPacket(uint8_t flags); // Send a empty packet that carries a flag, e.g. ACK
 

@@ -1472,36 +1472,59 @@ TcpSocketBase::GenerateEmptyPacketHeader(TcpHeader& header, uint8_t flags)
 
 }
 
+//void
+//TcpSocketBase::GenerateDataPacketHeader(TcpHeader& header,
+////  uint8_t flags,
+//  SequenceNumber32 seq,
+//  bool withAck
+////   uint32_t maxSize
+//
+//  )
+//{
+////  SequenceNumber32 s = m_nextTxSequence;
+//  GenerateEmptyPacketHeader(header, withAck ? TcpHeader::ACK : 0);
+//  header.
+//
+//}
+
+
 void
 TcpSocketBase::SendEmptyPacket(uint8_t flags)
 {
   TcpHeader header;
   GenerateEmptyPacketHeader(header,flags);
-  Ptr<Packet> p = CreateObject<Packet>();
-  SendPacket(header,p);
+  SendEmptyPacket(header);
+//  SendPacket(header,p);
 
 }
 
 void
 TcpSocketBase::SendEmptyPacket(TcpHeader header)
 {
-
-  SendPacket(header, p );
-//    SequenceNumber32 s = m_nextTxSequence;
-//
+//  TODO
 //  if (m_endPoint == 0 && m_endPoint6 == 0)
 //    {
 //      NS_LOG_WARN ("Failed to send empty packet due to null endpoint");
 //      return;
 //    }
-//  if (flags & TcpHeader::FIN)
-//    {
-//      flags |= TcpHeader::ACK;
-//    }
-//  else if (m_state == FIN_WAIT_1 || m_state == LAST_ACK || m_state == CLOSING)
-//    {
-//      ++s;
-//    }
+  uint8_t flags = header.GetFlags();
+
+  SequenceNumber32 s = m_nextTxSequence;
+
+  if (flags & TcpHeader::FIN)
+    {
+      flags |= TcpHeader::ACK;
+    }
+  else if (m_state == FIN_WAIT_1 || m_state == LAST_ACK || m_state == CLOSING)
+    {
+      ++s;
+    }
+
+  header.SetSequenceNumber(s);
+
+  Ptr<Packet> p = Create<Packet>();
+  SendPacket(header, p );
+
 
 //  header.SetWindowSize(AdvertisedWindowSize());
 }
@@ -1509,6 +1532,8 @@ TcpSocketBase::SendEmptyPacket(TcpHeader header)
 void
 TcpSocketBase::SendPacket(TcpHeader header, Ptr<Packet> p)
 {
+  // TODO log header at least ?
+
   // Check dest/src/seq nb are ok
   NS_ASSERT( header.GetAckNumber() == m_rxBuffer.NextRxSequence());
 //  NS_ASSERT( header.GetAckNumber() == m_rxBuffer.NextRxSequence());
@@ -1524,16 +1549,22 @@ TcpSocketBase::SendPacket(TcpHeader header, Ptr<Packet> p)
       NS_ASSERT( header.GetSourcePort() == m_endPoint6->GetLocalPort() );
       NS_ASSERT( header.GetDestinationPort() == m_endPoint6->GetPeerPort() );
     }
+  /// TODO assert seq number of TCP header
+  // En fait ca je peux pas le verifier sans avoir la longueur du paquet ip
+//  NS_ASSERT_MSG( header.GetLength() == p->GetSize() , "Packet size does not match header");
 
-  if (flags & TcpHeader::FIN)
-    {
-      // why this ? ack ?
-      flags |= TcpHeader::ACK;
-    }
-  else if (m_state == FIN_WAIT_1 || m_state == LAST_ACK || m_state == CLOSING)
-    {
-      ++s;
-    }
+//  if (flags & TcpHeader::FIN)
+//    {
+//      // why this ? ack ?
+//      flags |= TcpHeader::ACK;
+//    }
+//  else if (m_state == FIN_WAIT_1 || m_state == LAST_ACK || m_state == CLOSING)
+//    {
+//      ++s;
+//    }
+
+  // Set seq number
+
 
   header.SetWindowSize(AdvertisedWindowSize());
 //  AddOptions(header);
@@ -1576,19 +1607,86 @@ TcpSocketBase::SendPacket(TcpHeader header, Ptr<Packet> p)
           << Simulator::Now ().GetSeconds () << " to expire at time "
           << (Simulator::Now () + m_rto.Get ()).GetSeconds ()
           );
-      m_retxEvent = Simulator::Schedule(m_rto, &TcpSocketBase::SendEmptyPacket, this, (uint8_t)flags);
+      m_retxEvent = Simulator::Schedule(m_rto, (void (TcpSocketBase::*)(uint8_t )  )&TcpSocketBase::SendEmptyPacket, this, (uint8_t)flags);
     }
 }
 
 
+uint32_t
+TcpSocketBase::SendDataPacket(TcpHeader header, SequenceNumber32 seq,uint32_t maxSize)
+{
+//  Ptr<Packet> p = CreateObject<Packet>();
+  Ptr<Packet> p = m_txBuffer.CopyFromSequence(maxSize, seq);
 
+  uint32_t sz = p->GetSize(); // Size of packet
+//  uint8_t flags = withAck ? TcpHeader::ACK : 0;
+  uint32_t remainingData = m_txBuffer.SizeFromSequence(seq + SequenceNumber32(sz));
+//  Ptr<Packet> p = m_txBuffer.CopyFromSequence( header.GetLength(), seq);
+
+//  // TODO move that to SendPacket
+  if (m_closeOnEmpty && (remainingData == 0))
+    {
+      header.SetFlags( header.GetFlags() | TcpHeader::FIN);
+      // flags |= TcpHeader::FIN;
+      if (m_state == ESTABLISHED)
+        { // On active close: I am the first one to send FIN
+          NS_LOG_INFO ("ESTABLISHED -> FIN_WAIT_1");
+          m_state = FIN_WAIT_1;
+        }
+      else if (m_state == CLOSE_WAIT)
+        { // On passive close: Peer sent me FIN already
+          NS_LOG_INFO ("CLOSE_WAIT -> LAST_ACK");
+          m_state = LAST_ACK;
+        }
+    }
+
+   header.SetSequenceNumber(seq);
+
+  // Packet should be drop
+  if (IsCorrupt(p))
+    {
+      uint32_t tmp = (((seq.GetValue() + sz) - initialSeqNb) / m_segmentSize) % mod;
+      DROP.push_back(std::make_pair(Simulator::Now().GetSeconds(), tmp));
+    }
+  // Packet should be sent
+  else
+    {
+      SendPacket(header,p);
+//      if (m_endPoint)
+//        {
+//          m_tcp->SendPacket(p, header, m_endPoint->GetLocalAddress(), m_endPoint->GetPeerAddress(), m_boundnetdevice);
+//          uint32_t tmp = (((seq.GetValue() + sz) - initialSeqNb) / m_segmentSize) % mod;
+//          DATA.push_back(std::make_pair(Simulator::Now().GetSeconds(), tmp));
+//        }
+//      else
+//        {
+//          m_tcp->SendPacket(p, header, m_endPoint6->GetLocalAddress(), m_endPoint6->GetPeerAddress(), m_boundnetdevice);
+//        }
+    }
+  m_rtt->SentSeq(seq, sz);       // notify the RTT
+  // Notify the application of the data being sent unless this is a retransmit
+  if (seq == m_nextTxSequence)
+    {
+      Simulator::ScheduleNow(&TcpSocketBase::NotifyDataSent, this, sz);
+    }
+  // Update highTxMark
+  m_highTxMark = std::max(seq + sz, m_highTxMark.Get());
+  NS_LOG_DEBUG("DataPacket -----> " << header);
+  return sz;
+}
 
 /** Extract at most maxSize bytes from the TxBuffer at sequence seq, add the
  TCP header, and send to TcpL4Protocol */
-//uint32_t
-//TcpSocketBase::SendDataPacket(SequenceNumber32 seq, uint32_t maxSize, bool withAck)
-//{
-//  NS_LOG_FUNCTION (this << seq << maxSize << withAck);  //NS_LOG_INFO("SendDataPacket -> SeqNb: " << seq);
+uint32_t
+TcpSocketBase::SendDataPacket(SequenceNumber32 seq, uint32_t maxSize, bool withAck)
+{
+  NS_LOG_FUNCTION (this << seq << maxSize << withAck);  //NS_LOG_INFO("SendDataPacket -> SeqNb: " << seq);
+  TcpHeader header;
+
+  GenerateEmptyPacketHeader(header, withAck ? TcpHeader::ACK : 0);
+
+  return SendDataPacket( header, seq, maxSize);
+
 //  Ptr<Packet> p = m_txBuffer.CopyFromSequence(maxSize, seq);
 //  uint32_t sz = p->GetSize(); // Size of packet
 //  uint8_t flags = withAck ? TcpHeader::ACK : 0;
@@ -1610,7 +1708,6 @@ TcpSocketBase::SendPacket(TcpHeader header, Ptr<Packet> p)
 //    }
 //
 //
-//  GeneratePacketHeader();
 //  TcpHeader header;
 //  header.SetFlags(flags);
 //  header.SetSequenceNumber(seq);
@@ -1676,7 +1773,7 @@ TcpSocketBase::SendPacket(TcpHeader header, Ptr<Packet> p)
 //  m_highTxMark = std::max(seq + sz, m_highTxMark.Get());
 //  NS_LOG_DEBUG("DataPacket -----> " << header);
 //  return sz;
-//}
+}
 
 #if 0
 // The original one

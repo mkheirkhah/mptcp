@@ -159,8 +159,8 @@ protected:
   virtual void
   ReceivedData(Ptr<Packet>, const TcpHeader&);
 
-//  uint32_t
-//  SendDataPacket(SequenceNumber32 seq, uint32_t maxSize, bool withAck); // Send a data packet
+  uint32_t
+  SendDataPacket(SequenceNumber32 seq, uint32_t maxSize, bool withAck); // Send a data packet
 
   /**
   * Like send, but pass on the global seq number associated with

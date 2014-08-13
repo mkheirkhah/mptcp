@@ -294,12 +294,13 @@ MpTcpSubFlow::DoConnect()
         // Join option
         Ptr<TcpOptionMpTcpJoinInitialSyn> join =  CreateObject<TcpOptionMpTcpJoinInitialSyn>();
         //TODO retrieve from meta
-        join->SetLocalToken(0);
+//        join->SetLocalToken(0);
         join->SetPeerToken(0);
+//        join->SetAddressId(0);
 //        join->set
         header.AppendOption( join );
       }
-      SendEmptyPacket(header);
+      TcpSocketBase::SendEmptyPacket(header);
 
       NS_LOG_INFO (TcpStateName[m_state] << " -> SYN_SENT");
       m_state = SYN_SENT;
@@ -313,7 +314,7 @@ MpTcpSubFlow::DoConnect()
   return 0;
 }
 
-#if
+#if 0
 int
 MpTcpSubFlow::Connect(const Address &address)
 {
