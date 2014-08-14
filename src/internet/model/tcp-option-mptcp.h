@@ -43,17 +43,6 @@ http://www.iana.org/assignments/tcp-parameters/tcp-parameters.xhtml
 0xf 	(PRIVATE) 	Private Use within controlled testbe
  */
 // TODO rename to MpTcpSubType
-  enum SubType {
-    MP_CAPABLE,
-    MP_JOIN,
-    DSS,
-    ADD_ADDR,
-    REMOVE_ADDR,
-    MP_PRIO,
-    MP_FAIL,
-    MP_FASTCLOSE
-  };
-
 
 class TcpOptionMpTcpCapable;
 
@@ -75,6 +64,18 @@ TODO rename to TcpOptionMpTcp and the other ones as TcpOptionMpTcpDerivatives/Su
 class TcpOptionMpTcpMain : public TcpOption
 {
 public:
+  enum SubType {
+    MP_CAPABLE,
+    MP_JOIN,
+    DSS,
+    ADD_ADDR,
+    REMOVE_ADDR,
+    MP_PRIO,
+    MP_FAIL,
+    MP_FASTCLOSE
+  };
+
+
   TcpOptionMpTcpMain();
   virtual ~TcpOptionMpTcpMain();
 
@@ -227,9 +228,9 @@ public:
   virtual void SetRemoteKey(uint64_t remoteKey);
 
 
-  virtual bool HasPeerKey() const { return GetSerializedSize() == 20; };
+  virtual bool HasReceiverKey() const { return GetSerializedSize() == 20; };
 
-  virtual uint64_t GetLocalKey() const { return m_senderKey;}
+  virtual uint64_t GetSenderKey() const { return m_senderKey;}
   virtual uint64_t GetPeerKey() const { return m_remoteKey;}
 
   // TODO SetCryptoAlgorithm(

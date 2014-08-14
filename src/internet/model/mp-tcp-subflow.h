@@ -30,7 +30,8 @@
 
 using namespace std;
 
-namespace ns3{
+namespace ns3
+{
 
 class MpTcpSocketBase;
 
@@ -107,6 +108,8 @@ public:
   // TODO ? Moved from meta
   //  void ProcessListen  (uint8_t sFlowIdx, Ptr<Packet>, const TcpHeader&, const Address&, const Address&);
 
+  void
+  ProcessSynSent(Ptr<Packet> packet, const TcpHeader& tcpHeader);
 
   /**
   \return Value advertised by the meta socket
@@ -119,11 +122,19 @@ public:
   virtual void
   Retransmit(void);
 
+        // TODO support IPv6
+  Ptr<MpTcpPathIdManager> GetIdManager();
   /**
 
   */
   bool GetMappingForSegment( SequenceNumber32 ack, MpTcpMapping& );
 //  MpTcpMapping getSegmentOfACK( uint32_t ack);
+
+  /**
+  * This is a public function in TcpSocketBase
+  **/
+  virtual int
+  Close(void);   // Close by app: Kill socket upon tx buffer emptied
 
 
 protected:
@@ -135,6 +146,7 @@ protected:
   */
   void
   GenerateDataPacketHeader(TcpHeader& header, SequenceNumber32 seq, uint32_t maxSize, bool withAck);
+
 
   virtual void
   CloseAndNotify(void);
@@ -154,6 +166,9 @@ protected:
   int
   DoConnect();
 
+  Ptr<MpTcpSocketBase>
+  GetMeta();
+
   virtual void
   ReceivedAck(Ptr<Packet>, const TcpHeader&); // Received an ACK packet
   virtual void
@@ -172,8 +187,8 @@ protected:
   /**
   This one overridesprevious one, adding MPTCP options when needed
   */
-  virtual void
-  SendEmptyPacket(uint8_t flags);
+//  virtual void
+//  SendEmptyPacket(uint8_t flags);
 
   virtual Ptr<TcpSocketBase>
   Fork(void); // Call CopyObject<> to clone me

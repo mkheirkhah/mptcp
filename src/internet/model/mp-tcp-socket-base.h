@@ -231,6 +231,8 @@ protected: // protected methods
   // TODO remove should be done by helper instead
 //  bool InitiateSubflows();            // Initiate new subflows
 
+  int
+  Listen(void);
   /**
   Fails if
   **/
@@ -248,7 +250,7 @@ protected: // protected methods
   \bug convert to uint64_t ?
   \note Setting a remote key has the sideeffect of enabling MPTCP on the socket
   */
-  void SetRemoteKey(uint32_t );
+  void SetPeerKey(uint64_t );
 
   void
   ConnectionSucceeded(void); // Schedule-friendly wrapper for Socket::NotifyConnectionSucceeded()
@@ -338,6 +340,8 @@ protected: // protected methods
   */
   virtual Ptr<MpTcpSocketBase> MpTcpFork(void) = 0;
 
+
+
   virtual void Retransmit();
   // TODO see if we can remove/override parents
   virtual void ReceivedAck ( Ptr<Packet>, const TcpHeader&); // Received an ACK packet
@@ -370,7 +374,7 @@ protected: // protected methods
   */
   Time ComputeReTxTimeoutForSubflow( Ptr<MpTcpSubFlow> );
 
-
+  bool DoChecksum() const;
 
   //////////////////////////////////////////////////////////////////
   ////  Here follows a list of MPTCP specific *callbacks* triggered by subflows
@@ -467,8 +471,9 @@ protected: // protected variables
 
   bool m_mpEnabled;   //!< True if remote host is MPTCP compliant
 
-
+  // TODO rename since will track local too.
   Ptr<MpTcpPathIdManager> m_remotePathIdManager;  //!< Keep track of advertised ADDR id advertised by remote endhost
+
 
 //  MappingList m_unOrdered;  //!< buffer that hold the out of sequence received packet
 
@@ -501,7 +506,7 @@ private:
   // TODO rename into m_localKey  and move tokens into subflow (maybe not even needed)
   uint64_t m_localKey;  //!< Store local host token, generated during the 3-way handshake
   uint64_t m_remoteKey; //!< Store remote host token
-
+  bool     m_doChecksum;  //!< Compute the checksum. Negociated during 3WHS
 private:
 // CloseSubflow
   uint8_t AddLocalAddr(const Ipv4Address& address);

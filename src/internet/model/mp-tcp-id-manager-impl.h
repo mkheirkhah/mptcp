@@ -5,8 +5,8 @@
  * Some codes here are modeled from ns3::TCPNewReno implementation.
  * Email: m.kheirkhah@sussex.ac.uk
  */
-#ifndef MP_TCP_PATH_ID_MANAGER_H
-#define MP_TCP_PATH_ID_MANAGER_H
+#ifndef MP_TCP_PATH_ID_MANAGER_IMPL_H
+#define MP_TCP_PATH_ID_MANAGER_IMPL_H
 
 #include "ns3/callback.h"
 //#include "ns3/mp-tcp-typedefs.h"
@@ -18,6 +18,7 @@
 #include "ns3/object.h"
 #include "ns3/address.h"
 #include "ns3/inet-socket-address.h"
+#include "ns3/mp-tcp-id-manager.h"
 #include <map>
 #include <vector>
 
@@ -42,19 +43,17 @@ RFC6824
    removed from a local or remote host.
 
 * There should be a testsuite to
-* \class MpTcpPathIdManager
-* TODO tempalte
+* \class MpTcpPathIdManagerImpl
 **/
-class MpTcpPathIdManager
-//  : public Object
+class MpTcpPathIdManagerImpl : public MpTcpPathIdManager
 {
 
 public:
 
 
-  MpTcpPathIdManager();
+  MpTcpPathIdManagerImpl();
 
-  virtual ~MpTcpPathIdManager();
+  virtual ~MpTcpPathIdManagerImpl();
 
   /**
   Will generate an appropriate ID
@@ -79,7 +78,7 @@ protected:
   Can force the ID with which to register
   //    const Ipv4Address& address, uint16_t port = 0
   **/
-  virtual bool AddRemoteAddr(uint8_t addrId, const Ipv4Address& address, uint16_t port) = 0;
+  virtual bool AddRemoteAddr(uint8_t addrId, const Ipv4Address& address, uint16_t port);
 
   /**
   * del/rem
@@ -91,6 +90,33 @@ protected:
   RegisterLocalAddress()
 
 
+protected:
+  // MPTCP containers
+  // INetSocketAddress
+//  InetSocketAddress
+  typedef std::pair<const Ipv4Address, std::vector<uint16_t> > MpTcpAddressInfo;  //!< Ipv4/v6 address and its port
+
+//  typedef std::multimap<uint8_t,MpTcpAddressInfo>  MpTcpAddressContainer;
+  typedef std::map<uint8_t,MpTcpAddressInfo>  MpTcpAddressContainer;
+
+  //! Maps an Address Id to the pair  (Ipv4/v6, port)
+//  std::map<uint8_t,MpTcpAddressInfo> m_localAddrs;
+
+   //! List addresses advertised by the remote host
+   //! index 0 for local, 1 for remote addr
+  MpTcpAddressContainer m_addrs;
+
+  /**
+  Need this to check if an IP has already been advertised, in which case
+  the same id should be associated to the already advertised IP
+
+  **/
+//  virtual MpTcpAddressContainer::iterator FindAddrIdOfAddr(Address addr );
+
+
+//  virtual uint8_t GenerateAddrId(MpTcpAddressInfo);
+//  virtual uint8_t GenerateAddrId(const InetSocketAddress&);
+//  virtual uint8_t GenerateAddrId(const InetSocketAddress6&);
 };
 
 
@@ -99,4 +125,4 @@ protected:
 
 
 
-#endif // MP_TCP_PATH_ID_MANAGER_H
+#endif // MP_TCP_PATH_ID_MANAGER_IMPL_H

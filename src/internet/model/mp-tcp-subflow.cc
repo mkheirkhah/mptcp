@@ -120,6 +120,7 @@ MpTcpSubFlow::GetRemoteToken() const
 
 
 // TODO should improve parent's one once SOCIS code gets merged
+  #if 0
 void
 MpTcpSubFlow::SendEmptyPacket(uint8_t flags)
 {
@@ -191,7 +192,7 @@ MpTcpSubFlow::SendEmptyPacket(uint8_t flags)
       }
   }
 
-  #if 0
+
   if (((m_state == SYN_SENT) || (m_state == SYN_RCVD )))
     {
       // if master
@@ -209,7 +210,7 @@ MpTcpSubFlow::SendEmptyPacket(uint8_t flags)
 
     }
   else
-  #endif
+
   // if master use MP_CAPABLE
   if ( ((m_state == SYN_SENT) || (m_state == SYN_RCVD )) && hasSyn)
     {
@@ -268,7 +269,7 @@ MpTcpSubFlow::SendEmptyPacket(uint8_t flags)
 //          <<") SendEmptyPacket-> "
 //          << header <<" Length: "<< (int)header.GetLength());
 }
-
+  #endif
 
 
 
@@ -314,7 +315,43 @@ MpTcpSubFlow::DoConnect()
   return 0;
 }
 
+
+/** Inherit from Socket class: Kill this socket and signal the peer (if any) */
+int
+MpTcpSubFlow::Close(void)
+{
+  NS_LOG_FUNCTION (this);
+  // First we check to see if there is any unread rx data
+  // Bug number 426 claims we should send reset in this case.
+
+  if (m_rxBuffer.Size() != 0)
+    {
+      SendRST();
+      return 0;
+    }
+
+  //
+  if( GetNClosingSubflows() )
+  {
+
+  }
+
+
+  if (m_txBuffer.SizeFromSequence(m_nextTxSequence) > 0)
+    { // App close with pending data must wait until all data transmitted
+      if (m_closeOnEmpty == false)
+        {
+          m_closeOnEmpty = true;
+          NS_LOG_INFO ("Socket " << this << " deferring close, state " << TcpStateName[m_state]);
+        }
+      return 0;
+    }
+  return DoClose();
+}
+
+
 #if 0
+// Could be removed
 int
 MpTcpSubFlow::Connect(const Address &address)
 {
@@ -899,6 +936,244 @@ MpTcpSubFlow::Retransmit(void)
   m_metaSocket->OnSubflowRetransmit( this );
 
   // TODO change window ?
+}
+
+/** Received a packet upon LISTEN state. */
+void
+MpTcpSubFlow::ProcessListen(Ptr<Packet> packet, const TcpHeader& tcpHeader, const Address& fromAddress, const Address& toAddress)
+{
+  NS_LOG_FUNCTION (this << tcpHeader);
+
+  // Extract the flags. PSH and URG are not honoured.
+  uint8_t tcpflags = tcpHeader.GetFlags() & ~(TcpHeader::PSH | TcpHeader::URG);
+
+  // Fork a socket if received a SYN. Do nothing otherwise.
+  // C.f.: the LISTEN part in tcp_v4_do_rcv() in tcp_ipv4.c in Linux kernel
+  if (tcpflags != TcpHeader::SYN)
+    {
+      return;
+    }
+
+  // Call socket's notify function to let the server app know we got a SYN
+  // If the server app refuses the connection, do nothing
+  if (!NotifyConnectionRequest(fromAddress))
+    {
+      return;
+    }
+  // Clone the socket, simulate fork
+  Ptr<MpTcpSubFlow> newSock = Fork();
+  NS_LOG_LOGIC ("Cloned a TcpSocketBase " << newSock);
+  // TODO TcpSocketBase::
+  Simulator::ScheduleNow(&MpTcpSubFlow::CompleteFork, newSock, packet, tcpHeader, fromAddress, toAddress);
+}
+
+Ptr<MpTcpSocketBase>
+MpTcpSubFlow::GetMeta()
+{
+  //!
+
+}
+
+void
+MpTcpSubFlow::CompleteFork(Ptr<Packet> p, const TcpHeader& h, const Address& fromAddress, const Address& toAddress)
+{
+  // Get port and address from peer (connecting host)
+  // TODO upstream ns3 should assert that to and from Address are of the same kind
+  if (InetSocketAddress::IsMatchingType(toAddress))
+    {
+      m_endPoint = m_tcp->Allocate(InetSocketAddress::ConvertFrom(toAddress).GetIpv4(),
+          InetSocketAddress::ConvertFrom(toAddress).GetPort(), InetSocketAddress::ConvertFrom(fromAddress).GetIpv4(),
+          InetSocketAddress::ConvertFrom(fromAddress).GetPort());
+      m_endPoint6 = 0;
+    }
+  else if (Inet6SocketAddress::IsMatchingType(toAddress))
+    {
+      m_endPoint6 = m_tcp->Allocate6(Inet6SocketAddress::ConvertFrom(toAddress).GetIpv6(),
+          Inet6SocketAddress::ConvertFrom(toAddress).GetPort(), Inet6SocketAddress::ConvertFrom(fromAddress).GetIpv6(),
+          Inet6SocketAddress::ConvertFrom(fromAddress).GetPort());
+      m_endPoint = 0;
+    }
+  m_tcp->m_sockets.push_back(this);
+
+  // Change the cloned socket from LISTEN state to SYN_RCVD
+  NS_LOG_INFO ("LISTEN -> SYN_RCVD");
+  m_state = SYN_RCVD;
+  m_cnCount = m_cnRetries;
+  SetupCallback();
+  // Set the sequence number and send SYN+ACK
+  m_rxBuffer.SetNextRxSequence(h.GetSequenceNumber() + SequenceNumber32(1));
+
+  TcpHeader answerHeader;
+  GenerateEmptyPacketHeader( answerHeader, TcpHeader::SYN | TcpHeader::ACK );
+  if( IsMetaSocket() )
+  {
+    Ptr<TcpOptionMpTcpCapable> mpc = CreateObject<TcpOptionMpTcpCapable>();
+    mpc->SetSenderKey( GetMeta()->GetLocalKey() );
+    answerHeader.AppendOption( mpc );
+  }
+  else
+  {
+    Ptr<TcpOptionMpTcpJoinSynReceived> join = CreateObject<TcpOptionMpTcpJoinSynReceived>();
+    //! TODO request from meta its id
+    join->SetAddressId( id );
+    join->SetTruncatedHmac(2);
+    join->SetNonce(3);
+
+    answerHeader.AppendOption( join );
+  }
+
+//  NS_ASSERT( answerHeader.HasOption(TcpOption::P))
+  SendEmptyPacket(answerHeader);
+}
+
+Ptr<MpTcpPathIdManager>
+MpTcpSubFlow::GetIdManager()
+{
+  return GetMeta()->m_remotePathIdManager;
+}
+
+/** Received a packet upon SYN_SENT */
+void
+MpTcpSubFlow::ProcessSynSent(Ptr<Packet> packet, const TcpHeader& tcpHeader)
+{
+  NS_LOG_FUNCTION (this << tcpHeader);
+
+  // Extract the flags. PSH and URG are not honoured.
+  uint8_t tcpflags = tcpHeader.GetFlags() & ~(TcpHeader::PSH | TcpHeader::URG);
+
+  if (tcpflags == 0)
+    { // Bare data, accept it and move to ESTABLISHED state. This is not a normal behaviour. Remove this?
+      NS_ASSERT(false);
+//      NS_LOG_INFO ("SYN_SENT -> ESTABLISHED");
+//      m_state = ESTABLISHED;
+//      m_connected = true;
+//      m_retxEvent.Cancel();
+//      m_delAckCount = m_delAckMaxCount;
+//      ReceivedData(packet, tcpHeader);
+//      Simulator::ScheduleNow(&TcpSocketBase::ConnectionSucceeded, this);
+    }
+  else if (tcpflags == TcpHeader::ACK)
+    { // Ignore ACK in SYN_SENT
+    }
+  else if (tcpflags == TcpHeader::SYN)
+    {
+      NS_ASSERT_MSG(false,"Received syn while in syn_sent mode. Not supported at the moment");
+      // Received SYN, move to SYN_RCVD state and respond with SYN+ACK
+      // TODO
+//      NS_LOG_INFO ("SYN_SENT -> SYN_RCVD");
+//      m_state = SYN_RCVD;
+//      m_cnCount = m_cnRetries;  //reset
+//      m_rxBuffer.SetNextRxSequence(tcpHeader.GetSequenceNumber() + SequenceNumber32(1));
+//      SendEmptyPacket(TcpHeader::SYN | TcpHeader::ACK);
+    }
+    else if (tcpflags == (TcpHeader::SYN | TcpHeader::ACK))
+    {
+      /**
+      * Here is how the MPTCP 3WHS works:
+      *  o  SYN (A->B): A's Key for this connection.
+      *  o  SYN/ACK (B->A): B's Key for this connection.
+      *  o  ACK (A->B): A's Key followed by B's Key.
+      *
+      */
+//      NS_LOG_INFO("Received a SYN/ACK as answer");
+
+      NS_ASSERT(m_nextTxSequence + SequenceNumber32(1) == tcpHeader.GetAckNumber());
+
+      // check for option TODO fall back on TCP in that case
+      NS_ASSERT( tcpHeader.HasOption( TcpOption::MPTCP ) );
+
+
+      // For now we assume there is only one option of MPTCP kind but there may be several
+      // TODO update the SOCIS code to achieve this
+      Ptr<TcpOption> option = tcpHeader.GetOption(TcpOption::MPTCP);
+      Ptr<TcpOptionMpTcpMain> opt2 = DynamicCast<TcpOptionMpTcpMain>(option);
+
+      Ptr<TcpOption> answerOption;  //
+
+
+      if( IsMaster())
+      {
+        // Expect an MP_CAPABLE option
+        NS_ASSERT( opt2->GetSubType() == TcpOptionMpTcpMain::MP_CAPABLE );
+
+        Ptr<TcpOptionMpTcpCapable> mpc = DynamicCast<TcpOptionMpTcpCapable>(option);
+        NS_ASSERT( mpc );
+//        && mpc->HasSKey()
+        NS_LOG_INFO("peer key " << mpc->GetSenderKey()
+////          << "& receiver key" << mpc->GetLocalKey()
+        );
+
+        // Register that key
+        m_metaSocket->SetPeerKey( mpc->GetSenderKey() );
+        answerOption = mpc;
+
+      }
+      else
+      {
+      /**
+         |             |   SYN + MP_JOIN(Token-B, R-A)  |
+         |             |------------------------------->|
+         |             |<-------------------------------|
+         |             | SYN/ACK + MP_JOIN(HMAC-B, R-B) |
+         |             |                                |
+         |             |     ACK + MP_JOIN(HMAC-A)      |
+         |             |------------------------------->|
+         |             |<-------------------------------|
+         |             |             ACK                |
+
+   HMAC-A = HMAC(Key=(Key-A+Key-B), Msg=(R-A+R-B))
+   HMAC-B = HMAC(Key=(Key-B+Key-A), Msg=(R-B+R-A))
+    */
+        // expects MP_JOIN option
+        NS_ASSERT( opt2->GetSubType() == TcpOptionMpTcpMain::MP_JOIN );
+        Ptr<TcpOptionMpTcpJoinSynReceived> opt3 = DynamicCast<TcpOptionMpTcpJoinSynReceived>(option);
+        NS_ASSERT_MSG( opt3, "the MPTCP join option received is not of the expected 1 out of 3 MP_JOIN types." );
+
+        // Here we should check the tokens
+//        uint8_t buf[20] =
+//        opt3->GetTruncatedHmac();
+      }
+
+      // TODO support IPv6
+      GetMeta()->GetIdManager()->AddRemoteAddr(0, m_endPoint->GetPeerAddress(), m_endPoint->GetPeerPort() );
+
+      NS_ASSERT_MSG( answerOption, "Notify the ns3 team. the option should be created by ns3 beforehand." );
+
+      NS_LOG_INFO ("SYN_SENT -> ESTABLISHED");
+      m_state = ESTABLISHED;
+      m_connected = true;
+      m_retxEvent.Cancel();
+      m_rxBuffer.SetNextRxSequence(tcpHeader.GetSequenceNumber() + SequenceNumber32(1));
+      m_highTxMark = ++m_nextTxSequence;
+      m_txBuffer.SetHeadSequence(m_nextTxSequence);
+
+      TcpHeader answerHeader;
+//      NS_ASSERT_
+      GenerateEmptyPacketHeader(answerHeader,TcpHeader::ACK);
+      answerHeader.AppendOption( answerOption );
+      SendEmptyPacket(header);
+
+      fLowStartTime = Simulator::Now().GetSeconds();
+      // TODO check we can send rightaway data ?
+      SendPendingData(m_connected);
+      Simulator::ScheduleNow(&TcpSocketBase::ConnectionSucceeded, this);
+      // Always respond to first data packet to speed up the connection.
+      // Remove to get the behaviour of old NS-3 code.
+      m_delAckCount = m_delAckMaxCount;
+      initialSeqNb = tcpHeader.GetAckNumber().GetValue();
+      //sampleList.push_back(8);
+      //sampleList.push_back(15);
+      NS_LOG_INFO("initialSeqNb: " << initialSeqNb);
+    }
+  else
+    { // Other in-sequence input
+      if (tcpflags != TcpHeader::RST)
+        { // When (1) rx of FIN+ACK; (2) rx of FIN; (3) rx of bad flags
+          NS_LOG_LOGIC ("Illegal flag " << std::hex << static_cast<uint32_t> (tcpflags) << std::dec << " received. Reset packet is sent.");
+          SendRST();
+        }
+      CloseAndNotify();
+    }
 }
 
 /*

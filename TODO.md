@@ -13,11 +13,10 @@ Generic:
 * IPv6 support
 * add the possibility of setting priorities, ie the ability for a subflow to act as backup
 * implement callback support : need to change ns3 ? (matt)
-Morteza: the reason is mptcp subflows would be created in middle of run time, so no way to can hook them in configuration time. This partially being solved in MpTcpSubflow by calling to StartTracing() and then CwndTracer().I can recall there was bug in m_socket which prevent socket to fire call back at all :-)
 * when removing a subflow, flip with last one and update Id. Make sure it doesn't provoke any bug
 * let RTO be chosen by meta
-* Rename *Remote* into *Peer*
-* On MP_JOIN, register the address ID
+* crypto materials checks
+* on MP_join store the addresses Id
 
 Requests for ns3;
 * add an IsConnected member to TcpSocketBase ?
@@ -35,3 +34,4 @@ use "/NodeList/[i]/DeviceList/[i]" ?
 * TcpTxBuffer should be templated to work with SequenceNumber64 too
 * In X::GetTypeId(), SetParent<X> makes runner hangs
 * need to define each component with a new name ? best way would be to allow REGEX on test name
+* In TcpSocketBase::CompleteFork, should ASSERT that addressTo and addressFrom are of the same kind

@@ -155,7 +155,7 @@ TcpOptionMpTcpCapable::Print (std::ostream &os) const
   os << "MP_CAPABLE. version" << m_version
     << "Flags:" << m_flags
     << "Sender's Key [" << GetLocalKey() << "]";
-  if( HasPeerKey() )
+  if( HasReceiverKey() )
   {
     os  << "Peer's Key [" << GetPeerKey() << "]";
   }
@@ -176,7 +176,7 @@ TcpOptionMpTcpCapable::Serialize (Buffer::Iterator i) const
   i.WriteU8 ( (GetSubType () << 4) + (0x0f & GetVersion()) ); // Kind
   i.WriteU8 ( m_flags ); // Length
   i.WriteHtonU64( GetLocalKey() );
-  if( HasPeerKey() )
+  if( HasReceiverKey() )
   {
     i.WriteHtonU64( GetPeerKey() );
   }

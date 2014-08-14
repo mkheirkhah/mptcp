@@ -15,6 +15,9 @@ NS_LOG="MpTcpTestSuite=*|prefix_func:Socket=*:MpTcpSocketBase:*=error|warn" ./wa
 
 There is also a 2nd testsuite called "mptcp-option"
 
+ src/test/ns3tcp/ns3-tcp-loss-test-suite.cc
+ Config::SetDefault ("ns3::TcpL4Protocol::SocketType", "ns3::TcpTahoe");
+
 How to configure waf for prototyping
 ======
 Few interesting flags

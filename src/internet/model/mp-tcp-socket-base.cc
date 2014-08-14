@@ -26,6 +26,7 @@
 #include "ns3/object-vector.h"
 #include "ns3/mp-tcp-scheduler-round-robin.h"
 #include "ns3/mp-tcp-id-manager.h"
+#include "ns3/mp-tcp-id-manager-impl.h"
 
 NS_LOG_COMPONENT_DEFINE("MpTcpSocketBase");
 using namespace std;
@@ -61,21 +62,15 @@ MpTcpSocketBase::MpTcpSocketBase() :
   m_mpEnabled(false)
 {
   NS_LOG_FUNCTION(this);
-//  NS_ASSERT( m_tcp );
-
-  m_remotePathIdManager = CreateObject<MpTcpPathIdManager>();
-//  mpTokenRegister = false;
-
-//  m_totalCwnd = 0;
+  //Object
+  m_remotePathIdManager = Create<MpTcpPathIdManagerImpl>();
 
 //  client = false;
   m_server = false;
 
   // TODO remove
   remoteRecvWnd = 1;
-//  m_segmentSize = 0;
-//  nextTxSequence = 1;
-//  nextRxSequence = 1;
+
   gnu.SetOutFile("allPlots.pdf");
 
   mod = 60; // ??
@@ -160,6 +155,13 @@ MpTcpSocketBase::NotifyRemoteAddAddr(Address address)
   }
 }
 
+
+bool
+MpTcpSocketBase::DoChecksum() const
+{
+  return false;
+}
+
 std::vector<MpTcpSubFlow>::size_type
 MpTcpSocketBase::GetNSubflows() const
 {
@@ -170,7 +172,7 @@ MpTcpSocketBase::GetNSubflows() const
 Ptr<MpTcpSubFlow>
 MpTcpSocketBase::GetSubflow(uint8_t id)
 {
-//  NS_ASSERT()
+  NS_ASSERT_MSG(id < m_subflows.size(), "Trying to get an unexisting subflow");
   return m_subflows[id];
 }
 
@@ -229,12 +231,15 @@ MpTcpSocketBase::EstimateRtt(const TcpHeader& TcpHeader)
 
 
 void
-MpTcpSocketBase::SetRemoteKey(uint32_t remoteKey)
+MpTcpSocketBase::SetPeerKey(uint64_t remoteKey)
 {
   NS_ASSERT( m_remoteKey == 0);
-  //
-  remoteKey = (uint64_t)remoteKey;
+
+//  m_remoteKey = (uint64_t)remoteKey;
+
+  // not  sure yet. Wait to see if SYN/ACK is acked
   m_mpEnabled = true;
+  NS_LOG_DEBUG("Peer key set to " << remoteKey);
 }
 
 
@@ -1432,7 +1437,7 @@ MpTcpSocketBase::CreateSubflow(
   // find srcAddr
 //  sFlow->BindToNetDevice (this->FindOutputNetDevice() )
   //
-  if ( sFlow->Bind( srcAddr) != 0) {
+  if ( sFlow->Bind(srcAddr) != 0) {
     NS_LOG_ERROR("Could not bind to srcAddr" << srcAddr);
     return 0;
   }
@@ -1618,7 +1623,7 @@ MpTcpSocketBase::Bind()
 {
   NS_LOG_FUNCTION (this);
   m_server = false;
-  m_endPoint = m_tcp->Allocate();  // Create endPoint with ephemeralPort.
+  m_endPoint = m_tcp->Allocate();  // Create endPoint with ephemeralPort
   if (0 == m_endPoint)
     {
       m_errno = ERROR_ADDRNOTAVAIL;
@@ -1637,7 +1642,7 @@ MpTcpSocketBase::SetupCallback()
     {
       return -1;
     }
-  // set the call backs method
+  // TODO set the call backs method
 //  m_endPoint->SetRxCallback(MakeCallback(&MpTcpSocketBase::ForwardUp, Ptr<MpTcpSocketBase>(this)));
 //  m_endPoint->SetDestroyCallback(MakeCallback(&MpTcpSocketBase::Destroy, Ptr<MpTcpSocketBase>(this)));
   return 0;
@@ -1847,6 +1852,30 @@ MpTcpSocketBase::SendPendingData(bool withAck)
   return true;
 }
 
+int
+MpTcpSocketBase::Listen(void)
+{
+  NS_LOG_FUNCTION (this);
+  // Linux quits EINVAL if we're not in CLOSED state, so match what they do
+  if (m_state != CLOSED)
+    {
+      m_errno = ERROR_INVAL;
+      return -1;
+    }
+
+  // In other cases, set the state to LISTEN and done
+  NS_LOG_INFO ("CLOSED -> LISTEN");
+  m_state = LISTEN;
+  // TODO create a subflow
+
+  Ptr<MpTcpSubFlow> flow = CreateSubflow(this);
+  // TODO bind to where meta bounded
+//  m_endPoint should have already been allocated by meta: pass it
+  flow->Bind();
+  return flow->Listen();
+
+//  return 0;
+}
 
 /**
  TCP: Upon RTO:
@@ -2424,6 +2453,12 @@ MpTcpSocketBase::ForwardUp(Ptr<Packet> p, Ipv4Header header, uint16_t port, Ptr<
 }
 #endif
 
+
+void
+MpTcpSocketBase::GetIdManager()
+{
+  return m_remotePathIdManager;
+}
 
 void
 MpTcpSocketBase::GetAllAdvertisedDestinations(std::vector<InetSocketAddress>& cont)

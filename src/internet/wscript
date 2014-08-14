@@ -201,6 +201,7 @@ def build(bld):
         'model/mp-tcp-cc.cc',
         'model/mp-tcp-scheduler-round-robin.cc',
         'model/mp-tcp-id-manager.cc',
+        'model/mp-tcp-id-manager-impl.cc',
         'model/tcp-option.cc',
         'model/tcp-option-mptcp.cc',
         'model/tcp-option-nop.cc',
