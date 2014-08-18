@@ -130,7 +130,7 @@ TcpOptionMpTcpCapable::~TcpOptionMpTcpCapable ()
 bool
 TcpOptionMpTcpCapable::operator==(const TcpOptionMpTcpCapable& opt) const
 {
-  return (GetPeerKey() == opt.GetPeerKey() && GetLocalKey() == opt.GetLocalKey() );
+  return (GetPeerKey() == opt.GetPeerKey() && GetSenderKey() == opt.GetSenderKey() );
 }
 
 
@@ -175,7 +175,7 @@ TcpOptionMpTcpCapable::Serialize (Buffer::Iterator i) const
 
   i.WriteU8 ( (GetSubType () << 4) + (0x0f & GetVersion()) ); // Kind
   i.WriteU8 ( m_flags ); // Length
-  i.WriteHtonU64( GetLocalKey() );
+  i.WriteHtonU64( GetSenderKey() );
   if( HasReceiverKey() )
   {
     i.WriteHtonU64( GetPeerKey() );

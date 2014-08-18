@@ -1,6 +1,6 @@
 
 
-#include "ns3/mp-tcp-id-manager.h"
+#include "ns3/mp-tcp-id-manager-impl.h"
 #include "ns3/log.h"
 #include <algorithm>
 
@@ -8,15 +8,16 @@
 namespace ns3
 {
 
-NS_LOG_COMPONENT_DEFINE("MpTcpPathIdManager");
+NS_LOG_COMPONENT_DEFINE("MpTcpPathIdManagerImpl");
 
 
-MpTcpPathIdManager::MpTcpPathIdManager()
+MpTcpPathIdManagerImpl::MpTcpPathIdManagerImpl() :
+  MpTcpPathIdManager()
 {
   NS_LOG_INFO(this);
 }
 
-MpTcpPathIdManager::~MpTcpPathIdManager()
+MpTcpPathIdManagerImpl::~MpTcpPathIdManagerImpl()
 {
   NS_LOG_INFO(this);
 }
@@ -25,7 +26,7 @@ MpTcpPathIdManager::~MpTcpPathIdManager()
 
 //MpTcpAddressContainer::iterator
 ////uint8_t
-//MpTcpPathIdManager::FindAddrIdOfAddr(Address addr )
+//MpTcpPathIdManagerImpl::FindAddrIdOfAddr(Address addr )
 //{
 //
 //  ;
@@ -47,7 +48,7 @@ MpTcpPathIdManager::~MpTcpPathIdManager()
 //
 //uint8_t
 bool
-MpTcpPathIdManager::AddRemoteAddr(uint8_t addrId, const Ipv4Address& addressToRegister, uint16_t portToRegister)
+MpTcpPathIdManagerImpl::AddRemoteAddr(uint8_t addrId, const Ipv4Address& addressToRegister, uint16_t portToRegister)
 {
   MpTcpAddressContainer& container = m_addrs;
 
@@ -120,14 +121,14 @@ MpTcpPathIdManager::AddRemoteAddr(uint8_t addrId, const Ipv4Address& addressToRe
 
 
 //uint8_t
-//MpTcpPathIdManager::GenerateAddrId(MpTcpAddressInfo)
+//MpTcpPathIdManagerImpl::GenerateAddrId(MpTcpAddressInfo)
 //{
 //
 //}
 
 
 bool
-MpTcpPathIdManager::RemRemoteAddr(uint8_t addrId)
+MpTcpPathIdManagerImpl::RemRemoteAddr(uint8_t addrId)
 {
 //  MpTcpAddressContainer& container = m_remoteAddrs[remote];
 
@@ -141,9 +142,41 @@ MpTcpPathIdManager::RemRemoteAddr(uint8_t addrId)
 }
 
 
+uint8_t
+MpTcpPathIdManagerImpl::GetLocalAddrId(const InetSocketAddress& address)
+{
+  //TODO should be able to improve AddrId allocation to allow for more choices
+  // converts Static into member function ? add a modulo in case we add too many local addr ?
+  static uint8_t addrId = 0;
+  addrId++;
+
+  // TODO check if it's owned by the node ? or not ?
+
+  std::pair< std::map<Ipv4Address,uint8_t>::iterator , bool > result = m_localAddresses.insert( std::make_pair(address, addrId) );
+//  std::map<Ipv4Address,uint8_t>::iterator it = m_localAddresses.find( address );
+//  if( ! result.second)
+//  {
+    return result.first->second;
+//  }
+//  return
+}
+
+
+
+bool
+MpTcpPathIdManagerImpl::RemLocalAddr(Ipv4Address address, uint8_t& id)
+{
+  std::map<Ipv4Address,uint8_t>::iterator it  = m_localAddresses.find(address);
+  if(it != m_localAddresses.end() )
+  {
+    id = it->second;
+    return true;
+  }
+  return false;
+}
 
 void
-MpTcpPathIdManager::GetAllAdvertisedDestinations(std::vector<InetSocketAddress>& addresses)
+MpTcpPathIdManagerImpl::GetAllAdvertisedDestinations(std::vector<InetSocketAddress>& addresses)
 {
   addresses.clear();
   for(MpTcpAddressContainer::iterator externIt = m_addrs.begin(); externIt != m_addrs.end(); externIt++)

@@ -231,8 +231,6 @@ protected: // protected methods
   // TODO remove should be done by helper instead
 //  bool InitiateSubflows();            // Initiate new subflows
 
-  int
-  Listen(void);
   /**
   Fails if
   **/

@@ -339,6 +339,7 @@ def build(bld):
         'model/mp-tcp-cc.h',                  # matt
         'model/mp-tcp-olia.h',                # matt
         'model/mp-tcp-id-manager.h'  ,         # matt
+        'model/mp-tcp-id-manager-impl.h'  ,         # matt
         'model/mp-tcp-scheduler.h',           # matt
         'model/mp-tcp-scheduler-round-robin.h',           # matt
         # 'model/mp-tcp-path-manager-ndiff.h' # matt

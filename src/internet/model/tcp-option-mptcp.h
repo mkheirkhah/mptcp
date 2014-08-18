@@ -195,7 +195,7 @@ The MP_CAPABLE option is carried on the SYN, SYN/ACK, and ACK packets
       |                                                               |
       +---------------------------------------------------------------+
 **/
-class TcpOptionMpTcpCapable : public TcpOptionMpTcp<MP_CAPABLE>
+class TcpOptionMpTcpCapable : public TcpOptionMpTcp<TcpOptionMpTcpMain::MP_CAPABLE>
 {
 public:
   TcpOptionMpTcpCapable();
@@ -287,7 +287,7 @@ A: The leftmost bit, labeled "A", SHOULD be set to 1 to indicate
 
       Figure 5: Join Connection (MP_JOIN) Option (for Initial SYN)
 **/
-class TcpOptionMpTcpJoinInitialSyn : public TcpOptionMpTcp<MP_JOIN>
+class TcpOptionMpTcpJoinInitialSyn : public TcpOptionMpTcp<TcpOptionMpTcpMain::MP_JOIN>
 {
 
 public:
@@ -338,7 +338,7 @@ TODO negociate the random part
 
     Figure 6: Join Connection (MP_JOIN) Option (for Responding SYN/ACK)
 */
-class TcpOptionMpTcpJoinSynReceived : public TcpOptionMpTcp<MP_JOIN>
+class TcpOptionMpTcpJoinSynReceived : public TcpOptionMpTcp<TcpOptionMpTcpMain::MP_JOIN>
 {
 
 public:
@@ -386,7 +386,7 @@ protected:
 
         Figure 7: Join Connection (MP_JOIN) Option (for Third ACK)
 */
-class TcpOptionMpTcpJoinSynAckReceived : public TcpOptionMpTcp<MP_JOIN>
+class TcpOptionMpTcpJoinSynAckReceived : public TcpOptionMpTcp<TcpOptionMpTcpMain::MP_JOIN>
 {
 
 public:
@@ -442,7 +442,7 @@ we don't do the checksum either
                 Figure 9: Data Sequence Signal (DSS) Option
 
 */
-class TcpOptionMpTcpDSN : public TcpOptionMpTcp<DSS>
+class TcpOptionMpTcpDSN : public TcpOptionMpTcp<TcpOptionMpTcpMain::DSS>
 {
 
 public:
@@ -516,7 +516,7 @@ it's 0 for the sake of simplicity.
 
                  Figure 12: Add Address (ADD_ADDR) Option
 */
-class TcpOptionMpTcpAddAddress : public TcpOptionMpTcp<ADD_ADDR>
+class TcpOptionMpTcpAddAddress : public TcpOptionMpTcp<TcpOptionMpTcpMain::ADD_ADDR>
 {
 
 public:
@@ -575,7 +575,7 @@ protected:
 
           Figure 13: Remove Address (REMOVE_ADDR) Option
 */
-class TcpOptionMpTcpRemoveAddress : public TcpOptionMpTcp<REMOVE_ADDR>
+class TcpOptionMpTcpRemoveAddress : public TcpOptionMpTcp<TcpOptionMpTcpMain::REMOVE_ADDR>
 {
 
 public:
@@ -617,7 +617,7 @@ RFC 6824 a subflow where the
   Length may be 3 or 4 (if addrId present).
 
 */
-class TcpOptionMpTcpChangePriority : public TcpOptionMpTcp<MP_PRIO>
+class TcpOptionMpTcpChangePriority : public TcpOptionMpTcp<TcpOptionMpTcpMain::MP_PRIO>
 {
 
 public:

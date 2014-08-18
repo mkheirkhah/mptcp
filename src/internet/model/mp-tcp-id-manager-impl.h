@@ -82,13 +82,16 @@ protected:
 
   /**
   * del/rem
-  *
   */
   virtual bool RemRemoteAddr(uint8_t addrId);
 
 
-  RegisterLocalAddress()
+  virtual bool
+  RemLocalAddr(InetSocketAddress addrId);
 
+
+  virtual bool
+  RemLocalAddr(uint8_t addrId) ;
 
 protected:
   // MPTCP containers

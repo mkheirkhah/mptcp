@@ -180,36 +180,7 @@ MpTcpSocketBase::GetSubflow(uint8_t id)
 
 
 // TODO GetLocalAddr
-uint8_t
-MpTcpSocketBase::AddLocalAddr(const Ipv4Address& address)
-{
-  //TODO should be able to improve AddrId allocation to allow for more choices
-  // converts Static into member function ? add a modulo in case we add too many local addr ?
-  static uint8_t addrId = 0;
-  addrId++;
 
-  // TODO check if it's owned by the node ? or not ?
-
-  std::pair< std::map<Ipv4Address,uint8_t>::iterator , bool > result = m_localAddresses.insert( std::make_pair(address, addrId) );
-//  std::map<Ipv4Address,uint8_t>::iterator it = m_localAddresses.find( address );
-//  if( ! result.second)
-//  {
-    return result.first->second;
-//  }
-//  return
-}
-
-bool
-MpTcpSocketBase::RemLocalAddr(Ipv4Address address, uint8_t& id)
-{
-  std::map<Ipv4Address,uint8_t>::iterator it  = m_localAddresses.find(address);
-  if(it != m_localAddresses.end() )
-  {
-    id = it->second;
-    return true;
-  }
-  return false;
-}
 
 // Accept an iterator ?
 //bool
@@ -3702,6 +3673,8 @@ MpTcpSocketBase::IsThereRoute(Ipv4Address src, Ipv4Address dst)
 
 /**
 Used many times, may be worth registering the NetDevice in a subflow member ?
+should be straightforward
+TODO remove
 **/
 Ptr<NetDevice>
 MpTcpSocketBase::FindOutputNetDevice(Ipv4Address src)
@@ -4050,32 +4023,7 @@ MpTcpSocketBase::OpenCWND(uint8_t sFlowIdx, uint32_t ackedBytes)
 //    sFlow->scwnd = sFlow->scwnd * 0.875 + sFlow->cwnd * 0.125;
 //}
 
-//void
-//MpTcpSocketBase::DestroySubflowMapDSN()
-//{
-//  NS_LOG_FUNCTION_NOARGS();
-//  for (uint32_t i = 0; i < m_subflows.size(); i++)
-//    {
-//      Ptr<MpTcpSubFlow> sFlow = m_subflows[i];
-//      for (std::list<DSNMapping *>::iterator i = sFlow->m_mapDSN.begin(); i != sFlow->m_mapDSN.end(); i++)
-//        {
-//          i = sFlow->m_mapDSN.erase(i);
-//        }
-//      sFlow->m_mapDSN.clear();
-//    }
-//}
 
-// Why that ? socket should not be closed unless  everything
-//void
-//MpTcpSocketBase::DestroyUnOrdered()
-//{
-//  NS_LOG_FUNCTION_NOARGS();
-//  for (std::list<DSNMapping*>::iterator i = m_unOrdered.begin(); i != m_unOrdered.end(); i++)
-//    {
-//      i = m_unOrdered.erase(i);
-//    }
-//  m_unOrdered.clear();
-//}
 
 /** Kill this socket. This is a callback function configured to m_endpoint in
  SetupCallback(), invoked when the endpoint is destroyed. */
@@ -4128,16 +4076,6 @@ MpTcpSocketBase::OpenCWND(uint8_t sFlowIdx, uint32_t ackedBytes)
 //  return m_subflows[sFlowIdx];
 //}
 //
-//void
-//MpTcpSocketBase::SetCongestionCtrlAlgo(Ptr<MpTcpCongestionControl> ccalgo)
-//{
-////  AlgoCC = ccalgo;
-//  NS_ASSERT( ccalgo);
-//
-//  // TODO change connection should not have started
-//  NS_ASSERT_MSG( m_state != CLOSED  , "test" );
-//  m_algoCC = ccalgo;
-//}
 
 
 //DSNMapping*
@@ -4180,111 +4118,6 @@ MpTcpSocketBase::generatePlots()
   outfile.close();
 }
 
-//double
-//MpTcpSocketBase::getPathDelay(uint8_t idxPath)
-//{
-//  TimeValue delay;
-//  Ptr<Ipv4L3Protocol> ipv4 = m_node->GetObject<Ipv4L3Protocol>();
-//  // interface 0 is the loopback interface
-//  Ptr<Ipv4Interface> interface = ipv4->GetInterface(idxPath + 1);
-//  Ipv4InterfaceAddress interfaceAddr = interface->GetAddress(0);
-//  // do not consider loopback addresses
-//  if (interfaceAddr.GetLocal() == Ipv4Address::GetLoopback())
-//    return 0.0;
-//  Ptr<NetDevice> netDev = interface->GetDevice();
-//  Ptr<Channel> P2Plink = netDev->GetChannel();
-//  P2Plink->GetAttribute(string("Delay"), delay);
-//  return delay.Get().GetSeconds();
-//}
 
-//uint64_t
-//MpTcpSocketBase::getPathBandwidth(uint8_t idxPath)
-//{
-//  StringValue str;
-//  Ptr<Ipv4L3Protocol> ipv4 = m_node->GetObject<Ipv4L3Protocol>();
-//// interface 0 is the loopback interface
-//  Ptr<Ipv4Interface> interface = ipv4->GetInterface(idxPath + 1);
-//  Ipv4InterfaceAddress interfaceAddr = interface->GetAddress(0);
-//// do not consider loopback addresses
-//  if (interfaceAddr.GetLocal() == Ipv4Address::GetLoopback())
-//    return 0.0;
-//  Ptr<NetDevice> netDev = interface->GetDevice();
-//
-//  if (netDev->IsPointToPoint() == true)
-//    {
-//      netDev->GetAttribute(string("DataRate"), str);
-//    }
-//  else
-//    {
-//      Ptr<Channel> link = netDev->GetChannel();
-//      link->GetAttribute(string("DataRate"), str);
-//    }
-//
-//  DataRate bandwidth(str.Get());
-//  return bandwidth.GetBitRate();
-//}
-
-//double
-//MpTcpSocketBase::getGlobalThroughput()
-//{
-//  double gThroughput = 0;
-//  for (uint32_t i = 0; i < m_subflows.size(); i++)
-//    {
-//      Ptr<MpTcpSubFlow> sFlow = m_subflows[i];
-//      gThroughput += (sFlow->cwnd * sFlow->MSS * 8) / ((sFlow->rtt->GetCurrentEstimate()).GetSeconds());
-//    }
-//  return gThroughput;
-//}
-
-//double
-//MpTcpSocketBase::getConnectionEfficiency()
-//{
-//  double gThroughput = 0.0;
-//  uint64_t gBandwidth = 0;
-//  for (uint32_t i = 0; i < m_subflows.size(); i++)
-//    {
-//      Ptr<MpTcpSubFlow> sFlow = m_subflows[i];
-//      gThroughput += (sFlow->cwnd * sFlow->MSS * 8) / ((sFlow->rtt->GetCurrentEstimate()).GetSeconds());
-//      gBandwidth += getPathBandwidth(i);
-//    }
-//  return gThroughput / gBandwidth;
-//}
-
-
-//uint32_t
-//MpTcpSocketBase::getL3MTU(Ipv4Address addr)
-//{
-//  // return the MTU associated to the layer 3
-//  Ptr<Ipv4L3Protocol> l3Protocol = m_node->GetObject<Ipv4L3Protocol>();
-//  return l3Protocol->GetMtu(l3Protocol->GetInterfaceForAddress(addr)) - 100;
-//}
-
-//uint64_t
-//MpTcpSocketBase::getBandwidth(Ipv4Address addr)
-//{
-//  uint64_t bd = 0;
-//  StringValue uiv;
-//  std::string name = std::string("DataRate");
-//  Ptr<Ipv4L3Protocol> l3Protocol = m_node->GetObject<Ipv4L3Protocol>();
-//  Ptr<Ipv4Interface> ipv4If = l3Protocol->GetInterface(l3Protocol->GetInterfaceForAddress(addr));
-//  Ptr<NetDevice> netDevice = ipv4If->GetDevice();
-//  // if the device is a point to point one, then the data rate can be retrived directly from the device
-//  // if it's a CSMA one, then you should look at the corresponding channel
-//  if (netDevice->IsPointToPoint() == true)
-//    {
-//      netDevice->GetAttribute(name, (AttributeValue &) uiv);
-//      // converting the StringValue to a string, then deleting the 'bps' end
-//      std::string str = uiv.SerializeToString(0);
-//      std::istringstream iss(str.erase(str.size() - 3));
-//      iss >> bd;
-//    }
-//  return bd;
-//}
-
-//void
-//MpTcpSocketBase::HeartBeat()
-//{
-//  counter = 0;
-//}
 
 }  //namespace ns3

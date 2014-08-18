@@ -85,12 +85,23 @@ protected:
   * del/rem
   *
   */
-  virtual bool RemRemoteAddr(uint8_t addrId);
+  virtual bool RemRemoteAddr(uint8_t addrId) = 0;
 
+  virtual uint8_t
+  GetLocalAddrId(const InetSocketAddress& address) = 0;
+//  RegisterLocalAddress()
 
-  RegisterLocalAddress()
+  /**
+   * Called when closing the subflow
+   */
+  virtual bool
+  RemLocalAddr(InetSocketAddress addrId) = 0;
 
-
+  /**
+   * Called when meta receives a REMOVE_ADDRESS. It just contians ids then.
+   */
+  virtual bool
+  RemLocalAddr(uint8_t addrId) = 0;
 };
 
 

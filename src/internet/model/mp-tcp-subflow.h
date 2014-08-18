@@ -34,6 +34,7 @@ namespace ns3
 {
 
 class MpTcpSocketBase;
+class MpTcpPathIdManager;
 
 /**
  * \class MpTcpSubFlow
