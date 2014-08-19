@@ -119,6 +119,7 @@ public:
   /**
    * Extract data from the head of the buffer as indicated by nextRxSeq.
    * The extracted data is going to be forwarded to the application.
+   * The extracted data will be in order
    *
    * \param maxSize maximum number of bytes to extract
    * \returns a packet

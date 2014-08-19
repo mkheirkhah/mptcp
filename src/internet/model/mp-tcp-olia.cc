@@ -54,7 +54,7 @@ MpTcpCCOlia::~MpTcpCCOlia()
 
 
 Ptr<MpTcpSocketBase>
-MpTcpCCOlia::MpTcpFork(void)
+MpTcpCCOlia::ForkAsMeta(void)
 {
   return CopyObject<MpTcpCCOlia>(this);
 }

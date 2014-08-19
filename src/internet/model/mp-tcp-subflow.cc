@@ -18,6 +18,7 @@
 #include "ns3/node.h"
 #include "ns3/ptr.h"
 #include "ns3/tcp-option-mptcp.h"
+#include "ns3/mp-tcp-id-manager.h"
 //#include "ns3/ipv4-address.h"
 
 NS_LOG_COMPONENT_DEFINE("MpTcpSubflow");
@@ -46,8 +47,15 @@ MpTcpSubFlow::Fork(void)
 //  NS_LOG_ERROR("Not implemented");
 
 
+  return ForkAsSubflow();
+}
+
+Ptr<MpTcpSubFlow>
+MpTcpSubFlow::ForkAsSubflow(void)
+{
   return CopyObject<MpTcpSubFlow> (this);
 }
+
 
 void
 MpTcpSubFlow::DupAck(const TcpHeader& t, uint32_t count)
@@ -331,10 +339,10 @@ MpTcpSubFlow::Close(void)
     }
 
   //
-  if( GetNClosingSubflows() )
-  {
-
-  }
+//  if( GetMeta()->GetNClosingSubflows() )
+//  {
+//
+//  }
 
 
   if (m_txBuffer.SizeFromSequence(m_nextTxSequence) > 0)
@@ -581,7 +589,7 @@ MpTcpSubFlow::SendMapping(Ptr<Packet> p, SequenceNumber32 mptcpSeq)
     mapping.MapToSubflowSeqNumber( nextTxSeq );
 
     // record mapping
-    m_mappings.push_back( mapping  );
+    m_TxMappings.push_back( mapping  );
   }
 
 
@@ -622,67 +630,12 @@ MpTcpSubFlow::GenerateDataPacketHeader(TcpHeader& header, SequenceNumber32 seq, 
 // split into 2 functions 1 to GenerateHeaders, other one to add options
 // ajouter une fct DoSend
 uint32_t
-MpTcpSubFlow::SendDataPacket(SequenceNumber32 seq, uint32_t maxSize, bool withAck)
+MpTcpSubFlow::SendDataPacket(TcpHeader header, SequenceNumber32 seq,uint32_t maxSize)
 {
   MpTcpMapping mapping;
-  bool result = GetMappingForSegment(seq, mapping);
+  bool result = GetMappingForSegment( m_TxMappings, seq, mapping);
   NS_ASSERT(result == true);
-  // Generate packet
-//  TcpSocketBase::SendDataPacket(seq, maxSize, withAck);
 
-
-
- NS_LOG_FUNCTION (this << seq << maxSize << withAck);  //NS_LOG_INFO("SendDataPacket -> SeqNb: " << seq);
-  Ptr<Packet> p = m_txBuffer.CopyFromSequence(maxSize, seq);
-  uint32_t sz = p->GetSize(); // Size of packet
-  uint8_t flags = withAck ? TcpHeader::ACK : 0;
-  uint32_t remainingData = m_txBuffer.SizeFromSequence(seq + SequenceNumber32(sz));
-  if (m_closeOnEmpty && (remainingData == 0))
-    {
-      flags |= TcpHeader::FIN;
-      if (m_state == ESTABLISHED)
-        { // On active close: I am the first one to send FIN
-          NS_LOG_INFO ("ESTABLISHED -> FIN_WAIT_1");
-          m_state = FIN_WAIT_1;
-        }
-      else if (m_state == CLOSE_WAIT)
-        { // On passive close: Peer sent me FIN already
-          NS_LOG_INFO ("CLOSE_WAIT -> LAST_ACK");
-          m_state = LAST_ACK;
-        }
-    }
-  TcpHeader header;
-  header.SetFlags(flags);
-  header.SetSequenceNumber(seq);
-  header.SetAckNumber(m_rxBuffer.NextRxSequence());
-//  if (m_endPoint)
-//    {
-      header.SetSourcePort(m_endPoint->GetLocalPort());
-      header.SetDestinationPort(m_endPoint->GetPeerPort());
-//    }
-//  else
-//    {
-//      header.SetSourcePort(m_endPoint6->GetLocalPort());
-//      header.SetDestinationPort(m_endPoint6->GetPeerPort());
-//    }
-  header.SetWindowSize(AdvertisedWindowSize());
-//  AddOptions(header);
-  // TODO schedule retransmissions also via meta
-//  if (m_retxEvent.IsExpired())
-//    { // Schedule retransmit
-//      m_rto = m_rtt->RetransmitTimeout();
-//      NS_LOG_LOGIC (this << " SendDataPacket Schedule ReTxTimeout at time " <<
-//          Simulator::Now ().GetSeconds () << " to expire at time " <<
-//          (Simulator::Now () + m_rto.Get ()).GetSeconds () );
-//      m_retxEvent = Simulator::Schedule(m_rto, &TcpSocketBase::ReTxTimeout, this);
-//    }NS_LOG_LOGIC ("Send packet via TcpL4Protocol with flags 0x" << std::hex << static_cast<uint32_t> (flags) << std::dec);
-
-//  std::list < uint32_t > sampleList;
-//  // 4 drops on 3rd RTT
-//  sampleList.push_back(16);
-//  sampleList.push_back(20);
-//  sampleList.push_back(21);
-//
 //  // Add list to ListErrorModel object
 //  Ptr<ListErrorModel> rem = CreateObject<ListErrorModel>();
 //  rem->SetList(sampleList);
@@ -694,42 +647,10 @@ MpTcpSubFlow::SendDataPacket(SequenceNumber32 seq, uint32_t maxSize, bool withAc
     Ptr<TcpOptionMpTcpDSN> dsnOption = Create<TcpOptionMpTcpDSN>();
     dsnOption->SetMapping( mapping );
     header.AppendOption( dsnOption );
-//    header.AddOptDSN(OPT_DSN,
-//    mapping.m_dataSeqNumber.GetValue(), mapping.m_size, seq.GetValue()
-//    );
   }
 
 
-  // Packet should be drop
-  if (IsCorrupt(p))
-    {
-      uint32_t tmp = (((seq.GetValue() + sz) - initialSeqNb) / m_segmentSize) % mod;
-      DROP.push_back(std::make_pair(Simulator::Now().GetSeconds(), tmp));
-    }
-  // Packet should be sent
-  else
-    {
-      if (m_endPoint)
-        {
-          m_tcp->SendPacket(p, header, m_endPoint->GetLocalAddress(), m_endPoint->GetPeerAddress(), m_boundnetdevice);
-          uint32_t tmp = (((seq.GetValue() + sz) - initialSeqNb) / m_segmentSize) % mod;
-          DATA.push_back(std::make_pair(Simulator::Now().GetSeconds(), tmp));
-        }
-      else
-        {
-          m_tcp->SendPacket(p, header, m_endPoint6->GetLocalAddress(), m_endPoint6->GetPeerAddress(), m_boundnetdevice);
-        }
-    }
-  m_rtt->SentSeq(seq, sz);       // notify the RTT
-  // Notify the application of the data being sent unless this is a retransmit
-  if (seq == m_nextTxSequence)
-    {
-//      Simulator::ScheduleNow(&TcpSocketBase::NotifyDataSent, this, sz);
-    }
-  // Update highTxMark
-  m_highTxMark = std::max(seq + sz, m_highTxMark.Get());
-  NS_LOG_DEBUG("DataPacket -----> " << header);
-  return sz;
+  return TcpSocketBase::SendDataPacket(header,seq,maxSize);
 
 
 
@@ -938,7 +859,10 @@ MpTcpSubFlow::Retransmit(void)
   // TODO change window ?
 }
 
-/** Received a packet upon LISTEN state. */
+/**
+Received a packet upon LISTEN state.
+
+*/
 void
 MpTcpSubFlow::ProcessListen(Ptr<Packet> packet, const TcpHeader& tcpHeader, const Address& fromAddress, const Address& toAddress)
 {
@@ -961,7 +885,8 @@ MpTcpSubFlow::ProcessListen(Ptr<Packet> packet, const TcpHeader& tcpHeader, cons
       return;
     }
   // Clone the socket, simulate fork
-  Ptr<MpTcpSubFlow> newSock = Fork();
+//  Ptr<MpTcpSubFlow> newSock = Fork();
+  Ptr<MpTcpSubFlow> newSock = CopyObject<MpTcpSubFlow>(this);
   NS_LOG_LOGIC ("Cloned a TcpSocketBase " << newSock);
   // TODO TcpSocketBase::
   Simulator::ScheduleNow(&MpTcpSubFlow::CompleteFork, newSock, packet, tcpHeader, fromAddress, toAddress);
@@ -971,7 +896,7 @@ Ptr<MpTcpSocketBase>
 MpTcpSubFlow::GetMeta()
 {
   //!
-
+  return m_metaSocket;
 }
 
 void
@@ -1005,7 +930,7 @@ MpTcpSubFlow::CompleteFork(Ptr<Packet> p, const TcpHeader& h, const Address& fro
 
   TcpHeader answerHeader;
   GenerateEmptyPacketHeader( answerHeader, TcpHeader::SYN | TcpHeader::ACK );
-  if( IsMetaSocket() )
+  if( IsMaster() )
   {
     Ptr<TcpOptionMpTcpCapable> mpc = CreateObject<TcpOptionMpTcpCapable>();
     mpc->SetSenderKey( GetMeta()->GetLocalKey() );
@@ -1015,6 +940,8 @@ MpTcpSubFlow::CompleteFork(Ptr<Packet> p, const TcpHeader& h, const Address& fro
   {
     Ptr<TcpOptionMpTcpJoinSynReceived> join = CreateObject<TcpOptionMpTcpJoinSynReceived>();
     //! TODO request from meta its id
+    uint8_t id = 0;
+    id = GetIdManager()->GetLocalAddrId( InetSocketAddress(m_endPoint->GetLocalAddress(),m_endPoint->GetLocalPort()) );
     join->SetAddressId( id );
     join->SetTruncatedHmac(2);
     join->SetNonce(3);
@@ -1135,7 +1062,7 @@ MpTcpSubFlow::ProcessSynSent(Ptr<Packet> packet, const TcpHeader& tcpHeader)
       }
 
       // TODO support IPv6
-      GetMeta()->GetIdManager()->AddRemoteAddr(0, m_endPoint->GetPeerAddress(), m_endPoint->GetPeerPort() );
+      GetIdManager()->AddRemoteAddr(0, m_endPoint->GetPeerAddress(), m_endPoint->GetPeerPort() );
 
       NS_ASSERT_MSG( answerOption, "Notify the ns3 team. the option should be created by ns3 beforehand." );
 
@@ -1151,12 +1078,14 @@ MpTcpSubFlow::ProcessSynSent(Ptr<Packet> packet, const TcpHeader& tcpHeader)
 //      NS_ASSERT_
       GenerateEmptyPacketHeader(answerHeader,TcpHeader::ACK);
       answerHeader.AppendOption( answerOption );
-      SendEmptyPacket(header);
+      SendEmptyPacket(answerHeader);
 
       fLowStartTime = Simulator::Now().GetSeconds();
       // TODO check we can send rightaway data ?
       SendPendingData(m_connected);
-      Simulator::ScheduleNow(&TcpSocketBase::ConnectionSucceeded, this);
+
+      // TODO overwrite so that it warns meta
+      Simulator::ScheduleNow(&MpTcpSubFlow::ConnectionSucceeded, this);
       // Always respond to first data packet to speed up the connection.
       // Remove to get the behaviour of old NS-3 code.
       m_delAckCount = m_delAckMaxCount;
@@ -1253,7 +1182,7 @@ MpTcpSubFlow::AdvertiseAddress(Ipv4Address addr, uint16_t port)
 {
   NS_LOG_FUNCTION("Started advertising address");
   NS_ASSERT(m_metaSocket);
-
+#if 0
   // TODO check subflow is established !!
   uint8_t addrId = m_metaSocket->AddLocalAddr(addr);
 
@@ -1263,13 +1192,14 @@ MpTcpSubFlow::AdvertiseAddress(Ipv4Address addr, uint16_t port)
   Ptr<Packet> pkt = Create<Packet>();
 
   TcpHeader header;
-  header.SetFlags(TcpHeader::ACK);
-  //SequenceNumber32(m_txNextSequence)
-  header.SetSequenceNumber( m_nextTxSequence);
-  header.SetAckNumber( m_rxBuffer.NextRxSequence() );
-  header.SetSourcePort( m_endPoint->GetLocalPort() ); // m_endPoint->GetLocalPort()
-  header.SetDestinationPort( m_endPoint->GetPeerPort() );
-  header.SetWindowSize(AdvertisedWindowSize());
+  GenerateEmptyPacketHeader(header);
+//  header.SetFlags(TcpHeader::ACK);
+//  //SequenceNumber32(m_txNextSequence)
+//  header.SetSequenceNumber( m_nextTxSequence);
+//  header.SetAckNumber( m_rxBuffer.NextRxSequence() );
+//  header.SetSourcePort( m_endPoint->GetLocalPort() ); // m_endPoint->GetLocalPort()
+//  header.SetDestinationPort( m_endPoint->GetPeerPort() );
+//  header.SetWindowSize(AdvertisedWindowSize());
 //  uint8_t hlen = 0;
 //  uint8_t olen = 0;
 
@@ -1297,6 +1227,7 @@ MpTcpSubFlow::AdvertiseAddress(Ipv4Address addr, uint16_t port)
 
 //      this->SendPacket(pkt, header, m_localAddress, m_remoteAddress, FindOutputNetDevice(m_localAddress) );
   NS_LOG_INFO("Advertise  Addresses-> "<< header);
+  #endif
 }
 
 
@@ -1305,7 +1236,9 @@ MpTcpSubFlow::StopAdvertisingAddress(Ipv4Address address)
 {
   // TODO factor some code with AdvertiseAddress ?
   // TODO check subflow is established !!
+  #if 0
   uint8_t addrId = 0;
+
 //  addrId  = m_metaSocket->RemLocalAddr(addr);
 //FindLocalAddrId
   if( !m_metaSocket->RemLocalAddr(address,addrId) )
@@ -1319,19 +1252,19 @@ MpTcpSubFlow::StopAdvertisingAddress(Ipv4Address address)
   Ptr<Packet> pkt = Create<Packet>();
 
   TcpHeader header;
-  header.SetFlags(TcpHeader::ACK);
-  header.SetSequenceNumber( m_nextTxSequence );    // SequenceNumber32(TxSeqNumber)
-  header.SetAckNumber( m_rxBuffer.NextRxSequence() );
-  header.SetSourcePort( m_endPoint->GetLocalPort() ); // m_endPoint->GetLocalPort()
-  header.SetDestinationPort ( m_endPoint->GetPeerPort() );
-  header.SetWindowSize(AdvertisedWindowSize());
+  GenerateEmptyPacketHeader(header,TcpHeader::ACK);
+//  header.SetFlags(TcpHeader::ACK);
+//  header.SetSequenceNumber( m_nextTxSequence );    // SequenceNumber32(TxSeqNumber)
+//  header.SetAckNumber( m_rxBuffer.NextRxSequence() );
+//  header.SetSourcePort( m_endPoint->GetLocalPort() ); // m_endPoint->GetLocalPort()
+//  header.SetDestinationPort ( m_endPoint->GetPeerPort() );
+//  header.SetWindowSize(AdvertisedWindowSize());
 
 
 //      IPv4Address;;ConvertFrom ( addr );
   Ptr<TcpOptionMpTcpRemoveAddress> remOpt = CreateObject<TcpOptionMpTcpRemoveAddress>();
   remOpt->AddAddressId( addrId );
-
-//  header.AddOptREMADR(OPT_REMADR,  );
+  header.AppendOption( remOpt );
 
 
 
@@ -1340,6 +1273,7 @@ MpTcpSubFlow::StopAdvertisingAddress(Ipv4Address address)
 
 //      this->SendPacket(pkt, header, m_localAddress, m_remoteAddress, FindOutputNetDevice(m_localAddress) );
   NS_LOG_INFO("Advertise  Addresses-> "<< header);
+  #endif
   return true;
 }
 
@@ -1389,9 +1323,9 @@ MpTcpSubFlow::DiscardMappingsUpTo( uint32_t ack)
 
 
 bool
-MpTcpSubFlow::GetMappingForSegment( SequenceNumber32 subflowSeqNb, MpTcpMapping& mapping)
+MpTcpSubFlow::GetMappingForSegment( const MappingList& l, SequenceNumber32 subflowSeqNb, MpTcpMapping& mapping)
 {
-  for( MappingList::iterator it = m_mappings.begin(); it != m_mappings.end(); it++ )
+  for( MappingList::const_iterator it = l.begin(); it != l.end(); it++ )
   {
     // check seq nb is within the DSN range
     if ( (subflowSeqNb >= it->GetSubflowSequenceNumber() ) &&
@@ -1410,52 +1344,71 @@ MpTcpSubFlow::GetMappingForSegment( SequenceNumber32 subflowSeqNb, MpTcpMapping&
 
 // TODO check with its parent equivalent, may miss a few features
 // Receipt of new packet, put into Rx buffer
+
+
+/**
+TODO here I should look for an associated mapping. If there is not,
+then I discard the stuff
+*/
 void
 MpTcpSubFlow::ReceivedData(Ptr<Packet> p, const TcpHeader& mptcpHeader)
 {
   NS_LOG_FUNCTION (this << mptcpHeader);
+  MpTcpMapping receivedMapping;
 
-    // Put into Rx buffer
-//  SequenceNumber32 expectedSeq = m_rxBuffer.NextRxSequence();
+  Ptr<TcpOption> option = mptcpHeader.GetOption( TcpHeader::MPTCP );
+  Ptr<TcpOptionMpTcpMain> mptcpOption;
+  if(option)
+  {
+    mptcpOption = DynamicCast<TcpOptionMpTcpMain>(option);
+    NS_ASSERT( mptcpOption );
+    NS_LOG( "mptcp option with subtype " << option->GetSubType(mptcpOption) );
+
+    if( option->GetSubType(mptcpOption) == TcpOptionMpTcpMain::DSS)
+    {
+      Ptr<TcpOptionMpTcpDSN> dsn = DynamicCast<TcpOptionMpTcpMain>(option);
+      NS_ASSERT( "Adding " << dsn );
+      // TODO check for duplicates add a level of encapsulation ?
+      m_RxMappings.push_back( dsn->GetMapping() );
+//      dsn->
+
+    }
+
+  }
+
+  MpTcpMapping mapping;
+  // If cannot find an adequate mapping, then it should [check RFC]
+  if(!GetMappingForSegment( m_RxMappings, mptcpHeader.GetSequenceNumber(), mapping) )
+  {
+    NS_LOG_DEBUG("Could not find an adequate mapping for");
+    SendEmptyPacket(TcpHeader::ACK);
+    return;
+  }
+
+  // Put into Rx buffer
+  //  SequenceNumber32 expectedSeq = m_rxBuffer.NextRxSequence();
   if (!m_rxBuffer.Add(p, mptcpHeader))
     { // Insert failed: No data or RX buffer full
       SendEmptyPacket(TcpHeader::ACK);
       return;
     }
 
-  // TODO pass subflow id to the function
-//  m_metaSocket->ReceivedData(Ptr<Packet> p, const TcpHeader& mptcpHeader);
+  // TODO handle out of order case look at parent's member.
 
+
+  // TODO pass subflow id to the function
+  // TODO if that acknowledges a full mapping then transfer it to  the metasock
+  if( m_rxBuffer.Extract() )
+  {
+    m_rxBuffer.Extract()
+
+
+//  GetMeta()->ReceivedData(p, const TcpHeader& mptcpHeader);
+  }
   // TODO see what we can free in our TxBuffer
 
-//  std::vector<TcpOptions*> options = mptcpHeader.GetOptions();
-//  TcpOptions* opt;
-//  bool stored = true;
 
-  MpTcpMapping mapping;
      #if 0
-  if( GetMappingForSegment( mptcpHeader.GetSequenceNumber(), mapping) )
-  {
-
-  }
-
-  // loop through options to find DSN option
-  for (uint32_t i = 0; i < options.size(); i++)
-    {
-      opt = options[i];
-
-      // DSN mapping
-      if (opt->optName == OPT_DSN)
-      {
-          // TODO call a bit of the fct here TcpTxBuffer
-//          OptDataSeqMapping* optDSN = (OptDataSeqMapping*) opt;
-
-
-      }
-
-    } // end of 'for'
-
-
           if (optDSN->subflowSeqNumber == RxSeqNumber)
             {
               // if in order DSN

@@ -118,7 +118,7 @@ public: // public methods
   /**
   \return Number of subflows
   */
-  std::vector<MpTcpSubFlow>::size_type GetNSubflows() const;
+  std::vector< Ptr<MpTcpSubFlow> >::size_type GetNSubflows() const;
   // uint8
   Ptr<MpTcpSubFlow> GetSubflow(uint8_t);
 
@@ -336,7 +336,7 @@ protected: // protected methods
 
   /**
   */
-  virtual Ptr<MpTcpSocketBase> MpTcpFork(void) = 0;
+  virtual Ptr<MpTcpSocketBase> ForkAsMeta(void) = 0;
 
 
 
@@ -493,8 +493,6 @@ protected: // protected variables
 //  uint64_t nextTxSequence;       // Next expected sequence number to send in connection level
 //  uint64_t nextRxSequence;       // Next expected sequence number to receive in connection level
 
-  std::map<Ipv4Address,uint8_t> m_localAddresses; //!< Associate every local IP with an unique identifier
-
 
   // TODO make private ? check what it does
   // should be able to rmeove one
@@ -507,9 +505,9 @@ private:
   bool     m_doChecksum;  //!< Compute the checksum. Negociated during 3WHS
 private:
 // CloseSubflow
-  uint8_t AddLocalAddr(const Ipv4Address& address);
-
-  bool RemLocalAddr(Ipv4Address,uint8_t&);
+//  uint8_t AddLocalAddr(const Ipv4Address& address);
+//
+//  bool RemLocalAddr(Ipv4Address,uint8_t&);
 
 
 };

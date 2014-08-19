@@ -17,6 +17,7 @@ Generic:
 * let RTO be chosen by meta
 * crypto materials checks
 * on MP_join store the addresses Id
+* Extend TcpTxBuffer to support mappings ?
 
 Requests for ns3;
 * add an IsConnected member to TcpSocketBase ?

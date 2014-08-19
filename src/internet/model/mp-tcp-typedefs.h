@@ -103,6 +103,8 @@ public:
 
   virtual bool operator==( const MpTcpMapping&) const;
 
+//  operator<<(std::ostream &os);
+
   // TODO should be SequenceNumber64
 protected:
 //  SequenceNumber64 m_dataSequenceNumber;   //!< MPTCP level
@@ -113,6 +115,8 @@ protected:
 };
 
 typedef std::list<MpTcpMapping> MappingList;
+
+
 
 /**
 TODO remove

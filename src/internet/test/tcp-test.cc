@@ -37,6 +37,7 @@
 #include "ns3/inet6-socket-address.h"
 #include "ns3/uinteger.h"
 #include "ns3/log.h"
+#include "ns3/string.h"
 #include "ns3/mp-tcp-socket-factory.h"
 
 #include "ns3/ipv4-end-point.h"
@@ -53,6 +54,10 @@
 NS_LOG_COMPONENT_DEFINE ("TcpTestSuite");
 
 using namespace ns3;
+
+
+
+
 
 class TcpTestCase : public TestCase
 {
@@ -432,6 +437,10 @@ public:
   TcpTestSuite ()
     : TestSuite ("tcp", UNIT)
   {
+
+    // TODO addition by matt
+    Config::SetDefault ("ns3::TcpL4Protocol::SocketType", StringValue("ns3::MpTcpCCOlia") );
+
     // Arguments to these test cases are 1) totalStreamSize,
     // 2) source write size, 3) source read size
     // 4) server write size, and 5) server read size

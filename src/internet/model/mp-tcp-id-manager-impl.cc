@@ -23,6 +23,27 @@ MpTcpPathIdManagerImpl::~MpTcpPathIdManagerImpl()
 }
 
 
+TypeId
+MpTcpPathIdManagerImpl::GetTypeId (void)
+{
+  static TypeId tid = TypeId ("ns3::MpTcpPathIdManagerImpl")
+    .SetParent<Object> ()
+    //
+//    .AddConstructor<TcpOptionMpTcpMain> ()
+  ;
+//  NS_LOG_UNCOND("TcpOptionMpTcpMain::GetTypeId called !");
+  return tid;
+}
+
+
+TypeId
+MpTcpPathIdManagerImpl::GetInstanceTypeId (void) const
+{
+//  NS_LOG_UNCOND("TcpOptionMpTcpMain::GetInstanceTypeId called");
+  return GetTypeId ();
+}
+
+
 
 //MpTcpAddressContainer::iterator
 ////uint8_t
@@ -152,28 +173,33 @@ MpTcpPathIdManagerImpl::GetLocalAddrId(const InetSocketAddress& address)
 
   // TODO check if it's owned by the node ? or not ?
 
-  std::pair< std::map<Ipv4Address,uint8_t>::iterator , bool > result = m_localAddresses.insert( std::make_pair(address, addrId) );
+  std::pair< std::map<Ipv4Address,uint8_t>::iterator , bool > result = m_localAddresses.insert(
+              std::make_pair(address.GetIpv4(), addrId)
+              );
 //  std::map<Ipv4Address,uint8_t>::iterator it = m_localAddresses.find( address );
-//  if( ! result.second)
-//  {
-    return result.first->second;
-//  }
-//  return
+  if( ! result.second) addrId--;
+
+  return result.first->second;
 }
+
 
 
 
 bool
-MpTcpPathIdManagerImpl::RemLocalAddr(Ipv4Address address, uint8_t& id)
+MpTcpPathIdManagerImpl::RemLocalAddr(
+  InetSocketAddress address
+  )
+//  Ipv4Address address, uint8_t& id)
 {
-  std::map<Ipv4Address,uint8_t>::iterator it  = m_localAddresses.find(address);
+  std::map<Ipv4Address,uint8_t>::iterator it  = m_localAddresses.find( address.GetIpv4() );
   if(it != m_localAddresses.end() )
   {
-    id = it->second;
+//    id = it->second;
     return true;
   }
   return false;
 }
+
 
 void
 MpTcpPathIdManagerImpl::GetAllAdvertisedDestinations(std::vector<InetSocketAddress>& addresses)

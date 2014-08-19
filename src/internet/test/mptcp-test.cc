@@ -75,7 +75,7 @@ we should try not to add to internet dependancies ['bridge', 'mpi', 'network', '
 
 
 //typedef MpTcpSocketBase SocketToBeTested;
-typedef TcpNewReno SocketToBeTested;
+//typedef TcpNewReno SocketToBeTested;
 
 
 /**

@@ -211,7 +211,7 @@ def build(bld):
         'model/tcp-option-sack.cc',
         'model/tcp-option-snack.cc',
         'model/tcp-option-sack-permitted.cc',
-        'model/tcp-option-winscale.cc',
+        'model/tcp-option-winscale.cc'
         ]
 
     internet_test = bld.create_ns3_module_test_library('internet')
@@ -332,14 +332,12 @@ def build(bld):
         'model/tcp-socket-factory-impl.h',  # Morteza Kheirkhah
         'model/mp-tcp-socket-base.h',       # Morteza Kheirkhah
         'model/mp-tcp-typedefs.h',          # Morteza Kheirkhah
-        #<'model/tcp-options.h',              # Morteza Kheirkhah
         'model/mp-tcp-subflow.h',           # Morteza Kheirkhah
-        'model/tcp-option.h', # matt
         'model/mp-tcp-socket-factory-impl.h', # matt
         'model/mp-tcp-cc.h',                  # matt
         'model/mp-tcp-olia.h',                # matt
-        'model/mp-tcp-id-manager.h'  ,         # matt
-        'model/mp-tcp-id-manager-impl.h'  ,         # matt
+        'model/mp-tcp-id-manager.h',         # matt
+        'model/mp-tcp-id-manager-impl.h',         # matt
         'model/mp-tcp-scheduler.h',           # matt
         'model/mp-tcp-scheduler-round-robin.h',           # matt
         # 'model/mp-tcp-path-manager-ndiff.h' # matt

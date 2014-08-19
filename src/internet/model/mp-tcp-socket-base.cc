@@ -409,7 +409,7 @@ MpTcpSocketBase::ProcessListen(Ptr<Packet> packet, const TcpHeader& mptcpHeader,
     }
 
   // Clone the socket, simulate fork
-  Ptr<MpTcpSocketBase> newSock = MpTcpFork();
+  Ptr<MpTcpSocketBase> newSock = ForkAsMeta();
   NS_LOG_DEBUG ("Clone new MpTcpSocketBase new connection. ListenerSocket " << this << " AcceptedSocket "<< newSock);
   Simulator::ScheduleNow(&MpTcpSocketBase::CompleteFork, newSock, packet, mptcpHeader, fromAddress, toAddress);
 }
@@ -442,22 +442,29 @@ MpTcpSocketBase::CompleteFork(Ptr<Packet> p, const TcpHeader& mptcpHeader, const
   m_tcp->m_sockets.push_back(this);
 
   // Create new master subflow (master subsock) and assign its endpoint to the connection endpoint
-  //InetSocketAddress( m_endPoint->GetLocalAddress() , )
   Ptr<MpTcpSubFlow> sFlow = CreateSubflow( fromAddress );
-  sFlow->m_state = SYN_RCVD;
-  sFlow->m_cnCount = sFlow->m_cnRetries;
-  sFlow->m_endPoint = m_endPoint; // This is master subsock, its endpoint is the same as connection endpoint.
-  sFlow->SetSegSize(m_segmentSize);
+
+  NS_ASSERT( GetNSubflows() == 0);
+//  m_subflows.clear();
+  m_subflows.push_back( sFlow );
+
+  Simulator::ScheduleNow(&MpTcpSubFlow::CompleteFork, sFlow, p, mptcpHeader, fromAddress, toAddress);
+//  sFlow->m_state = SYN_RCVD;
+//  sFlow->m_cnCount = sFlow->m_cnRetries;
+//  sFlow->m_endPoint = m_endPoint; // This is master subsock, its endpoint is the same as connection endpoint.
+//  sFlow->SetSegSize(m_segmentSize);
 
   // TODO should be able to set RemoteKey
 
-  NS_LOG_INFO ("("<< (int)sFlow->m_routeId<<") LISTEN -> SYN_RCVD");
+//  NS_LOG_INFO ("("<< (int)sFlow->m_routeId<<") LISTEN -> SYN_RCVD");
 
-  m_subflows.push_back( sFlow );
+
+
   //Set the subflow sequence number and send SYN+ACK
-  sFlow->m_rxBuffer.SetNextRxSequence( mptcpHeader.GetSequenceNumber() + SequenceNumber32(1) );
+  // TODO done automatically
+//  sFlow->m_rxBuffer.SetNextRxSequence( mptcpHeader.GetSequenceNumber() + SequenceNumber32(1) );
 
-  sFlow->SendEmptyPacket( TcpHeader::SYN | TcpHeader::ACK);
+//  sFlow->SendEmptyPacket( TcpHeader::SYN | TcpHeader::ACK);
 
   // Update currentSubflow in case close just after 3WHS.
 //  NS_LOG_UNCOND("CompleteFork -> receivingBufferSize: " << m_recvingBuffer->bufMaxSize);
@@ -505,6 +512,8 @@ MpTcpSocketBase::ProcessListen(uint8_t sFlowIdx, Ptr<Packet> packet, const TcpHe
 void
 MpTcpSocketBase::ConnectionSucceeded(void)
 {
+//  TcpSocketBase::ConnectionSucceeded();
+
   // Wrapper to protected function NotifyConnectionSucceeded() so that it can
   // be called as a scheduled event
 //  NotifyConnectionSucceeded();
@@ -778,11 +787,13 @@ MpTcpSocketBase::ProcessLastAck(uint8_t sFlowIdx, Ptr<Packet> packet, const TcpH
 #endif
 
 // Receipt of new packet, put into Rx buffer
+// TODO should be called from subflows only
 void
 MpTcpSocketBase::ReceivedData(Ptr<Packet> p, const TcpHeader& mptcpHeader)
 {
   // Just override parent's
   // Does nothing
+
   #if 0
 
   NS_LOG_FUNCTION (this << mptcpHeader);
@@ -977,6 +988,8 @@ uint32_t
 MpTcpSocketBase::SendDataPacket(SequenceNumber32 seq, uint32_t maxSize, bool withAck)
 {
   NS_LOG_FUNCTION (this << "Should do nothing" << maxSize << withAck);
+
+
   return 0;
 }
 
@@ -1338,7 +1351,7 @@ MpTcpSocketBase::GetInitialCwnd(void) const
 Ptr<TcpSocketBase>
 MpTcpSocketBase::Fork(void)
 {
-  return MpTcpFork();
+  return ForkAsMeta();
 //  CopyObject<MpTcpSocketBase>(this);
 }
 
@@ -1349,22 +1362,6 @@ MpTcpSocketBase::DupAck(const TcpHeader& t, uint32_t count)
   NS_LOG_FUNCTION_NOARGS();
 }
 //...........................................................................................
-
-int
-MpTcpSocketBase::Listen(void)
-{
-  NS_LOG_FUNCTION(this);
-
-  if (m_state != CLOSED)
-    {
-      m_errno = ERROR_INVAL;
-      return -1; // TODO return -m_errno ?
-    }
-
-  // MPTCP connection state is LISTEN
-  m_state = LISTEN;
-  return 0;
-}
 
 
 // TODO rename ? CreateAndAdd? Add ? Start ? Initiate
@@ -1421,7 +1418,9 @@ MpTcpSocketBase::CreateSubflow(
 
 
   m_subflows.push_back( sFlow );
+
   // TODO set id of the Flow
+  // It's
   sFlow->m_routeId = m_subflows.size() - 1;
   // Should not be needed since bind register socket
 //  m_tcp->m_sockets.push_back(this); // appelé apres un bind ou dans completeFork
@@ -1709,15 +1708,19 @@ MpTcpSocketBase::SendPendingData(bool withAck)
   mappings.reserve( GetNSubflows() );
   m_scheduler->GenerateMappings(mappings);
 //  NS_ASSERT_MSG( mappings.size() == , "Should be as many" )
-
+//  NS_LOG_UNCOND
   // Loop through mappings and send Data
   for(MappingVector::iterator it = mappings.begin(); it != mappings.end(); it++ )
   {
+    NS_LOG_DEBUG("generated [" << mappings.size() << "] mappings");
+
     Ptr<MpTcpSubFlow> sf = GetSubflow(it->first);
 //    MpTcpMapping& mapping = it->second
 //    Retrieve data  Rename SendMappedData
     SequenceNumber32& dataSeq = it->second.first;
     uint16_t mappingSize = it->second.second;
+
+    NS_LOG_DEBUG("Sending mapping [seq "<< dataSeq << " size" << mappingSize << "] on subflow #" << it->first);
     sf->SendMapping( m_txBuffer.CopyFromSequence(mappingSize, dataSeq ) , dataSeq  );
   }
 
@@ -1839,7 +1842,7 @@ MpTcpSocketBase::Listen(void)
   m_state = LISTEN;
   // TODO create a subflow
 
-  Ptr<MpTcpSubFlow> flow = CreateSubflow(this);
+  Ptr<MpTcpSubFlow> flow = CreateSubflow( m_endPoint->GetLocalAddress() );
   // TODO bind to where meta bounded
 //  m_endPoint should have already been allocated by meta: pass it
   flow->Bind();
@@ -1847,6 +1850,23 @@ MpTcpSocketBase::Listen(void)
 
 //  return 0;
 }
+//
+//int
+//MpTcpSocketBase::Listen(void)
+//{
+//  NS_LOG_FUNCTION(this);
+//
+//  if (m_state != CLOSED)
+//    {
+//      m_errno = ERROR_INVAL;
+//      return -1; // TODO return -m_errno ?
+//    }
+//
+//  // MPTCP connection state is LISTEN
+//  m_state = LISTEN;
+//  return 0;
+//}
+//
 
 /**
  TCP: Upon RTO:
@@ -2425,11 +2445,12 @@ MpTcpSocketBase::ForwardUp(Ptr<Packet> p, Ipv4Header header, uint16_t port, Ptr<
 #endif
 
 
-void
-MpTcpSocketBase::GetIdManager()
-{
-  return m_remotePathIdManager;
-}
+//void
+//MpTcpSocketBase::GetIdManager()
+//{
+//  NS_ASSERT(m_remotePathIdManager);
+//  return m_remotePathIdManager;
+//}
 
 void
 MpTcpSocketBase::GetAllAdvertisedDestinations(std::vector<InetSocketAddress>& cont)

@@ -55,6 +55,12 @@ public:
 
   virtual ~MpTcpPathIdManagerImpl();
 
+  static TypeId
+  GetTypeId (void);
+
+  TypeId
+  GetInstanceTypeId (void) const;
+
   /**
   Will generate an appropriate ID
   (InetSocketAddress addr
@@ -67,33 +73,36 @@ public:
   \warning Don't forget to clear the vector first !
   **/
 
-  virtual void GetAllAdvertisedDestinations(std::vector<InetSocketAddress>& addresses);
+  virtual void
+  GetAllAdvertisedDestinations(std::vector<InetSocketAddress>& addresses);
 
   // TODO move callbacks here + local address Mgmt ?
 
 
-protected:
-  friend class MpTcpSocketBase;
+  uint8_t
+  GetLocalAddrId(const InetSocketAddress& address);
   /**
   Can force the ID with which to register
   //    const Ipv4Address& address, uint16_t port = 0
   **/
-  virtual bool AddRemoteAddr(uint8_t addrId, const Ipv4Address& address, uint16_t port);
+  virtual bool
+  AddRemoteAddr(uint8_t addrId, const Ipv4Address& address, uint16_t port);
 
   /**
   * del/rem
   */
-  virtual bool RemRemoteAddr(uint8_t addrId);
-
+  virtual bool
+  RemRemoteAddr(uint8_t addrId);
 
   virtual bool
   RemLocalAddr(InetSocketAddress addrId);
-
-
-  virtual bool
-  RemLocalAddr(uint8_t addrId) ;
+//  virtual bool
+//  RemLocalAddr(uint8_t addrId) ;
 
 protected:
+  friend class MpTcpSocketBase;
+
+
   // MPTCP containers
   // INetSocketAddress
 //  InetSocketAddress
@@ -108,6 +117,9 @@ protected:
    //! List addresses advertised by the remote host
    //! index 0 for local, 1 for remote addr
   MpTcpAddressContainer m_addrs;
+
+
+  std::map<Ipv4Address,uint8_t> m_localAddresses; //!< Associate every local IP with an unique identifier
 
   /**
   Need this to check if an IP has already been advertised, in which case

@@ -96,6 +96,10 @@ public:
   */
   virtual uint32_t GetLocalToken() const;
 
+
+  virtual Ptr<MpTcpSubFlow>
+  ForkAsSubflow(void);
+
   /**
   \see GetLocalToken
   */
@@ -108,6 +112,15 @@ public:
 
   // TODO ? Moved from meta
   //  void ProcessListen  (uint8_t sFlowIdx, Ptr<Packet>, const TcpHeader&, const Address&, const Address&);
+  void
+  ProcessListen(Ptr<Packet> packet, const TcpHeader& tcpHeader, const Address& fromAddress, const Address& toAddress);
+
+  /**
+   * Will send MP_JOIN or MP_CAPABLE depending on if it is master or not
+   *
+   */
+  void
+  CompleteFork(Ptr<Packet> p, const TcpHeader& h, const Address& fromAddress, const Address& toAddress);
 
   void
   ProcessSynSent(Ptr<Packet> packet, const TcpHeader& tcpHeader);
@@ -124,11 +137,16 @@ public:
   Retransmit(void);
 
         // TODO support IPv6
-  Ptr<MpTcpPathIdManager> GetIdManager();
-  /**
+  Ptr<MpTcpPathIdManager>
+  GetIdManager();
 
+  /**
+  * \param l list
+  * \param m pass on the mapping you want to retrieve
   */
-  bool GetMappingForSegment( SequenceNumber32 ack, MpTcpMapping& );
+  bool
+  GetMappingForSegment( const MappingList& l, SequenceNumber32 ack, MpTcpMapping& m);
+
 //  MpTcpMapping getSegmentOfACK( uint32_t ack);
 
   /**
@@ -176,7 +194,8 @@ protected:
   ReceivedData(Ptr<Packet>, const TcpHeader&);
 
   uint32_t
-  SendDataPacket(SequenceNumber32 seq, uint32_t maxSize, bool withAck); // Send a data packet
+//  SendDataPacket(SequenceNumber32 seq, uint32_t maxSize, bool withAck); // Send a data packet
+  SendDataPacket(TcpHeader header, SequenceNumber32 seq,uint32_t maxSize);
 
   /**
   * Like send, but pass on the global seq number associated with
@@ -237,7 +256,9 @@ protected:
 
   // Use Ptr here so that we don't have to unallocate memory manually ?
 //  std::list<DSNMapping *> m_mapDSN;  //!< List of all sent packets
-  std::list<MpTcpMapping> m_mappings;  //!< List of all sent packets
+//  typedef std::list<MpTcpMapping> MappingList
+  MappingList m_TxMappings;  //!< List of all sent packets
+  MappingList m_RxMappings;  //!< List of all sent packets
 
   // parent should provide it ?
   Ptr<RttMeanDeviation> rtt;  // RTT calculator

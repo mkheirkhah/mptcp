@@ -40,7 +40,7 @@ public:
   GetInitialCwnd(void) const;
 
 
-  virtual Ptr<MpTcpSocketBase> MpTcpFork(void);
+  virtual Ptr<MpTcpSocketBase> ForkAsMeta(void);
 //  virtual Ptr<TcpSocketBase> Fork(void);
   // transform into a callback ?
   // Callback<Ptr<MpTcpSubFlow>, Ptr<MpTcpSocketBase>, Ptr<MpTcpCongestionControl> >

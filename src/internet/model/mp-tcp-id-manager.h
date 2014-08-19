@@ -46,7 +46,7 @@ RFC6824
 * TODO tempalte
 **/
 class MpTcpPathIdManager
-//  : public Object
+  : public Object
 {
 
 public:
@@ -68,24 +68,26 @@ public:
   \warning Don't forget to clear the vector first !
   **/
 
-  virtual void GetAllAdvertisedDestinations(std::vector<InetSocketAddress>& addresses);
+  virtual void
+  GetAllAdvertisedDestinations(std::vector<InetSocketAddress>& addresses) = 0;
 
   // TODO move callbacks here + local address Mgmt ?
 
 
-protected:
-  friend class MpTcpSocketBase;
+
   /**
   Can force the ID with which to register
   //    const Ipv4Address& address, uint16_t port = 0
   **/
-  virtual bool AddRemoteAddr(uint8_t addrId, const Ipv4Address& address, uint16_t port) = 0;
+  virtual bool
+  AddRemoteAddr(uint8_t addrId, const Ipv4Address& address, uint16_t port) = 0;
 
   /**
   * del/rem
   *
   */
-  virtual bool RemRemoteAddr(uint8_t addrId) = 0;
+  virtual bool
+  RemRemoteAddr(uint8_t addrId) = 0;
 
   virtual uint8_t
   GetLocalAddrId(const InetSocketAddress& address) = 0;
@@ -100,8 +102,10 @@ protected:
   /**
    * Called when meta receives a REMOVE_ADDRESS. It just contians ids then.
    */
-  virtual bool
-  RemLocalAddr(uint8_t addrId) = 0;
+//  virtual bool
+//  RemLocalAddr(uint8_t addrId) = 0;
+
+
 };
 
 

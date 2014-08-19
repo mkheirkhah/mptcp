@@ -154,7 +154,7 @@ TcpOptionMpTcpCapable::Print (std::ostream &os) const
 {
   os << "MP_CAPABLE. version" << m_version
     << "Flags:" << m_flags
-    << "Sender's Key [" << GetLocalKey() << "]";
+    << "Sender's Key [" << GetSenderKey() << "]";
   if( HasReceiverKey() )
   {
     os  << "Peer's Key [" << GetPeerKey() << "]";
@@ -307,9 +307,16 @@ TcpOptionMpTcpJoinSynReceived::TcpOptionMpTcpJoinSynReceived()
 
 TcpOptionMpTcpJoinSynReceived::~TcpOptionMpTcpJoinSynReceived ()
 {
-  NS_LOG_FUNCTION_NOARGS();
+//  NS_LOG_FUNCTION_NOARGS();
+  NS_LOG_FUNCTION(this);
 }
 
+
+void
+TcpOptionMpTcpJoinSynReceived::SetNonce(uint32_t nonce)
+{
+  m_nonce = nonce;
+}
 
 void
 TcpOptionMpTcpJoinSynReceived::Print (std::ostream &os) const

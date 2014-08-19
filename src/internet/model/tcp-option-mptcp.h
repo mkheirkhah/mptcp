@@ -350,6 +350,7 @@ public:
 
   // Setters
   virtual void SetTruncatedHmac(uint64_t ) ;
+  virtual void SetNonce(uint32_t ) ;
 
   // Getters
   virtual uint64_t GetTruncatedHmac() const { return m_truncatedHmac; };
