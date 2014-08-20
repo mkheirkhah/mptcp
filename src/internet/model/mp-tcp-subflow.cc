@@ -1349,6 +1349,7 @@ MpTcpSubFlow::GetMappingForSegment( const MappingList& l, SequenceNumber32 subfl
 /**
 TODO here I should look for an associated mapping. If there is not,
 then I discard the stuff
+std::ostream& ns3::operator<<(std::ostream&,const ns3::TcpOptionMptcpMain&)
 */
 void
 MpTcpSubFlow::ReceivedData(Ptr<Packet> p, const TcpHeader& mptcpHeader)
@@ -1356,20 +1357,37 @@ MpTcpSubFlow::ReceivedData(Ptr<Packet> p, const TcpHeader& mptcpHeader)
   NS_LOG_FUNCTION (this << mptcpHeader);
   MpTcpMapping receivedMapping;
 
-  Ptr<TcpOption> option = mptcpHeader.GetOption( TcpHeader::MPTCP );
+  // Need to register DSN mappings first
+  Ptr<TcpOption> option = mptcpHeader.GetOption( TcpOption::MPTCP );
   Ptr<TcpOptionMpTcpMain> mptcpOption;
   if(option)
   {
     mptcpOption = DynamicCast<TcpOptionMpTcpMain>(option);
     NS_ASSERT( mptcpOption );
-    NS_LOG( "mptcp option with subtype " << option->GetSubType(mptcpOption) );
+    NS_LOG_INFO( "mptcp option with subtype " << mptcpOption->GetSubType() );
 
-    if( option->GetSubType(mptcpOption) == TcpOptionMpTcpMain::DSS)
+    if( mptcpOption->GetSubType(mptcpOption) == TcpOptionMpTcpMain::DSS)
     {
       Ptr<TcpOptionMpTcpDSN> dsn = DynamicCast<TcpOptionMpTcpMain>(option);
-      NS_ASSERT( "Adding " << dsn );
+      NS_ASSERT( "Adding " );
+      // Check if it has a mapping !
       // TODO check for duplicates add a level of encapsulation ?
-      m_RxMappings.push_back( dsn->GetMapping() );
+      uint8_t flags = dsn->GetFlags();
+
+      if( flags & TcpOptionMpTcpDSN::DSNMappingPresent)
+      {
+        //
+        m_RxMappings.push_back( dsn->GetMapping() );
+      }
+
+    // Check for DATA ACK too
+//      if( flags & TcpOptionMpTcpDSN::DataAckPresent)
+//      {
+// TODO ajouter une fct pr savoir ce qui a été acquitté
+    /// call NewAck( voir le parent
+//        //TODO check if we can free a Tx mapping at the subflow level
+//          DiscardMappingsUpTo(m_TxMapping);
+//      }
 //      dsn->
 
     }

@@ -465,6 +465,7 @@ public:
   // setter
   void SetMapping(MpTcpMapping mapping);
   MpTcpMapping GetMapping( ) const;
+  uint8_t GetFlags() const { return m_flags;};
 //  virtual void Configure(uint64_t, uint32_t, uint16_t);
 
   // getters
