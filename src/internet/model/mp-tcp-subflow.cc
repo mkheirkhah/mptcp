@@ -589,7 +589,7 @@ MpTcpSubFlow::SendMapping(Ptr<Packet> p, SequenceNumber32 mptcpSeq)
     mapping.MapToSubflowSeqNumber( nextTxSeq );
 
     // record mapping
-    m_TxMappings.push_back( mapping  );
+    m_TxMappings.insert( mapping  );
   }
 
 
@@ -1328,8 +1328,10 @@ MpTcpSubFlow::GetMappingForSegment( const MappingList& l, SequenceNumber32 subfl
   for( MappingList::const_iterator it = l.begin(); it != l.end(); it++ )
   {
     // check seq nb is within the DSN range
-    if ( (subflowSeqNb >= it->GetSubflowSequenceNumber() ) &&
-      (subflowSeqNb < it->GetSubflowSequenceNumber() + it->GetDataLevelLength() )
+    if (
+      it->IsInRange( subflowSeqNb )
+//    (subflowSeqNb >= it->GetSubflowSequenceNumber() ) &&
+//      (subflowSeqNb < it->GetSubflowSequenceNumber() + it->GetDataLevelLength())
     )
     {
       mapping = *it;
@@ -1344,6 +1346,62 @@ MpTcpSubFlow::GetMappingForSegment( const MappingList& l, SequenceNumber32 subfl
 
 // TODO check with its parent equivalent, may miss a few features
 // Receipt of new packet, put into Rx buffer
+void
+MpTcpSubFlow::NewAck(SequenceNumber32 const& ack)
+{
+  NS_LOG_FUNCTION (this << ack);
+
+  MpTcpMapping mapping;
+
+  if(!GetMappingForSegment( m_TxMappings, ack, mapping) )
+  {
+    NS_LOG_DEBUG("Could not find an adequate Tx mapping for ack " << ack);
+    // TODO remove that later
+//    NS_ASSERT_MSG(false,"No mapping received for that ack nb");
+//    SendEmptyPacket(TcpHeader::ACK);
+    return;
+  }
+
+  TcpSocketBase::NewAck( ack );
+
+  DiscardTxMappingsUpToSeqNumber( ack );
+  //  Je peux pas le discard tant que
+  //  m_txBuffer.DiscardUpTo( ack );
+
+
+  // TODO check the full mapping is reachable
+//  if( m_txBuffer.Available(mapping.GetDataSequenceNumber(), mapping.MaxSequence()))
+//  {
+//    Packet pkt = m_rxBuffer.Extract(mapping.GetDataSequenceNumber(), mapping.GetDataLevelLength() );
+//
+//    //! pass on data
+//    GetMeta()->ReceivedData( pkt, mapping );
+//
+//  }
+
+}
+
+void
+MpTcpSubFlow::DiscardTxMappingsUpToSeqNumber(SequenceNumber32 seq)
+{
+  NS_LOG_INFO("Discarding mappings up to " << seq);
+  MappingList& l = m_TxMappings;
+  for( MappingList::iterator it = l.begin(); it != l.end(); it++ )
+  {
+    //GetDataSequenceNumber
+    if( it->MaxSequence() < seq  )
+    {
+      //it =
+//      NS_ASSERT( );
+      // TODO check mapping transfer was completed on this subflow
+//      if( m_txBuffer.HeadSequence() <  )
+//      {
+//
+//      }
+      l.erase(it);
+    }
+  }
+}
 
 
 /**
@@ -1366,9 +1424,9 @@ MpTcpSubFlow::ReceivedData(Ptr<Packet> p, const TcpHeader& mptcpHeader)
     NS_ASSERT( mptcpOption );
     NS_LOG_INFO( "mptcp option with subtype " << mptcpOption->GetSubType() );
 
-    if( mptcpOption->GetSubType(mptcpOption) == TcpOptionMpTcpMain::DSS)
+    if( mptcpOption->GetSubType() == TcpOptionMpTcpMain::DSS)
     {
-      Ptr<TcpOptionMpTcpDSN> dsn = DynamicCast<TcpOptionMpTcpMain>(option);
+      Ptr<TcpOptionMpTcpDSN> dsn = DynamicCast<TcpOptionMpTcpDSN>(mptcpOption);
       NS_ASSERT( "Adding " );
       // Check if it has a mapping !
       // TODO check for duplicates add a level of encapsulation ?
@@ -1376,138 +1434,96 @@ MpTcpSubFlow::ReceivedData(Ptr<Packet> p, const TcpHeader& mptcpHeader)
 
       if( flags & TcpOptionMpTcpDSN::DSNMappingPresent)
       {
-        //
-        m_RxMappings.push_back( dsn->GetMapping() );
+        //  is that ok ?
+        m_RxMappings.insert( dsn->GetMapping() ); //push_back
       }
 
     // Check for DATA ACK too
-//      if( flags & TcpOptionMpTcpDSN::DataAckPresent)
-//      {
-// TODO ajouter une fct pr savoir ce qui a été acquitté
+      if( flags & TcpOptionMpTcpDSN::DataAckPresent)
+      {
+        GetMeta()->ReceivedAck( SequenceNumber32(dsn->GetDataAck() ) );
+
+
     /// call NewAck( voir le parent
-//        //TODO check if we can free a Tx mapping at the subflow level
-//          DiscardMappingsUpTo(m_TxMapping);
-//      }
-//      dsn->
-
-    }
-
-  }
+//          DiscardTxMappingsUpToSeqNumber( GetMeta()->GetTxBuffer( ) ;
+      }
+    } // end of DSS option
+  } // mptcp option
 
   MpTcpMapping mapping;
+
+//  OutOfRange
   // If cannot find an adequate mapping, then it should [check RFC]
   if(!GetMappingForSegment( m_RxMappings, mptcpHeader.GetSequenceNumber(), mapping) )
   {
     NS_LOG_DEBUG("Could not find an adequate mapping for");
+    // TODO remove that later
+    NS_ASSERT_MSG(false,"No mapping received for that ack nb");
     SendEmptyPacket(TcpHeader::ACK);
     return;
   }
 
+  TcpSocketBase::ReceivedData( p, mptcpHeader );
+  #if 0
   // Put into Rx buffer
-  //  SequenceNumber32 expectedSeq = m_rxBuffer.NextRxSequence();
+  SequenceNumber32 expectedSeq = m_rxBuffer.NextRxSequence();
   if (!m_rxBuffer.Add(p, mptcpHeader))
     { // Insert failed: No data or RX buffer full
       SendEmptyPacket(TcpHeader::ACK);
       return;
     }
-
+  if (m_rxBuffer.Size() > m_rxBuffer.Available() || m_rxBuffer.NextRxSequence() > expectedSeq + p->GetSize())
+    { // A gap exists in the buffer, or we filled a gap: Always ACK
+      SendEmptyPacket(TcpHeader::ACK);
+    }
+  else
+    { // In-sequence packet: ACK if delayed ack count allows
+      if (++m_delAckCount >= m_delAckMaxCount)
+        {
+          m_delAckEvent.Cancel();
+          m_delAckCount = 0;
+          SendEmptyPacket(TcpHeader::ACK);
+        }
+      else if (m_delAckEvent.IsExpired())
+        {
+          m_delAckEvent = Simulator::Schedule(m_delAckTimeout, &TcpSocketBase::DelAckTimeout, this);
+          NS_LOG_LOGIC (this << " scheduled delayed ACK at " << (Simulator::Now () + Simulator::GetDelayLeft (m_delAckEvent)).GetSeconds ());
+        }
+    }
+  // Notify app to receive if necessary
+  if (expectedSeq < m_rxBuffer.NextRxSequence())
+    { // NextRxSeq advanced, we have something to send to the app
+      if (!m_shutdownRecv)
+        {
+          NotifyDataRecv();
+        }
+      // Handle exceptions
+      if (m_closeNotified)
+        {
+          NS_LOG_WARN ("Why TCP " << this << " got data after close notification?");
+        }
+      // If we received FIN before and now completed all "holes" in rx buffer,
+      // invoke peer close procedure
+      if (m_rxBuffer.Finished() && (tcpHeader.GetFlags() & TcpHeader::FIN) == 0)
+        {
+          DoPeerClose();
+        }
+    }
+    #endif
   // TODO handle out of order case look at parent's member.
 
 
   // TODO pass subflow id to the function
   // TODO if that acknowledges a full mapping then transfer it to  the metasock
-  if( m_rxBuffer.Extract() )
-  {
-    m_rxBuffer.Extract()
-
-
-//  GetMeta()->ReceivedData(p, const TcpHeader& mptcpHeader);
-  }
+//  if( m_rxBuffer.Extract() )
+//  {
+//    m_rxBuffer.Extract()
+//
+//
+////  GetMeta()->ReceivedData(p, const TcpHeader& mptcpHeader);
+//  }
   // TODO see what we can free in our TxBuffer
 
-
-     #if 0
-          if (optDSN->subflowSeqNumber == RxSeqNumber)
-            {
-              // if in order DSN
-              if (optDSN->dataSeqNumber == nextRxSequence)
-                {
-                  NS_LOG_WARN("In-order DataPacket Received! SubflowSeqNb: " << optDSN->subflowSeqNumber);
-                  uint32_t amountRead = recvingBuffer->ReadPacket(p, optDSN->dataLevelLength);
-                  if (amountRead == 0)
-                    {
-                      NS_ASSERT(3!=3);
-                      NS_LOG_WARN(this << "data has failed to be added in receiveBuffer!");
-                      return;
-                    }
-                  NS_ASSERT(amountRead == optDSN->dataLevelLength && optDSN->dataLevelLength == p->GetSize());
-                  RxSeqNumber += amountRead;
-                  // Do we need to increment highest ACK??
-                  //sFlow->highestAck = std::max(highestAck, (mptcpHeader.GetAckNumber()).GetValue() - 1);
-                  nextRxSequence += amountRead;
-                  ReadUnOrderedData();
-                  if (expectedSeq < RxSeqNumber)
-                    {
-                      NotifyDataRecv();
-                    }
-                  SendEmptyPacket(sFlowIdx, TcpHeader::ACK);
-                  // If we received FIN before and now completed all "holes" in rx buffer, invoke peer close
-//                  if (Finished() && (mptcpHeader.GetFlags() & TcpHeader::FIN) == 0)
-                  if (Finished() && (mptcpHeader.GetFlags() & TcpHeader::FIN) == 0)
-                    {
-                      NS_LOG_INFO("("<< (int) sFlowIdx <<") Last data packet received, now received FIN is in sequence!");
-                      DoPeerClose(sFlowIdx);
-                      return;
-                    }
-                }
-              else if (optDSN->dataSeqNumber > nextRxSequence) // there is a gap in dataSeqNumber
-                {
-                  NS_LOG_WARN("optDSN->dataSeqNumber > nextRxSequence");
-                  stored = StoreUnOrderedData(
-                      new DSNMapping(sFlowIdx, optDSN->dataSeqNumber, optDSN->dataLevelLength, optDSN->subflowSeqNumber,
-                          mptcpHeader.GetAckNumber().GetValue(), p));
-                  // I think subflowSeqNumber should be advanced here as it is in-sequence even though dataSeqNum is unordered!
-                  // So if we don't send ACK here then sender can't send anymore data until it receives ACK or its timeout run-out.
-                  if (stored)
-                    {
-                      RxSeqNumber += optDSN->dataLevelLength;
-                      highestAck = std::max(highestAck, (mptcpHeader.GetAckNumber()).GetValue() - 1);
-                    }
-                  SendEmptyPacket(sFlowIdx, TcpHeader::ACK);
-                }
-              else
-                {
-                  NS_ASSERT(3!=3);
-                  NS_LOG_WARN(this << "Data received is duplicated in DataSeq Lavel so it has been rejected!");
-                  SendEmptyPacket(TcpHeader::ACK);
-                }
-            }
-          else if (optDSN->subflowSeqNumber > RxSeqNumber)
-            { // There is a gap in subflowSeqNumber
-              // This condition might occures when a packet get drop...
-              stored = StoreUnOrderedData(
-                  new DSNMapping(sFlowIdx, optDSN->dataSeqNumber, optDSN->dataLevelLength, optDSN->subflowSeqNumber,
-                      mptcpHeader.GetAckNumber().GetValue(), p));
-              if (stored)
-                {
-                  SendEmptyPacket(TcpHeader::ACK); // Since there is a gap in subflow level then we ask for it!
-                }
-              else
-                {
-                  NS_LOG_ERROR("Data failed to be stored in unOrderedBuffer SegNb: " << optDSN->subflowSeqNumber);
-                  SendEmptyPacket(TcpHeader::ACK);
-                }
-            }
-          else if (optDSN->subflowSeqNumber < RxSeqNumber)
-            { // Received subflowSeqNumer is smaller than subflow expected RxSeqNumber
-              NS_LOG_INFO("Data received is duplicated in Subflow Layer so it has been rejected! subflowSeq: " << optDSN->subflowSeqNumber << " dataSeq: " << optDSN->dataSeqNumber);
-              SendEmptyPacket(TcpHeader::ACK);  // Ask for expected subflow sequnce number.
-            }
-          else
-            NS_ASSERT(3!=3);
-        }
-    } // end of 'for'
-    #endif
 }
 
 uint16_t
@@ -1517,9 +1533,17 @@ MpTcpSubFlow::AdvertisedWindowSize(void)
 }
 
 
+/*
+Upon ack receival we need to act depending on if it's new or not
+-if it's new it may allow us to discard a mapping
+-otherwise notify meta of duplicate
+*/
 void
-MpTcpSubFlow::ReceivedAck(Ptr<Packet>, const TcpHeader&)
+MpTcpSubFlow::ReceivedAck(Ptr<Packet> p, const TcpHeader& header)
 {
+  NS_LOG_FUNCTION (this << header);
+  NS_LOG_ERROR("Not implemented");
+
 
 }
 

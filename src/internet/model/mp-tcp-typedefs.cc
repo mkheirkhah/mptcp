@@ -28,6 +28,31 @@ MpTcpMapping::operator==( const MpTcpMapping& mapping) const
     );
 }
 
+SequenceNumber32
+MpTcpMapping::MaxSequence (void) const
+{
+  return ( GetDataSequenceNumber() + GetDataLevelLength() );
+}
+
+bool
+MpTcpMapping::operator<(MpTcpMapping const& m) const
+{
+
+  return (GetDataSequenceNumber() < m.GetDataSequenceNumber() );
+}
+
+
+bool
+MpTcpMapping::IsInRange(SequenceNumber32 const& ack) const
+{
+
+  return (
+    GetDataSequenceNumber() <= ack &&
+    // TODO >= ou > ?
+     MaxSequence() >= ack
+  );
+}
+
 
 //SequenceNumber32 subflowSeqNb
 void

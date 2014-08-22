@@ -39,8 +39,18 @@ This is the MPTCP meta socket the application talks with
 this socket. New subflows, as well as the first one (the master
 socket) are linked to this meta socket.
 
-Every data transfer happens on a subflow. Following the linux kernel from UCL (http://multipath-tcp.org) convention,
+Every data transfer happens on a subflow.
+Following the linux kernel from UCL (http://multipath-tcp.org) convention,
 the first established subflow is called the "master" subflow.
+
+This inherits TcpSocketBase so that it can be  used as any other TCP variant:
+this is the backward compability feature that is required in RFC.
+Also doing so allows to run TCP tests with MPTCP via for instance the command
+Config::SetDefault ("ns3::TcpL4Protocol::SocketType", "ns3::MpTcpOlia");
+
+But to make sure some inherited functions are not improperly used, we need to redefine them so that they
+launch an assert. You can notice those via the comments "//! Disabled"
+
 As such many inherited (protected) functions are overriden & left empty.
 
 **/
@@ -342,7 +352,15 @@ protected: // protected methods
 
   virtual void Retransmit();
   // TODO see if we can remove/override parents
+
+  //! Disabled
   virtual void ReceivedAck ( Ptr<Packet>, const TcpHeader&); // Received an ACK packet
+
+  virtual void ReceivedAck( SequenceNumber32 ack
+//  , Ptr<MpTcpSubFlow> sf
+  );
+
+  //! Disabled
   virtual void ReceivedData ( Ptr<Packet>, const TcpHeader&); // Recv of a data, put into buffer, call L7 to get it if necessary
 
   /** Does nothing */
@@ -350,7 +368,10 @@ protected: // protected methods
 
 //  virtual bool ReadOptions (uint8_t sFlowIdx, Ptr<Packet> pkt, const TcpHeader&); // Read option from incoming packets
 //  virtual bool ReadOptions (Ptr<Packet> pkt, const TcpHeader&); // Read option from incoming packets (Listening Socket only)
-  virtual void DupAck(const TcpHeader& t, uint32_t count);  // Not in operation, it's pure virtual function from TcpSocketBase
+
+  //! Disabled
+  void DupAck(const TcpHeader& t, uint32_t count);
+  virtual void DupAck( SequenceNumber32 ack,Ptr<MpTcpSubFlow> );
 //  void DupAck(uint8_t sFlowIdx, DSNMapping * ptrDSN);       // Congestion control algorithms -> loss recovery
 //  void NewACK(uint8_t sFlowIdx, const TcpHeader&, TcpOptions* opt);
 //  void NewAckNewReno(uint8_t sFlowIdx, const TcpHeader&, TcpOptions* opt);
@@ -396,9 +417,9 @@ protected: // protected methods
   virtual void
   NewAck(SequenceNumber32 const& dataLevelSeq);
 
-  //
-  virtual void
-  NewAck(SequenceNumber64 const& dataLevelSeq);
+  // Not implemented yet
+//  virtual void
+//  NewAck(SequenceNumber64 const& dataLevelSeq);
 
   // Re-ordering buffer
 //  bool StoreUnOrderedData(DSNMapping *ptr);

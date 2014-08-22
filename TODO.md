@@ -36,3 +36,4 @@ use "/NodeList/[i]/DeviceList/[i]" ?
 * In X::GetTypeId(), SetParent<X> makes runner hangs
 * need to define each component with a new name ? best way would be to allow REGEX on test name
 * In TcpSocketBase::CompleteFork, should ASSERT that addressTo and addressFrom are of the same kind
+* TcpSocketBase::NewAck remove the last SendPendingData

@@ -897,77 +897,62 @@ MpTcpSocketBase::ReceivedData(Ptr<Packet> p, const TcpHeader& mptcpHeader)
 
 /** Process the newly received ACK */
 
+//, Ptr<MpTcpSubFlow> sf
+void
+MpTcpSocketBase::ReceivedAck( SequenceNumber32 ack)
+{
+  NS_LOG_FUNCTION ( this << "Received ack" << ack);
+
+//  #if 0
+//  uint32_t ack = (tcpHeader.GetAckNumber()).GetValue();
+//  uint32_t tmp = ((ack - initialSeqNb) / m_segmentSize) % mod;
+//  ACK.push_back(std::make_pair(Simulator::Now().GetSeconds(), tmp));
+
+
+  if (ack < m_txBuffer.HeadSequence())
+    { // Case 1: Old ACK, ignored.
+      NS_LOG_LOGIC ("Ignored ack " << ack );
+    }
+  else if (ack == m_txBuffer.HeadSequence())
+    { // Case 2: Potentially a duplicated ACK
+      if (ack < m_nextTxSequence)
+        {
+          NS_LOG_LOGIC ("TODO Dupack of " << ack);
+          // TODO add new prototpye ?
+//          DupAck(tcpHeader,
+//          ++m_dupAckCount);
+        }
+      // otherwise, the ACK is precisely equal to the nextTxSequence
+      NS_ASSERT( ack <= m_nextTxSequence);
+    }
+  else if (ack > m_txBuffer.HeadSequence())
+    { // Case 3: New ACK, reset m_dupAckCount and update m_txBuffer
+      NS_LOG_LOGIC ("New ack of " << ack );
+      NewAck(ack);
+      m_dupAckCount = 0;
+    }
+  // If there is any data piggybacked, store it into m_rxBuffer
+//  if (packet->GetSize() > 0)
+//    {
+//      ReceivedData(packet, tcpHeader);
+//    }
+//  #endif
+}
+
+
+void
+MpTcpSocketBase::DupAck( SequenceNumber32 ack,Ptr<MpTcpSubFlow> sf)
+{
+  //!
+  NS_LOG_INFO("Duplicate ACK");
+}
+
+
 void
 MpTcpSocketBase::ReceivedAck(Ptr<Packet> packet, const TcpHeader& mptcpHeader)
 {
-//  NS_LOG_FUNCTION ( sFlowIdx << mptcpHeader);
 
-  #if 0
-  Ptr<MpTcpSubFlow> sFlow = m_subflows[sFlowIdx];
-  uint32_t ack = (mptcpHeader.GetAckNumber()).GetValue();
-
-  uint32_t tmp = ((ack - sFlow->initialSequnceNumber) / sFlow->GetSegSize()) % mod;
-  sFlow->ACK.push_back(make_pair(Simulator::Now().GetSeconds(), tmp));
-
-  // Stop execution if TCPheader is not ACK at all.
-  if (0 == (mptcpHeader.GetFlags() & TcpHeader::ACK))
-    { // Ignore if no ACK flag
-      NS_ASSERT(3!=3);
-    }
-  // Received ACK. Compare the ACK number against highest unacked seqno.
-  else if (ack <= sFlow->highestAck + 1)
-    {
-      NS_LOG_LOGIC ("This acknowlegment" << mptcpHeader.GetAckNumber ()
-        << "do not ack the latest data in subflow level");
-      list<DSNMapping *>::iterator current = sFlow->m_mapDSN.begin();
-      list<DSNMapping *>::iterator next = sFlow->m_mapDSN.begin();
-      while (current != sFlow->m_mapDSN.end())
-        {
-          ++next;
-          DSNMapping *ptrDSN = *current;
-          // All segments before ackSeqNum should be removed from the m_mapDSN list.
-          if (ptrDSN->subflowSeqNumber + ptrDSN->dataLevelLength <= ack)
-            { // Optional task ...
-              //next = sFlow->m_mapDSN.erase(current);
-              //delete ptrDSN;
-            }
-          // There is a sent segment with subflowSN equal to ack but the ack is smaller than already receveid acked!
-          else if ((ptrDSN->subflowSeqNumber == ack) && (ack < sFlow->highestAck + 1))
-            { // Case 1: Old ACK, ignored.
-              NS_LOG_WARN ("Ignored ack of " << mptcpHeader.GetAckNumber());
-              NS_ASSERT(3!=3);
-              break;
-            }
-          // There is a sent segment with requested SequenceNumber and ack is for first unacked byte!!
-          else if ((ptrDSN->subflowSeqNumber == ack) && (ack == sFlow->highestAck + 1))
-            { // Case 2: Potentially a duplicated ACK, so ack should be smaller than nextExpectedSN to send.
-              if (ack < sFlow->TxSeqNumber)
-                {
-                  //NS_LOG_ERROR(Simulator::Now().GetSeconds()<< " [" << m_node->GetId()<< "] Duplicated ack received for SeqgNb: " << ack << " DUPACKs: " << sFlow->m_dupAckCount + 1);
-                  DupAck(sFlowIdx, ptrDSN);
-                  break;
-                }
-              // otherwise, the ACK is precisely equal to the nextTxSequence
-              NS_ASSERT(ack <= sFlow->TxSeqNumber);
-              break;
-            }
-          current = next;
-        }
-    }
-  else if (ack > sFlow->highestAck + 1)
-    { // Case 3: New ACK, reset m_dupAckCount and update m_txBuffer (DSNMapping List)
-      NS_LOG_WARN ("New ack of " << mptcpHeader.GetAckNumber ());
-      NewAckNewReno(sFlowIdx, mptcpHeader, 0);
-      sFlow->m_dupAckCount = 0;
-    }
-  // If there is any data piggybacked, store it into m_rxBuffer
-  if (packet->GetSize() > 0)
-    {
-      NS_ASSERT(3!=3);
-      NS_LOG_WARN(this << " ReceivedAck -> There is data piggybacked, deal with it...");
-      ReceivedData(sFlowIdx, packet, mptcpHeader);
-    }
-    #endif
+  NS_ASSERT_MSG(false, "Must not be called");
 }
 
 
@@ -1356,10 +1341,13 @@ MpTcpSocketBase::Fork(void)
 }
 
 /** Cut cwnd and enter fast recovery mode upon triple dupack TODO ?*/
+
+
+
 void
 MpTcpSocketBase::DupAck(const TcpHeader& t, uint32_t count)
 {
-  NS_LOG_FUNCTION_NOARGS();
+  NS_ASSERT_MSG(false,"Should never be called");
 }
 //...........................................................................................
 
@@ -1676,19 +1664,32 @@ MpTcpSocketBase::SendBufferedData()
 
 
 // CAREFUL, note that here it's SequenceNumber64
-void
-MpTcpSocketBase::NewAck(SequenceNumber64 const& dataLevelSeq)
-{
-  //!
-
-}
+//void
+//MpTcpSocketBase::NewAck(SequenceNumber64 const& dataLevelSeq)
+//{
+//  //!
+//
+//}
 
 // TODO call 64bits  version ?
+// It should know from which subflow it comes from
 void
-MpTcpSocketBase::NewAck(SequenceNumber32 const& seq)
+MpTcpSocketBase::NewAck(SequenceNumber32 const& seq
+//,Ptr<MpTcpSubFlow> sf
+)
 {
-  //
+  // update tx buffer
   TcpSocketBase::NewAck( seq  );
+
+  // Retrieve the highest m_txBuffer
+
+  // Is done at subflow lvl alread
+  // should be done from here for all subflows since
+  // a same mapping could have been attributed to for allo
+  // BUT can't be discarded if not acklowdged at subflow level so...
+//  sf->DiscardTxMappingsUpToSeqNumber( m_txBuffer.HeadSequence() );
+//    in that fct
+//  discard
 }
 
 /**

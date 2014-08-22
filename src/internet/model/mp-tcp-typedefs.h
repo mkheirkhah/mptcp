@@ -88,6 +88,21 @@ public:
   void MapToSubflowSeqNumber( SequenceNumber32 seq) { m_subflowSequenceNumber = seq;}
   virtual ~MpTcpMapping() {};
 
+  bool IsInRange(SequenceNumber32 const& ack) const;
+
+  /**
+   * Select the max it can accept
+   */
+  SequenceNumber32 MaxSequence (void) const;
+
+
+  /**
+  * Necessary for std::set to sort mappings
+  * Compares data seq nb
+  */
+  bool operator<(MpTcpMapping const& ) const;
+
+
   // getters
   virtual
   //uint64_t
@@ -114,7 +129,10 @@ protected:
 
 };
 
-typedef std::list<MpTcpMapping> MappingList;
+/**
+This should be a set to prevent duplication and keep it ordered
+*/
+typedef std::set<MpTcpMapping> MappingList;
 
 
 

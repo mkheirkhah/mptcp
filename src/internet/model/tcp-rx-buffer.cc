@@ -56,6 +56,13 @@ TcpRxBuffer::~TcpRxBuffer ()
 {
 }
 
+
+// should be able to Extract head, tail from a mapping
+//uint32_t available(head,tail)
+//TcpRxBuffer::
+//  m_data.first().GetKey()
+
+
 SequenceNumber32
 TcpRxBuffer::NextRxSequence (void) const
 {
