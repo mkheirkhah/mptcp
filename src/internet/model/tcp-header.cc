@@ -441,6 +441,12 @@ TcpHeader::AppendOption (Ptr<TcpOption> option)
   m_length = totalLen >> 2;
 }
 
+void
+TcpHeader::GetOptions (TcpHeader::TcpOptionList& l) const
+{
+  l = m_options;
+}
+
 Ptr<TcpOption>
 TcpHeader::GetOption (uint8_t kind) const
 {

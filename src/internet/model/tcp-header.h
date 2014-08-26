@@ -160,6 +160,8 @@ public:
    * \return Whether the header contains a specific kind of option, or 0
    */
   Ptr<TcpOption> GetOption (uint8_t kind) const;
+  typedef std::list< Ptr<TcpOption> > TcpOptionList; //!< List of TcpOption
+  void GetOptions (TcpOptionList& ) const;
 
   /**
    * \brief Check if the header has the option specified
@@ -275,7 +277,7 @@ private:
   bool m_goodChecksum;    //!< Flag to indicate that checksum is correct
 
 
-  typedef std::list< Ptr<TcpOption> > TcpOptionList; //!< List of TcpOption
+
   TcpOptionList m_options; //!< TcpOption present in the header
 };
 
