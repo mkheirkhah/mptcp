@@ -68,8 +68,16 @@ public: // public methods
   \warn This function should be called once a connection is established else
   **/
   virtual bool IsMpTcpEnabled() const;
+
+  /**
+  \brief Generates random key
+  **/
   virtual uint64_t GenerateKey() const;
 
+  /**
+  * TODO when is it considered
+  * \return
+  */
   bool IsConnected() const;
 
   // Public interface for MPTCP
@@ -148,9 +156,13 @@ public: // public methods
   //, const INetAddress& dstAddr
   /**
   public equivalent ?
-
+  * \brief
+  * \param srcAddr Address to bind to. In theory Can be an InetSocketAddress or an Inet6SocketAddress
+  * for now just InetSocketAddress
   */
-  Ptr<MpTcpSubFlow> CreateSubflow(const Address& srcAddr);
+  Ptr<MpTcpSubFlow> CreateSubflow(
+//    const Address& srcAddr
+    );
 
   // Path management related functions
 
@@ -488,7 +500,7 @@ protected: // protected variables
 //  virtual void OnAddAddress(MpTcpAddressInfo);
 //  virtual void OnRemAddress();
 
-  bool m_mpEnabled;   //!< True if remote host is MPTCP compliant
+  bool m_mpEnabled;   //!< True if remote host is MPTCP compliant (not used so far. could be disabled)
 
   // TODO rename since will track local too.
   Ptr<MpTcpPathIdManager> m_remotePathIdManager;  //!< Keep track of advertised ADDR id advertised by remote endhost

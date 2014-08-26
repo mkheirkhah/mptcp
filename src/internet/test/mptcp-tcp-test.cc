@@ -2,7 +2,7 @@
 /*
  * Copyright (c) 2007 Georgia Tech Research Corporation
  * Copyright (c) 2009 INRIA
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation;
@@ -37,6 +37,8 @@
 #include "ns3/inet6-socket-address.h"
 #include "ns3/uinteger.h"
 #include "ns3/log.h"
+#include "ns3/string.h"
+#include "ns3/mp-tcp-socket-factory.h"
 
 #include "ns3/ipv4-end-point.h"
 #include "ns3/arp-l3-protocol.h"
@@ -52,6 +54,10 @@
 NS_LOG_COMPONENT_DEFINE ("TcpTestSuite");
 
 using namespace ns3;
+
+
+
+
 
 class TcpTestCase : public TestCase
 {
@@ -102,7 +108,7 @@ static std::string Name (std::string str, uint32_t totalStreamSize,
                          bool useIpv6)
 {
   std::ostringstream oss;
-  oss << str << " total=" << totalStreamSize << " sourceWrite=" << sourceWriteSize 
+  oss << str << " total=" << totalStreamSize << " sourceWrite=" << sourceWriteSize
       << " sourceRead=" << sourceReadSize << " serverRead=" << serverReadSize
       << " serverWrite=" << serverWriteSize << " useIpv6=" << useIpv6;
   return oss.str ();
@@ -123,8 +129,8 @@ TcpTestCase::TcpTestCase (uint32_t totalStreamSize,
                           uint32_t serverWriteSize,
                           uint32_t serverReadSize,
                           bool useIpv6)
-  : TestCase (Name ("Send string data from client to server and back", 
-                    totalStreamSize, 
+  : TestCase (Name ("Send string data from client to server and back",
+                    totalStreamSize,
                     sourceWriteSize,
                     serverReadSize,
                     serverWriteSize,
@@ -171,9 +177,9 @@ TcpTestCase::DoRun (void)
   NS_TEST_EXPECT_MSG_EQ (m_currentSourceTxBytes, m_totalBytes, "Source sent all bytes");
   NS_TEST_EXPECT_MSG_EQ (m_currentServerRxBytes, m_totalBytes, "Server received all bytes");
   NS_TEST_EXPECT_MSG_EQ (m_currentSourceRxBytes, m_totalBytes, "Source received all bytes");
-  NS_TEST_EXPECT_MSG_EQ (memcmp (m_sourceTxPayload, m_serverRxPayload, m_totalBytes), 0, 
+  NS_TEST_EXPECT_MSG_EQ (memcmp (m_sourceTxPayload, m_serverRxPayload, m_totalBytes), 0,
                          "Server received expected data buffers");
-  NS_TEST_EXPECT_MSG_EQ (memcmp (m_sourceTxPayload, m_sourceRxPayload, m_totalBytes), 0, 
+  NS_TEST_EXPECT_MSG_EQ (memcmp (m_sourceTxPayload, m_sourceRxPayload, m_totalBytes), 0,
                          "Source received back expected data buffers");
 }
 void
@@ -203,7 +209,7 @@ TcpTestCase::ServerHandleRecv (Ptr<Socket> sock)
         {
           NS_FATAL_ERROR ("Server could not read stream at byte " << m_currentServerRxBytes);
         }
-      NS_TEST_EXPECT_MSG_EQ ((m_currentServerRxBytes + p->GetSize () <= m_totalBytes), true, 
+      NS_TEST_EXPECT_MSG_EQ ((m_currentServerRxBytes + p->GetSize () <= m_totalBytes), true,
                              "Server received too many bytes");
       NS_LOG_DEBUG ("Server recv data=\"" << GetString (p) << "\"");
       p->CopyData (&m_serverRxPayload[m_currentServerRxBytes], p->GetSize ());
@@ -259,7 +265,7 @@ TcpTestCase::SourceHandleRecv (Ptr<Socket> sock)
         {
           NS_FATAL_ERROR ("Source could not read stream at byte " << m_currentSourceRxBytes);
         }
-      NS_TEST_EXPECT_MSG_EQ ((m_currentSourceRxBytes + p->GetSize () <= m_totalBytes), true, 
+      NS_TEST_EXPECT_MSG_EQ ((m_currentSourceRxBytes + p->GetSize () <= m_totalBytes), true,
                              "Source received too many bytes");
       NS_LOG_DEBUG ("Source recv data=\"" << GetString (p) << "\"");
       p->CopyData (&m_sourceRxPayload[m_currentSourceRxBytes], p->GetSize ());
@@ -327,6 +333,7 @@ TcpTestCase::SetupDefaultSim (void)
   dev0->SetChannel (channel);
   dev1->SetChannel (channel);
 
+//  Ptr<SocketFactory> sockFactory0 = node0->GetObject<MpTcpSocketFactory> ();
   Ptr<SocketFactory> sockFactory0 = node0->GetObject<TcpSocketFactory> ();
   Ptr<SocketFactory> sockFactory1 = node1->GetObject<TcpSocketFactory> ();
 
@@ -429,8 +436,12 @@ static class TcpTestSuite : public TestSuite
 {
 public:
   TcpTestSuite ()
-    : TestSuite ("tcp", UNIT)
+    : TestSuite ("mptcp-tcp", UNIT)
   {
+
+    // TODO addition by matt
+    Config::SetDefault ("ns3::TcpL4Protocol::SocketType", StringValue("ns3::MpTcpCCOlia") );
+
     // Arguments to these test cases are 1) totalStreamSize,
     // 2) source write size, 3) source read size
     // 4) server write size, and 5) server read size

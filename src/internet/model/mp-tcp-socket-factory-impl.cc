@@ -33,6 +33,7 @@ Ptr<Socket>
 MpTcpSocketFactoryImpl::CreateSocket(void)
 {
 //  CreateObject()
+  NS_ASSERT_MSG(m_mptcp,"Call SetTcp() on the factory before creating a socket");
   return m_mptcp->CreateSocket( MpTcpCCOlia::GetTypeId() );
 }
 

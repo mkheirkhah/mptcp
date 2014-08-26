@@ -32,13 +32,25 @@ MpTcpSubFlow::GetTypeId(void)
 {
   static TypeId tid = TypeId("ns3::MpTcpSubFlow")
       .SetParent<TcpSocketBase>()
-      .AddTraceSource("cWindow",
-          "The congestion control window to trace.",
-           MakeTraceSourceAccessor(&MpTcpSubFlow::m_cWnd));
+      .AddConstructor<MpTcpSubFlow>()
+      // TODO should be inherited
+//      .AddTraceSource("cWindow",
+//          "The congestion control window to trace.",
+//           MakeTraceSourceAccessor(&MpTcpSubFlow::m_cWnd))
+    ;
   return tid;
 }
 
+//bool
+void
+MpTcpSubFlow::SetMeta(Ptr<MpTcpSocketBase> metaSocket)
+{
+  NS_ASSERT(metaSocket);
+  NS_ASSERT(m_state == CLOSED);
 
+  m_metaSocket = metaSocket;
+//  return true;
+}
 
 Ptr<TcpSocketBase>
 MpTcpSubFlow::Fork(void)
@@ -279,6 +291,80 @@ MpTcpSubFlow::SendEmptyPacket(uint8_t flags)
 }
   #endif
 
+#if 0
+int
+MpTcpSubFlow::Connect(const Address & address)
+{
+  NS_LOG_FUNCTION (this << address);
+
+  // If haven't do so, Bind() this socket first
+  if (InetSocketAddress::IsMatchingType(address) && m_endPoint6 == 0)
+    {
+      if (m_endPoint == 0)
+        {
+          if( )
+          if (Bind() == -1)
+            {
+              NS_ASSERT(m_endPoint == 0);
+              return -1; // Bind() failed
+            }
+          NS_ASSERT(m_endPoint != 0);
+        }
+      InetSocketAddress transport = InetSocketAddress::ConvertFrom(address);
+      m_endPoint->SetPeer(transport.GetIpv4(), transport.GetPort());
+      m_endPoint6 = 0;
+
+      // Get the appropriate local address and port number from the routing protocol and set up endpoint
+      if (SetupEndpoint() != 0)
+        { // Route to destination does not exist
+          return -1;
+        }
+    }
+  else if (Inet6SocketAddress::IsMatchingType(address) && m_endPoint == 0)
+    {
+      // If we are operating on a v4-mapped address, translate the address to
+      // a v4 address and re-call this function
+      Inet6SocketAddress transport = Inet6SocketAddress::ConvertFrom(address);
+      Ipv6Address v6Addr = transport.GetIpv6();
+      if (v6Addr.IsIpv4MappedAddress() == true)
+        {
+          Ipv4Address v4Addr = v6Addr.GetIpv4MappedAddress();
+          return Connect(InetSocketAddress(v4Addr, transport.GetPort()));
+        }
+
+      if (m_endPoint6 == 0)
+        {
+          if (Bind6() == -1)
+            {
+              NS_ASSERT(m_endPoint6 == 0);
+              return -1; // Bind() failed
+            }
+          NS_ASSERT(m_endPoint6 != 0);
+        }
+      m_endPoint6->SetPeer(v6Addr, transport.GetPort());
+      m_endPoint = 0;
+
+      // Get the appropriate local address and port number from the routing protocol and set up endpoint
+      if (SetupEndpoint6() != 0)
+        { // Route to destination does not exist
+          return -1;
+        }
+    }
+  else
+    {
+      m_errno = ERROR_INVAL;
+      return -1;
+    }
+
+  // Re-initialize parameters in case this socket is being reused after CLOSE
+  m_rtt->Reset();
+  m_cnCount = m_cnRetries;
+
+  // DoConnect() will do state-checking and send a SYN packet
+  return DoConnect();
+}
+#endif
+
 
 
 int
@@ -315,11 +401,11 @@ MpTcpSubFlow::DoConnect()
       m_state = SYN_SENT;
     }
   else if (m_state != TIME_WAIT)
-    { // In states SYN_RCVD, ESTABLISHED, FIN_WAIT_1, FIN_WAIT_2, and CLOSING, an connection
-      // exists. We send RST, tear down everything, and close this socket.
-      SendRST();
-      CloseAndNotify();
-    }
+  { // In states SYN_RCVD, ESTABLISHED, FIN_WAIT_1, FIN_WAIT_2, and CLOSING, an connection
+    // exists. We send RST, tear down everything, and close this socket.
+    SendRST();
+    CloseAndNotify();
+  }
   return 0;
 }
 
@@ -497,7 +583,8 @@ MpTcpSubFlow::MpTcpSubFlow(const MpTcpSubFlow& sock)
   NS_LOG_LOGIC ("Invoked the copy constructor");
 }
 
-MpTcpSubFlow::MpTcpSubFlow(Ptr<MpTcpSocketBase> metaSocket
+MpTcpSubFlow::MpTcpSubFlow(
+//Ptr<MpTcpSocketBase> metaSocket
 //, bool master
 ) :
     TcpSocketBase(),
@@ -514,13 +601,13 @@ MpTcpSubFlow::MpTcpSubFlow(Ptr<MpTcpSocketBase> metaSocket
      // TODO move out to MpTcpCControl
 
 
-    m_metaSocket(metaSocket),
+//    m_metaSocket(metaSocket),
     m_backupSubflow(false),
     m_localNonce(0),
     m_remoteToken(0)
 {
-  NS_ASSERT( m_metaSocket );
-
+//  NS_ASSERT( m_metaSocket );
+  NS_LOG_INFO(this);
 //  connected = false;
 
   // TODO use/create function to generate initial random number seq
@@ -531,11 +618,13 @@ MpTcpSubFlow::MpTcpSubFlow(Ptr<MpTcpSocketBase> metaSocket
 
 //  maxSeqNb = TxSeqNumber - 1;
 //  highestAck = 0;
-  rtt = CreateObject<RttMeanDeviation>();
-  rtt->Gain(0.1);
-  Time estimate;
-  estimate = Seconds(1.5);
-  rtt->SetCurrentEstimate(estimate);
+
+// Set up by factory no ?
+//  rtt = CreateObject<RttMeanDeviation>();
+//  rtt->Gain(0.1);
+//  Time estimate;
+//  estimate = Seconds(1.5);
+//  rtt->SetCurrentEstimate(estimate);
   m_cnRetries = 3;
   Time est = MilliSeconds(200);
   m_cnTimeout = est;
@@ -551,6 +640,7 @@ MpTcpSubFlow::MpTcpSubFlow(Ptr<MpTcpSocketBase> metaSocket
 
 MpTcpSubFlow::~MpTcpSubFlow()
 {
+  NS_LOG_FUNCTION(this);
   //std::list<DSNMapping *>
 //  for (MappingList::iterator it = m_mapDSN.begin(); it != m_mapDSN.end(); ++it)
 //    {
@@ -902,29 +992,40 @@ MpTcpSubFlow::GetMeta()
 void
 MpTcpSubFlow::CompleteFork(Ptr<Packet> p, const TcpHeader& h, const Address& fromAddress, const Address& toAddress)
 {
+  NS_LOG_INFO( this << "Completing fork of MPTCP subflow");
   // Get port and address from peer (connecting host)
   // TODO upstream ns3 should assert that to and from Address are of the same kind
-  if (InetSocketAddress::IsMatchingType(toAddress))
-    {
-      m_endPoint = m_tcp->Allocate(InetSocketAddress::ConvertFrom(toAddress).GetIpv4(),
-          InetSocketAddress::ConvertFrom(toAddress).GetPort(), InetSocketAddress::ConvertFrom(fromAddress).GetIpv4(),
-          InetSocketAddress::ConvertFrom(fromAddress).GetPort());
-      m_endPoint6 = 0;
-    }
-  else if (Inet6SocketAddress::IsMatchingType(toAddress))
-    {
-      m_endPoint6 = m_tcp->Allocate6(Inet6SocketAddress::ConvertFrom(toAddress).GetIpv6(),
-          Inet6SocketAddress::ConvertFrom(toAddress).GetPort(), Inet6SocketAddress::ConvertFrom(fromAddress).GetIpv6(),
-          Inet6SocketAddress::ConvertFrom(fromAddress).GetPort());
-      m_endPoint = 0;
-    }
-  m_tcp->m_sockets.push_back(this);
+  if(IsMaster()) {
+    NS_LOG_INFO("Master socket: getting endpoint from meta");
+    m_endPoint = GetMeta()->m_endPoint;
+    m_endPoint6 = GetMeta()->m_endPoint6;
+  }
+  else {
+    NS_LOG_INFO("Not Master socket: allocating endpoint ");
+    if (InetSocketAddress::IsMatchingType(toAddress))
+      {
+        m_endPoint = m_tcp->Allocate(InetSocketAddress::ConvertFrom(toAddress).GetIpv4(),
+            InetSocketAddress::ConvertFrom(toAddress).GetPort(), InetSocketAddress::ConvertFrom(fromAddress).GetIpv4(),
+            InetSocketAddress::ConvertFrom(fromAddress).GetPort());
+        m_endPoint6 = 0;
+      }
+    else if (Inet6SocketAddress::IsMatchingType(toAddress))
+      {
+        m_endPoint6 = m_tcp->Allocate6(Inet6SocketAddress::ConvertFrom(toAddress).GetIpv6(),
+            Inet6SocketAddress::ConvertFrom(toAddress).GetPort(), Inet6SocketAddress::ConvertFrom(fromAddress).GetIpv6(),
+            Inet6SocketAddress::ConvertFrom(fromAddress).GetPort());
+        m_endPoint = 0;
+      }
+
+    m_tcp->m_sockets.push_back(this);
+  }
 
   // Change the cloned socket from LISTEN state to SYN_RCVD
   NS_LOG_INFO ("LISTEN -> SYN_RCVD");
   m_state = SYN_RCVD;
   m_cnCount = m_cnRetries;
   SetupCallback();
+
   // Set the sequence number and send SYN+ACK
   m_rxBuffer.SetNextRxSequence(h.GetSequenceNumber() + SequenceNumber32(1));
 
@@ -935,6 +1036,7 @@ MpTcpSubFlow::CompleteFork(Ptr<Packet> p, const TcpHeader& h, const Address& fro
     Ptr<TcpOptionMpTcpCapable> mpc = CreateObject<TcpOptionMpTcpCapable>();
     mpc->SetSenderKey( GetMeta()->GetLocalKey() );
     answerHeader.AppendOption( mpc );
+    NS_LOG_INFO ("CompleteFork: appended MP_CAPABLE option");
   }
   else
   {
@@ -947,6 +1049,8 @@ MpTcpSubFlow::CompleteFork(Ptr<Packet> p, const TcpHeader& h, const Address& fro
     join->SetNonce(3);
 
     answerHeader.AppendOption( join );
+
+    NS_LOG_INFO ("CompleteFork: appended MP_JOIN option");
   }
 
 //  NS_ASSERT( answerHeader.HasOption(TcpOption::P))
@@ -1104,38 +1208,6 @@ MpTcpSubFlow::ProcessSynSent(Ptr<Packet> packet, const TcpHeader& tcpHeader)
       CloseAndNotify();
     }
 }
-
-/*
-This function is useless as prototyped in TcpSocketBase :(
-*/
-#if 0
-bool
-MpTcpSubFlow::ReadOptions(Ptr<Packet> pkt, const TcpHeader& mptcpHeader)
-{
-  NS_LOG_FUNCTION(this << mptcpHeader);
-
-  std::vector<TcpOptions*> mp_options = mptcpHeader.GetOptions();
-  uint8_t flags = mptcpHeader.GetFlags();
-  TcpOptions *opt;
-  bool hasSyn = flags & TcpHeader::SYN;
-  for (uint32_t j = 0; j < mp_options.size(); j++)
-  {
-    // TODO if the option belongs to MPTCP then notify the metasocket or inspect here ?
-      opt = mp_options[j];
-      if ((opt->optName == OPT_MPCAPABLE) && hasSyn)
-      {
-        //TODO check not connected yet
-        NS_ASSERT_MSG( (m_state == LISTEN) , "This could be a bug please report it to our GitHub page");
-        NS_ASSERT_MSG( !m_metaSocket->IsMpTcpEnabled(), "This could be a bug please report it to our GitHub page");
-
-        // SYN+ACK would be send later on by ProcessSynRcvd(...)
-        m_metaSocket->SetRemoteKey( ((OptMultipathCapable *) opt)->senderToken  );
-
-      }
-  }
-  return true; // This should return true otherwise Forwardup() would retrun too.
-}
-#endif
 
 
 bool
@@ -1424,7 +1496,7 @@ MpTcpSubFlow::ReceivedData(Ptr<Packet> p, const TcpHeader& mptcpHeader)
     NS_ASSERT( mptcpOption );
     NS_LOG_INFO( "mptcp option with subtype " << mptcpOption->GetSubType() );
 
-    if( mptcpOption->GetSubType() == TcpOptionMpTcpMain::DSS)
+    if( mptcpOption->GetSubType() == TcpOptionMpTcpMain::MP_DSS)
     {
       Ptr<TcpOptionMpTcpDSN> dsn = DynamicCast<TcpOptionMpTcpDSN>(mptcpOption);
       NS_ASSERT( "Adding " );

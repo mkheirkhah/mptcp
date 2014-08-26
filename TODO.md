@@ -18,6 +18,10 @@ Generic:
 * crypto materials checks
 * on MP_join store the addresses Id
 * Extend TcpTxBuffer to support mappings ?
+* remove the files for mptcpsocketfactory, it's not needed: we cna use a tcpsocketfacotry
+* test what happens when we remove the master socket while the connection keeps going. It should provoke problems since endpoint is not allocated anymore
+* Merge the 3 MPTCP JOIN options into one
+
 
 Requests for ns3;
 * add an IsConnected member to TcpSocketBase ?

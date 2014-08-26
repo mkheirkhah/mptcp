@@ -34,9 +34,9 @@ namespace ns3 {
 http://www.iana.org/assignments/tcp-parameters/tcp-parameters.xhtml
  0x0 	MP_CAPABLE 	Multipath Capable
 0x1 	MP_JOIN 	Join Connection
-0x2 	DSS 	Data Sequence Signal (Data ACK and data sequence mapping)
-0x3 	ADD_ADDR 	Add Address
-0x4 	REMOVE_ADDR 	Remove Address
+0x2 	MP_DSS 	Data Sequence Signal (Data ACK and data sequence mapping)
+0x3 	MP_ADD_ADDR 	Add Address
+0x4 	MP_REMOVE_ADDR 	Remove Address
 0x5 	MP_PRIO 	Change Subflow Priority
 0x6 	MP_FAIL 	Fallback
 0x7 	MP_FASTCLOSE 	Fast Close
@@ -67,9 +67,9 @@ public:
   enum SubType {
     MP_CAPABLE,
     MP_JOIN,
-    DSS,
-    ADD_ADDR,
-    REMOVE_ADDR,
+    MP_DSS,
+    MP_ADD_ADDR,
+    MP_REMOVE_ADDR,
     MP_PRIO,
     MP_FAIL,
     MP_FASTCLOSE
@@ -291,6 +291,12 @@ class TcpOptionMpTcpJoinInitialSyn : public TcpOptionMpTcp<TcpOptionMpTcpMain::M
 {
 
 public:
+  enum {
+  Syn,
+  SynAck,
+  Ack
+//  SYN_RCVD
+  };
 
   TcpOptionMpTcpJoinInitialSyn();
   virtual ~TcpOptionMpTcpJoinInitialSyn();
@@ -443,7 +449,7 @@ we don't do the checksum either
                 Figure 9: Data Sequence Signal (DSS) Option
 
 */
-class TcpOptionMpTcpDSN : public TcpOptionMpTcp<TcpOptionMpTcpMain::DSS>
+class TcpOptionMpTcpDSN : public TcpOptionMpTcp<TcpOptionMpTcpMain::MP_DSS>
 {
 
 public:
@@ -518,7 +524,7 @@ it's 0 for the sake of simplicity.
 
                  Figure 12: Add Address (ADD_ADDR) Option
 */
-class TcpOptionMpTcpAddAddress : public TcpOptionMpTcp<TcpOptionMpTcpMain::ADD_ADDR>
+class TcpOptionMpTcpAddAddress : public TcpOptionMpTcp<TcpOptionMpTcpMain::MP_ADD_ADDR>
 {
 
 public:
@@ -531,7 +537,7 @@ public:
 
    "port is specified, MPTCP SHOULD attempt to connect to the specified
    address on the same port as is already in use by the subflow on which
-   the ADD_ADDR signal was sent"
+   the MP_ADD_ADDR signal was sent"
   */
 //  virtual bool IsPortEmbedded() ;
 
@@ -575,9 +581,9 @@ protected:
    +---------------+---------------+-------+-------+---------------+
                               (followed by n-1 Address IDs, if required)
 
-          Figure 13: Remove Address (REMOVE_ADDR) Option
+          Figure 13: Remove Address (MP_REMOVE_ADDR) Option
 */
-class TcpOptionMpTcpRemoveAddress : public TcpOptionMpTcp<TcpOptionMpTcpMain::REMOVE_ADDR>
+class TcpOptionMpTcpRemoveAddress : public TcpOptionMpTcp<TcpOptionMpTcpMain::MP_REMOVE_ADDR>
 {
 
 public:

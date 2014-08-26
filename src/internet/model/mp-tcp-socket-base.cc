@@ -27,6 +27,7 @@
 #include "ns3/mp-tcp-scheduler-round-robin.h"
 #include "ns3/mp-tcp-id-manager.h"
 #include "ns3/mp-tcp-id-manager-impl.h"
+#include "ns3/tcp-option-mptcp.h"
 
 NS_LOG_COMPONENT_DEFINE("MpTcpSocketBase");
 using namespace std;
@@ -204,9 +205,10 @@ MpTcpSocketBase::EstimateRtt(const TcpHeader& TcpHeader)
 void
 MpTcpSocketBase::SetPeerKey(uint64_t remoteKey)
 {
-  NS_ASSERT( m_remoteKey == 0);
+//  NS_ASSERT( m_remoteKey == 0);
+//  NS_ASSERT( m_state != CLOSED);
 
-//  m_remoteKey = (uint64_t)remoteKey;
+  m_remoteKey = (uint64_t)remoteKey;
 
   // not  sure yet. Wait to see if SYN/ACK is acked
   m_mpEnabled = true;
@@ -214,123 +216,6 @@ MpTcpSocketBase::SetPeerKey(uint64_t remoteKey)
 }
 
 
-// Read options from incoming packets
-#if 0
-bool
-MpTcpSocketBase::ReadOptions(Ptr<Packet> pkt, const TcpHeader& mptcpHeader)
-{
-  NS_LOG_FUNCTION(this << mptcpHeader);
-  // why this ?
-//  NS_ASSERT(m_remoteKey == 0 && m_mpEnabled == false);
-  vector<TcpOptions*> mp_options = mptcpHeader.GetOptions();
-  uint8_t flags = mptcpHeader.GetFlags();
-  TcpOptions *opt;
-  bool hasSyn = flags & TcpHeader::SYN;
-  for (uint32_t j = 0; j < mp_options.size(); j++)
-    {
-      opt = mp_options[j];
-      if ((opt->optName == OPT_MPCAPABLE) && hasSyn
-//        && (mpRecvState == MP_NONE)
-        )
-        { // SYN+ACK would be send later on by ProcessSynRcvd(...)
-//          mpRecvState = MP_MPC;
-          m_mpEnabled = true;
-          m_remoteKey = ((OptMultipathCapable *) opt)->senderToken;
-        }
-      else
-        NS_FATAL_ERROR("Unexpected option has received ... This could be a bug please report it to our GitHub page");
-    }
-  return true; // This should return true otherwise Forwardup() would retrun too.
-}
-
-// Read options from incoming packets
-// May be upgraded by SOCIS patch ?
-bool
-MpTcpSocketBase::ReadOptions(uint8_t sFlowIdx, Ptr<Packet> pkt, const TcpHeader& mptcpHeader)
-{
-  NS_LOG_FUNCTION(this << (int)sFlowIdx << mptcpHeader);
-  Ptr<MpTcpSubFlow> sFlow = m_subflows[sFlowIdx];
-  std::vector<TcpOptions*> options = mptcpHeader.GetOptions();
-  uint8_t flags = mptcpHeader.GetFlags();
-  TcpOptions *opt;
-  bool hasSyn = flags & TcpHeader::SYN;
-//  bool TxAddr = false;
-  for (uint32_t j = 0; j < options.size(); j++)
-    {
-      opt = options[j];
-      if ((opt->optName == OPT_MPCAPABLE) && hasSyn
-//      && (mpRecvState == MP_NONE)
-      )
-        { // SYN+ACK would be send later on by ProcessSynRcvd(...)
-//          mpRecvState = MP_MPC;
-          m_mpEnabled = true;
-          m_remoteKey = ((OptMultipathCapable *) opt)->senderToken;
-//          NS_ASSERT(client);
-        }
-      else if ((opt->optName == OPT_JOIN) && hasSyn)
-        {
-          /*
-          OptJoinConnection * optJoin = (OptJoinConnection *) opt;
-          //
-
-          if (
-            (mpSendState == MP_ADDADDR) &&
-            (GetLocalKey() == optJoin->receiverToken)
-            )
-            {
-              // SYN+ACK would be send later on by ProcessSynRcvd(...)
-              // Join option is sent over the path (couple of addresses) not already in use
-            }
-          */
-        }
-      else if (
-        (opt->optName == OPT_ADDR)
-        //&& (mpRecvState == MP_MPC)
-        )
-        {
-          // Receiver store sender's addresses information and send back its addresses.
-          // If there are several addresses to advertise then multiple OPT_ADDR would be attached to the TCP Options.
-//          MpTcpAddressInfo * addrInfo = new MpTcpAddressInfo();
-          uint8_t addrId = ((OptAddAddress *) opt)->addrID;
-//          addrInfo->ipv4Addr = ((OptAddAddress *) opt)->addr;
-
-          //TODO support port
-          // Convert en address
-          if( m_remotePathIdManager->AddRemoteAddr( addrId, ((OptAddAddress *) opt)->addr, 0 ) )
-          {
-//            TxAddr = true;
-// bool remote //new local
-//            NotifyNewRemoteAddAddr( );
-          }
-
-
-        }
-      else if (opt->optName == OPT_REMADR)
-        { // not implemented yet
-          NS_LOG_WARN(this << "ReadOption-> OPT_REMADR is not implemented yet");
-
-          /**
-          This is achieved through the Remove Address (REMOVE_ADDR) option
-         (Figure 13), which will remove a previously added address (or list of
-         addresses) from a connection and terminate any subflows currently
-         using that address.
-
-         **/
-         // TODO look for subflow matching that addr and remove it
-         // Also remove from pathManager
-//         m_remote
-         m_remotePathIdManager->RemRemoteAddr( ((OptAddAddress *) opt)->addrID );
-
-        }
-      else if (opt->optName == OPT_DSN)
-        { // not implemented yet
-          NS_LOG_LOGIC(this << " ReadOption-> OPT_DSN -> we'll deal with it later on");
-        }
-    }
-
-  return true;
-}
-#endif
 
 
 
@@ -384,6 +269,8 @@ MpTcpSocketBase::ProcessEstablished(uint8_t sFlowIdx, Ptr<Packet> packet, const 
     }
 }
 #endif
+
+
 void
 MpTcpSocketBase::ProcessListen(Ptr<Packet> packet, const TcpHeader& mptcpHeader, const Address& fromAddress, const Address& toAddress)
 {
@@ -400,6 +287,20 @@ MpTcpSocketBase::ProcessListen(Ptr<Packet> packet, const TcpHeader& mptcpHeader,
       return;
     }
 
+  // TODO  check for MP option
+
+  // For now we assume there is only one option of MPTCP kind but there may be several
+  // TODO update the SOCIS code to achieve this
+  Ptr<TcpOption> option = mptcpHeader.GetOption(TcpOption::MPTCP);
+  Ptr<TcpOptionMpTcpMain> opt2 = DynamicCast<TcpOptionMpTcpMain>(option);
+
+
+  // Expect an MP_CAPABLE option
+  NS_ASSERT_MSG( opt2->GetSubType() == TcpOptionMpTcpMain::MP_CAPABLE, "MPTCP sockets can only connect to MPTCP sockets. There is no fallback implemented yet." );
+
+
+
+
   // Call socket's notify function to let the server app know we got a SYN
   // If the server app refuses the connection, do nothing
   if (!NotifyConnectionRequest(fromAddress))
@@ -408,7 +309,9 @@ MpTcpSocketBase::ProcessListen(Ptr<Packet> packet, const TcpHeader& mptcpHeader,
       return;
     }
 
-  // Clone the socket, simulate fork
+
+
+  // Clone the socket, simulate fork CopyObject
   Ptr<MpTcpSocketBase> newSock = ForkAsMeta();
   NS_LOG_DEBUG ("Clone new MpTcpSocketBase new connection. ListenerSocket " << this << " AcceptedSocket "<< newSock);
   Simulator::ScheduleNow(&MpTcpSocketBase::CompleteFork, newSock, packet, mptcpHeader, fromAddress, toAddress);
@@ -422,18 +325,35 @@ void
 MpTcpSocketBase::CompleteFork(Ptr<Packet> p, const TcpHeader& mptcpHeader, const Address& fromAddress, const Address& toAddress)
 {
   NS_LOG_FUNCTION(this);
-  m_server = true;
 
   // Get port and address from peer (connecting host)
-  if (InetSocketAddress::IsMatchingType(toAddress))
-    {
-      m_endPoint = m_tcp->Allocate(InetSocketAddress::ConvertFrom(toAddress).GetIpv4(), InetSocketAddress::ConvertFrom(toAddress).GetPort(),
-          InetSocketAddress::ConvertFrom(fromAddress).GetIpv4(), InetSocketAddress::ConvertFrom(fromAddress).GetPort());
-    }
+//  if (InetSocketAddress::IsMatchingType(toAddress))
+//    {
+//      m_endPoint = m_tcp->Allocate(InetSocketAddress::ConvertFrom(toAddress).GetIpv4(), InetSocketAddress::ConvertFrom(toAddress).GetPort(),
+//          InetSocketAddress::ConvertFrom(fromAddress).GetIpv4(), InetSocketAddress::ConvertFrom(fromAddress).GetPort());
+//    }
   NS_ASSERT(InetSocketAddress::ConvertFrom(toAddress).GetIpv4() == m_endPoint->GetLocalAddress());
   NS_ASSERT(InetSocketAddress::ConvertFrom(toAddress).GetPort() == m_endPoint->GetLocalPort());
   NS_ASSERT(InetSocketAddress::ConvertFrom(fromAddress).GetIpv4() == m_endPoint->GetPeerAddress());
   NS_ASSERT(InetSocketAddress::ConvertFrom(fromAddress).GetPort() == m_endPoint->GetPeerPort());
+
+  Ptr<TcpOption> option = mptcpHeader.GetOption(TcpOption::MPTCP);
+//  Ptr<TcpOptionMpTcpMain> opt2 = DynamicCast<TcpOptionMpTcpMain>(option);
+
+  Ptr<TcpOptionMpTcpCapable> mpc = DynamicCast<TcpOptionMpTcpCapable>(option);
+
+  NS_ASSERT( mpc );
+
+  // this is not really needed. For path management maybe ?
+  m_server = true;
+  m_state = SYN_RCVD; // Think of updating it
+
+  NS_LOG_INFO("peer key " << mpc->GetSenderKey() );
+
+  // Register keys
+  SetPeerKey( mpc->GetSenderKey() );
+  m_localKey = GenerateKey();
+
 
   // We only setup destroy callback for MPTCP connection's endPoints, not on subflows endpoints.
   SetupCallback();
@@ -442,9 +362,18 @@ MpTcpSocketBase::CompleteFork(Ptr<Packet> p, const TcpHeader& mptcpHeader, const
   m_tcp->m_sockets.push_back(this);
 
   // Create new master subflow (master subsock) and assign its endpoint to the connection endpoint
-  Ptr<MpTcpSubFlow> sFlow = CreateSubflow( fromAddress );
+  Ptr<MpTcpSubFlow> sFlow = CreateSubflow(  );
+  NS_ASSERT_MSG(sFlow,"Contact ns3 team");
 
-  NS_ASSERT( GetNSubflows() == 0);
+  if ( sFlow->Bind(fromAddress) != 0) {
+    NS_LOG_ERROR("Could not bind to srcAddr" << fromAddress);
+    return;
+  }
+
+  m_endPoint = sFlow->m_endPoint;
+  m_endPoint6 = sFlow->m_endPoint6;
+
+//  NS_ASSERT( GetNSubflows() == 0);
 //  m_subflows.clear();
   m_subflows.push_back( sFlow );
 
@@ -453,13 +382,8 @@ MpTcpSocketBase::CompleteFork(Ptr<Packet> p, const TcpHeader& mptcpHeader, const
 //  sFlow->m_cnCount = sFlow->m_cnRetries;
 //  sFlow->m_endPoint = m_endPoint; // This is master subsock, its endpoint is the same as connection endpoint.
 //  sFlow->SetSegSize(m_segmentSize);
-
   // TODO should be able to set RemoteKey
-
 //  NS_LOG_INFO ("("<< (int)sFlow->m_routeId<<") LISTEN -> SYN_RCVD");
-
-
-
   //Set the subflow sequence number and send SYN+ACK
   // TODO done automatically
 //  sFlow->m_rxBuffer.SetNextRxSequence( mptcpHeader.GetSequenceNumber() + SequenceNumber32(1) );
@@ -468,8 +392,7 @@ MpTcpSocketBase::CompleteFork(Ptr<Packet> p, const TcpHeader& mptcpHeader, const
 
   // Update currentSubflow in case close just after 3WHS.
 //  NS_LOG_UNCOND("CompleteFork -> receivingBufferSize: " << m_recvingBuffer->bufMaxSize);
-  NS_LOG_INFO(this << "  MPTCP connection is initiated (Receiver): "
-    );
+  NS_LOG_INFO(this << "  MPTCP connection is initiated (Receiver): ");
 }
 
 /** Received a packet upon LISTEN state. */
@@ -1356,11 +1279,15 @@ MpTcpSocketBase::DupAck(const TcpHeader& t, uint32_t count)
 //int
 Ptr<MpTcpSubFlow>
 MpTcpSocketBase::CreateSubflow(
-      const Address& _srcAddr
+//      const Address& _srcAddr
 //      , const Address& dstAddr
       )
 {
-  InetSocketAddress srcAddr = InetSocketAddress::ConvertFrom(_srcAddr);
+//  NS_ASSERT_MSG(
+//  InetSocketAddress::IsMatchingType(_srcAddr),
+//  "for dev purpose. To remove later"
+//  );
+//  InetSocketAddress srcAddr = InetSocketAddress::ConvertFrom(_srcAddr);
 
 //  bool masterSocket = false;
   // TODO ajouter la limite du nb de sous flots ?
@@ -1384,19 +1311,21 @@ MpTcpSocketBase::CreateSubflow(
   }
   else
   {
-
+//    NS_LOG_UNCOND ( "How did I arrive here ?");
   }
 
+  Ptr<Socket> sock = m_tcp->CreateSocket( MpTcpSubFlow::GetTypeId() );
 
-  Ptr<MpTcpSubFlow> sFlow = CreateObject<MpTcpSubFlow>(this);
+  Ptr<MpTcpSubFlow> sFlow = DynamicCast<MpTcpSubFlow>(sock);
+  sFlow->SetMeta(this);
+  NS_ASSERT_MSG( sFlow, "Contact ns3 team");
+
+//  sFlow->SetTcp( m_tcp );
   // TODO find associated device and bind to it
   // find srcAddr
 //  sFlow->BindToNetDevice (this->FindOutputNetDevice() )
   //
-  if ( sFlow->Bind(srcAddr) != 0) {
-    NS_LOG_ERROR("Could not bind to srcAddr" << srcAddr);
-    return 0;
-  }
+
 
 //  if(!sFlow->Connect( dstAddr) )
 //  {
@@ -1405,38 +1334,63 @@ MpTcpSocketBase::CreateSubflow(
 //  }
 
 
-  m_subflows.push_back( sFlow );
+//  m_subflows.push_back( sFlow );
 
   // TODO set id of the Flow
   // It's
-  sFlow->m_routeId = m_subflows.size() - 1;
+//  static routeId
+//  sFlow->m_routeId = m_subflows.size() - 1;
   // Should not be needed since bind register socket
 //  m_tcp->m_sockets.push_back(this); // appelé apres un bind ou dans completeFork
   return sFlow;
 }
 
 
-
+/**
+Need to override parent's otherwise it allocates an endpoint to the meta socket
+and upon connection , the tcp subflow can't allocate
+*/
 int
-MpTcpSocketBase::DoConnect(void)
+MpTcpSocketBase::Connect(const Address & toAddress)
 {
-  NS_LOG_FUNCTION (this);
+  NS_LOG_INFO(this << "Connect");
 
-  // A new connection is allowed only if this socket does not have a connection
+  if( IsConnected() )
+  {
+    NS_LOG_WARN("Trying to connect meta while already connected");
+    return ERROR_ISCONN; // INVAL ?
+  }
+
   if (m_state == CLOSED || m_state == LISTEN || m_state == SYN_SENT || m_state == LAST_ACK || m_state == CLOSE_WAIT)
     {
       // send a SYN packet and change state into SYN_SENT
-      Ptr<MpTcpSubFlow> sFlow = CreateSubflow( m_endPoint->GetLocalAddress() );
-      int ret = sFlow->Connect( m_endPoint->GetPeerAddress() );
+      Ptr<MpTcpSubFlow> sFlow = CreateSubflow(
+//            InetSocketAddress(m_endPoint->GetLocalAddress(), m_endPoint->GetLocalPort())
+          );
+      // We should not bind
+
+      // This function will allocate a new one
+      int ret = sFlow->Connect(
+                toAddress
+//                InetSocketAddress( m_endPoint->GetPeerAddress(), m_endPoint->GetPeerPort() )
+                  );
+
       if(ret != 0)
       {
+        NS_LOG_ERROR("Could not connect but why ? TODO destroy subflow");
+        // TODO destroy
         return ret;
       }
-//      NS_ASSERT( );
+      NS_LOG_INFO ("looks like successful connection");
+      m_endPoint = sFlow->m_endPoint;
+      m_endPoint6 = sFlow->m_endPoint6;
 
+      m_subflows.push_back( sFlow );
+
+//      NS_ASSERT( );
 //      SendEmptyPacket(TcpHeader::SYN);
 //      NS_LOG_INFO (TcpStateName[m_state] << " -> SYN_SENT");
-//      m_state = SYN_SENT;
+      m_state = SYN_SENT;
     }
   else if (m_state != TIME_WAIT)
     { // In states SYN_RCVD, ESTABLISHED, FIN_WAIT_1, FIN_WAIT_2, and CLOSING, an connection
@@ -1446,8 +1400,60 @@ MpTcpSocketBase::DoConnect(void)
 //      CloseAndNotify();
       NS_LOG_UNCOND("Time wait");
     }
-  return 0;
 
+  return DoConnect();
+}
+
+int
+MpTcpSocketBase::DoConnect(void)
+{
+  NS_LOG_FUNCTION (this << "Disabled");
+//DeAllocate
+//  if(IsConnected()) {
+//    NS_LOG_WARN(this << " is already connected");
+//    return -1;
+//  }
+  #if 0
+  // A new connection is allowed only if this socket does not have a connection
+  // TODO is this check enough for multiple subflows ?
+  if (m_state == CLOSED || m_state == LISTEN || m_state == SYN_SENT || m_state == LAST_ACK || m_state == CLOSE_WAIT)
+    {
+      // send a SYN packet and change state into SYN_SENT
+      Ptr<MpTcpSubFlow> sFlow = CreateSubflow(
+            InetSocketAddress(m_endPoint->GetLocalAddress(), m_endPoint->GetLocalPort())
+          );
+      // We should not bind
+
+      // This function will allocate a new one
+      int ret = sFlow->Connect(
+                InetSocketAddress( m_endPoint->GetPeerAddress(), m_endPoint->GetPeerPort() )
+                  );
+
+      if(ret != 0)
+      {
+        NS_LOG_ERROR("Could not connect but why ? TODO destroy subflow");
+        // TODO destroy
+        return ret;
+      }
+      NS_LOG_INFO ("");
+      m_endPoint = sFlow->m_endPoint;
+      m_endPoint6 = sFlow->m_endPoint6;
+//      NS_ASSERT( );
+//      SendEmptyPacket(TcpHeader::SYN);
+//      NS_LOG_INFO (TcpStateName[m_state] << " -> SYN_SENT");
+      m_state = SYN_SENT;
+    }
+  else if (m_state != TIME_WAIT)
+    { // In states SYN_RCVD, ESTABLISHED, FIN_WAIT_1, FIN_WAIT_2, and CLOSING, an connection
+      // exists. We send RST, tear down everything, and close this socket.
+      // TODO
+//      SendRST();
+//      CloseAndNotify();
+      NS_LOG_UNCOND("Time wait");
+    }
+
+  #endif
+  return 0;
 }
 
 /***
@@ -1566,13 +1572,13 @@ MpTcpSocketBase::IsConnected() const
 
 
 
-int
-MpTcpSocketBase::Connect(const Address &address)
-{
-  NS_LOG_FUNCTION ( this << address );
-  // this should call our own DoConnect
-  return TcpSocketBase::Connect(address);
-}
+//int
+//MpTcpSocketBase::Connect(const Address &address)
+//{
+//  NS_LOG_FUNCTION ( this << address );
+//  // this should call our own DoConnect
+//  return TcpSocketBase::Connect(address);
+//}
 
 
 /** Inherited from Socket class: Bind socket to an end-point in MpTcpL4Protocol */
@@ -1831,27 +1837,26 @@ int
 MpTcpSocketBase::Listen(void)
 {
   NS_LOG_FUNCTION (this);
+  return TcpSocketBase::Listen();
   // Linux quits EINVAL if we're not in CLOSED state, so match what they do
-  if (m_state != CLOSED)
-    {
-      m_errno = ERROR_INVAL;
-      return -1;
-    }
-
-  // In other cases, set the state to LISTEN and done
-  NS_LOG_INFO ("CLOSED -> LISTEN");
-  m_state = LISTEN;
+//  if (m_state != CLOSED)
+//    {
+//      m_errno = ERROR_INVAL;
+//      return -1;
+//    }
+//
+//  // In other cases, set the state to LISTEN and done
+//  NS_LOG_INFO ("CLOSED -> LISTEN");
+//  m_state = LISTEN;
   // TODO create a subflow
-
-  Ptr<MpTcpSubFlow> flow = CreateSubflow( m_endPoint->GetLocalAddress() );
+//  Ptr<MpTcpSubFlow> flow = CreateSubflow( InetSocketAddress(m_endPoint->GetLocalAddress(), m_endPoint->GetLocalPort()) );
   // TODO bind to where meta bounded
 //  m_endPoint should have already been allocated by meta: pass it
-  flow->Bind();
-  return flow->Listen();
-
+//  flow->Bind();
+//  return flow->Listen();
 //  return 0;
 }
-//
+
 //int
 //MpTcpSocketBase::Listen(void)
 //{
@@ -2156,6 +2161,7 @@ MpTcpSocketBase::GenerateToken(uint32_t& token) const
 uint64_t
 MpTcpSocketBase::GenerateKey() const
 {
+  // TODO rather use NS3 random generator
   return (rand() % 1000 + 1);
 }
 

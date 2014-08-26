@@ -50,12 +50,15 @@ public:
   Every subflow is linked to that socket.
   \param The metasocket it is linked to
   **/
-  MpTcpSubFlow(Ptr<MpTcpSocketBase> metaSocket);
+  MpTcpSubFlow();
 
   MpTcpSubFlow(const MpTcpSubFlow&);
 
   virtual ~MpTcpSubFlow();
 
+  virtual void
+//  bool
+  SetMeta(Ptr<MpTcpSocketBase> metaSocket);
 //  virtual int
 //  Connect(const Address &address);      // Setup endpoint and call ProcessAction() to connect
 
@@ -64,6 +67,7 @@ public:
   \warning for prototyping purposes, we let the user free to advertise an IP that doesn't belong to the node
   (in reference to MPTCP connection agility).
   \note Maybe we should change this behavior ?
+  TODO convert to Address to work with IPv6
   */
   virtual void
   AdvertiseAddress(Ipv4Address , uint16_t port);

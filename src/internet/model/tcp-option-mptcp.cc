@@ -81,7 +81,26 @@ TcpOptionMpTcpMain::CreateOption(uint8_t subtype)
   switch(subtype)
   {
     case MP_CAPABLE:
-//      return CreateObject<TcpOptionMpTcpCapable>();
+      return CreateObject<TcpOptionMpTcpCapable>();
+
+    case MP_JOIN:
+      // TODO merge the 3 options
+      return CreateObject<TcpOptionMpTcpJoin>();
+
+    case MP_DSS:
+      return CreateObject<TcpOptionMpTcpDSN>();
+    case MP_FAIL:
+    case MP_FASTCLOSE:
+      NS_ASSERT_MSG(false,"Unsupported MPTCP options. Implement them !" );
+
+//      return CreateObject<TcpOptionMpTcp>();
+      break;
+    case MP_DSS:
+      return CreateObject<TcpOptionMpTcpDSN>();
+    case MP_PRIO:
+      return CreateObject<TcpOptionMpTcpChangePriority>();
+    case MP_REMOVE_ADDR:
+      return CreateObject<TcpOptionMpTcpChangePriority>();
 
     default:
       NS_ASSERT_MSG(false,"Unsupported MPTCP suboption");

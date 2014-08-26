@@ -98,10 +98,18 @@ public:
   Bind(void);    // Bind a socket by setting up endpoint in TcpL4Protocol
   virtual int
   Bind6(void);    // Bind a socket by setting up endpoint in TcpL4Protocol
+  /**
+  * \param address Expects Inet(6)SocketAddress
+  */
   virtual int
   Bind(const Address &address);         // ... endpoint of specific addr or port
+
+  /**
+  * \brief Setup endpoint and call ProcessAction() to connect
+  * \param address Expects Inet(6)SocketAddress
+  */
   virtual int
-  Connect(const Address &address);      // Setup endpoint and call ProcessAction() to connect
+  Connect(const Address &address);
   virtual int
   Listen(void);  // Verify the socket is in a correct state and call ProcessAction() to listen
   virtual int

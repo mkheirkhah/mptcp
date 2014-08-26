@@ -4,8 +4,14 @@ README
 This code is yet another attempt at upstreaming MPTCP (Multipath TCP). It is based on ns3.19.
 
 
-How to launch the MPTCP testsuite ?
+How to launch the MPTCP testsuites ?
 ======
+There are 3 test I now use for testing (less in the future hopefull if we can use MPTCP sockets with TCPapps). Their names are:
+* mptcp (test multiple subflows, address management)
+* mptcp-tcp (copy/paste of tcp-test.cc)
+* mptcp-option
+
+
 To run the test suite with logging messages:
 NS_LOG="MpTcpTestSuite=*|prefix_func:Socket=*:*=error|warn" ./waf --run "test-runner --suite=mptcp"or (more complete)
 NS_LOG="MpTcpTestSuite=*|prefix_func:Socket=*:MpTcpSocketBase:*=error|warn" ./waf --run "test-runner --verbose --suite=mptcp"
