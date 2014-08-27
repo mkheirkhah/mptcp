@@ -276,6 +276,8 @@ A: The leftmost bit, labeled "A", SHOULD be set to 1 to indicate
 /**
   TODO allow to set back up flag
   MP_JOIN subtype:
+\verbatim
+
   -For Initial SYN
       +---------------+---------------+-------+-----+-+---------------+
       |     Kind      |  Length = 12  |Subtype|     |B|   Address ID  |
@@ -286,6 +288,34 @@ A: The leftmost bit, labeled "A", SHOULD be set to 1 to indicate
       +---------------------------------------------------------------+
 
       Figure 5: Join Connection (MP_JOIN) Option (for Initial SYN)
+
+                           1                   2                   3
+       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+      +---------------+---------------+-------+-----+-+---------------+
+      |     Kind      |  Length = 16  |Subtype|     |B|   Address ID  |
+      +---------------+---------------+-------+-----+-+---------------+
+      |                                                               |
+      |                Sender's Truncated HMAC (64 bits)              |
+      |                                                               |
+      +---------------------------------------------------------------+
+      |                Sender's Random Number (32 bits)               |
+      +---------------------------------------------------------------+
+
+    Figure 6: Join Connection (MP_JOIN) Option (for Responding SYN/ACK)
+
+                           1                   2                   3
+       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+      +---------------+---------------+-------+-----------------------+
+      |     Kind      |  Length = 24  |Subtype|      (reserved)       |
+      +---------------+---------------+-------+-----------------------+
+      |                                                               |
+      |                                                               |
+      |                   Sender's HMAC (160 bits)                    |
+      |                                                               |
+      |                                                               |
+      +---------------------------------------------------------------+
+
+        Figure 7: Join Connection (MP_JOIN) Option (for Third ACK)
 **/
 class TcpOptionMpTcpJoin : public TcpOptionMpTcp<TcpOptionMpTcpMain::MP_JOIN>
 {
@@ -296,7 +326,7 @@ public:
   \brief The MPTCP standard assigns only one MP_JOIN subtype but depending on
   **/
   enum State {
-  Unitialized = 0,
+  Uninitialized = 0,
   Syn    = 12,
   SynAck = 16,
   Ack    = 24
@@ -307,10 +337,14 @@ public:
 
   virtual bool operator==(const TcpOptionMpTcpJoin&) const;
 
-
+  /**
+  this part is for SYN
+  **/
+  virtual uint32_t GetNonce() const;
 
   // Setters
-  virtual void SetPeerToken(uint32_t token) { m_peerToken = token; }
+  virtual void
+  SetPeerToken(uint32_t token) { m_peerToken = token; }
 //  virtual void SetLocalToken(uint32_t token) { m_localToken = token; }
 
 //  virtual void SetBackupFlag
@@ -333,14 +367,22 @@ public:
   virtual uint32_t Deserialize (Buffer::Iterator start);
   virtual uint32_t GetSerializedSize (void) const;
 
+
+  /**
+  this part is for ACK. Not implemented yet. Always 0
+  **/
+  virtual const uint8_t* GetHmac() const;
+  virtual void SetHmac(uint8_t hmac[20]) ;
+
 protected:
   State m_state;  //!<
 
   uint8_t m_addressId;    //!< Mandatory
   uint8_t m_flags;
-  uint32_t m_peerToken;
-  uint32_t m_nonce;  //!< Rename to *nonce* . Should be a random number
-  Buffer m_buff;  //!< To deal with the various data
+//  uint64_t m_nonce;
+//  uint32_t m_peerToken;
+//  uint32_t m_nonce;  //!< Rename to *nonce* . Should be a random number
+  uint32_t m_buffer[5];  //!< To deal with the various data
 };
 
 

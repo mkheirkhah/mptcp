@@ -269,6 +269,9 @@ TcpOptionMpTcpJoin::SetAddressId(uint8_t addrId)
   m_addressId =  addrId;
 }
 
+
+TcpOptionMpTcpJoin::
+
 uint32_t
 TcpOptionMpTcpJoin::GetPeerToken() const
 {
@@ -276,16 +279,15 @@ TcpOptionMpTcpJoin::GetPeerToken() const
   return m_peerToken;
 }
 
-//bool
-//TcpOptionMpTcpJoin::GetState()
-//{
-//}
 
 
-TcpOptionMpTcpJoin::SetStateFromFlags(const uint32)
+void
+TcpOptionMpTcpJoin::SetState(State s)
 {
-  //!
-  return ( m_state == state);
+  NS_ASSERT(m_state == Uninitialized);
+  m_state = s;
+  m_buffer.AddAtStart(s);
+//  return ( m_state == state);
 }
 
 uint8_t
@@ -300,64 +302,132 @@ TcpOptionMpTcpJoin::operator==(const TcpOptionMpTcpJoin& opt) const
 {
 //  NS_ASSERT(m_state & (SynAck | Ack) );
   bool result = false;
+  if( m_state != opt.m_state) return false;
+
   switch() {
-    case
+    case Uninitialized:
     case Syn:
-      result |= GetAddressId() == opt.GetAddressId();
-      break;
+      return (
+        GetPeerToken() == opt.GetPeerToken()
+        && GetNonce() == opt.GetNonce()
+    //    && GetLocalToken() == opt.GetLocalToken()
+        && GetAddressId() == opt.GetAddressId()
+        );
+
+
 
     case SynAck:
       result
       break;
 
     case Ack:
-
+      return true;
   };
-  return (
-    GetPeerToken() == opt.GetPeerToken()
-    && m_nonce == opt.m_nonce
-//    && GetLocalToken() == opt.GetLocalToken()
-    && GetAddressId() == opt.GetAddressId()
-    );
+
+  NS_ASSERT_MSG(false, "Contact ns3 team");
+  return false;
 }
 
+uint32_t
+TcpOptionMpTcpJoin::GetNonce() const
+{
+  NS_ASSERT(m_state == Syn);
+  return m_buffer[0];
+}
 
 void
 TcpOptionMpTcpJoin::Serialize (Buffer::Iterator i) const
 {
   TcpOptionMpTcp::SerializeRef(i);
   i.WriteU8( GetSubType() << 4 );
-//  i.WriteU8( GetAddressId() );
-// CopyData
-  CreateFragment
-  i.WriteHtonU32( GetPeerToken() );
-  i.WriteHtonU32( m_nonce );
-  // la je continue a sérialiser
-}
-
-uint32_t
-TcpOptionMpTcpJoin::Deserialize (Buffer::Iterator i)
-{
-//  TcpOptionMpTcp::Deserialize(start);
-  uint32_t length = (uint32_t) i.ReadU8();
-//  NS_ASSERT( length == 12);
-  m_state = static_cast<State>( length );
-
-  uint8_t subtype_and_flags = i.ReadU8()  ;
-  NS_ASSERT( (subtype_and_flags >> 4) == GetSubType() );
+  if(m_state & (Syn | SynAck) )
+    i.WriteU8( GetAddressId() );
+  else
+    i.writeU8( 0 );
 
   switch( m_state )
   {
     case Syn:
-      SetAddressId(
-      // TODO copy to buffer?
-      i.ReadU8() );
+      i.WriteHtonU32( GetPeerToken() );
+      i.WriteHtonU32( GetNonce() );
       break;
+
+    case SynAck:
+
+      break;
+
+    case Ack:
+      break;
+  // +=4 cos amount of bytes we write
+  for(int i = 0; i < m_state/4-1; i++)
+  {
+    i.WriteHtonU32( m_buffer[i]);
   }
+// CopyData
+//  CreateFragment
+
+//  i.Write( m_buffer.Begin(), m_buffer.End() );
+  // la je continue a sérialiser
+}
+
+const uint8_t*
+TcpOptionMpTcpJoin::GetHmac() const
+{
+  NS_ASSERT(m_state == Ack);
+  //  i.Read( &m_hmac[0], 20);
+//  m_buffer.Read();
+//  return &m_hmac[0];
+  return 0;
+};
+
+
+uint32_t
+TcpOptionMpTcpJoin::Deserialize (Buffer::Iterator i)
+{
+  NS_ASSERT(m_state == Uninitialized);
+
+//  TcpOptionMpTcp::Deserialize(start);
+  uint32_t length = (uint32_t) i.ReadU8();
+//  NS_ASSERT( length == 12);
+
+  uint8_t subtype_and_flags = i.ReadU8()  ;
+  NS_ASSERT( (subtype_and_flags >> 4) == GetSubType() );
+
+  // 4 because first line of
+  m_state = static_cast<State>( length );
+//  m_buffer.AddAtBegin(m_state);
+
+  m_addressId = i.ReadU8();
+
+  switch( m_state )
+  {
+    case Syn:
+//      m_buffer.Write()
+      // TODO copy to buffer?
+
+      m_buffer[0] = i.ReadNtohU32();
+      m_buffer[1] = i.ReadNtohU32();
+      break;
+
+    case SynAck;
+//      SetAddressId( i.ReadU8() );
+      {
+        uint64_t temp = 0;
+        temp = i.ReadNtohU64();
+        m_buffer[0] = temp << 32;
+        m_buffer[1] = (uint32_t)temp ; // hope it gets truncated to 32 bits
+      }
+      m_buffer[2] = i.ReadNtohU32();  // read nonce
+      break;
+
+    case Ack:
+      i.Read( (uint8_t*)&m_buffer, 20);
+      break;
+  };
 
 
   SetPeerToken( i.ReadNtohU32() );
-  m_nonce = i.ReadNtohU32();
+
   return m_state;
 }
 
@@ -371,7 +441,9 @@ TcpOptionMpTcpJoin::SetAddressId(uint8_t addrId)
 uint32_t
 TcpOptionMpTcpJoin::GetSerializedSize (void) const
 {
-    return 12;
+  NS_ASSERT(m_state != Uninitialized);
+
+  return (m_state);
 }
 
 
