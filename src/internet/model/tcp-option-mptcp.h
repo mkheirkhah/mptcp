@@ -287,21 +287,94 @@ A: The leftmost bit, labeled "A", SHOULD be set to 1 to indicate
 
       Figure 5: Join Connection (MP_JOIN) Option (for Initial SYN)
 **/
+class TcpOptionMpTcpJoin : public TcpOptionMpTcp<TcpOptionMpTcpMain::MP_JOIN>
+{
+
+public:
+  /**
+  \enum State
+  \brief The MPTCP standard assigns only one MP_JOIN subtype but depending on
+  **/
+  enum State {
+  Unitialized = 0,
+  Syn    = 12,
+  SynAck = 16,
+  Ack    = 24
+  };
+
+  TcpOptionMpTcpJoin();
+  virtual ~TcpOptionMpTcpJoin();
+
+  virtual bool operator==(const TcpOptionMpTcpJoin&) const;
+
+
+
+  // Setters
+  virtual void SetPeerToken(uint32_t token) { m_peerToken = token; }
+//  virtual void SetLocalToken(uint32_t token) { m_localToken = token; }
+
+//  virtual void SetBackupFlag
+  // Getters
+  virtual uint32_t
+  GetPeerToken() const ;
+
+//  virtual uint32_t GetLocalToken() const { return m_localToken; }
+  virtual uint8_t
+  GetAddressId() const;
+
+  virtual void
+  SetAddressId(uint8_t addrId);
+
+  virtual void Print (std::ostream &os) const;
+
+  virtual bool SetStateFromFlags(const State& state);
+  // Ok
+  virtual void Serialize (Buffer::Iterator start) const;
+  virtual uint32_t Deserialize (Buffer::Iterator start);
+  virtual uint32_t GetSerializedSize (void) const;
+
+protected:
+  State m_state;  //!<
+
+  uint8_t m_addressId;    //!< Mandatory
+  uint8_t m_flags;
+  uint32_t m_peerToken;
+  uint32_t m_nonce;  //!< Rename to *nonce* . Should be a random number
+  Buffer m_buff;  //!< To deal with the various data
+};
+
+
+#if 0
+/**
+  TODO allow to set back up flag
+  MP_JOIN subtype:
+  -For Initial SYN
+      +---------------+---------------+-------+-----+-+---------------+
+      |     Kind      |  Length = 12  |Subtype|     |B|   Address ID  |
+      +---------------+---------------+-------+-----+-+---------------+
+      |                   Receiver's Token (32 bits)                  |
+      +---------------------------------------------------------------+
+      |                Sender's Random Number (32 bits)               |
+      +---------------------------------------------------------------+
+
+      Figure 5: Join Connection (MP_JOIN) Option (for Initial SYN)
+**/
 class TcpOptionMpTcpJoinInitialSyn : public TcpOptionMpTcp<TcpOptionMpTcpMain::MP_JOIN>
 {
 
 public:
-  enum {
-  Syn,
-  SynAck,
-  Ack
-//  SYN_RCVD
+  enum State {
+  Syn    = 12,
+  SynAck = 16,
+  Ack    = 24
   };
 
   TcpOptionMpTcpJoinInitialSyn();
   virtual ~TcpOptionMpTcpJoinInitialSyn();
 
   virtual bool operator==(const TcpOptionMpTcpJoinInitialSyn&) const;
+
+
 
   // Setters
   virtual void SetPeerToken(uint32_t token) { m_peerToken = token; }
@@ -323,6 +396,7 @@ public:
 protected:
   uint8_t m_addressId;    //!< Mandatory
   uint8_t m_flags;
+
   uint32_t m_peerToken;
   uint32_t m_nonce;  //!< Rename to *nonce* . Should be a random number
 };
@@ -420,7 +494,7 @@ protected:
 
 };
 
-
+#endif
 
 /**
 

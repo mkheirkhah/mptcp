@@ -236,6 +236,149 @@ TcpOptionMpTcpCapable::GetSerializedSize (void) const
 /////////////////////////////////////////////////////////
 ////////  MP_JOIN Initial SYN
 /////////////////////////////////////////////////////////
+TcpOptionMpTcpJoin::TcpOptionMpTcpJoin()
+    : TcpOptionMpTcp (),
+    m_addressId(0),
+    m_flags(0),
+    , m_state(Unitialized)
+//    m_peerToken(0),
+//    m_nonce(0)
+{
+  NS_LOG_FUNCTION(this);
+
+  // TODO Generate a random number
+  m_nonce = 3232;
+}
+
+TcpOptionMpTcpJoin::~TcpOptionMpTcpJoin ()
+{
+  NS_LOG_FUNCTION(this);
+}
+
+
+void
+TcpOptionMpTcpJoin::Print (std::ostream &os) const
+{
+  os << "MP_Join Initial Syn" << ";";
+}
+
+void
+TcpOptionMpTcpJoin::SetAddressId(uint8_t addrId)
+{
+  NS_ASSERT(m_state & (SynAck | Ack) );
+  m_addressId =  addrId;
+}
+
+uint32_t
+TcpOptionMpTcpJoin::GetPeerToken() const
+{
+  NS_ASSERT(m_state & (SynAck | Ack) );
+  return m_peerToken;
+}
+
+//bool
+//TcpOptionMpTcpJoin::GetState()
+//{
+//}
+
+
+TcpOptionMpTcpJoin::SetStateFromFlags(const uint32)
+{
+  //!
+  return ( m_state == state);
+}
+
+uint8_t
+TcpOptionMpTcpJoin::GetAddressId() const
+{
+  NS_ASSERT(m_state & (SynAck | Ack) );
+  return m_addressId;
+}
+
+bool
+TcpOptionMpTcpJoin::operator==(const TcpOptionMpTcpJoin& opt) const
+{
+//  NS_ASSERT(m_state & (SynAck | Ack) );
+  bool result = false;
+  switch() {
+    case
+    case Syn:
+      result |= GetAddressId() == opt.GetAddressId();
+      break;
+
+    case SynAck:
+      result
+      break;
+
+    case Ack:
+
+  };
+  return (
+    GetPeerToken() == opt.GetPeerToken()
+    && m_nonce == opt.m_nonce
+//    && GetLocalToken() == opt.GetLocalToken()
+    && GetAddressId() == opt.GetAddressId()
+    );
+}
+
+
+void
+TcpOptionMpTcpJoin::Serialize (Buffer::Iterator i) const
+{
+  TcpOptionMpTcp::SerializeRef(i);
+  i.WriteU8( GetSubType() << 4 );
+//  i.WriteU8( GetAddressId() );
+// CopyData
+  CreateFragment
+  i.WriteHtonU32( GetPeerToken() );
+  i.WriteHtonU32( m_nonce );
+  // la je continue a sérialiser
+}
+
+uint32_t
+TcpOptionMpTcpJoin::Deserialize (Buffer::Iterator i)
+{
+//  TcpOptionMpTcp::Deserialize(start);
+  uint32_t length = (uint32_t) i.ReadU8();
+//  NS_ASSERT( length == 12);
+  m_state = static_cast<State>( length );
+
+  uint8_t subtype_and_flags = i.ReadU8()  ;
+  NS_ASSERT( (subtype_and_flags >> 4) == GetSubType() );
+
+  switch( m_state )
+  {
+    case Syn:
+      SetAddressId(
+      // TODO copy to buffer?
+      i.ReadU8() );
+      break;
+  }
+
+
+  SetPeerToken( i.ReadNtohU32() );
+  m_nonce = i.ReadNtohU32();
+  return m_state;
+}
+
+void
+TcpOptionMpTcpJoin::SetAddressId(uint8_t addrId)
+{
+  NS_ASSERT_MSG( m_state != Ack, "Not usable in state ack" );
+  m_addressId =  addrId;
+}
+// OK
+uint32_t
+TcpOptionMpTcpJoin::GetSerializedSize (void) const
+{
+    return 12;
+}
+
+
+#if 0
+/////////////////////////////////////////////////////////
+////////  MP_JOIN Initial SYN
+/////////////////////////////////////////////////////////
 TcpOptionMpTcpJoinInitialSyn::TcpOptionMpTcpJoinInitialSyn()
     : TcpOptionMpTcp (),
     m_addressId(0),
@@ -480,6 +623,7 @@ TcpOptionMpTcpJoinSynAckReceived::GetSerializedSize (void) const
 {
     return 24;
 }
+#endif
 
 
 
