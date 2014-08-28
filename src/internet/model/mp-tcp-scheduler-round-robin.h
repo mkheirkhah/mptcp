@@ -22,13 +22,19 @@ namespace ns3
 class MpTcpSocketBase;
 class MpTcpSubFlow;
 
+
+//typedef std::vector< std::pair<uint8_t, std::pair< SequenceNumber32,uint32_t > > > MappingVector;
+//
+typedef std::vector< std::pair< SequenceNumber32,uint32_t > > MappingVector;
+
+
 class MpTcpSchedulerRoundRobin : public Object
 //: public MpTcpScheduler
 {
 
 public:
   MpTcpSchedulerRoundRobin(Ptr<MpTcpSocketBase> metaSock);
-  virtual ~MpTcpSchedulerRoundRobin () {}
+  virtual ~MpTcpSchedulerRoundRobin ();
 
   //Ptr<MpTcpSocketBase> metaSock
   //            std::pair<int,
@@ -42,7 +48,9 @@ public:
   virtual int
   GenerateMappings(
 //      MappingList&
-  std::vector< std::pair<uint8_t, std::pair< SequenceNumber32, uint32_t > > >&
+//  std::vector< std::pair<uint8_t, std::pair< SequenceNumber32, uint32_t > > >
+  MappingVector
+  &
     );
 
   /**

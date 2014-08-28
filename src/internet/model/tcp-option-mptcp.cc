@@ -76,7 +76,7 @@ TcpOptionMpTcpMain::GetInstanceTypeId (void) const
 
 
 Ptr<TcpOption>
-TcpOptionMpTcpMain::CreateOption(uint8_t subtype)
+TcpOptionMpTcpMain::CreateMpTcpOption(uint8_t subtype)
 {
   switch(subtype)
   {
@@ -95,8 +95,7 @@ TcpOptionMpTcpMain::CreateOption(uint8_t subtype)
 
 //      return CreateObject<TcpOptionMpTcp>();
       break;
-    case MP_DSS:
-      return CreateObject<TcpOptionMpTcpDSN>();
+
     case MP_PRIO:
       return CreateObject<TcpOptionMpTcpChangePriority>();
     case MP_REMOVE_ADDR:
@@ -238,16 +237,16 @@ TcpOptionMpTcpCapable::GetSerializedSize (void) const
 /////////////////////////////////////////////////////////
 TcpOptionMpTcpJoin::TcpOptionMpTcpJoin()
     : TcpOptionMpTcp (),
+    m_state(Uninitialized),
     m_addressId(0),
-    m_flags(0),
-    , m_state(Unitialized)
+    m_flags(0)
 //    m_peerToken(0),
 //    m_nonce(0)
 {
   NS_LOG_FUNCTION(this);
 
   // TODO Generate a random number
-  m_nonce = 3232;
+//  m_nonce = 3232;
 }
 
 TcpOptionMpTcpJoin::~TcpOptionMpTcpJoin ()
@@ -255,6 +254,12 @@ TcpOptionMpTcpJoin::~TcpOptionMpTcpJoin ()
   NS_LOG_FUNCTION(this);
 }
 
+void
+TcpOptionMpTcpJoin::SetPeerToken(uint32_t token)
+{
+  NS_ASSERT( m_state & Syn);
+  m_buffer[0] = token;
+}
 
 void
 TcpOptionMpTcpJoin::Print (std::ostream &os) const
@@ -270,13 +275,13 @@ TcpOptionMpTcpJoin::SetAddressId(uint8_t addrId)
 }
 
 
-TcpOptionMpTcpJoin::
+
 
 uint32_t
 TcpOptionMpTcpJoin::GetPeerToken() const
 {
-  NS_ASSERT(m_state & (SynAck | Ack) );
-  return m_peerToken;
+  NS_ASSERT(m_state & Syn );
+  return m_buffer[0];
 }
 
 
@@ -286,7 +291,7 @@ TcpOptionMpTcpJoin::SetState(State s)
 {
   NS_ASSERT(m_state == Uninitialized);
   m_state = s;
-  m_buffer.AddAtStart(s);
+//  m_buffer.AddAtStart(s);
 //  return ( m_state == state);
 }
 
@@ -301,11 +306,14 @@ bool
 TcpOptionMpTcpJoin::operator==(const TcpOptionMpTcpJoin& opt) const
 {
 //  NS_ASSERT(m_state & (SynAck | Ack) );
-  bool result = false;
+//  bool result = false;
   if( m_state != opt.m_state) return false;
 
-  switch() {
+  switch(m_state)
+  {
     case Uninitialized:
+      return true;
+
     case Syn:
       return (
         GetPeerToken() == opt.GetPeerToken()
@@ -317,10 +325,15 @@ TcpOptionMpTcpJoin::operator==(const TcpOptionMpTcpJoin& opt) const
 
 
     case SynAck:
-      result
-      break;
+      return (
+          GetNonce() == opt.GetNonce()
+//          && GetTruncatedHmac() == opt.GetTruncatedHmac()
+          && GetAddressId()  == opt.GetAddressId()
+          );
+
 
     case Ack:
+      //TODO compare hash etc..
       return true;
   };
 
@@ -331,9 +344,22 @@ TcpOptionMpTcpJoin::operator==(const TcpOptionMpTcpJoin& opt) const
 uint32_t
 TcpOptionMpTcpJoin::GetNonce() const
 {
-  NS_ASSERT(m_state == Syn);
+  NS_ASSERT(m_state & (Syn | SynAck) );
   return m_buffer[0];
 }
+
+void
+TcpOptionMpTcpJoin::SetNonce(uint32_t nonce)
+{
+//  NS_ASSERT(m_state & () Syn);
+  if(m_state == Syn)
+    m_buffer[1] = nonce;
+  else if(m_state == SynAck)
+    m_buffer[2] = nonce;
+  else
+    NS_ASSERT(false);
+}
+
 
 void
 TcpOptionMpTcpJoin::Serialize (Buffer::Iterator i) const
@@ -343,26 +369,37 @@ TcpOptionMpTcpJoin::Serialize (Buffer::Iterator i) const
   if(m_state & (Syn | SynAck) )
     i.WriteU8( GetAddressId() );
   else
-    i.writeU8( 0 );
+    i.WriteU8( 0 );
 
   switch( m_state )
   {
+    case Uninitialized:
+      NS_ASSERT_MSG(false,"Can't");
+
     case Syn:
       i.WriteHtonU32( GetPeerToken() );
       i.WriteHtonU32( GetNonce() );
       break;
 
     case SynAck:
-
+      {
+        uint64_t hmac = GetTruncatedHmac();
+//        temp ;
+        i.WriteHtonU64(hmac);
+      }
+      i.WriteHtonU32( GetNonce() );
       break;
 
     case Ack:
+      // +=4 cos amount of bytes we write
+      for(int j = 0; j < m_state/4-1; j++)
+      {
+        i.WriteHtonU32( m_buffer[j]);
+      }
       break;
-  // +=4 cos amount of bytes we write
-  for(int i = 0; i < m_state/4-1; i++)
-  {
-    i.WriteHtonU32( m_buffer[i]);
   }
+
+
 // CopyData
 //  CreateFragment
 
@@ -401,23 +438,19 @@ TcpOptionMpTcpJoin::Deserialize (Buffer::Iterator i)
 
   switch( m_state )
   {
+    case Uninitialized:
+      NS_ASSERT_MSG(false, "" );
+
     case Syn:
 //      m_buffer.Write()
       // TODO copy to buffer?
-
-      m_buffer[0] = i.ReadNtohU32();
-      m_buffer[1] = i.ReadNtohU32();
+      SetPeerToken( i.ReadNtohU32() );
+      SetNonce(  i.ReadNtohU32() );
       break;
 
-    case SynAck;
-//      SetAddressId( i.ReadU8() );
-      {
-        uint64_t temp = 0;
-        temp = i.ReadNtohU64();
-        m_buffer[0] = temp << 32;
-        m_buffer[1] = (uint32_t)temp ; // hope it gets truncated to 32 bits
-      }
-      m_buffer[2] = i.ReadNtohU32();  // read nonce
+    case SynAck:
+      SetTruncatedHmac( i.ReadNtohU64() );
+      SetNonce(i.ReadNtohU32() );  // read nonce
       break;
 
     case Ack:
@@ -426,17 +459,25 @@ TcpOptionMpTcpJoin::Deserialize (Buffer::Iterator i)
   };
 
 
-  SetPeerToken( i.ReadNtohU32() );
+
 
   return m_state;
 }
 
 void
-TcpOptionMpTcpJoin::SetAddressId(uint8_t addrId)
+TcpOptionMpTcpJoin::SetHmac(uint8_t hmac[20])
 {
-  NS_ASSERT_MSG( m_state != Ack, "Not usable in state ack" );
-  m_addressId =  addrId;
+  //
+//  std::copy(hmac, hmac+20,m_hmac);
 }
+
+
+//void
+//TcpOptionMpTcpJoin::SetAddressId(uint8_t addrId)
+//{
+//  NS_ASSERT_MSG( m_state != Ack, "Not usable in state ack" );
+//  m_addressId =  addrId;
+//}
 // OK
 uint32_t
 TcpOptionMpTcpJoin::GetSerializedSize (void) const
@@ -446,47 +487,27 @@ TcpOptionMpTcpJoin::GetSerializedSize (void) const
   return (m_state);
 }
 
+void
+TcpOptionMpTcpJoin::SetTruncatedHmac(uint64_t hmac)
+{
+  NS_ASSERT_MSG(m_state == SynAck,"Wrong state");
+  m_buffer[0] = hmac >> 32;
+  m_buffer[1] = (hmac);
+}
+
+uint64_t
+TcpOptionMpTcpJoin::GetTruncatedHmac() const
+{
+  NS_ASSERT_MSG(m_state == SynAck,"Wrong state");
+  uint64_t temp = 0;
+  temp = m_buffer[0] ;
+  temp = temp << 32;
+  temp |= m_buffer[1] ;
+
+  return temp;
+};
 
 #if 0
-/////////////////////////////////////////////////////////
-////////  MP_JOIN Initial SYN
-/////////////////////////////////////////////////////////
-TcpOptionMpTcpJoinInitialSyn::TcpOptionMpTcpJoinInitialSyn()
-    : TcpOptionMpTcp (),
-    m_addressId(0),
-    m_flags(0),
-    m_peerToken(0),
-    m_nonce(0)
-{
-  NS_LOG_FUNCTION(this);
-
-  // TODO Generate a random number
-  m_nonce = 3232;
-}
-
-TcpOptionMpTcpJoinInitialSyn::~TcpOptionMpTcpJoinInitialSyn ()
-{
-  NS_LOG_FUNCTION_NOARGS();
-}
-
-
-void
-TcpOptionMpTcpJoinInitialSyn::Print (std::ostream &os) const
-{
-  os << "MP_Join Initial Syn" << ";";
-}
-
-
-bool
-TcpOptionMpTcpJoinInitialSyn::operator==(const TcpOptionMpTcpJoinInitialSyn& opt) const
-{
-  return (
-    GetPeerToken() == opt.GetPeerToken()
-    && m_nonce == opt.m_nonce
-//    && GetLocalToken() == opt.GetLocalToken()
-    && GetAddressId() == opt.GetAddressId()
-    );
-}
 
 
 void
@@ -516,12 +537,6 @@ TcpOptionMpTcpJoinInitialSyn::Deserialize (Buffer::Iterator i)
   return 12;
 }
 
-// OK
-uint32_t
-TcpOptionMpTcpJoinInitialSyn::GetSerializedSize (void) const
-{
-    return 12;
-}
 
 
 

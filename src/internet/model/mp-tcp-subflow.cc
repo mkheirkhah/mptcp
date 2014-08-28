@@ -386,11 +386,13 @@ MpTcpSubFlow::DoConnect()
       }
       else
       {
-        // Join option
-        Ptr<TcpOptionMpTcpJoinInitialSyn> join =  CreateObject<TcpOptionMpTcpJoinInitialSyn>();
+        // Join option InitialSyn
+        Ptr<TcpOptionMpTcpJoin> join =  CreateObject<TcpOptionMpTcpJoin>();
         //TODO retrieve from meta
 //        join->SetLocalToken(0);
+        join->SetState(TcpOptionMpTcpJoin::Syn);
         join->SetPeerToken(0);
+        join->SetNonce(0);
 //        join->SetAddressId(0);
 //        join->set
         header.AppendOption( join );
@@ -589,12 +591,6 @@ MpTcpSubFlow::MpTcpSubFlow(
 ) :
     TcpSocketBase(),
     m_routeId(0),
-//    m_state(CLOSED),
-//    sAddr(Ipv4Address::GetZero()),
-//    sPort(0),
-//    dAddr(Ipv4Address::GetZero()),
-//    m_dPort(0),
-//    oif(0), // outputinterface
     m_ssThresh(65535),  // retrieve from meta CC set in parent's ?
 //    m_mapDSN(0),
     m_lastMeasuredRtt(Seconds(0.0)),
@@ -606,18 +602,11 @@ MpTcpSubFlow::MpTcpSubFlow(
     m_localNonce(0),
     m_remoteToken(0)
 {
-//  NS_ASSERT( m_metaSocket );
   NS_LOG_INFO(this);
-//  connected = false;
 
   // TODO use/create function to generate initial random number seq
 //  TxSeqNumber = rand() % 1000;
 //  RxSeqNumber = 0;
-
-//  cwnd = 0;
-
-//  maxSeqNb = TxSeqNumber - 1;
-//  highestAck = 0;
 
 // Set up by factory no ?
 //  rtt = CreateObject<RttMeanDeviation>();
@@ -659,6 +648,13 @@ MpTcpSubFlow::CloseAndNotify(void)
   TcpSocketBase::CloseAndNotify();
 }
 
+
+int
+MpTcpSubFlow::Send(Ptr<Packet> p, uint32_t flags)
+{
+  NS_ASSERT_MSG(false,"Use sendmapping instead");
+  return 0;
+}
 //, uint32_t maxSize
 // rename globalSeqNb ?
 int
@@ -722,6 +718,8 @@ MpTcpSubFlow::GenerateDataPacketHeader(TcpHeader& header, SequenceNumber32 seq, 
 uint32_t
 MpTcpSubFlow::SendDataPacket(TcpHeader header, SequenceNumber32 seq,uint32_t maxSize)
 {
+  NS_LOG_DEBUG("Adding mapping");
+
   MpTcpMapping mapping;
   bool result = GetMappingForSegment( m_TxMappings, seq, mapping);
   NS_ASSERT(result == true);
@@ -734,6 +732,7 @@ MpTcpSubFlow::SendDataPacket(TcpHeader header, SequenceNumber32 seq,uint32_t max
   if(mapping.GetSubflowSequenceNumber() == seq  )
   {
     // Add DSN option
+    NS_LOG_DEBUG("Adding DSN option");
     Ptr<TcpOptionMpTcpDSN> dsnOption = Create<TcpOptionMpTcpDSN>();
     dsnOption->SetMapping( mapping );
     header.AppendOption( dsnOption );
@@ -995,12 +994,12 @@ MpTcpSubFlow::CompleteFork(Ptr<Packet> p, const TcpHeader& h, const Address& fro
   NS_LOG_INFO( this << "Completing fork of MPTCP subflow");
   // Get port and address from peer (connecting host)
   // TODO upstream ns3 should assert that to and from Address are of the same kind
-  if(IsMaster()) {
-    NS_LOG_INFO("Master socket: getting endpoint from meta");
-    m_endPoint = GetMeta()->m_endPoint;
-    m_endPoint6 = GetMeta()->m_endPoint6;
-  }
-  else {
+//  if(IsMaster()) {
+//    NS_LOG_INFO("Master socket: getting endpoint from meta");
+//    m_endPoint = GetMeta()->m_endPoint;
+//    m_endPoint6 = GetMeta()->m_endPoint6;
+//  }
+//  else {
     NS_LOG_INFO("Not Master socket: allocating endpoint ");
     if (InetSocketAddress::IsMatchingType(toAddress))
       {
@@ -1018,12 +1017,13 @@ MpTcpSubFlow::CompleteFork(Ptr<Packet> p, const TcpHeader& h, const Address& fro
       }
 
     m_tcp->m_sockets.push_back(this);
-  }
+//  }
 
   // Change the cloned socket from LISTEN state to SYN_RCVD
   NS_LOG_INFO ("LISTEN -> SYN_RCVD");
   m_state = SYN_RCVD;
   m_cnCount = m_cnRetries;
+
   SetupCallback();
 
   // Set the sequence number and send SYN+ACK
@@ -1031,6 +1031,8 @@ MpTcpSubFlow::CompleteFork(Ptr<Packet> p, const TcpHeader& h, const Address& fro
 
   TcpHeader answerHeader;
   GenerateEmptyPacketHeader( answerHeader, TcpHeader::SYN | TcpHeader::ACK );
+
+  m_masterSocket = true;  //!< Only for the master socket is completeFork called
   if( IsMaster() )
   {
     Ptr<TcpOptionMpTcpCapable> mpc = CreateObject<TcpOptionMpTcpCapable>();
@@ -1040,7 +1042,8 @@ MpTcpSubFlow::CompleteFork(Ptr<Packet> p, const TcpHeader& h, const Address& fro
   }
   else
   {
-    Ptr<TcpOptionMpTcpJoinSynReceived> join = CreateObject<TcpOptionMpTcpJoinSynReceived>();
+    Ptr<TcpOptionMpTcpJoin> join = CreateObject<TcpOptionMpTcpJoin>();
+    join->SetState(TcpOptionMpTcpJoin::Ack);
     //! TODO request from meta its id
     uint8_t id = 0;
     id = GetIdManager()->GetLocalAddrId( InetSocketAddress(m_endPoint->GetLocalAddress(),m_endPoint->GetLocalPort()) );
@@ -1141,24 +1144,25 @@ MpTcpSubFlow::ProcessSynSent(Ptr<Packet> packet, const TcpHeader& tcpHeader)
       }
       else
       {
-      /**
-         |             |   SYN + MP_JOIN(Token-B, R-A)  |
-         |             |------------------------------->|
-         |             |<-------------------------------|
-         |             | SYN/ACK + MP_JOIN(HMAC-B, R-B) |
-         |             |                                |
-         |             |     ACK + MP_JOIN(HMAC-A)      |
-         |             |------------------------------->|
-         |             |<-------------------------------|
-         |             |             ACK                |
+        /**
+               |             |   SYN + MP_JOIN(Token-B, R-A)  |
+               |             |------------------------------->|
+               |             |<-------------------------------|
+               |             | SYN/ACK + MP_JOIN(HMAC-B, R-B) |
+               |             |                                |
+               |             |     ACK + MP_JOIN(HMAC-A)      |
+               |             |------------------------------->|
+               |             |<-------------------------------|
+               |             |             ACK                |
 
-   HMAC-A = HMAC(Key=(Key-A+Key-B), Msg=(R-A+R-B))
-   HMAC-B = HMAC(Key=(Key-B+Key-A), Msg=(R-B+R-A))
-    */
+         HMAC-A = HMAC(Key=(Key-A+Key-B), Msg=(R-A+R-B))
+         HMAC-B = HMAC(Key=(Key-B+Key-A), Msg=(R-B+R-A))
+          */
         // expects MP_JOIN option
         NS_ASSERT( opt2->GetSubType() == TcpOptionMpTcpMain::MP_JOIN );
-        Ptr<TcpOptionMpTcpJoinSynReceived> opt3 = DynamicCast<TcpOptionMpTcpJoinSynReceived>(option);
-        NS_ASSERT_MSG( opt3, "the MPTCP join option received is not of the expected 1 out of 3 MP_JOIN types." );
+        Ptr<TcpOptionMpTcpJoin> opt3 = DynamicCast<TcpOptionMpTcpJoin>(option);
+        //
+        NS_ASSERT_MSG( opt3 && opt3->GetState() == TcpOptionMpTcpJoin::SynAck, "the MPTCP join option received is not of the expected 1 out of 3 MP_JOIN types." );
 
         // Here we should check the tokens
 //        uint8_t buf[20] =
@@ -1209,15 +1213,21 @@ MpTcpSubFlow::ProcessSynSent(Ptr<Packet> packet, const TcpHeader& tcpHeader)
     }
 }
 
+bool
+MpTcpSubFlow::SendPendingData(bool withAck)
+{
+  //!
+  return TcpSocketBase::SendPendingData(withAck);
+}
+
 
 bool
 MpTcpSubFlow::IsMaster() const
 {
   NS_ASSERT(m_metaSocket);
-
-  // TODO
-  return (m_endPoint == m_metaSocket->m_endPoint); // This is master subsock, its endpoint is the same as connection endpoint.
-
+  return m_masterSocket;
+  // TODO it will never return true
+//  return (m_endPoint == m_metaSocket->m_endPoint); // This is master subsock, its endpoint is the same as connection endpoint.
   // is that enough ?
 //  return (m_metaSocket->m_subflows.size() == 1);
 }

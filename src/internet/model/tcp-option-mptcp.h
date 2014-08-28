@@ -91,7 +91,7 @@ public:
 //    os << "MPTCP option. You should override";
   }
 
-  static Ptr<TcpOption> CreateOption(uint8_t kind);
+  static Ptr<TcpOption> CreateMpTcpOption(uint8_t kind);
 
   virtual uint32_t
   GetSerializedSize (void) const =0;
@@ -337,14 +337,35 @@ public:
 
   virtual bool operator==(const TcpOptionMpTcpJoin&) const;
 
+
+  State GetState() const { return m_state;}
+
   /**
   this part is for SYN
   **/
-  virtual uint32_t GetNonce() const;
+  virtual uint32_t
+  GetNonce() const;
+  virtual void
+  SetNonce(uint32_t) ;
+
+
+  /**
+  this part is for SYN/ACK
+  **/
+  virtual void SetTruncatedHmac(uint64_t ) ;
+  virtual uint64_t GetTruncatedHmac() const;
+
+
+  /**
+  this part is for ACK. Not implemented yet. Always 0
+  **/
+  virtual const uint8_t* GetHmac() const;
+  virtual void SetHmac(uint8_t hmac[20]) ;
+
 
   // Setters
   virtual void
-  SetPeerToken(uint32_t token) { m_peerToken = token; }
+  SetPeerToken(uint32_t token);
 //  virtual void SetLocalToken(uint32_t token) { m_localToken = token; }
 
 //  virtual void SetBackupFlag
@@ -359,20 +380,19 @@ public:
   virtual void
   SetAddressId(uint8_t addrId);
 
+
+
   virtual void Print (std::ostream &os) const;
 
-  virtual bool SetStateFromFlags(const State& state);
+//  virtual bool SetStateFromFlags(const State& state);
   // Ok
   virtual void Serialize (Buffer::Iterator start) const;
   virtual uint32_t Deserialize (Buffer::Iterator start);
   virtual uint32_t GetSerializedSize (void) const;
+  virtual void SetState(State s);
 
 
-  /**
-  this part is for ACK. Not implemented yet. Always 0
-  **/
-  virtual const uint8_t* GetHmac() const;
-  virtual void SetHmac(uint8_t hmac[20]) ;
+
 
 protected:
   State m_state;  //!<
@@ -472,10 +492,11 @@ public:
 
   // Setters
   virtual void SetTruncatedHmac(uint64_t ) ;
+   virtual uint64_t GetTruncatedHmac() const { return m_truncatedHmac; };
   virtual void SetNonce(uint32_t ) ;
 
   // Getters
-  virtual uint64_t GetTruncatedHmac() const { return m_truncatedHmac; };
+
   virtual uint64_t GetNonce() const { return m_nonce; };
 
   virtual uint8_t GetAddressId() const { return m_addressId; }

@@ -335,26 +335,30 @@ public:
         ////////////////////////////////////////////////
         //// MP TcpOptionMpTcpJoinInitialSyn
         ////
-        Ptr<TcpOptionMpTcpJoinInitialSyn> syn = CreateObject<TcpOptionMpTcpJoinInitialSyn>(),
-                    syn2 = CreateObject<TcpOptionMpTcpJoinInitialSyn>();
+        Ptr<TcpOptionMpTcpJoin> syn = CreateObject<TcpOptionMpTcpJoin>(),
+                    syn2 = CreateObject<TcpOptionMpTcpJoin>();
+//                    TcpOptionMpTcpMain::CreateMpTcpOption(TcpOptionMpTcpMain::MP_JOIN);
+//                     CreateObject<TcpOptionMpTcpJoin>();
+        syn->SetState(TcpOptionMpTcpJoin::Syn);
         syn->SetAddressId(4);
         syn->SetPeerToken(5323);
         AddTestCase(
-                new TcpOptionMpTcpTestCase<TcpOptionMpTcpJoinInitialSyn> ( syn, "MP_JOIN Syn"),
+                new TcpOptionMpTcpTestCase<TcpOptionMpTcpJoin> ( syn, "MP_JOIN Syn"),
                 QUICK
                 );
 
 
-
+//#if 0
         ////////////////////////////////////////////////
         //// MP TcpOptionMpTcpJoinSynReceived
         ////
-        Ptr<TcpOptionMpTcpJoinSynReceived> jsr = CreateObject<TcpOptionMpTcpJoinSynReceived>(),
-            jsr2 = CreateObject<TcpOptionMpTcpJoinSynReceived>();
+        Ptr<TcpOptionMpTcpJoin> jsr = CreateObject<TcpOptionMpTcpJoin>(),
+            jsr2 = CreateObject<TcpOptionMpTcpJoin>();
+        jsr->SetState(TcpOptionMpTcpJoin::SynAck);
         jsr->SetAddressId(4);
         jsr->SetTruncatedHmac( 522323 );
         AddTestCase(
-                new TcpOptionMpTcpTestCase<TcpOptionMpTcpJoinSynReceived> ( jsr, "MP_JOIN Syn Received"),
+                new TcpOptionMpTcpTestCase<TcpOptionMpTcpJoin> ( jsr, "MP_JOIN Syn Received"),
                 QUICK
                 );
 
@@ -363,14 +367,16 @@ public:
         ////////////////////////////////////////////////
         //// MP TcpOptionMpTcpJoinSynReceived
         ////
-        Ptr<TcpOptionMpTcpJoinSynAckReceived> jsar = CreateObject<TcpOptionMpTcpJoinSynAckReceived>();
+        Ptr<TcpOptionMpTcpJoin> jsar = CreateObject<TcpOptionMpTcpJoin>();
         uint8_t hmac[20] = {3,0};
+        jsar->SetState(TcpOptionMpTcpJoin::Ack);
         jsar->SetHmac( hmac  );
         AddTestCase(
-                new TcpOptionMpTcpTestCase<TcpOptionMpTcpJoinSynAckReceived> ( jsar, "MP_JOIN SynAck Received"),
+                new TcpOptionMpTcpTestCase<TcpOptionMpTcpJoin> ( jsar, "MP_JOIN SynAck Received"),
                 QUICK
                 );
 
+//#endif
 //     Ptr<UniformRandomVariable> x = CreateObject<UniformRandomVariable> ();
 //
 //     for (uint32_t i=0; i<1000; ++i)

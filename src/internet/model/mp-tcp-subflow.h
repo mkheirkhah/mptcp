@@ -105,7 +105,15 @@ public:
   virtual uint32_t
   GetLocalToken() const;
 
+  virtual bool
+  SendPendingData(bool withAck = false);
 
+  /**
+  Disabled for now.
+  SendMapping should be used instead.
+  **/
+  int
+  Send(Ptr<Packet> p, uint32_t flags);
   /**
   * Removes all mappings that covered dataspace seq nbs lower than "ack"
   * \param dataAck
@@ -325,7 +333,8 @@ protected:
 //private:
 
 private:
-  bool m_backupSubflow;
+  bool m_backupSubflow; //!< Priority
+  bool m_masterSocket;  //!< True if this is the first subflow established (with MP_CAPABLE)
 
   uint32_t m_localNonce;  //!< Store local host token, generated during the 3-way handshake
   uint32_t m_remoteToken; //!< Store remote host token

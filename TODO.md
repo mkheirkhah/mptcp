@@ -21,6 +21,7 @@ Generic:
 * remove the files for mptcpsocketfactory, it's not needed: we cna use a tcpsocketfacotry
 * test what happens when we remove the master socket while the connection keeps going. It should provoke problems since endpoint is not allocated anymore
 * Merge the 3 MPTCP JOIN options into one
+* Possibility to choose over which subflow some data should flow
 
 
 Requests for ns3;

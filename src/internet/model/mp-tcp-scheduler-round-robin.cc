@@ -2,7 +2,9 @@
 #include "ns3/mp-tcp-scheduler-round-robin.h"
 #include "ns3/mp-tcp-subflow.h"
 #include "ns3/mp-tcp-socket-base.h"
+#include "ns3/log.h"
 
+NS_LOG_COMPONENT_DEFINE("MpTcpSchedulerRoundRobin");
 
 namespace ns3
 {
@@ -14,9 +16,13 @@ MpTcpSchedulerRoundRobin::MpTcpSchedulerRoundRobin(Ptr<MpTcpSocketBase> metaSock
   m_lastUsedFlowId(0),
   m_metaSock(metaSock)
 {
-
+  NS_LOG_FUNCTION(this);
 }
 
+MpTcpSchedulerRoundRobin::~MpTcpSchedulerRoundRobin (void)
+{
+  NS_LOG_FUNCTION(this);
+}
 
 //uint16_t
 Ptr<MpTcpSubFlow>
@@ -35,7 +41,7 @@ MpTcpSchedulerRoundRobin::GetSubflowToUseForEmptyPacket()
 int
 MpTcpSchedulerRoundRobin::GenerateMappings(
 //  std::vector< std::pair<uint8_t, MappingList>& mappings
-  std::vector< std::pair<uint8_t, std::pair< SequenceNumber32,uint32_t > > >
+  MappingVector
   & mappings
   )
 {
@@ -88,12 +94,38 @@ MpTcpSchedulerRoundRobin::GenerateMappings(
 //  }
 
 //  SequenceNumber32 startSeq = 0;
-  uint32_t amountOfDataToSend = m_metaSock->m_txBuffer.SizeFromSequence(  m_metaSock->m_nextTxSequence);
-  uint8_t i = 0;
 
+//  uint32_t amountOfDataToSend     = m_metaSock->m_txBuffer.SizeFromSequence(m_metaSock->m_nextTxSequence);
+  SequenceNumber32 metaNextTxSeq  = m_metaSock->m_nextTxSequence;
+//  uint8_t i = 0;
+  uint32_t amountOfDataToSend = 0;
 
+  for(int i = 0; i < (int)m_metaSock->GetNSubflows(); ++i)
+  {
+    Ptr<MpTcpSubFlow> sf = m_metaSock->GetSubflow(i);
+    uint32_t window = sf->AvailableWindow();
+    amountOfDataToSend = 0;
+//    //is protected
+
+    if( window > 0)
+    {
+//      amountOfDataToSend
+      // generate mapping
+//      std::pair<SequenceNumber32, uint32_t> mapping = std::make_pair( metaNextTxSeq, std::max(window) );
+
+      // update value
+
+      amountOfDataToSend = std::min( window, m_metaSock->m_txBuffer.SizeFromSequence( metaNextTxSeq ) );
+    }
+    mappings.push_back(  std::make_pair( metaNextTxSeq, amountOfDataToSend) );
+    metaNextTxSeq += amountOfDataToSend;
+  }
+
+  #if 0
+  std::pair<SequenceNumber32, uint32_t> mapping;
   while(amountOfDataToSend > 0)
   {
+
     if(i >= m_metaSock->GetNSubflows())
     {
 //      NS_LOG_DEBUG("reached limit of number of subflows");
@@ -107,17 +139,18 @@ MpTcpSchedulerRoundRobin::GenerateMappings(
     {
       // generate mapping
       std::pair<SequenceNumber32, uint32_t> mapping = std::make_pair( m_metaSock->m_nextTxSequence, window );
-      mappings.push_back( std::make_pair(i,mapping ) );
+
 
       // update value
       m_metaSock->m_nextTxSequence += window;
       amountOfDataToSend = m_metaSock->m_txBuffer.SizeFromSequence(m_metaSock->m_nextTxSequence);
     }
+    mappings.push_back( std::make_pair(i,mapping ) );
     i++;
   }
 
 
-  #if 0
+
   for(int i = 0; i < m_metaSock->GetNSubflows(); i++ )
   {
     Ptr<MpTcpSubFlow> sf = m_metaSock->GetSubflow(i);

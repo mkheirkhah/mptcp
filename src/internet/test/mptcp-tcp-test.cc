@@ -203,7 +203,9 @@ TcpTestCase::ServerHandleRecv (Ptr<Socket> sock)
 {
   while (sock->GetRxAvailable () > 0)
     {
+
       uint32_t toRead = std::min (m_serverReadSize, sock->GetRxAvailable ());
+      NS_LOG_DEBUG("Rx Available [" << toRead );
       Ptr<Packet> p = sock->Recv (toRead, 0);
       if (p == 0 && sock->GetErrno () != Socket::ERROR_NOTERROR)
         {

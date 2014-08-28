@@ -125,7 +125,7 @@ public: // public methods
   TcpTxBuffer API need to be used in future!
   This would called SendPendingData() - TcpTxBuffer API need to be used in future!
   */
-  bool SendBufferedData();
+//  bool SendBufferedData();
 //  int FillBuffer(uint8_t* buf, uint32_t size);// Fill sending buffer with data - TcpTxBuffer API need to be used in future!
 //  uint32_t Recv(uint8_t* buf, uint32_t size); // Receive data from receiveing buffer - TcpRxBuffe API need to be used in future!
 //  void allocateSendingBuffer(uint32_t size);  // Can be removed now as SetSndBufSize() is implemented instead!
@@ -168,6 +168,7 @@ public: // public methods
 
   virtual int GenerateToken(uint32_t& token ) const;
 
+  virtual void Destroy(void);
   /**
   \return 0 In case of success
   TODO bool ?
@@ -282,11 +283,17 @@ protected: // protected methods
   // Transfer operations
 //  void ForwardUp(Ptr<Packet> p, Ipv4Header header, uint16_t port, Ptr<Ipv4Interface> interface);
 
+  /** Inherit from Socket class: Return data to upper-layer application. Parameter flags
+   is not used. Data is returned as a packet of size no larger than maxSize */
+  Ptr<Packet>
+  Recv(uint32_t maxSize, uint32_t flags);
+  int
+  Send(Ptr<Packet> p, uint32_t flags);
 
   /**
    * Sending data via subflows with available window size. It sends data only to ESTABLISHED subflows.
    * It sends data by calling SendDataPacket() function.
-   * Called by functions: SendBufferedData, ReceveidAck, NewAck
+   * Called by functions: ReceveidAck, NewAck
    * send as  much as possible
    */
   virtual bool SendPendingData(bool withAck = false);
