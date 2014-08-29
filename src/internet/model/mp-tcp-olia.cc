@@ -34,9 +34,15 @@ MpTcpCCOlia::GetTypeId (void)
 }
 
 
+//TypeId
+//MpTcpCCOlia::GetInstanceTypeId(void) const
+//{
+//  return GetTypeId();
+//}
 
 
-MpTcpCCOlia::MpTcpCCOlia(void)
+MpTcpCCOlia::MpTcpCCOlia(void) :
+  MpTcpSocketBase()
 {
   NS_LOG_FUNCTION (this);
 }

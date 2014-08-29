@@ -17,6 +17,7 @@ MpTcpSchedulerRoundRobin::MpTcpSchedulerRoundRobin(Ptr<MpTcpSocketBase> metaSock
   m_metaSock(metaSock)
 {
   NS_LOG_FUNCTION(this);
+  NS_ASSERT(m_metaSock);
 }
 
 MpTcpSchedulerRoundRobin::~MpTcpSchedulerRoundRobin (void)
@@ -28,7 +29,7 @@ MpTcpSchedulerRoundRobin::~MpTcpSchedulerRoundRobin (void)
 Ptr<MpTcpSubFlow>
 MpTcpSchedulerRoundRobin::GetSubflowToUseForEmptyPacket()
 {
-//  NS_ASSERT(metaSock);
+  NS_ASSERT(m_metaSock->GetNSubflows() > 0 );
   return  m_metaSock->GetSubflow(0);
 //  m_lastUsedFlowId = (m_lastUsedFlowId + 1) % m_metaSock->GetNSubflows();
 //  return m_metaSock->GetSubFlow(m_lastUsedFlowId);
@@ -45,7 +46,7 @@ MpTcpSchedulerRoundRobin::GenerateMappings(
   & mappings
   )
 {
-
+  NS_LOG_FUNCTION(this);
   #if 0
   // MATT this should be done into subflows
   // This is a condition when main mptcp sendingBuffer is empty but they are some packets in a subflow's buffer

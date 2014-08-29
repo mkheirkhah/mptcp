@@ -45,6 +45,8 @@ public:
   static TypeId
   GetTypeId(void);
 
+  virtual TypeId GetInstanceTypeId(void) const;
+
   /**
   the metasocket is the socket the application is talking to.
   Every subflow is linked to that socket.
@@ -53,11 +55,9 @@ public:
   MpTcpSubFlow();
 
   MpTcpSubFlow(const MpTcpSubFlow&);
-
   virtual ~MpTcpSubFlow();
 
   virtual void
-//  bool
   SetMeta(Ptr<MpTcpSocketBase> metaSocket);
 //  virtual int
 //  Connect(const Address &address);      // Setup endpoint and call ProcessAction() to connect
@@ -104,6 +104,9 @@ public:
   */
   virtual uint32_t
   GetLocalToken() const;
+
+  virtual void
+  DoForwardUp(Ptr<Packet> packet, Ipv4Header header, uint16_t port, Ptr<Ipv4Interface> incomingInterface);
 
   virtual bool
   SendPendingData(bool withAck = false);

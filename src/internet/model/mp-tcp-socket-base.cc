@@ -4,6 +4,7 @@
  * Some codes here are modeled from ns3::TCPNewReno implementation.
  * Email: m.kheirkhah@sussex.ac.uk
  */
+#undef NS_LOG_APPEND_CONTEXT
 #define NS_LOG_APPEND_CONTEXT \
   if (m_node) { std::clog << Simulator::Now ().GetSeconds () << " [node " << m_node->GetId () << "] "; }
 
@@ -349,6 +350,7 @@ MpTcpSocketBase::CompleteFork(Ptr<Packet> p, const TcpHeader& mptcpHeader, const
 
   // this is not really needed. For path management maybe ?
   m_server = true;
+  NS_LOG_INFO(this << " LISTEN -> SYN_RCVD");
   m_state = SYN_RCVD; // Think of updating it
 
   NS_LOG_INFO("peer key " << mpc->GetSenderKey() );
@@ -364,17 +366,12 @@ MpTcpSocketBase::CompleteFork(Ptr<Packet> p, const TcpHeader& mptcpHeader, const
   m_tcp->m_sockets.push_back(this);
 
   // Create new master subflow (master subsock) and assign its endpoint to the connection endpoint
-  Ptr<MpTcpSubFlow> sFlow = CreateSubflow();
+  Ptr<MpTcpSubFlow> sFlow = CreateSubflow(true);
   NS_ASSERT_MSG(sFlow,"Contact ns3 team");
 //  sFlow->master
   // We deallocate the endpoint so that the subflow can reallocate it
 
 // don't need to bind
-
-//  if ( sFlow->Bind(fromAddress) != 0) {
-//    NS_LOG_ERROR("Could not bind to srcAddr" << fromAddress);
-//    return;
-//  }
 
   // upon subflow destruction this m_endpoint should be .
   m_endPoint = 0;
@@ -1279,13 +1276,11 @@ MpTcpSocketBase::DupAck(const TcpHeader& t, uint32_t count)
 //...........................................................................................
 
 
+
 // TODO rename ? CreateAndAdd? Add ? Start ? Initiate
 //int
 Ptr<MpTcpSubFlow>
-MpTcpSocketBase::CreateSubflow(
-//      const Address& _srcAddr
-//      , const Address& dstAddr
-      )
+MpTcpSocketBase::CreateSubflow(bool masterSocket)
 {
 //  NS_ASSERT_MSG(
 //  InetSocketAddress::IsMatchingType(_srcAddr),
@@ -1307,21 +1302,26 @@ MpTcpSocketBase::CreateSubflow(
       return 0;
     }
   }
-  else if( GetNSubflows() > 0 )
+  //else if( GetNSubflows() > 0 )
+  else if( m_state == SYN_SENT || m_state== SYN_RCVD)
   {
+    // throw an assert here instead ?
     NS_LOG_ERROR("Already attempting to establish a connection");
 //    return -ERROR_INVAL;
     return 0;
   }
-  else
+  else if(m_state == TIME_WAIT || m_state == CLOSE_WAIT || m_state == CLOSING)
   {
 //    NS_LOG_UNCOND ( "How did I arrive here ?");
+    NS_LOG_ERROR("Can't create subflow ");
+
   }
 
   Ptr<Socket> sock = m_tcp->CreateSocket( MpTcpSubFlow::GetTypeId() );
 
   Ptr<MpTcpSubFlow> sFlow = DynamicCast<MpTcpSubFlow>(sock);
   sFlow->SetMeta(this);
+  sFlow->m_masterSocket = masterSocket;
   NS_ASSERT_MSG( sFlow, "Contact ns3 team");
 
 //  sFlow->SetTcp( m_tcp );
@@ -1337,7 +1337,7 @@ MpTcpSocketBase::CreateSubflow(
 //    return 0;
 //  }
 
-
+  NS_LOG_INFO ( "subflow " << sFlow << " associated with node " << sFlow->m_node);
 //  m_subflows.push_back( sFlow );
 
   // TODO set id of the Flow
@@ -1349,6 +1349,14 @@ MpTcpSocketBase::CreateSubflow(
   return sFlow;
 }
 
+void
+MpTcpSocketBase::DoForwardUp(Ptr<Packet> packet, Ipv4Header header, uint16_t port, Ptr<Ipv4Interface> incomingInterface)
+{
+
+  NS_LOG_FUNCTION(this);
+  TcpSocketBase::DoForwardUp(packet,header,port,incomingInterface);
+}
+
 
 /**
 Need to override parent's otherwise it allocates an endpoint to the meta socket
@@ -1357,7 +1365,7 @@ and upon connection , the tcp subflow can't allocate
 int
 MpTcpSocketBase::Connect(const Address & toAddress)
 {
-  NS_LOG_INFO(this << "Connect");
+  NS_LOG_FUNCTION(this);
 
   if( IsConnected() )
   {
@@ -1367,17 +1375,12 @@ MpTcpSocketBase::Connect(const Address & toAddress)
 
   if (m_state == CLOSED || m_state == LISTEN || m_state == SYN_SENT || m_state == LAST_ACK || m_state == CLOSE_WAIT)
     {
-      // send a SYN packet and change state into SYN_SENT
-      Ptr<MpTcpSubFlow> sFlow = CreateSubflow(
-//            InetSocketAddress(m_endPoint->GetLocalAddress(), m_endPoint->GetLocalPort())
-          );
-      // We should not bind
+
+      Ptr<MpTcpSubFlow> sFlow = CreateSubflow(true);
+
 
       // This function will allocate a new one
-      int ret = sFlow->Connect(
-                toAddress
-//                InetSocketAddress( m_endPoint->GetPeerAddress(), m_endPoint->GetPeerPort() )
-                  );
+      int ret = sFlow->Connect(toAddress);
 
       if(ret != 0)
       {
@@ -1385,7 +1388,7 @@ MpTcpSocketBase::Connect(const Address & toAddress)
         // TODO destroy
         return ret;
       }
-      NS_LOG_INFO ("looks like successful connection");
+      // NS_LOG_INFO ("looks like successful connection");
 //      m_endPoint = sFlow->m_endPoint;
 //      m_endPoint6 = sFlow->m_endPoint6;
 
@@ -1393,10 +1396,10 @@ MpTcpSocketBase::Connect(const Address & toAddress)
 
 //      NS_ASSERT( );
 //      SendEmptyPacket(TcpHeader::SYN);
-//      NS_LOG_INFO (TcpStateName[m_state] << " -> SYN_SENT");
+      NS_LOG_INFO (TcpStateName[m_state] << " -> SYN_SENT");
       m_state = SYN_SENT;
 
-      return sFlow->DoConnect();
+      return ret;
     }
   else if (m_state != TIME_WAIT)
     { // In states SYN_RCVD, ESTABLISHED, FIN_WAIT_1, FIN_WAIT_2, and CLOSING, an connection
@@ -1610,14 +1613,6 @@ MpTcpSocketBase::SetupCallback()
 {
   NS_LOG_FUNCTION(this);
   return TcpSocketBase::SetupCallback();
-//  if (m_endPoint == 0)
-//    {
-//      return -1;
-//    }
-  // TODO set the call backs method
-//  m_endPoint->SetRxCallback(MakeCallback(&MpTcpSocketBase::ForwardUp, Ptr<MpTcpSocketBase>(this)));
-//  m_endPoint->SetDestroyCallback(MakeCallback(&MpTcpSocketBase::Destroy, Ptr<MpTcpSocketBase>(this)));
-//  return 0;
 }
 
 /** Inherit from socket class: Bind socket (with specific address) to an end-point in TcpL4Protocol */
@@ -1626,41 +1621,7 @@ MpTcpSocketBase::Bind(const Address &address)
 {
   NS_LOG_FUNCTION (this<<address);
   m_server = true;
-  return TcpSocketBase::Bind();
-//  if (!InetSocketAddress::IsMatchingType(address))
-//    {
-//      m_errno = ERROR_INVAL;
-//      return -1;
-//    }
-//
-//  InetSocketAddress transport = InetSocketAddress::ConvertFrom(address);
-//  Ipv4Address ipv4 = transport.GetIpv4();
-//  uint16_t port = transport.GetPort();
-//
-//  if (ipv4 == Ipv4Address::GetAny() && port == 0)
-//    {
-//      m_endPoint = m_tcp->Allocate();
-//    }
-//  else if (ipv4 == Ipv4Address::GetAny() && port != 0)
-//    { // Allocate with specific port
-//      m_endPoint = m_tcp->Allocate(port);
-//    }
-//  else if (ipv4 != Ipv4Address::GetAny() && port == 0)
-//    { // Allocate with specific ipv4 address
-//      m_endPoint = m_tcp->Allocate(ipv4);
-//    }
-//  else if (ipv4 != Ipv4Address::GetAny() && port != 0)
-//    { // Allocate with specific Ipv4 add:port
-//      m_endPoint = m_tcp->Allocate(ipv4, port);
-//    }
-//  else
-//  {
-//    NS_LOG_ERROR("Bind to specific add:port has failed!");
-//  }
-//
-//  //m_tcp->m_sockets.push_back(this); // we don't need it for now
-//  NS_LOG_LOGIC("MpTcpSocketBase:Bind(addr) " << this << " got an endpoint " << m_endPoint << " localAddr " << m_endPoint->GetLocalAddress() << ":" << m_endPoint->GetLocalPort() << " RemoteAddr " << m_endPoint->GetPeerAddress() << ":"<< m_endPoint->GetPeerPort());
-//  return SetupCallback();
+  return TcpSocketBase::Bind(address);
 }
 
 
@@ -3758,7 +3719,9 @@ uint16_t
 MpTcpSocketBase::AdvertisedWindowSize()
 {
   NS_LOG_FUNCTION(this);
-  return TcpSocketBase::AdvertisedWindowSize();
+  uint16_t value = TcpSocketBase::AdvertisedWindowSize();
+  NS_LOG_DEBUG("Advertised Window size of " << value );
+  return value;
 }
 
 

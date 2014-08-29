@@ -967,7 +967,8 @@ TcpSocketBase::ProcessEstablished(Ptr<Packet> packet, const TcpHeader& tcpHeader
     { // Received RST or the TCP flags is invalid, in either case, terminate this socket
       if (tcpflags != TcpHeader::RST)
         { // this must be an invalid flag, send reset
-          NS_LOG_LOGIC ("Illegal flag " << tcpflags << " received. Reset packet is sent.");
+
+          NS_LOG_LOGIC ("Illegal flag " << TcpHeader::FlagstoString(tcpflags) << " received. Reset packet is sent.");
           SendRST();
         }
       CloseAndNotify();
@@ -1098,7 +1099,7 @@ TcpSocketBase::ProcessSynSent(Ptr<Packet> packet, const TcpHeader& tcpHeader)
     { // Other in-sequence input
       if (tcpflags != TcpHeader::RST)
         { // When (1) rx of FIN+ACK; (2) rx of FIN; (3) rx of bad flags
-          NS_LOG_LOGIC ("Illegal flag " << std::hex << static_cast<uint32_t> (tcpflags) << std::dec << " received. Reset packet is sent.");
+          NS_LOG_LOGIC ("Illegal flag " << TcpHeader::FlagstoString(tcpflags,'|') << std::dec << " received. Reset packet is sent.");
           SendRST();
         }
       CloseAndNotify();
@@ -1444,7 +1445,7 @@ TcpSocketBase::Destroy6(void)
 void
 TcpSocketBase::GenerateEmptyPacketHeader(TcpHeader& header, uint8_t flags)
 {
-  NS_LOG_FUNCTION (this << (uint32_t)flags);
+  NS_LOG_DEBUG (this << " with flags " << flags);
 //  Ptr<Packet> p = Create<Packet>();
 //  TcpHeader header;
   SequenceNumber32 s = m_nextTxSequence;
@@ -1533,6 +1534,7 @@ void
 TcpSocketBase::SendPacket(TcpHeader header, Ptr<Packet> p)
 {
   // TODO log header at least ?
+  NS_LOG_FUNCTION(header);
 
   // Check dest/src/seq nb are ok
   NS_ASSERT( header.GetAckNumber() == m_rxBuffer.NextRxSequence());
@@ -1680,7 +1682,7 @@ TcpSocketBase::SendDataPacket(TcpHeader header, SequenceNumber32 seq,uint32_t ma
 uint32_t
 TcpSocketBase::SendDataPacket(SequenceNumber32 seq, uint32_t maxSize, bool withAck)
 {
-  NS_LOG_FUNCTION (this << seq << maxSize << withAck);  //NS_LOG_INFO("SendDataPacket -> SeqNb: " << seq);
+  NS_LOG_FUNCTION (this << "seq" << seq << "with max size " << maxSize << "and ack"<< withAck);  //NS_LOG_INFO("SendDataPacket -> SeqNb: " << seq);
   TcpHeader header;
 
   GenerateEmptyPacketHeader(header, withAck ? TcpHeader::ACK : 0);
@@ -2201,6 +2203,7 @@ uint16_t
 TcpSocketBase::AdvertisedWindowSize()
 {
   //NS_LOG_INFO("AdvertiseWindow: " << std::min(m_rxBuffer.MaxBufferSize() - m_rxBuffer.Size(), (uint32_t) m_maxWinSize));
+  //uint16_t
   return std::min(m_rxBuffer.MaxBufferSize() - m_rxBuffer.Size(), (uint32_t) m_maxWinSize);
 }
 

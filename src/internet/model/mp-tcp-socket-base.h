@@ -132,7 +132,8 @@ public: // public methods
 //  void allocateRecvingBuffer(uint32_t size);  // Can be removed now as SetRcvBufSize() is implemented instead!
 
 
-
+  void
+  DoForwardUp(Ptr<Packet> packet, Ipv4Header header, uint16_t port, Ptr<Ipv4Interface> incomingInterface);
   /**
   \return Number of subflows
   */
@@ -162,6 +163,7 @@ public: // public methods
   */
   Ptr<MpTcpSubFlow> CreateSubflow(
 //    const Address& srcAddr
+    bool masterSocket
     );
 
   // Path management related functions

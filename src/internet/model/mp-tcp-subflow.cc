@@ -1,9 +1,17 @@
 /*
  * MultiPath-TCP (MPTCP) implementation.
- * Programmed by Morteza Kheirkhah from University of Sussex.
+ * Programmed by :
+ *  - Matthieu Coudron (Université Pierre et Marie Curie - Paris)
+ *  - Morteza Kheirkhah from University of Sussex.
  * Some codes here are modeled from ns3::TCPNewReno implementation.
  * Email: m.kheirkhah@sussex.ac.uk
+ * matthieu.coudron@lip6.fr
  */
+#undef NS_LOG_APPEND_CONTEXT
+#define NS_LOG_APPEND_CONTEXT \
+  if (m_node) { std::clog << Simulator::Now ().GetSeconds () << " [node " << m_node->GetId () << "] "; }
+
+
 #include <iostream>
 #include "ns3/mp-tcp-typedefs.h"
 #include "ns3/simulator.h"
@@ -41,13 +49,20 @@ MpTcpSubFlow::GetTypeId(void)
   return tid;
 }
 
+
+TypeId
+MpTcpSubFlow::GetInstanceTypeId(void) const
+{
+  return GetTypeId();
+}
+
 //bool
 void
 MpTcpSubFlow::SetMeta(Ptr<MpTcpSocketBase> metaSocket)
 {
   NS_ASSERT(metaSocket);
   NS_ASSERT(m_state == CLOSED);
-
+  NS_LOG_FUNCTION(this);
   m_metaSocket = metaSocket;
 //  return true;
 }
@@ -291,79 +306,14 @@ MpTcpSubFlow::SendEmptyPacket(uint8_t flags)
 }
   #endif
 
-#if 0
-int
-MpTcpSubFlow::Connect(const Address & address)
-{
-  NS_LOG_FUNCTION (this << address);
 
-  // If haven't do so, Bind() this socket first
-  if (InetSocketAddress::IsMatchingType(address) && m_endPoint6 == 0)
-    {
-      if (m_endPoint == 0)
-        {
-          if( )
-          if (Bind() == -1)
-            {
-              NS_ASSERT(m_endPoint == 0);
-              return -1; // Bind() failed
-            }
-          NS_ASSERT(m_endPoint != 0);
-        }
-      InetSocketAddress transport = InetSocketAddress::ConvertFrom(address);
-      m_endPoint->SetPeer(transport.GetIpv4(), transport.GetPort());
-      m_endPoint6 = 0;
+//int
+//MpTcpSubFlow::Connect(const Address & address)
+//{
+//  NS_LOG_FUNCTION (this << address);
+//  return TcpSocketBase::Connect
+//}
 
-      // Get the appropriate local address and port number from the routing protocol and set up endpoint
-      if (SetupEndpoint() != 0)
-        { // Route to destination does not exist
-          return -1;
-        }
-    }
-  else if (Inet6SocketAddress::IsMatchingType(address) && m_endPoint == 0)
-    {
-      // If we are operating on a v4-mapped address, translate the address to
-      // a v4 address and re-call this function
-      Inet6SocketAddress transport = Inet6SocketAddress::ConvertFrom(address);
-      Ipv6Address v6Addr = transport.GetIpv6();
-      if (v6Addr.IsIpv4MappedAddress() == true)
-        {
-          Ipv4Address v4Addr = v6Addr.GetIpv4MappedAddress();
-          return Connect(InetSocketAddress(v4Addr, transport.GetPort()));
-        }
-
-      if (m_endPoint6 == 0)
-        {
-          if (Bind6() == -1)
-            {
-              NS_ASSERT(m_endPoint6 == 0);
-              return -1; // Bind() failed
-            }
-          NS_ASSERT(m_endPoint6 != 0);
-        }
-      m_endPoint6->SetPeer(v6Addr, transport.GetPort());
-      m_endPoint = 0;
-
-      // Get the appropriate local address and port number from the routing protocol and set up endpoint
-      if (SetupEndpoint6() != 0)
-        { // Route to destination does not exist
-          return -1;
-        }
-    }
-  else
-    {
-      m_errno = ERROR_INVAL;
-      return -1;
-    }
-
-  // Re-initialize parameters in case this socket is being reused after CLOSE
-  m_rtt->Reset();
-  m_cnCount = m_cnRetries;
-
-  // DoConnect() will do state-checking and send a SYN packet
-  return DoConnect();
-}
-#endif
 
 
 
@@ -602,7 +552,7 @@ MpTcpSubFlow::MpTcpSubFlow(
     m_localNonce(0),
     m_remoteToken(0)
 {
-  NS_LOG_INFO(this);
+  NS_LOG_FUNCTION(this);
 
   // TODO use/create function to generate initial random number seq
 //  TxSeqNumber = rand() % 1000;
@@ -989,6 +939,13 @@ MpTcpSubFlow::GetMeta()
 }
 
 void
+MpTcpSubFlow::DoForwardUp(Ptr<Packet> packet, Ipv4Header header, uint16_t port, Ptr<Ipv4Interface> incomingInterface)
+{
+  NS_LOG_FUNCTION(this);
+  TcpSocketBase::DoForwardUp(packet,header,port,incomingInterface);
+}
+
+void
 MpTcpSubFlow::CompleteFork(Ptr<Packet> p, const TcpHeader& h, const Address& fromAddress, const Address& toAddress)
 {
   NS_LOG_INFO( this << "Completing fork of MPTCP subflow");
@@ -1020,7 +977,7 @@ MpTcpSubFlow::CompleteFork(Ptr<Packet> p, const TcpHeader& h, const Address& fro
 //  }
 
   // Change the cloned socket from LISTEN state to SYN_RCVD
-  NS_LOG_INFO ("LISTEN -> SYN_RCVD");
+  NS_LOG_INFO ( TcpStateName[m_state] << " -> SYN_RCVD");
   m_state = SYN_RCVD;
   m_cnCount = m_cnRetries;
 
@@ -1071,6 +1028,7 @@ void
 MpTcpSubFlow::ProcessSynSent(Ptr<Packet> packet, const TcpHeader& tcpHeader)
 {
   NS_LOG_FUNCTION (this << tcpHeader);
+  NS_ASSERT(m_state == SYN_SENT);
 
   // Extract the flags. PSH and URG are not honoured.
   uint8_t tcpflags = tcpHeader.GetFlags() & ~(TcpHeader::PSH | TcpHeader::URG);
@@ -1132,10 +1090,7 @@ MpTcpSubFlow::ProcessSynSent(Ptr<Packet> packet, const TcpHeader& tcpHeader)
 
         Ptr<TcpOptionMpTcpCapable> mpc = DynamicCast<TcpOptionMpTcpCapable>(option);
         NS_ASSERT( mpc );
-//        && mpc->HasSKey()
-        NS_LOG_INFO("peer key " << mpc->GetSenderKey()
-////          << "& receiver key" << mpc->GetLocalKey()
-        );
+        NS_LOG_INFO("peer key " << mpc->GetSenderKey() );
 
         // Register that key
         m_metaSocket->SetPeerKey( mpc->GetSenderKey() );
@@ -1611,6 +1566,7 @@ MpTcpSubFlow::ReceivedData(Ptr<Packet> p, const TcpHeader& mptcpHeader)
 uint16_t
 MpTcpSubFlow::AdvertisedWindowSize(void)
 {
+  NS_LOG_DEBUG(this);
   return m_metaSocket->AdvertisedWindowSize();
 }
 
@@ -1624,7 +1580,7 @@ void
 MpTcpSubFlow::ReceivedAck(Ptr<Packet> p, const TcpHeader& header)
 {
   NS_LOG_FUNCTION (this << header);
-  NS_LOG_ERROR("Not implemented");
+  NS_LOG_ERROR("Not implemented. To implement ?");
 
 
 }
