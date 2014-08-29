@@ -47,6 +47,37 @@ TcpHeader::~TcpHeader ()
 {
 }
 
+std::string
+TcpHeader::FlagstoString(uint8_t flags, char delimiter)
+{
+  //
+  static const char* flagNames[8] = {
+    //"NONE",
+    "FIN",
+    "SYN",
+    "RST",
+    "PSH",
+    "ACK",
+    "URG",
+    "ECE",
+    "CWR"
+  };
+
+  std::string flagsDescription = "";
+
+  for(int i = 0; i < 8; ++i)
+  {
+    if( flags & (1 << i) )
+    {
+      if(flagsDescription.length() > 0) flagsDescription += delimiter;
+      flagsDescription.append( flagNames[i] );
+
+    }
+  }
+  return flagsDescription;
+}
+
+
 void
 TcpHeader::EnableChecksums (void)
 {
@@ -252,39 +283,7 @@ TcpHeader::Print (std::ostream &os)  const
   if (m_flags != 0)
     {
       os<<" [";
-      if ((m_flags & FIN) != 0)
-        {
-          os<<" FIN ";
-        }
-      if ((m_flags & SYN) != 0)
-        {
-          os<<" SYN ";
-        }
-      if ((m_flags & RST) != 0)
-        {
-          os<<" RST ";
-        }
-      if ((m_flags & PSH) != 0)
-        {
-          os<<" PSH ";
-        }
-      if ((m_flags & ACK) != 0)
-        {
-          os<<" ACK ";
-        }
-      if ((m_flags & URG) != 0)
-        {
-          os<<" URG ";
-        }
-      if ((m_flags & ECE) != 0)
-        {
-          os<<" ECE ";
-        }
-      if ((m_flags & CWR) != 0)
-        {
-          os<<" CWR ";
-        }
-
+      os<< FlagstoString(m_flags);
       os<<"]";
     }
 

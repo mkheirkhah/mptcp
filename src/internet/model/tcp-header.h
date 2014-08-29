@@ -236,6 +236,12 @@ public:
   typedef enum { NONE = 0, FIN = 1, SYN = 2, RST = 4, PSH = 8, ACK = 16,
                  URG = 32, ECE = 64, CWR = 128} Flags_t;
 
+
+  /**
+   * \brief
+   */
+  static std::string FlagstoString(uint8_t flags, char delimiter=' ');
+
   /**
    * \brief Get the type ID.
    * \return the object TypeId
