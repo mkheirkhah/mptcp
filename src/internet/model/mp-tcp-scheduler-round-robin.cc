@@ -9,20 +9,40 @@ NS_LOG_COMPONENT_DEFINE("MpTcpSchedulerRoundRobin");
 namespace ns3
 {
 
+TypeId
+MpTcpSchedulerRoundRobin::GetTypeId (void)
+{
+  static TypeId tid = TypeId ("ns3::MpTcpSchedulerRoundRobin")
+    .SetParent<Object> ()
+    //
+    .AddConstructor<MpTcpSchedulerRoundRobin> ()
+  ;
+//  NS_LOG_UNCOND("TcpOptionMpTcpMain::GetTypeId called !");
+  return tid;
+}
 
 
-
-MpTcpSchedulerRoundRobin::MpTcpSchedulerRoundRobin(Ptr<MpTcpSocketBase> metaSock) :
+//Ptr<MpTcpSocketBase> metaSock
+MpTcpSchedulerRoundRobin::MpTcpSchedulerRoundRobin() :
   m_lastUsedFlowId(0),
-  m_metaSock(metaSock)
+  m_metaSock(0)
 {
   NS_LOG_FUNCTION(this);
-  NS_ASSERT(m_metaSock);
+//  NS_ASSERT(m_metaSock);
 }
 
 MpTcpSchedulerRoundRobin::~MpTcpSchedulerRoundRobin (void)
 {
   NS_LOG_FUNCTION(this);
+}
+
+
+void
+MpTcpSchedulerRoundRobin::SetMeta(Ptr<MpTcpSocketBase> metaSock)
+{
+  NS_ASSERT(metaSock);
+  NS_ASSERT_MSG(m_metaSock == 0,"SetMeta already called");
+  m_metaSock = metaSock;
 }
 
 //uint16_t
@@ -47,6 +67,7 @@ MpTcpSchedulerRoundRobin::GenerateMappings(
   )
 {
   NS_LOG_FUNCTION(this);
+  NS_ASSERT_MSG(m_metaSock,"Call SetMeta() before generating a mapping");
   #if 0
   // MATT this should be done into subflows
   // This is a condition when main mptcp sendingBuffer is empty but they are some packets in a subflow's buffer

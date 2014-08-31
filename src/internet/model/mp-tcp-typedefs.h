@@ -88,6 +88,12 @@ public:
   void MapToSubflowSeqNumber( SequenceNumber32 seq) { m_subflowSequenceNumber = seq;}
   virtual ~MpTcpMapping() {};
 
+
+  void
+  SetDataSequenceNumber(SequenceNumber32);
+  void
+  SetMappingSize(uint16_t);
+
   bool IsInRange(SequenceNumber32 const& ack) const;
 
   /**

@@ -10,6 +10,7 @@ namespace ns3
 
 NS_LOG_COMPONENT_DEFINE("MpTcpPathIdManagerImpl");
 
+NS_OBJECT_ENSURE_REGISTERED(MpTcpPathIdManagerImpl);
 
 MpTcpPathIdManagerImpl::MpTcpPathIdManagerImpl() :
   MpTcpPathIdManager()
@@ -27,9 +28,9 @@ TypeId
 MpTcpPathIdManagerImpl::GetTypeId (void)
 {
   static TypeId tid = TypeId ("ns3::MpTcpPathIdManagerImpl")
-    .SetParent<Object> ()
+    .SetParent<MpTcpPathIdManager> ()
     //
-//    .AddConstructor<TcpOptionMpTcpMain> ()
+    .AddConstructor<MpTcpPathIdManagerImpl> ()
   ;
 //  NS_LOG_UNCOND("TcpOptionMpTcpMain::GetTypeId called !");
   return tid;

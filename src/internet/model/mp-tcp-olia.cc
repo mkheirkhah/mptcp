@@ -2,6 +2,8 @@
 #include "ns3/mp-tcp-olia.h"
 #include "ns3/log.h"
 #include "ns3/object.h"
+#include "ns3/mp-tcp-id-manager.h"
+//#include "ns3/mp-tcp-id-manager.h"
 
 NS_LOG_COMPONENT_DEFINE("MpTcpCCOlia");
 
@@ -47,7 +49,8 @@ MpTcpCCOlia::MpTcpCCOlia(void) :
   NS_LOG_FUNCTION (this);
 }
 
-MpTcpCCOlia::MpTcpCCOlia(const MpTcpCCOlia& sock)
+MpTcpCCOlia::MpTcpCCOlia(const MpTcpCCOlia& sock) :
+  MpTcpSocketBase(sock)
 {
   NS_LOG_FUNCTION (this);
   NS_LOG_LOGIC ("Invoked the copy constructor");
@@ -58,10 +61,19 @@ MpTcpCCOlia::~MpTcpCCOlia()
   NS_LOG_FUNCTION (this);
 }
 
+  // inherited function, no need to doc.
+//TypeId
+//MpTcpCCOlia::GetInstanceTypeId (void) const
+//{
+//  return GetTypeId();
+//}
 
 Ptr<MpTcpSocketBase>
 MpTcpCCOlia::ForkAsMeta(void)
 {
+  NS_LOG_UNCOND ("Fork as meta" << this->GetInstanceTypeId() << " to " << GetTypeId());
+//  Ptr<MpTcpCCOlia> p =
+
   return CopyObject<MpTcpCCOlia>(this);
 }
 

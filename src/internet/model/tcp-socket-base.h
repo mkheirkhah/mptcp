@@ -270,7 +270,7 @@ protected:
 //  GenerateDataPacketHeader(TcpHeader& header, SequenceNumber32 seq, bool withAck);
 
   virtual void
-  SendEmptyPacket(TcpHeader header);
+  SendEmptyPacket(TcpHeader& header);
 
   virtual uint32_t
   SendDataPacket(TcpHeader header,SequenceNumber32 seq,uint32_t maxSize);

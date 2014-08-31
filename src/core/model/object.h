@@ -55,9 +55,9 @@ struct ObjectDeleter
  * functionality to break the reference cycles. The reference count is increamented
  * and decremented with the methods Object::Ref and Object::Unref. If a reference cycle is
  * present, the user is responsible for breaking it by calling Object::Dispose in
- * a single location. This will eventually trigger the invocation of Object::DoDispose 
+ * a single location. This will eventually trigger the invocation of Object::DoDispose
  * on itself and all its aggregates. The Object::DoDispose method is always automatically
- * invoked from the Object::Unref method before destroying the object, even if the user 
+ * invoked from the Object::Unref method before destroying the object, even if the user
  * did not call Object::Dispose directly.
  */
 class Object : public SimpleRefCount<Object,ObjectBase,ObjectDeleter>
@@ -73,7 +73,7 @@ public:
    * \brief Iterate over the objects aggregated to an ns3::Object.
    *
    * This iterator does not allow you to iterate over the initial
-   * object used to call Object::GetAggregateIterator. 
+   * object used to call Object::GetAggregateIterator.
    *
    * Note: this is a java-style iterator.
    */
@@ -136,7 +136,7 @@ private:
    *
    * This method aggregates the two objects together: after this
    * method returns, it becomes possible to call GetObject
-   * on one to get the other, and vice-versa. 
+   * on one to get the other, and vice-versa.
    *
    * This method calls the virtual method NotifyNewAggregates to
    * notify all aggregated objects that they have been aggregated
@@ -186,7 +186,7 @@ protected:
    */
   virtual void DoInitialize (void);
   /**
-   * This method is called by Object::Dispose or by the object's 
+   * This method is called by Object::Dispose or by the object's
    * destructor, whichever comes first.
    *
    * Subclasses are expected to implement their real destruction
@@ -231,7 +231,7 @@ private:
   friend struct ObjectDeleter;
 
   /**
-   * This data structure uses a classic C-style trick to 
+   * This data structure uses a classic C-style trick to
    * hold an array of variable size without performing
    * two memory allocations: the declaration of the structure
    * declares a one-element array but when we allocate
@@ -294,7 +294,7 @@ private:
   void UpdateSortedArray (struct Aggregates *aggregates, uint32_t i) const;
   /**
    * Attempt to delete this object. This method iterates
-   * over all aggregated objects to check if they all 
+   * over all aggregated objects to check if they all
    * have a zero refcount. If yes, the object and all
    * its aggregates are deleted. If not, nothing is done.
    */
@@ -316,7 +316,7 @@ private:
   bool m_initialized;
   /**
    * a pointer to an array of 'aggregates'. i.e., a pointer to
-   * each object aggregated to this object is stored in this 
+   * each object aggregated to this object is stored in this
    * array. The array is shared by all aggregated objects
    * so the size of the array is indirectly a reference count.
    */
@@ -346,7 +346,7 @@ Ptr<T> CopyObject (Ptr<T> object);
 
 namespace ns3 {
 
-void 
+void
 ObjectDeleter::Delete (Object *object)
 {
   object->DoDelete ();
@@ -357,7 +357,7 @@ ObjectDeleter::Delete (Object *object)
  *************************************************************************/
 
 template <typename T>
-Ptr<T> 
+Ptr<T>
 Object::GetObject () const
 {
   // This is an optimization: if the cast works (which is likely),
@@ -377,7 +377,7 @@ Object::GetObject () const
 }
 
 template <typename T>
-Ptr<T> 
+Ptr<T>
 Object::GetObject (TypeId tid) const
 {
   Ptr<Object> found = DoGetObject (tid);

@@ -161,6 +161,10 @@ public:
   CompleteFork(Ptr<Packet> p, const TcpHeader& h, const Address& fromAddress, const Address& toAddress);
 
   void
+  ProcessSynRcvd(Ptr<Packet> packet, const TcpHeader& tcpHeader, const Address& fromAddress,
+    const Address& toAddress);
+
+  void
   ProcessSynSent(Ptr<Packet> packet, const TcpHeader& tcpHeader);
 
   /**

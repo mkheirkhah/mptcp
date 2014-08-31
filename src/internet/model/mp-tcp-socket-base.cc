@@ -66,38 +66,45 @@ MpTcpSocketBase::GetTypeId(void)
 
 MpTcpSocketBase::MpTcpSocketBase() :
   TcpSocketBase(),
-  m_mpEnabled(false)
+  m_mpEnabled(false),
+  m_server(false),
+  m_localKey(0),
+  m_remoteKey(0),
+  m_doChecksum(false)
 {
   NS_LOG_FUNCTION(this);
-  //Object
+  //not considered as an Object
   m_remotePathIdManager = Create<MpTcpPathIdManagerImpl>();
-
-//  client = false;
-  m_server = false;
-
-  // TODO remove
-  remoteRecvWnd = 1;
+  m_scheduler = Create<MpTcpSchedulerRoundRobin>();
+  m_scheduler->SetMeta(this);
 
   gnu.SetOutFile("allPlots.pdf");
 
   mod = 60; // ??
-  Callback<void, Ptr<Socket> > vPS = MakeNullCallback<void, Ptr<Socket> >();
-  Callback<void, Ptr<Socket>, const Address &> vPSA = MakeNullCallback<void, Ptr<Socket>, const Address &>();
-  Callback<void, Ptr<Socket>, uint32_t> vPSUI = MakeNullCallback<void, Ptr<Socket>, uint32_t>();
-  SetConnectCallback(vPS, vPS);
-  SetDataSentCallback(vPSUI);
-  SetSendCallback(vPSUI);
-  SetRecvCallback(vPS);
+  // done by default ?
+//  Callback<void, Ptr<Socket> > vPS = MakeNullCallback<void, Ptr<Socket> >();
+//  Callback<void, Ptr<Socket>, const Address &> vPSA = MakeNullCallback<void, Ptr<Socket>, const Address &>();
+//  Callback<void, Ptr<Socket>, uint32_t> vPSUI = MakeNullCallback<void, Ptr<Socket>, uint32_t>();
+//  SetConnectCallback(vPS, vPS);
+//  SetDataSentCallback(vPSUI);
+//  SetSendCallback(vPSUI);
+//  SetRecvCallback(vPS);
 
   /* Generate a random key */
-  m_localKey = GenerateKey(); // TODO later ? on fork or on SYN_SENT
-  m_remoteKey = 0;
+//  m_localKey = GenerateKey(); // TODO later ? on fork or on SYN_SENT
+
 }
+
 
 MpTcpSocketBase::~MpTcpSocketBase(void)
 {
   NS_LOG_FUNCTION(this);
   m_node = 0;
+
+  if( m_scheduler )
+  {
+
+  }
   /*
    * Upon Bind, an Ipv4Endpoint is allocated and set to m_endPoint, and
    * DestroyCallback is set to TcpSocketBase::Destroy. If we called
@@ -348,10 +355,7 @@ MpTcpSocketBase::CompleteFork(Ptr<Packet> p, const TcpHeader& mptcpHeader, const
 
   NS_ASSERT( mpc );
 
-  // this is not really needed. For path management maybe ?
   m_server = true;
-  NS_LOG_INFO(this << " LISTEN -> SYN_RCVD");
-  m_state = SYN_RCVD; // Think of updating it
 
   NS_LOG_INFO("peer key " << mpc->GetSenderKey() );
 
@@ -367,6 +371,8 @@ MpTcpSocketBase::CompleteFork(Ptr<Packet> p, const TcpHeader& mptcpHeader, const
 
   // Create new master subflow (master subsock) and assign its endpoint to the connection endpoint
   Ptr<MpTcpSubFlow> sFlow = CreateSubflow(true);
+  m_state = SYN_RCVD; // Think of updating it
+  NS_LOG_INFO(this << " LISTEN -> SYN_RCVD");
   NS_ASSERT_MSG(sFlow,"Contact ns3 team");
 //  sFlow->master
   // We deallocate the endpoint so that the subflow can reallocate it
@@ -1284,15 +1290,9 @@ MpTcpSocketBase::CreateSubflow(bool masterSocket)
 {
 //  NS_ASSERT_MSG(
 //  InetSocketAddress::IsMatchingType(_srcAddr),
-//  "for dev purpose. To remove later"
-//  );
 //  InetSocketAddress srcAddr = InetSocketAddress::ConvertFrom(_srcAddr);
 
 //  bool masterSocket = false;
-  // TODO ajouter la limite du nb de sous flots ?
-  // Checker que ca existe pas déjà ?
-  // create subflow
-  // TODO convert to ASSERT ? and put *real* checks outside ?
   if( IsConnected() )
   {
     if(!IsMpTcpEnabled())
@@ -1303,7 +1303,7 @@ MpTcpSocketBase::CreateSubflow(bool masterSocket)
     }
   }
   //else if( GetNSubflows() > 0 )
-  else if( m_state == SYN_SENT || m_state== SYN_RCVD)
+  else if( m_state == SYN_SENT || m_state == SYN_RCVD)
   {
     // throw an assert here instead ?
     NS_LOG_ERROR("Already attempting to establish a connection");

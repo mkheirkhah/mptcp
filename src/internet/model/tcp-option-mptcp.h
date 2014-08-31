@@ -395,7 +395,7 @@ public:
 
 
 protected:
-  State m_state;  //!<
+  State m_state;  //!<  3 typs of MP_JOIN. Members will throw an exception if used in wrong mode.
 
   uint8_t m_addressId;    //!< Mandatory
   uint8_t m_flags;
@@ -407,62 +407,6 @@ protected:
 
 
 #if 0
-/**
-  TODO allow to set back up flag
-  MP_JOIN subtype:
-  -For Initial SYN
-      +---------------+---------------+-------+-----+-+---------------+
-      |     Kind      |  Length = 12  |Subtype|     |B|   Address ID  |
-      +---------------+---------------+-------+-----+-+---------------+
-      |                   Receiver's Token (32 bits)                  |
-      +---------------------------------------------------------------+
-      |                Sender's Random Number (32 bits)               |
-      +---------------------------------------------------------------+
-
-      Figure 5: Join Connection (MP_JOIN) Option (for Initial SYN)
-**/
-class TcpOptionMpTcpJoinInitialSyn : public TcpOptionMpTcp<TcpOptionMpTcpMain::MP_JOIN>
-{
-
-public:
-  enum State {
-  Syn    = 12,
-  SynAck = 16,
-  Ack    = 24
-  };
-
-  TcpOptionMpTcpJoinInitialSyn();
-  virtual ~TcpOptionMpTcpJoinInitialSyn();
-
-  virtual bool operator==(const TcpOptionMpTcpJoinInitialSyn&) const;
-
-
-
-  // Setters
-  virtual void SetPeerToken(uint32_t token) { m_peerToken = token; }
-//  virtual void SetLocalToken(uint32_t token) { m_localToken = token; }
-
-//  virtual void SetBackupFlag
-  // Getters
-  virtual uint32_t GetPeerToken() const { return m_peerToken; }
-//  virtual uint32_t GetLocalToken() const { return m_localToken; }
-  virtual uint8_t GetAddressId() const { return m_addressId; }
-  virtual void SetAddressId(uint8_t addrId) { m_addressId =  addrId; }
-
-  virtual void Print (std::ostream &os) const;
-  // Ok
-  virtual void Serialize (Buffer::Iterator start) const;
-  virtual uint32_t Deserialize (Buffer::Iterator start);
-  virtual uint32_t GetSerializedSize (void) const;
-
-protected:
-  uint8_t m_addressId;    //!< Mandatory
-  uint8_t m_flags;
-
-  uint32_t m_peerToken;
-  uint32_t m_nonce;  //!< Rename to *nonce* . Should be a random number
-};
-
 
 /**
 TODO negociate the random part
@@ -621,9 +565,12 @@ public:
 
   virtual bool operator==(const TcpOptionMpTcpDSN&) const;
 
-
+  /**
+  * \brief Set seq nb of acked data at MPTP level
+  */
   virtual void SetDataAck(uint32_t);
   virtual uint32_t GetDataAck() const { return m_dataAck; };
+
 
   virtual void Print (std::ostream &os) const;
   // OK
@@ -635,10 +582,7 @@ protected:
   MpTcpMapping m_mapping;
   uint8_t m_flags;
 //  uint64_t m_dataAck; //!< Can be On 32 bits dependings on the flags
-  uint32_t m_dataAck; //!< Can be On 32 bits dependings on the flags
-//  uint64_t m_dataSequenceNumber;
-//  uint32_t m_subflowSequenceNumber;
-//  uint16_t m_dataLevelLength;
+  uint32_t m_dataAck; //!< Can be On 32 bits dependings on the flags. Data Acked by this option
 };
 
 
@@ -678,7 +622,10 @@ public:
   */
 //  virtual bool IsPortEmbedded() ;
 
-  virtual void SetAddress(InetSocketAddress, uint8_t addrId);
+  /**
+  * Expects InetXSocketAddress
+  */
+  virtual void SetAddress(const Address& address, uint8_t addrId);
 //  virtual void SetAddress(Ipv6Address);
 
   virtual bool operator==(const TcpOptionMpTcpAddAddress&) const;
@@ -686,8 +633,11 @@ public:
   * Only IPv4 is supported
   * \return IPversion
   */
-  virtual void GetAddress( InetSocketAddress& address) const;
+  virtual uint8_t GetAddressVersion(void) const;
+  virtual InetSocketAddress GetAddress(void) const;
+  virtual Inet6SocketAddress GetAddress6(void) const;
   virtual uint8_t GetAddressId() const;
+
 //  virtual void IsIpv6() const { return (m_length == 26); };
   virtual void Print (std::ostream &os) const;
   //ok
@@ -698,10 +648,11 @@ public:
 protected:
 //  uint8_t m_length;
 
-  uint8_t m_addressVersion; //!< IPver
+  uint8_t m_addressVersion; //!< IPversion (4 or 6)
   uint8_t m_addrId;
   uint8_t m_port;
-
+//  Address m_address;
+//  union {};
   Ipv4Address m_address;
   Ipv6Address m_address6; //!< unused
 //  InetSocketAddress m_address;

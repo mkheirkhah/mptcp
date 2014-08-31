@@ -17,6 +17,20 @@ MpTcpMapping::MpTcpMapping() :
   NS_LOG_FUNCTION(this);
 }
 
+void
+MpTcpMapping::SetMappingSize(uint16_t length)
+{
+  m_dataLevelLength = length;
+}
+
+
+void
+MpTcpMapping::SetDataSequenceNumber(SequenceNumber32 seq)
+{
+  m_dataSequenceNumber = seq;
+}
+
+
 bool
 MpTcpMapping::operator==( const MpTcpMapping& mapping) const
 {

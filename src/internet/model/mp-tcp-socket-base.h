@@ -16,7 +16,7 @@
 
 #include "ns3/mp-tcp-cc.h"
 #include "ns3/inet-socket-address.h"
-//#include "ns3/mp-tcp-scheduler-round-robin.h"
+#include "ns3/mp-tcp-scheduler-round-robin.h"
 
 //using namespace std;
 
@@ -28,7 +28,7 @@ class Packet;
 class TcpL4Protocol;
 class MpTcpPathIdManager;
 class MpTcpSubFlow;
-class MpTcpSchedulerRoundRobin;
+//class MpTcpSchedulerRoundRobin;
 class MpTcpCongestionControl;
 
 /**
@@ -59,7 +59,12 @@ class MpTcpSocketBase : public TcpSocketBase
 public: // public methods
 
   static TypeId GetTypeId(void);
+
+  // inherited function, no need to doc.
+//  virtual TypeId GetInstanceTypeId (void) const;
+
   MpTcpSocketBase();
+//  MpTcpSocketBase(const MpTcpSocketBase&);
 //  MpTcpSocketBase(Ptr<Node> node);
   virtual ~MpTcpSocketBase();
 

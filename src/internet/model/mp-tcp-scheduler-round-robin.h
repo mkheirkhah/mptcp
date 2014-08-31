@@ -8,6 +8,7 @@
 #include "ns3/mp-tcp-typedefs.h"
 #include "ns3/object.h"
 #include "ns3/ptr.h"
+#include "ns3/mp-tcp-scheduler-round-robin.h"
 #include <vector>
 #include <list>
 
@@ -28,14 +29,20 @@ class MpTcpSubFlow;
 typedef std::vector< std::pair< SequenceNumber32,uint32_t > > MappingVector;
 
 
-class MpTcpSchedulerRoundRobin : public Object
+class MpTcpSchedulerRoundRobin
+: public Object
 //: public MpTcpScheduler
 {
 
 public:
-  MpTcpSchedulerRoundRobin(Ptr<MpTcpSocketBase> metaSock);
+  static TypeId
+  GetTypeId (void);
+
+  MpTcpSchedulerRoundRobin();
   virtual ~MpTcpSchedulerRoundRobin ();
 
+
+  void SetMeta(Ptr<MpTcpSocketBase> metaSock);
   //Ptr<MpTcpSocketBase> metaSock
   //            std::pair<int,
             // DSNMapping

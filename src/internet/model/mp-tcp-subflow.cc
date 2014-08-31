@@ -154,158 +154,6 @@ MpTcpSubFlow::GetRemoteToken() const
 
 
 
-// TODO should improve parent's one once SOCIS code gets merged
-  #if 0
-void
-MpTcpSubFlow::SendEmptyPacket(uint8_t flags)
-{
-  NS_LOG_FUNCTION (this << "yo");
-//  Ptr<MpTcpSubFlow> sFlow = m_subflows[sFlowIdx];
-  Ptr<Packet> p = Create<Packet>();
-
-//  SequenceNumber32 s = SequenceNumber32(m_nextTxSequence.Get() );
-  SequenceNumber32 s = m_nextTxSequence ;
-
-  if (m_endPoint == 0)
-    {
-      NS_FATAL_ERROR("Failed to send empty packet due to null subflow's endpoint");
-      NS_LOG_WARN ("Failed to send empty packet due to null subflow's endpoint");
-      return;
-    }
-  if (flags & TcpHeader::FIN)
-    {
-      flags |= TcpHeader::ACK;
-//      m_nextTxSequence.Get()
-//      if (maxSeqNb != TxSeqNumber - 1 ) // Potential bug ?  && client)
-//        s = maxSeqNb + 1;
-    }
-  else if (m_state == FIN_WAIT_1 || m_state == LAST_ACK || m_state == CLOSING)
-    {
-      ++s;
-    }
-
-  TcpHeader header;
-//  uint8_t hlen = 0; // header length ?
-//  uint8_t olen = 0; // additionnal header length. wait for SOCIS code
-
-  header.SetSourcePort( m_endPoint->GetLocalPort());
-  header.SetDestinationPort( m_endPoint->GetPeerPort() );
-  header.SetFlags(flags);
-  header.SetSequenceNumber(s);
-  header.SetAckNumber(SequenceNumber32( m_rxBuffer.NextRxSequence() ));
-  header.SetWindowSize(AdvertisedWindowSize());
-
-  bool hasSyn = flags & TcpHeader::SYN;
-  bool hasFin = flags & TcpHeader::FIN;
-  bool isAck = flags == TcpHeader::ACK;
-
-    // in parent they do   m_rto = m_rtt->RetransmitTimeout();
-  // TODO let meta decide RTO
-  Time RTO = rtt->RetransmitTimeout();
-
-
-  /////////////////////////////////////////////////
-  //// if there is a SYN
-  ////
-  if (hasSyn)
-  {
-      if (m_cnCount == 0)
-      {
-          // No more connection retries, give up
-          NS_LOG_INFO ("Connection failed.");
-          CloseAndNotify();
-          return;
-      }
-      else
-      {
-        //TODO use ComputeTx ... member
-          // Exponential backoff of connection time out
-          int backoffCount = 0x1 << (m_cnRetries - m_cnCount);
-          RTO = Seconds(m_cnTimeout.GetSeconds() * backoffCount);
-          m_cnCount--;
-          NS_LOG_UNCOND("("<< (int)m_routeId << ") SendEmptyPacket -> backoffCount: " << backoffCount << " RTO: " << RTO.GetSeconds() << " m_cnTimeout: " << m_cnTimeout.GetSeconds() <<" m_cnCount: "<< m_cnCount);
-      }
-  }
-
-
-  if (((m_state == SYN_SENT) || (m_state == SYN_RCVD )))
-    {
-      // if master
-
-//      m_localNonce = rand() % 1000 + 1;        // Random Local Token
-//      header.AddOptMPC(OPT_MPCAPABLE, m_localNonce); // Adding MP_CAPABLE & Token to TCP option (5 Bytes)
-//      olen += 5;
-//      m_tcp->m_TokenMap[m_localNonce] = m_endPoint;       //m_tcp->m_TokenMap.insert(std::make_pair(m_localNonce, m_endPoint))
-
-//      NS_LOG_INFO("("
-//            << (int)sFlow->m_routeId
-//            << ") SendEmptyPacket -> m_localNonce is mapped to connection endpoint -> "
-//            << m_localNonce << " -> " << m_endPoint
-//            << " TokenMapsSize: "<< m_tcp->m_TokenMap.size());
-
-    }
-  else
-
-  // if master use MP_CAPABLE
-  if ( ((m_state == SYN_SENT) || (m_state == SYN_RCVD )) && hasSyn)
-    {
-      if(IsMaster())
-      {
-        uint64_t remoteKey = 0, localKey = 0;
-        // rename remote into Peer
-        m_metaSocket->GetRemoteKey(remoteKey);
-        localKey = m_metaSocket->GetLocalKey();
-
-        Ptr<TcpOptionMpTcpCapable> mpcapableOption = CreateObject<TcpOptionMpTcpCapable>();
-//         ;
-        mpcapableOption->SetRemoteKey( remoteKey );
-        mpcapableOption->SetSenderKey( localKey );
-        header.AppendOption( Ptr<TcpOption>(mpcapableOption) );
-      }
-      else
-      {
-
-      }
-//      header.AddOptMPC(OPT_MPCAPABLE, GetLocalToken() );       // Adding MP_CAPABLE & Token to TCP option (5 Bytes)
-    }
-  // Otherwise MP_JOIN
-//  else if (m_state == SYN_SENT && hasSyn && !IsMaster())
-//    {
-////      NS_ASSERT() TODO check for token/ remote nonce  existence
-//      header.AddOptJOIN(OPT_JOIN, GetRemoteToken(), 0); // last param = addrId
-//
-//    }
-
-//  uint8_t plen = (4 - (olen % 4)) % 4;
-//  olen = (olen + plen) / 4;
-//  hlen = 5 + olen;
-//  header.SetLength(hlen);
-//  header.SetOptionsLength(olen);
-//  header.SetPaddingLength(plen);
-
-  //m_metaSocket->FindOutputNetDevice(sAddr)
-  m_tcp->SendPacket(p, header, m_endPoint->GetLocalAddress() , m_endPoint->GetPeerAddress(), m_endPoint->GetBoundNetDevice() );
-  //sFlow->rtt->SentSeq (sFlow->TxSeqNumber, 1);           // notify the RTT
-
-  if (m_retxEvent.IsExpired() && (hasFin || hasSyn) && !isAck)
-    { // Retransmit SYN / SYN+ACK / FIN / FIN+ACK to guard against lost
-//RTO = rtt->RetransmitTimeout();
-//sFlowIdx,
-      m_retxEvent = Simulator::Schedule(RTO, &MpTcpSubFlow::SendEmptyPacket, this, flags);
-      NS_LOG_INFO ("("
-//            <<(int)sFlowIdx <<
-            ") SendEmptyPacket -> ReTxTimer set for FIN / FIN+ACK / SYN / SYN+ACK now "
-            << Simulator::Now ().GetSeconds () << " Expire at " << (Simulator::Now () + RTO).GetSeconds ()
-            << " RTO: " << RTO.GetSeconds());
-    }
-
-  //if (!isAck)
-//  NS_LOG_INFO("("
-//          <<") SendEmptyPacket-> "
-//          << header <<" Length: "<< (int)header.GetLength());
-}
-  #endif
-
 
 //int
 //MpTcpSubFlow::Connect(const Address & address)
@@ -313,8 +161,57 @@ MpTcpSubFlow::SendEmptyPacket(uint8_t flags)
 //  NS_LOG_FUNCTION (this << address);
 //  return TcpSocketBase::Connect
 //}
+#if 0
+void
+MpTcpSubFlow::SendEmptyPacket(TcpHeader& header)
+{
+  if (flags & TcpHeader::SYN && flags & TcpHeader::ACK)
+  {
+    //
+    NS_ASSERT(m_state == SYN_RCVD);
+  }
+  else if (flags == TcpHeader::SYN )
+  {
+    // Add an MP_CAPABLE or MP_JOIN option
+    // is possible in SYN_RCVD if peer did not receive ack of 3WHS
+    NS_ASSERT(m_state == LISTEN || m_state == SYN_RCVD);
+      if( IsMaster() )
+      {
+        Ptr<TcpOptionMpTcpCapable> mpc =  CreateObject<TcpOptionMpTcpCapable>();
+        mpc->SetSenderKey( m_metaSocket->GetLocalKey() );
+        header.AppendOption( mpc );
+      }
+      else
+      {
+        // Join option InitialSyn
+        Ptr<TcpOptionMpTcpJoin> join =  CreateObject<TcpOptionMpTcpJoin>();
+        //TODO retrieve from meta
+//        join->SetLocalToken(0);
+        join->SetState(TcpOptionMpTcpJoin::Syn);
+        join->SetPeerToken(0);
+        join->SetNonce(0);
+//        join->SetAddressId(0);
+//        join->set
+        header.AppendOption( join );
+      }
+  }
+  // Quand on ferme la connexion qu'arrive-t'il ?
+//  else if(m_state == SYN_SENT )
+//  {
+//
+//  }
+//  else if(m_state == SYN_SENT )
+//  {
+//
+//  }
+
+  Ptr<Packet> p = Create<Packet>();
+  SendPacket(header, p );
 
 
+//  header.SetWindowSize(AdvertisedWindowSize());
+}
+#endif
 
 
 int
@@ -327,6 +224,8 @@ MpTcpSubFlow::DoConnect()
     { // send a SYN packet and change state into SYN_SENT
       TcpHeader header;
       GenerateEmptyPacketHeader(header,TcpHeader::SYN);
+
+      // code moved inside SendEmptyPacket
 
       if( IsMaster() )
       {
@@ -347,8 +246,9 @@ MpTcpSubFlow::DoConnect()
 //        join->set
         header.AppendOption( join );
       }
-      TcpSocketBase::SendEmptyPacket(header);
 
+      TcpSocketBase::SendEmptyPacket(header);
+//      NS_ASSERT( header.)
       NS_LOG_INFO (TcpStateName[m_state] << " -> SYN_SENT");
       m_state = SYN_SENT;
     }
@@ -396,127 +296,6 @@ MpTcpSubFlow::Close(void)
 }
 
 
-#if 0
-// Could be removed
-int
-MpTcpSubFlow::Connect(const Address &address)
-{
-  InetSocketAddress transport = InetSocketAddress::ConvertFrom(address);
-
-
-  // Should depend on if it's first or not
-  NS_LOG_FUNCTION(this );
-
-
-  // allocates subflow
-//  Ptr<MpTcpSubFlow> sFlow = CreateObject<MpTcpSubFlow>(this);
-  // TODO en fait il ne devrait pas y avoir de m_routeId
-//  sFlow->m_routeId = (m_subflows.empty()  ? 0 : m_subflows.back()->m_routeId + 1);
-
-
-  // Following is a duplicate of parent's connect
-  if (m_endPoint == 0)
-    {
-      if (Bind() == -1) // Bind(), if there is no endpoint for this socket
-        {
-          NS_ASSERT(m_endPoint == 0);
-          return -1; // Bind() failed.
-        }
-      // Make sure endpoint is created.
-      NS_ASSERT(m_endPoint != 0);
-    }
-  // Set up remote addr:port for this endpoint as we knew it from Connect's parameters
-  m_endPoint->SetPeer( transport.GetIpv4(), transport.GetPort() );
-
-  // weird compared to parent's way of doing things
-  if (m_endPoint->GetLocalAddress() == "0.0.0.0")
-    {
-      // Find approapriate local address from the routing protocol for this endpoint.
-      if (SetupEndpoint() != 0)
-        { // Route to destination does not exist.
-          return -1;
-        }
-    }
-  else
-    {
-    // TODO this might be removed since SetupEndpoint does it
-    // Make sure there is an route from source to destination. Source might be set wrongly.
-      if (( m_metaSocket->IsThereRoute(m_endPoint->GetLocalAddress(), m_endPoint->GetPeerAddress())) == false)
-        {
-          NS_LOG_INFO("Connect -> There is no route from " << m_endPoint->GetLocalAddress()
-                    << " to " << m_endPoint->GetPeerAddress());
-          //m_tcp->DeAllocate(m_endPoint); // this would fire up destroy function...
-          return -1;
-        }
-    }
-
-  // Set up subflow local addrs:port from endpoint
-//  sAddr = m_endPoint->GetLocalAddress();
-//  sPort = m_endPoint->GetLocalPort();
-//  MSS = m_segmentSize;
-  cwnd = GetSegSize();  // initial window should depends on ???
-
-  NS_LOG_INFO("Connect -> SegmentSize: " << GetSegSize()  ) ;//
-//  NS_LOG_UNCOND("Connect -> SendingBufferSize: " << sendingBuffer->bufMaxSize);
-
-  // This is master subsocket (master subflow) then its endpoint is the same as connection endpoint.
-  // Ptet buggy la
-//  this->m_endPoint = m_metaSocket->m_endPoint;
-
-
-  //sFlow->rtt->Reset();
-  m_cnCount = m_cnRetries;
-
-//  if (sFlow->state == CLOSED || sFlow->state == LISTEN || sFlow->state == SYN_SENT || sFlow->state == LAST_ACK || sFlow->state == CLOSE_WAIT)
-//    { // send a SYN packet and change state into SYN_SENT
-  NS_LOG_INFO ("("
-//      << (int)sFlow->m_routeId << ") "
-      << TcpStateName[state] << " -> SYN_SENT");
-
-//  m_state = SYN_SENT;
-//  m_state = SYN_SENT;  // Subflow state should be changed first then SendEmptyPacket...
-
-
-//  currentSublow = sFlow->m_routeId; // update currentSubflow in case close just after 3WHS.
-  // TODO move to tcpsocket base
-  NS_LOG_INFO(this << "  MPTCP connection is initiated (Sender): "
-//        << sAddr << ":" << sPort << " -> " << dAddr << ":" << m_dPort
-        << " m_state: " << TcpStateName[m_state]
-        );
-
-
-  // Copied from tcp-socket-base to modify
-  // A new connection is allowed only if this socket does not have a connection
-  if (m_state == CLOSED || m_state == LISTEN || m_state == SYN_SENT || m_state == LAST_ACK || m_state == CLOSE_WAIT)
-    { // send a SYN packet and change state into SYN_SENT
-//      TODO
-//      SendEmptyPacket(TcpHeader::SYN);
-      SendEmptyPacket( TcpHeader::SYN);
-//      SendEmptyPacket(m_routeId, TcpHeader::SYN);
-      NS_LOG_INFO (TcpStateName[m_state] << " -> SYN_SENT");
-      m_state = SYN_SENT;
-    }
-  else if (m_state != TIME_WAIT)
-    { // In states SYN_RCVD, ESTABLISHED, FIN_WAIT_1, FIN_WAIT_2, and CLOSING, an connection
-      // exists. We send RST, tear down everything, and close this socket.
-      SendRST();
-
-      // TODO should notify main
-      CloseAndNotify();
-    }
-
-  // TODO notify connection succeeded ?
-//    }
-//  else if (sFlow->state != TIME_WAIT)
-//    { // In states SYN_RCVD, ESTABLISHED, FIN_WAIT_1, FIN_WAIT_2, and CLOSING, an connection
-//      // exists. We send RST, tear down everything, and close this socket.
-//      NS_LOG_WARN(" Connect-> Can't open another connection as connection is exist -> RST need to be sent. Not yet implemented");
-//    SendRST ();
-//      CloseAndNotify ();
-//    }
-  return 0;
-}
-#endif
 
 // Does this constructor even make sense ? no ? to remove ?
 MpTcpSubFlow::MpTcpSubFlow(const MpTcpSubFlow& sock)
@@ -1060,13 +839,7 @@ MpTcpSubFlow::ProcessSynSent(Ptr<Packet> packet, const TcpHeader& tcpHeader)
     }
     else if (tcpflags == (TcpHeader::SYN | TcpHeader::ACK))
     {
-      /**
-      * Here is how the MPTCP 3WHS works:
-      *  o  SYN (A->B): A's Key for this connection.
-      *  o  SYN/ACK (B->A): B's Key for this connection.
-      *  o  ACK (A->B): A's Key followed by B's Key.
-      *
-      */
+
 //      NS_LOG_INFO("Received a SYN/ACK as answer");
 
       NS_ASSERT(m_nextTxSequence + SequenceNumber32(1) == tcpHeader.GetAckNumber());
@@ -1080,22 +853,32 @@ MpTcpSubFlow::ProcessSynSent(Ptr<Packet> packet, const TcpHeader& tcpHeader)
       Ptr<TcpOption> option = tcpHeader.GetOption(TcpOption::MPTCP);
       Ptr<TcpOptionMpTcpMain> opt2 = DynamicCast<TcpOptionMpTcpMain>(option);
 
-      Ptr<TcpOption> answerOption;  //
-
+//      Ptr<TcpOption> answerOption;
+      TcpHeader answerHeader;
+      GenerateEmptyPacketHeader(answerHeader,TcpHeader::ACK);
 
       if( IsMaster())
       {
+        /**
+        * Here is how the MPTCP 3WHS works:
+        *  o  SYN (A->B): A's Key for this connection.
+        *  o  SYN/ACK (B->A): B's Key for this connection.
+        *  o  ACK (A->B): A's Key followed by B's Key.
+        *
+        */
+
         // Expect an MP_CAPABLE option
         NS_ASSERT( opt2->GetSubType() == TcpOptionMpTcpMain::MP_CAPABLE );
 
         Ptr<TcpOptionMpTcpCapable> mpc = DynamicCast<TcpOptionMpTcpCapable>(option);
-        NS_ASSERT( mpc );
+        NS_ASSERT_MSG( mpc ,"Contact ns3 team" );
         NS_LOG_INFO("peer key " << mpc->GetSenderKey() );
 
         // Register that key
         m_metaSocket->SetPeerKey( mpc->GetSenderKey() );
-        answerOption = mpc;
 
+
+        answerHeader.AppendOption( mpc );
       }
       else
       {
@@ -1115,19 +898,23 @@ MpTcpSubFlow::ProcessSynSent(Ptr<Packet> packet, const TcpHeader& tcpHeader)
           */
         // expects MP_JOIN option
         NS_ASSERT( opt2->GetSubType() == TcpOptionMpTcpMain::MP_JOIN );
-        Ptr<TcpOptionMpTcpJoin> opt3 = DynamicCast<TcpOptionMpTcpJoin>(option);
-        //
-        NS_ASSERT_MSG( opt3 && opt3->GetState() == TcpOptionMpTcpJoin::SynAck, "the MPTCP join option received is not of the expected 1 out of 3 MP_JOIN types." );
+        Ptr<TcpOptionMpTcpJoin> join = DynamicCast<TcpOptionMpTcpJoin>(option);
+        // TODO should be less restrictive in case there is a loss
+        NS_ASSERT_MSG( join && join->GetState() == TcpOptionMpTcpJoin::SynAck, "the MPTCP join option received is not of the expected 1 out of 3 MP_JOIN types." );
 
         // Here we should check the tokens
 //        uint8_t buf[20] =
 //        opt3->GetTruncatedHmac();
+
+        Ptr<TcpOptionMpTcpJoin> joinAck = TcpOptionMpTcpMain::CreateOption(TcpOptionMpTcpMain::MP_JOIN);
+        joinAck->SetState(TcpOptionMpTcpJoin::Ack);
+        joinAck->SetTruncatedHmac(0);
+        answerHeader.AppendOption( joinAck );
       }
 
       // TODO support IPv6
       GetIdManager()->AddRemoteAddr(0, m_endPoint->GetPeerAddress(), m_endPoint->GetPeerPort() );
 
-      NS_ASSERT_MSG( answerOption, "Notify the ns3 team. the option should be created by ns3 beforehand." );
 
       NS_LOG_INFO ("SYN_SENT -> ESTABLISHED");
       m_state = ESTABLISHED;
@@ -1137,10 +924,8 @@ MpTcpSubFlow::ProcessSynSent(Ptr<Packet> packet, const TcpHeader& tcpHeader)
       m_highTxMark = ++m_nextTxSequence;
       m_txBuffer.SetHeadSequence(m_nextTxSequence);
 
-      TcpHeader answerHeader;
-//      NS_ASSERT_
-      GenerateEmptyPacketHeader(answerHeader,TcpHeader::ACK);
-      answerHeader.AppendOption( answerOption );
+
+
       SendEmptyPacket(answerHeader);
 
       fLowStartTime = Simulator::Now().GetSeconds();
@@ -1166,6 +951,43 @@ MpTcpSubFlow::ProcessSynSent(Ptr<Packet> packet, const TcpHeader& tcpHeader)
         }
       CloseAndNotify();
     }
+}
+
+
+void
+MpTcpSubFlow::ProcessSynRcvd(Ptr<Packet> packet, const TcpHeader& tcpHeader, const Address& fromAddress,
+    const Address& toAddress)
+{
+  //!
+  NS_LOG_FUNCTION (this << tcpHeader);
+
+
+
+
+  // Extract the flags. PSH and URG are not honoured.
+  uint8_t tcpflags = tcpHeader.GetFlags() & ~(TcpHeader::PSH | TcpHeader::URG);
+
+  if (tcpflags == TcpHeader::SYN)
+    {
+
+      // TODO check for MP_CAPABLE
+      // factorize with code from Listen( that sends options !!
+
+      // Probably the peer lost my SYN+ACK
+      // So we need to resend it with the MPTCP option
+      Ptr<TcpOptionMpTcpCapable> mpc;
+      TcpHeader answerHeader;
+      GenerateEmptyPacketHeader(answerHeader,TcpHeader::SYN | TcpHeader::ACK);
+      mpc->SetSenderKey( GetMeta()->GetLocalKey() );
+      m_rxBuffer.SetNextRxSequence(tcpHeader.GetSequenceNumber() + SequenceNumber32(1));
+
+      answerHeader.AppendOption(mpc);
+      SendEmptyPacket(answerHeader);
+      return;
+    }
+
+  TcpSocketBase::ProcessSynRcvd( packet, tcpHeader, fromAddress, toAddress);
+
 }
 
 bool
@@ -1453,8 +1275,11 @@ MpTcpSubFlow::ReceivedData(Ptr<Packet> p, const TcpHeader& mptcpHeader)
   MpTcpMapping receivedMapping;
 
   // Need to register DSN mappings first
+  // TODO there may be several MPTCP options i should retrieve them all
   Ptr<TcpOption> option = mptcpHeader.GetOption( TcpOption::MPTCP );
   Ptr<TcpOptionMpTcpMain> mptcpOption;
+
+
   if(option)
   {
     mptcpOption = DynamicCast<TcpOptionMpTcpMain>(option);
@@ -1582,6 +1407,7 @@ MpTcpSubFlow::ReceivedAck(Ptr<Packet> p, const TcpHeader& header)
   NS_LOG_FUNCTION (this << header);
   NS_LOG_ERROR("Not implemented. To implement ?");
 
+  TcpSocketBase::ReceivedAck(p, header );
 
 }
 

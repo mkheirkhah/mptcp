@@ -1494,21 +1494,9 @@ TcpSocketBase::SendEmptyPacket(uint8_t flags)
 {
   TcpHeader header;
   GenerateEmptyPacketHeader(header,flags);
-  SendEmptyPacket(header);
+
 //  SendPacket(header,p);
-
-}
-
-void
-TcpSocketBase::SendEmptyPacket(TcpHeader header)
-{
-//  TODO
-//  if (m_endPoint == 0 && m_endPoint6 == 0)
-//    {
-//      NS_LOG_WARN ("Failed to send empty packet due to null endpoint");
-//      return;
-//    }
-  uint8_t flags = header.GetFlags();
+//  uint8_t flags = header.GetFlags();
 
   SequenceNumber32 s = m_nextTxSequence;
 
@@ -1522,6 +1510,19 @@ TcpSocketBase::SendEmptyPacket(TcpHeader header)
     }
 
   header.SetSequenceNumber(s);
+  SendEmptyPacket(header);
+}
+
+void
+TcpSocketBase::SendEmptyPacket(TcpHeader& header)
+{
+//  TODO
+//  if (m_endPoint == 0 && m_endPoint6 == 0)
+//    {
+//      NS_LOG_WARN ("Failed to send empty packet due to null endpoint");
+//      return;
+//    }
+
 
   Ptr<Packet> p = Create<Packet>();
   SendPacket(header, p );

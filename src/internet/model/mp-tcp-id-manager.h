@@ -50,7 +50,7 @@ class MpTcpPathIdManager
 {
 
 public:
-
+  static TypeId GetTypeId();
 
   MpTcpPathIdManager();
 
