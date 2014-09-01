@@ -85,11 +85,14 @@ public:
   virtual TypeId GetInstanceTypeId (void) const;
 
   virtual void
-  Print (std::ostream &os) const
-  {
-    NS_ASSERT_MSG(false, " You should override TcpOptionMpTcp::Print function");
-//    os << "MPTCP option. You should override";
-  }
+  Print (std::ostream &os) const;
+
+  /**
+  * \brief
+  */
+  static std::string
+  SubTypetoString(uint8_t flags, char delimiter);
+
 
   static Ptr<TcpOption> CreateMpTcpOption(uint8_t kind);
 
@@ -112,7 +115,7 @@ public:
   virtual void
   Serialize (Buffer::Iterator start) const = 0;
 
-
+  std::ostream & operator << (std::ostream &os) const;
 
   /**
   *
@@ -138,6 +141,11 @@ protected:
   SerializeRef (Buffer::Iterator& i) const;
 };
 // TODO transofrmer en template
+
+
+// TODO do also for TCP option
+//std::ostream & operator << (std::ostream &os, TypeId tid);
+
 
 template<unsigned int SUBTYPE>
 class TcpOptionMpTcp : public TcpOptionMpTcpMain
@@ -236,7 +244,7 @@ public:
   // TODO SetCryptoAlgorithm(
 
   virtual void Print (std::ostream &os) const;
-//  void operator<<(std::ostream &os) const
+//  void  const
 //  {
 //    Print(os);
 //  }
@@ -271,7 +279,7 @@ A: The leftmost bit, labeled "A", SHOULD be set to 1 to indicate
     uint32_t m_length;
 };
 
-
+//std::ostream& operator<<(std::ostream &os, const TcpOption&);
 
 /**
   TODO allow to set back up flag
@@ -542,7 +550,7 @@ public:
     DataAckOf8Bytes = 2, //!< a  (should not be used for now)
     DSNMappingPresent = 4,  //!< M
     DSNOfEightBytes   = 8,      //!< m  (should not be used for now)
-    DataFin           = 16 //!< F
+    DataFin           = 16 //!< F . what's the datafin ?
 
   };
 
@@ -629,6 +637,7 @@ public:
 //  virtual void SetAddress(Ipv6Address);
 
   virtual bool operator==(const TcpOptionMpTcpAddAddress&) const;
+
   /**
   * Only IPv4 is supported
   * \return IPversion

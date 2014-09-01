@@ -312,8 +312,6 @@ MpTcpSocketBase::ProcessListen(Ptr<Packet> packet, const TcpHeader& mptcpHeader,
   NS_ASSERT_MSG( opt2->GetSubType() == TcpOptionMpTcpMain::MP_CAPABLE, "MPTCP sockets can only connect to MPTCP sockets. There is no fallback implemented yet." );
 
 
-
-
   // Call socket's notify function to let the server app know we got a SYN
   // If the server app refuses the connection, do nothing
   if (!NotifyConnectionRequest(fromAddress))
@@ -324,9 +322,9 @@ MpTcpSocketBase::ProcessListen(Ptr<Packet> packet, const TcpHeader& mptcpHeader,
 
 
 
-  // Clone the socket, simulate fork CopyObject
+  // simulate fork. The MP_CAPABLe option will be checked in completeFork
   Ptr<MpTcpSocketBase> newSock = ForkAsMeta();
-  NS_LOG_DEBUG ("Clone new MpTcpSocketBase new connection. ListenerSocket " << this << " AcceptedSocket "<< newSock);
+  // NS_LOG_DEBUG ("Clone new MpTcpSocketBase new connection. ListenerSocket " << this << " AcceptedSocket "<< newSock);
   Simulator::ScheduleNow(&MpTcpSocketBase::CompleteFork, newSock, packet, mptcpHeader, fromAddress, toAddress);
 }
 
@@ -827,9 +825,11 @@ MpTcpSocketBase::ReceivedData(Ptr<Packet> p, const TcpHeader& mptcpHeader)
 
 /** Process the newly received ACK */
 
-//, Ptr<MpTcpSubFlow> sf
+//
 void
-MpTcpSocketBase::ReceivedAck( SequenceNumber32 ack)
+MpTcpSocketBase::ReceivedAck( SequenceNumber32 ack
+                             , Ptr<MpTcpSubFlow> sf
+                             )
 {
   NS_LOG_FUNCTION ( this << "Received ack" << ack);
 

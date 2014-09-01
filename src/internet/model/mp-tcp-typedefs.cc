@@ -24,6 +24,14 @@ MpTcpMapping::SetMappingSize(uint16_t length)
 }
 
 
+std::ostream&
+operator<<(std::ostream& os, const MpTcpMapping& mapping)
+{
+  //
+  os << "Mapping dataSeq [" << mapping.GetDataSequenceNumber() << "]";
+  return os;
+}
+
 void
 MpTcpMapping::SetDataSequenceNumber(SequenceNumber32 seq)
 {

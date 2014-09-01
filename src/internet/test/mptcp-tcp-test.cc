@@ -48,6 +48,7 @@
 #include "ns3/icmpv6-l4-protocol.h"
 #include "ns3/udp-l4-protocol.h"
 #include "ns3/tcp-l4-protocol.h"
+#include "ns3/trace-helper.h"
 
 #include <string>
 
@@ -300,7 +301,14 @@ TcpTestCase::CreateInternetNode ()
   //UDP
   Ptr<UdpL4Protocol> udp = CreateObject<UdpL4Protocol> ();
   node->AggregateObject (udp);
+
+  /// Added by matt for debugging purposes
+  //EnablePcapAll ("tcp-bulk-send", false);
   //TCP
+  PcapHelperForDevice helper;
+  helper.EnablePcapAll("testmptcp",false);
+  //pcap.EnablePcapInternal("mptcp",dev,true,true);
+
   Ptr<TcpL4Protocol> tcp = CreateObject<TcpL4Protocol> ();
   node->AggregateObject (tcp);
   return node;

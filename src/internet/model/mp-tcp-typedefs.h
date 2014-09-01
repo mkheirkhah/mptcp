@@ -124,7 +124,7 @@ public:
 
   virtual bool operator==( const MpTcpMapping&) const;
 
-//  operator<<(std::ostream &os);
+
 
   // TODO should be SequenceNumber64
 protected:
@@ -140,7 +140,7 @@ This should be a set to prevent duplication and keep it ordered
 */
 typedef std::set<MpTcpMapping> MappingList;
 
-
+std::ostream& operator<<(std::ostream &os, const MpTcpMapping& mapping);
 
 /**
 TODO remove

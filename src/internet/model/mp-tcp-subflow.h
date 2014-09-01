@@ -212,6 +212,13 @@ protected:
   virtual void
   CloseAndNotify(void);
 
+  ///// Mappings related
+  /**
+  * \param mapping
+  * \todo should check if mappings intersect, already exist etc...
+  */
+  bool
+  AddPeerMapping(const MpTcpMapping& mapping);
   virtual void
   DiscardMappingsUpTo(uint32_t ack);
 

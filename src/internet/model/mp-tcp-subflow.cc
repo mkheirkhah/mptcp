@@ -702,6 +702,8 @@ MpTcpSubFlow::ProcessListen(Ptr<Packet> packet, const TcpHeader& tcpHeader, cons
     {
       return;
     }
+
+
   // Clone the socket, simulate fork
 //  Ptr<MpTcpSubFlow> newSock = Fork();
   Ptr<MpTcpSubFlow> newSock = CopyObject<MpTcpSubFlow>(this);
@@ -730,29 +732,23 @@ MpTcpSubFlow::CompleteFork(Ptr<Packet> p, const TcpHeader& h, const Address& fro
   NS_LOG_INFO( this << "Completing fork of MPTCP subflow");
   // Get port and address from peer (connecting host)
   // TODO upstream ns3 should assert that to and from Address are of the same kind
-//  if(IsMaster()) {
-//    NS_LOG_INFO("Master socket: getting endpoint from meta");
-//    m_endPoint = GetMeta()->m_endPoint;
-//    m_endPoint6 = GetMeta()->m_endPoint6;
-//  }
-//  else {
-    NS_LOG_INFO("Not Master socket: allocating endpoint ");
-    if (InetSocketAddress::IsMatchingType(toAddress))
-      {
-        m_endPoint = m_tcp->Allocate(InetSocketAddress::ConvertFrom(toAddress).GetIpv4(),
-            InetSocketAddress::ConvertFrom(toAddress).GetPort(), InetSocketAddress::ConvertFrom(fromAddress).GetIpv4(),
-            InetSocketAddress::ConvertFrom(fromAddress).GetPort());
-        m_endPoint6 = 0;
-      }
-    else if (Inet6SocketAddress::IsMatchingType(toAddress))
-      {
-        m_endPoint6 = m_tcp->Allocate6(Inet6SocketAddress::ConvertFrom(toAddress).GetIpv6(),
-            Inet6SocketAddress::ConvertFrom(toAddress).GetPort(), Inet6SocketAddress::ConvertFrom(fromAddress).GetIpv6(),
-            Inet6SocketAddress::ConvertFrom(fromAddress).GetPort());
-        m_endPoint = 0;
-      }
 
-    m_tcp->m_sockets.push_back(this);
+  if (InetSocketAddress::IsMatchingType(toAddress))
+    {
+      m_endPoint = m_tcp->Allocate(InetSocketAddress::ConvertFrom(toAddress).GetIpv4(),
+          InetSocketAddress::ConvertFrom(toAddress).GetPort(), InetSocketAddress::ConvertFrom(fromAddress).GetIpv4(),
+          InetSocketAddress::ConvertFrom(fromAddress).GetPort());
+      m_endPoint6 = 0;
+    }
+  else if (Inet6SocketAddress::IsMatchingType(toAddress))
+    {
+      m_endPoint6 = m_tcp->Allocate6(Inet6SocketAddress::ConvertFrom(toAddress).GetIpv6(),
+          Inet6SocketAddress::ConvertFrom(toAddress).GetPort(), Inet6SocketAddress::ConvertFrom(fromAddress).GetIpv6(),
+          Inet6SocketAddress::ConvertFrom(fromAddress).GetPort());
+      m_endPoint = 0;
+    }
+
+  m_tcp->m_sockets.push_back(this);
 //  }
 
   // Change the cloned socket from LISTEN state to SYN_RCVD
@@ -906,7 +902,7 @@ MpTcpSubFlow::ProcessSynSent(Ptr<Packet> packet, const TcpHeader& tcpHeader)
 //        uint8_t buf[20] =
 //        opt3->GetTruncatedHmac();
 
-        Ptr<TcpOptionMpTcpJoin> joinAck = TcpOptionMpTcpMain::CreateOption(TcpOptionMpTcpMain::MP_JOIN);
+        Ptr<TcpOptionMpTcpJoin> joinAck = CreateObject<TcpOptionMpTcpJoin>();
         joinAck->SetState(TcpOptionMpTcpJoin::Ack);
         joinAck->SetTruncatedHmac(0);
         answerHeader.AppendOption( joinAck );
@@ -967,14 +963,16 @@ MpTcpSubFlow::ProcessSynRcvd(Ptr<Packet> packet, const TcpHeader& tcpHeader, con
   // Extract the flags. PSH and URG are not honoured.
   uint8_t tcpflags = tcpHeader.GetFlags() & ~(TcpHeader::PSH | TcpHeader::URG);
 
+  // In case our syn/ack got lost
   if (tcpflags == TcpHeader::SYN)
     {
-
+      NS_FATAL_ERROR("Not implemented yet");
       // TODO check for MP_CAPABLE
       // factorize with code from Listen( that sends options !!
 
       // Probably the peer lost my SYN+ACK
       // So we need to resend it with the MPTCP option
+      // This could be a join case too
       Ptr<TcpOptionMpTcpCapable> mpc;
       TcpHeader answerHeader;
       GenerateEmptyPacketHeader(answerHeader,TcpHeader::SYN | TcpHeader::ACK);
@@ -1272,7 +1270,11 @@ void
 MpTcpSubFlow::ReceivedData(Ptr<Packet> p, const TcpHeader& mptcpHeader)
 {
   NS_LOG_FUNCTION (this << mptcpHeader);
+  // Following was moved to ReceivedAck sincethis is from there that ReceivedData can
+  // be called
+  #if 0
   MpTcpMapping receivedMapping;
+
 
   // Need to register DSN mappings first
   // TODO there may be several MPTCP options i should retrieve them all
@@ -1311,7 +1313,7 @@ MpTcpSubFlow::ReceivedData(Ptr<Packet> p, const TcpHeader& mptcpHeader)
       }
     } // end of DSS option
   } // mptcp option
-
+  #endif
   MpTcpMapping mapping;
 
 //  OutOfRange
@@ -1324,6 +1326,7 @@ MpTcpSubFlow::ReceivedData(Ptr<Packet> p, const TcpHeader& mptcpHeader)
     SendEmptyPacket(TcpHeader::ACK);
     return;
   }
+
 
   TcpSocketBase::ReceivedData( p, mptcpHeader );
   #if 0
@@ -1400,17 +1403,82 @@ MpTcpSubFlow::AdvertisedWindowSize(void)
 Upon ack receival we need to act depending on if it's new or not
 -if it's new it may allow us to discard a mapping
 -otherwise notify meta of duplicate
+
+this is called
 */
 void
 MpTcpSubFlow::ReceivedAck(Ptr<Packet> p, const TcpHeader& header)
 {
   NS_LOG_FUNCTION (this << header);
-  NS_LOG_ERROR("Not implemented. To implement ?");
+  //NS_LOG_ERROR("Not implemented. To implement ?");
 
+  // TODO need to check for DSN mappings
+  TcpHeader::TcpOptionList l;
+  header.GetOptions(l);
+  for(TcpHeader::TcpOptionList::const_iterator it = l.begin(); it != l.end(); ++it)
+  {
+    if( (*it)->GetKind() == TcpOption::MPTCP)
+    {
+      Ptr<TcpOptionMpTcpMain> opt = DynamicCast<TcpOptionMpTcpMain>(*it);
+      if(opt->GetSubType() == TcpOptionMpTcpMain::MP_DSS)
+      {
+        //
+        Ptr<TcpOptionMpTcpDSN> dss = DynamicCast<TcpOptionMpTcpDSN>(opt);
+        NS_LOG_INFO( "hello" << dss);
+        uint8_t flags = dss->GetFlags();
+
+        //
+        if(flags & TcpOptionMpTcpDSN::DataAckPresent)
+        {
+          if(flags & TcpOptionMpTcpDSN::DataAckOf8Bytes)
+          {
+            NS_FATAL_ERROR("Not supported");
+          }
+          else
+          {
+            // TODO pass the info to the meta
+            //
+            GetMeta()->ReceivedAck( SequenceNumber32(dss->GetDataAck()), Ptr<MpTcpSubFlow>(this));
+          }
+        }
+
+        // Look for mapping
+        if( flags & TcpOptionMpTcpDSN::DSNMappingPresent )
+        {
+          //!
+          if(flags & TcpOptionMpTcpDSN::DSNOfEightBytes)
+          {
+            NS_FATAL_ERROR("Not supported");
+          }
+          else
+          {
+            //!
+            AddPeerMapping(dss->GetMapping());
+          }
+        }
+
+      }
+      else {
+          //->GetSubType()
+        NS_LOG_WARN("Strange MPTCP option in packet " << opt );
+      }
+    }
+  }
+
+  // if packet size > 0 then it will call ReceivedData
   TcpSocketBase::ReceivedAck(p, header );
 
 }
 
+bool
+MpTcpSubFlow::AddPeerMapping(const MpTcpMapping& mapping)
+{
+  //! TODO check if there is already such a mapping?
+  // check in meta ? if it supervises everything ?
+  NS_LOG_FUNCTION(this << mapping);
+  m_RxMappings.insert( mapping );
+  return true;
+}
 
 void
 MpTcpSubFlow::CwndTracer(uint32_t oldval, uint32_t newval)
@@ -1418,17 +1486,6 @@ MpTcpSubFlow::CwndTracer(uint32_t oldval, uint32_t newval)
   //NS_LOG_UNCOND("Subflow "<< m_routeId <<": Moving cwnd from " << oldval << " to " << newval);
   cwndTracer.push_back(make_pair(Simulator::Now().GetSeconds(), newval));
 }
-
-// subflow should know his mapping
-//void
-//MpTcpSubFlow::AddDSNMapping(
-//  uint8_t sFlowIdx,
-//    uint64_t dSeqNum, uint16_t dLvlLen, uint32_t sflowSeqNum, uint32_t ack,
-//    Ptr<Packet> pkt)
-//{
-//  NS_LOG_FUNCTION_NOARGS();
-//  m_mapDSN.push_back(new DSNMapping(sFlowIdx, dSeqNum, dLvlLen, sflowSeqNum, ack, pkt));
-//}
 
 //void
 //MpTcpSubFlow::SetFinSequence(const SequenceNumber32& s)
@@ -1440,20 +1497,5 @@ MpTcpSubFlow::CwndTracer(uint32_t oldval, uint32_t newval)
 //    ++RxSeqNumber;
 //}
 
-//DSNMapping *
-//MpTcpSubFlow::GetunAckPkt()
-//{
-//  NS_LOG_FUNCTION(this);
-//  DSNMapping * ptrDSN = 0;
-//  for (list<DSNMapping *>::iterator it = m_mapDSN.begin(); it != m_mapDSN.end(); ++it)
-//    {
-//      DSNMapping * ptr = *it;
-//      if (ptr->subflowSeqNumber == highestAck + 1)
-//        {
-//          ptrDSN = ptr;
-//          break;
-//        }
-//    }
-//  return ptrDSN;
-//}
-}
+
+} // end of ns3

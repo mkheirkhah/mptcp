@@ -49,10 +49,10 @@ public:
   // Called by SendPendingData() to get a subflow based on round robin algorithm
 //  virtual int GeneratePartition(Ptr<MpTcpSocketBase> metaSock);
 
-  virtual const char*
-  GetName(void) const {
-    return "OLIA";
-  };
+//  virtual const char*
+//  GetName(void) const {
+//    return "OLIA";
+//  };
 
 //  SendPendingData()
 };

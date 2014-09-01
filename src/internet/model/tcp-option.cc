@@ -38,6 +38,13 @@ namespace ns3 {
 NS_OBJECT_ENSURE_REGISTERED (TcpOption);
 
 
+std::ostream&
+operator<<(std::ostream &os, const TcpOption& opt)
+{
+  opt.Print(os);
+  return os;
+}
+
 TcpOption::TcpOption ()
 {
 }

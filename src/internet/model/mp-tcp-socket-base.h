@@ -381,13 +381,13 @@ protected: // protected methods
 
   //! Disabled
   virtual void ReceivedAck ( Ptr<Packet>, const TcpHeader&); // Received an ACK packet
-
-  virtual void ReceivedAck( SequenceNumber32 ack
-//  , Ptr<MpTcpSubFlow> sf
-  );
-
   //! Disabled
   virtual void ReceivedData ( Ptr<Packet>, const TcpHeader&); // Recv of a data, put into buffer, call L7 to get it if necessary
+
+  virtual void ReceivedAck( SequenceNumber32 ack
+  , Ptr<MpTcpSubFlow> sf
+  );
+
 
   /** Does nothing */
   virtual void EstimateRtt (const TcpHeader&);

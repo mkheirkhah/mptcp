@@ -66,6 +66,10 @@ public:
   static Ptr<TcpOption> CreateOption (uint8_t kind); // Factory method for all options
 };
 
+
+std::ostream&
+operator<<(std::ostream &os, const TcpOption& opt);
+
 } // namespace ns3
 
 #endif /* TCP_OPTION */

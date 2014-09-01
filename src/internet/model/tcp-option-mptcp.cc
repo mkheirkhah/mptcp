@@ -75,6 +75,54 @@ TcpOptionMpTcpMain::GetInstanceTypeId (void) const
 }
 
 
+void
+TcpOptionMpTcpMain::Print (std::ostream &os) const
+{
+    NS_ASSERT_MSG(false, " You should override TcpOptionMpTcp::Print function");
+//    os << "MPTCP option. You should override";
+}
+
+
+std::ostream &
+TcpOptionMpTcpMain::operator << (std::ostream &os) const
+{
+
+  os << "Hello world";
+  return os;
+}
+
+
+std::string
+TcpOptionMpTcpMain::SubTypetoString(uint8_t flags, char delimiter)
+{
+  //
+  static const char* flagNames[8] = {
+    //"NONE",
+    "CAPABLE",
+    "JOIN",
+    "DSS",
+    "ADD_ADDR",
+    "REM_ADDR",
+    "CHANGE_PRIORITY",
+    "MP_FAIL",
+    "MP_FASTCLOSE"
+  };
+
+  std::string flagsDescription = "";
+
+  for(int i = 0; i < 8; ++i)
+  {
+    if( flags & (1 << i) )
+    {
+      if(flagsDescription.length() > 0) flagsDescription += delimiter;
+      flagsDescription.append( flagNames[i] );
+
+    }
+  }
+  return flagsDescription;
+}
+
+
 Ptr<TcpOption>
 TcpOptionMpTcpMain::CreateMpTcpOption(uint8_t subtype)
 {
@@ -923,7 +971,7 @@ TcpOptionMpTcpDSN::Deserialize (Buffer::Iterator i)
 void
 TcpOptionMpTcpDSN::SetDataAck(uint32_t dataAck)
 {
-  m_mapping. = dataAck;
+  m_dataAck = dataAck;
   m_flags |= DataAckPresent;
 }
 
@@ -966,21 +1014,21 @@ TcpOptionMpTcpAddAddress::~TcpOptionMpTcpAddAddress()
 }
 
 void
-TcpOptionMpTcpAddAddress::SetAddress(Address address, uint8_t addrId)
+TcpOptionMpTcpAddAddress::SetAddress(const Address& _address, uint8_t addrId)
 {
-  if(InetSocketAddress::IsMatchingType(address) )
+  if(InetSocketAddress::IsMatchingType(_address) )
   {
     m_addressVersion = 4;
-    InetSocketAddress address =  InetSocketAddress::ConvertFrom(m_address);
+    InetSocketAddress address =  InetSocketAddress::ConvertFrom(_address);
     m_address = address.GetIpv4();
 //    m_address6 = address6.GetIpv6();
-    m_port = address6.GetPort();
+    m_port = address.GetPort();
   }
   else
   {
-    NS_ASSERT_MSG(Inet6SocketAddress::IsMatchingType(m_address), "Address of unsupported type");
+    NS_ASSERT_MSG(Inet6SocketAddress::IsMatchingType(_address), "Address of unsupported type");
     m_addressVersion = 6;
-    Inet6SocketAddress address6 =  Inet6SocketAddress::ConvertFrom(m_address);
+    Inet6SocketAddress address6 =  Inet6SocketAddress::ConvertFrom(_address);
     m_address6 = address6.GetIpv6();
     m_port = address6.GetPort();
   }
@@ -1009,7 +1057,7 @@ TcpOptionMpTcpAddAddress::Print (std::ostream &os) const
   else {
     os << m_address6;
   }
-  oss << "]";
+  os << "]";
 //  if( GetSerializedSize() == 4)
 //  {
 //    os << addrId;
@@ -1086,7 +1134,7 @@ TcpOptionMpTcpAddAddress::Serialize (Buffer::Iterator i) const
   }
   else
   {
-    NS_ASSERT_MSG(addressVersion==6, "You should set an IP address before serializing MPTCP option ADD_ADDR");
+    NS_ASSERT_MSG(m_addressVersion==6, "You should set an IP address before serializing MPTCP option ADD_ADDR");
 
     uint8_t  	buf[16];
 //    m_address6.GetIpv6().GetBytes( buf );
@@ -1138,7 +1186,7 @@ TcpOptionMpTcpAddAddress::Deserialize (Buffer::Iterator i)
   else
   {
     // ipv6
-    NS_ABORT_MSG("IPv6 not supported yet");
+    NS_FATAL_ERROR("IPv6 not supported yet");
 //    m_address6.Set( );
   }
   return length;
@@ -1265,7 +1313,7 @@ TcpOptionMpTcpRemoveAddress::Print (std::ostream &os) const
         it++
         )
   {
-    os << it;
+    os << *it << "/";
   }
 }
 
@@ -1275,6 +1323,7 @@ TcpOptionMpTcpRemoveAddress::operator==(const TcpOptionMpTcpRemoveAddress& opt) 
   return (m_addressesId == opt.m_addressesId);
 
 }
+
 
 
 ///////////////////////////////////////:
@@ -1292,7 +1341,7 @@ TcpOptionMpTcpChangePriority::TcpOptionMpTcpChangePriority() :
 void
 TcpOptionMpTcpChangePriority::Print (std::ostream &os) const
 {
-  os << "MP_Prio: Change priority of address with id ["
+  os << "MP_Prio: Change priority of address with id [";
 
   if( GetSerializedSize() == 4)
   {
