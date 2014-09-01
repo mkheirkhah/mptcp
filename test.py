@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/python2
 ## -*- Mode: python; py-indent-offset: 4; indent-tabs-mode: nil; coding: utf-8; -*-
 #
 # Copyright (c) 2009 University of Washington
