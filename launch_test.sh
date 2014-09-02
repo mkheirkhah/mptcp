@@ -5,6 +5,8 @@ NS_LOG="Socket:TcpSocketBase:MpTcpSocketBase:MpTcpSubflow:*=error|warn|prefix_al
 NS_LOG="$NS_LOG:MpTcpSchedulerRoundRobin"
 NS_LOG="$NS_LOG:TcpTestCase"
 NS_LOG="$NS_LOG:TcpL4Protocol"
+NS_LOG="$NS_LOG:TraceHelper"
+
 #NS_LOG="$NS_LOG:MpTcpTestSuite=*|prefix_func:Socket=*"
 
 export NS_LOG
