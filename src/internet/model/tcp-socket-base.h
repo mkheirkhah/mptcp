@@ -232,7 +232,7 @@ protected:
   SetupCallback(void);        // Common part of the two Bind(), i.e. set callback and remembering local addr:port
   virtual int
   DoConnect(void);            // Sending a SYN packet to make a connection if the state allows
-  void
+  virtual void
   ConnectionSucceeded(void); // Schedule-friendly wrapper for Socket::NotifyConnectionSucceeded()
   int
   SetupEndpoint(void);        // Configure m_endpoint for local addr for given remote addr
@@ -250,7 +250,7 @@ protected:
   DoForwardUp(Ptr<Packet> packet, Ipv4Header header, uint16_t port, Ptr<Ipv4Interface> incomingInterface); //Get a pkt from L3
   virtual void
   DoForwardUp(Ptr<Packet> packet, Ipv6Address saddr, Ipv6Address daddr, uint16_t port); // Ipv6 version
-  bool
+  virtual bool
   SendPendingData(bool withAck = false); // Send as much as the window allows
 
 
@@ -320,19 +320,19 @@ public:
   TimeWait(void);  // Move from CLOSING or FIN_WAIT_2 to TIME_WAIT state
 
   // State transition functions
-  void
+  virtual void
   ProcessEstablished(Ptr<Packet>, const TcpHeader&); // Received a packet upon ESTABLISHED state
-  void
+  virtual void
   ProcessListen(Ptr<Packet>, const TcpHeader&, const Address&, const Address&); // Process the newly received ACK
-  void
+  virtual void
   ProcessSynSent(Ptr<Packet>, const TcpHeader&); // Received a packet upon SYN_SENT
-  void
+  virtual void
   ProcessSynRcvd(Ptr<Packet>, const TcpHeader&, const Address&, const Address&); // Received a packet upon SYN_RCVD
-  void
+  virtual void
   ProcessWait(Ptr<Packet>, const TcpHeader&); // Received a packet upon CLOSE_WAIT, FIN_WAIT_1, FIN_WAIT_2
-  void
+  virtual void
   ProcessClosing(Ptr<Packet>, const TcpHeader&); // Received a packet upon CLOSING
-  void
+  virtual void
   ProcessLastAck(Ptr<Packet>, const TcpHeader&); // Received a packet upon LAST_ACK
 
   // Window management

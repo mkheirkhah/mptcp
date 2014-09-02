@@ -11,7 +11,7 @@ List of tests:
 
 Generic:
 * IPv6 support
-* add the possibility of setting priorities, ie the ability for a subflow to act as backup
+* add the possibility of setting priorities, ie the ability for a subflow to act as backup. Also take into account at scheduling level
 * implement callback support : need to change ns3 ? (matt)
 * when removing a subflow, flip with last one and update Id. Make sure it doesn't provoke any bug
 * let RTO be chosen by meta
@@ -22,6 +22,7 @@ Generic:
 * test what happens when we remove the master socket while the connection keeps going. It should provoke problems since endpoint is not allocated anymore
 * Merge the 3 MPTCP JOIN options into one
 * Possibility to choose over which subflow some data should flow
+* :x
 
 
 Requests for ns3;
@@ -42,4 +43,4 @@ use "/NodeList/[i]/DeviceList/[i]" ?
 * need to define each component with a new name ? best way would be to allow REGEX on test name
 * In TcpSocketBase::CompleteFork, should ASSERT that addressTo and addressFrom are of the same kind
 * TcpSocketBase::NewAck remove the last SendPendingData
-* should be easier to use the helpers
+* should be easier to use the helpers (for instance to assign an IP, or trace pcap files)

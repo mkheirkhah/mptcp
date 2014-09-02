@@ -1537,8 +1537,12 @@ TcpSocketBase::SendPacket(TcpHeader header, Ptr<Packet> p)
   // TODO log header at least ?
   NS_LOG_FUNCTION(header);
 
+  //header.SetSequenceNumber()
+  header.SetAckNumber(m_rxBuffer.NextRxSequence());
+
   // Check dest/src/seq nb are ok
-  NS_ASSERT( header.GetAckNumber() == m_rxBuffer.NextRxSequence());
+  NS_ASSERT_MSG( header.GetAckNumber() == m_rxBuffer.NextRxSequence(),"Forgot to update nextRxSequence when generating the header");
+  //NS_ASSERT_MSG( header.GetSequenceNumber() == m_txBuffer
 //  NS_ASSERT( header.GetAckNumber() == m_rxBuffer.NextRxSequence());
   int flags = header.GetFlags();
 

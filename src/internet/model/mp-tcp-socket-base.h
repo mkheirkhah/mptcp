@@ -53,6 +53,7 @@ launch an assert. You can notice those via the comments "//! Disabled"
 
 As such many inherited (protected) functions are overriden & left empty.
 
+TODO add callbacks in case of an MP_JOIN ? add_addr ?
 **/
 class MpTcpSocketBase : public TcpSocketBase
 {
@@ -140,10 +141,13 @@ public: // public methods
   void
   DoForwardUp(Ptr<Packet> packet, Ipv4Header header, uint16_t port, Ptr<Ipv4Interface> incomingInterface);
   /**
-  \return Number of subflows
+  \return Number of connected subflows (that is that ran the 3whs)
   */
   std::vector< Ptr<MpTcpSubFlow> >::size_type GetNSubflows() const;
   // uint8
+  /**
+  * \return an established subflow
+  */
   Ptr<MpTcpSubFlow> GetSubflow(uint8_t);
 
 
@@ -167,7 +171,6 @@ public: // public methods
   * for now just InetSocketAddress
   */
   Ptr<MpTcpSubFlow> CreateSubflow(
-//    const Address& srcAddr
     bool masterSocket
     );
 
@@ -180,7 +183,8 @@ public: // public methods
   \return 0 In case of success
   TODO bool ?
   **/
-  int GetRemoteKey(uint64_t& remoteKey) const;
+  //int GetRemoteKey(uint64_t& remoteKey) const;
+  uint64_t GetRemoteKey() const;
 
   /**
   \brief Generated during
@@ -262,6 +266,11 @@ protected: // protected methods
 //  bool InitiateSubflows();            // Initiate new subflows
 
   /**
+  When a subflow gets connected
+  TODO rename into ConnectionSucceeded
+  **/
+  void OnSubflowEstablishment(Ptr<MpTcpSubFlow>);
+  /**
   Fails if
   **/
 //  bool AddLocalAddress(uint8_t&, Port);
@@ -270,7 +279,7 @@ protected: // protected methods
 
 //  void SetAddrEventCallback(Callback<bool, Ptr<Socket>, Address, uint8_t> remoteAddAddrCb,
 //                          Callback<void, uint8_t> remoteRemAddrCb);
-
+  //virtual RemoteAddAddr
   void NotifyRemoteAddAddr(Address address);
   void NotifyRemoteRemAddr(uint8_t addrId);
 
@@ -280,7 +289,7 @@ protected: // protected methods
   */
   void SetPeerKey(uint64_t );
 
-  void
+  virtual void
   ConnectionSucceeded(void); // Schedule-friendly wrapper for Socket::NotifyConnectionSucceeded()
 
 
@@ -503,7 +512,18 @@ protected: // protected methods
 protected: // protected variables
 
   typedef std::vector<Ptr<MpTcpSubFlow> > SubflowList;
-  SubflowList m_subflows;
+
+  enum {
+    Established = 0,
+    Others = 1
+  };
+  /**
+  *
+  */
+  SubflowList m_subflows[2];
+  //! 0 for established,
+  //!< 1 for established
+  //!< 2 for backups
 
   Callback<bool, Ptr<Socket>, Address, uint8_t > m_onRemoteAddAddr;  //!< return true to create a subflow
 //  Callback<bool, Ptr<Socket>, Address, uint8_t > m_onNewLocalIp;  //!< return true to create a subflow

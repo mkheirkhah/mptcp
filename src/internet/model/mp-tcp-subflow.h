@@ -222,6 +222,12 @@ protected:
   virtual void
   DiscardMappingsUpTo(uint32_t ack);
 
+  /**
+  * Overrides parent in order to warn meta
+  **/
+  virtual void
+  ConnectionSucceeded(void);
+
   virtual void
   SetSSThresh(uint32_t threshold);
   virtual uint32_t

@@ -672,7 +672,7 @@ MpTcpSubFlow::Retransmit(void)
   TcpSocketBase::Retransmit();
 
   // pass on mapping
-  m_metaSocket->OnSubflowRetransmit( this );
+  GetMeta()->OnSubflowRetransmit( this );
 
   // TODO change window ?
 }
@@ -798,6 +798,20 @@ MpTcpSubFlow::GetIdManager()
   return GetMeta()->m_remotePathIdManager;
 }
 
+void
+MpTcpSubFlow::ConnectionSucceeded(void)
+{
+  // TODO use SetConnectCallback
+  // SetSubflowConnectCallback
+  // Use callbacks on
+  //!
+  //if(IsMaster()Ķ
+     //GetMeta()->NotifyConnectionSucceeded();
+
+  GetMeta()->OnSubflowEstablishment(this);
+  TcpSocketBase::ConnectionSucceeded();
+}
+
 /** Received a packet upon SYN_SENT */
 void
 MpTcpSubFlow::ProcessSynSent(Ptr<Packet> packet, const TcpHeader& tcpHeader)
@@ -824,7 +838,7 @@ MpTcpSubFlow::ProcessSynSent(Ptr<Packet> packet, const TcpHeader& tcpHeader)
     }
   else if (tcpflags == TcpHeader::SYN)
     {
-      NS_ASSERT_MSG(false,"Received syn while in syn_sent mode. Not supported at the moment");
+      NS_FATAL_ERROR("Not supported at the moment");
       // Received SYN, move to SYN_RCVD state and respond with SYN+ACK
       // TODO
 //      NS_LOG_INFO ("SYN_SENT -> SYN_RCVD");
@@ -833,15 +847,21 @@ MpTcpSubFlow::ProcessSynSent(Ptr<Packet> packet, const TcpHeader& tcpHeader)
 //      m_rxBuffer.SetNextRxSequence(tcpHeader.GetSequenceNumber() + SequenceNumber32(1));
 //      SendEmptyPacket(TcpHeader::SYN | TcpHeader::ACK);
     }
-    else if (tcpflags == (TcpHeader::SYN | TcpHeader::ACK))
+    else if (tcpflags == (TcpHeader::SYN | TcpHeader::ACK) &&
+             (m_nextTxSequence + SequenceNumber32(1) == tcpHeader.GetAckNumber()))
     {
 
 //      NS_LOG_INFO("Received a SYN/ACK as answer");
 
-      NS_ASSERT(m_nextTxSequence + SequenceNumber32(1) == tcpHeader.GetAckNumber());
+      //NS_ASSERT();
+      // TODO overwrite so that it warns meta
+      Simulator::ScheduleNow(&MpTcpSubFlow::ConnectionSucceeded, this);
+
 
       // check for option TODO fall back on TCP in that case
       NS_ASSERT( tcpHeader.HasOption( TcpOption::MPTCP ) );
+
+
 
 
       // For now we assume there is only one option of MPTCP kind but there may be several
@@ -866,13 +886,17 @@ MpTcpSubFlow::ProcessSynSent(Ptr<Packet> packet, const TcpHeader& tcpHeader)
         // Expect an MP_CAPABLE option
         NS_ASSERT( opt2->GetSubType() == TcpOptionMpTcpMain::MP_CAPABLE );
 
-        Ptr<TcpOptionMpTcpCapable> mpc = DynamicCast<TcpOptionMpTcpCapable>(option);
-        NS_ASSERT_MSG( mpc ,"Contact ns3 team" );
-        NS_LOG_INFO("peer key " << mpc->GetSenderKey() );
+        Ptr<TcpOptionMpTcpCapable> mpcRcvd = DynamicCast<TcpOptionMpTcpCapable>(option);
+        NS_ASSERT_MSG( mpcRcvd,"Contact ns3 team" );
+        NS_LOG_INFO("peer key " << mpcRcvd->GetSenderKey() );
 
         // Register that key
-        m_metaSocket->SetPeerKey( mpc->GetSenderKey() );
+        GetMeta()->SetPeerKey( mpcRcvd->GetSenderKey() );
 
+        Ptr<TcpOptionMpTcpCapable> mpc = CreateObject<TcpOptionMpTcpCapable>();
+        mpc->SetSenderKey( GetMeta()->GetLocalKey() );
+        //mpcRcvd->GetSenderKey()
+        mpc->SetRemoteKey( GetMeta()->GetRemoteKey() );
 
         answerHeader.AppendOption( mpc );
       }
@@ -924,12 +948,13 @@ MpTcpSubFlow::ProcessSynSent(Ptr<Packet> packet, const TcpHeader& tcpHeader)
 
       SendEmptyPacket(answerHeader);
 
+      // TODO check if that's ok
       fLowStartTime = Simulator::Now().GetSeconds();
+
       // TODO check we can send rightaway data ?
       SendPendingData(m_connected);
 
-      // TODO overwrite so that it warns meta
-      Simulator::ScheduleNow(&MpTcpSubFlow::ConnectionSucceeded, this);
+
       // Always respond to first data packet to speed up the connection.
       // Remove to get the behaviour of old NS-3 code.
       m_delAckCount = m_delAckMaxCount;
