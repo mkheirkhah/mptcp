@@ -378,34 +378,55 @@ MpTcpSubFlow::CloseAndNotify(void)
 }
 
 
+/**
+Maybe we could allow this providing a mapping already exists ?
+**/
 int
 MpTcpSubFlow::Send(Ptr<Packet> p, uint32_t flags)
 {
   NS_ASSERT_MSG(false,"Use sendmapping instead");
   return 0;
 }
+
 //, uint32_t maxSize
 // rename globalSeqNb ?
 int
-MpTcpSubFlow::SendMapping(Ptr<Packet> p, SequenceNumber32 mptcpSeq)
+MpTcpSubFlow::SendMapping(Ptr<Packet> p, MpTcpMapping& mapping)
 {
-  NS_LOG_FUNCTION (this << p);
-
+  NS_LOG_FUNCTION (this << mapping);
+  NS_ASSERT_MSG(mapping.GetDataLevelLength() != 0,"You should fill the mapping" );
   // backup its value because send will change it
-  SequenceNumber32 nextTxSeq = m_nextTxSequence;
+  //SequenceNumber32 nextTxSeq = m_nextTxSequence;
+
+  // Check m_txBuffer can handle it otherwise it will get refused
+
+    // Everything went fine
+  //if(res >= 0)
+  //{*
+  // TODO in fact there could be an overlap between recorded mappings and the current one
+  // so the following check is not enough. To change later
+  if(m_txBuffer.Available() < mapping.GetDataLevelLength())
+  {
+    NS_LOG_ERROR("Too much data to send");
+    return -ERROR_MSGSIZE;
+  }
+
+
+    //MpTcpMapping mapping;
+    //mapping.Configure( mptcpSeq, p->GetSize()  );
+    mapping.MapToSubflowSeqNumber( m_nextTxSequence );
+
+    // record mapping TODO check if it does not already exist
+    // TODO GetMappingForDSN
+    // GetMappingForSSN
+  //GetMappingForSegment(m_TxMappings,)
+    m_TxMappings.insert( mapping  );
+
+  //}
+
 
   int res = TcpSocketBase::Send(p,0);
 
-  // Everything went fine
-  if(res >= 0)
-  {
-    MpTcpMapping mapping;
-    mapping.Configure( mptcpSeq, p->GetSize() );
-    mapping.MapToSubflowSeqNumber( nextTxSeq );
-
-    // record mapping
-    m_TxMappings.insert( mapping  );
-  }
 
 
   return res;
@@ -445,9 +466,9 @@ MpTcpSubFlow::GenerateDataPacketHeader(TcpHeader& header, SequenceNumber32 seq, 
 // split into 2 functions 1 to GenerateHeaders, other one to add options
 // ajouter une fct DoSend
 uint32_t
-MpTcpSubFlow::SendDataPacket(TcpHeader header, SequenceNumber32 seq,uint32_t maxSize)
+MpTcpSubFlow::SendDataPacket(TcpHeader header, SequenceNumber32 seq, uint32_t maxSize)
 {
-  NS_LOG_DEBUG("Adding mapping");
+  NS_LOG_FUNCTION(this);
 
   MpTcpMapping mapping;
   bool result = GetMappingForSegment( m_TxMappings, seq, mapping);
@@ -1235,7 +1256,7 @@ MpTcpSubFlow::NewAck(SequenceNumber32 const& ack)
 
   MpTcpMapping mapping;
 
-  if(!GetMappingForSegment( m_TxMappings, ack, mapping) )
+  if(!GetMappingForSegment( m_TxMappings, ack-1, mapping) )
   {
     NS_LOG_DEBUG("Could not find an adequate Tx mapping for ack " << ack);
     // TODO remove that later
@@ -1246,7 +1267,8 @@ MpTcpSubFlow::NewAck(SequenceNumber32 const& ack)
 
   TcpSocketBase::NewAck( ack );
 
-  DiscardTxMappingsUpToSeqNumber( ack );
+  // WRONG  they can be sparse. This should be done by meta
+  // DiscardTxMappingsUpToSeqNumber( ack );
   //  Je peux pas le discard tant que
   //  m_txBuffer.DiscardUpTo( ack );
 
@@ -1271,7 +1293,7 @@ MpTcpSubFlow::DiscardTxMappingsUpToSeqNumber(SequenceNumber32 seq)
   for( MappingList::iterator it = l.begin(); it != l.end(); it++ )
   {
     //GetDataSequenceNumber
-    if( it->MaxSequence() < seq  )
+    if( it->MaxDataSequence() < seq  )
     {
       //it =
 //      NS_ASSERT( );
@@ -1348,12 +1370,21 @@ MpTcpSubFlow::ReceivedData(Ptr<Packet> p, const TcpHeader& mptcpHeader)
     NS_LOG_DEBUG("Could not find an adequate mapping for");
     // TODO remove that later
     NS_ASSERT_MSG(false,"No mapping received for that ack nb");
-    SendEmptyPacket(TcpHeader::ACK);
+
+    // TODO we should create here a DSS option else it will not be freed at the sender
+    TcpHeader ackHeader;
+    GenerateEmptyPacketHeader(ackHeader,TcpHeader::ACK);
+    Ptr<TcpOptionMpTcpDSN> dss = CreateObject<TcpOptionMpTcpDSN>();
+    dss->
+    SendEmptyPacket(ackHeader);
     return;
   }
 
-
+  // TODO this function sends ACK without the mptcp DSS option .
   TcpSocketBase::ReceivedData( p, mptcpHeader );
+
+
+
   #if 0
   // Put into Rx buffer
   SequenceNumber32 expectedSeq = m_rxBuffer.NextRxSequence();
@@ -1449,23 +1480,10 @@ MpTcpSubFlow::ReceivedAck(Ptr<Packet> p, const TcpHeader& header)
       {
         //
         Ptr<TcpOptionMpTcpDSN> dss = DynamicCast<TcpOptionMpTcpDSN>(opt);
-        NS_LOG_INFO( "hello" << dss);
+        NS_LOG_INFO( dss);
         uint8_t flags = dss->GetFlags();
 
-        //
-        if(flags & TcpOptionMpTcpDSN::DataAckPresent)
-        {
-          if(flags & TcpOptionMpTcpDSN::DataAckOf8Bytes)
-          {
-            NS_FATAL_ERROR("Not supported");
-          }
-          else
-          {
-            // TODO pass the info to the meta
-            //
-            GetMeta()->ReceivedAck( SequenceNumber32(dss->GetDataAck()), Ptr<MpTcpSubFlow>(this));
-          }
-        }
+
 
         // Look for mapping
         if( flags & TcpOptionMpTcpDSN::DSNMappingPresent )
@@ -1482,6 +1500,20 @@ MpTcpSubFlow::ReceivedAck(Ptr<Packet> p, const TcpHeader& header)
           }
         }
 
+        //
+        if(flags & TcpOptionMpTcpDSN::DataAckPresent)
+        {
+          if(flags & TcpOptionMpTcpDSN::DataAckOf8Bytes)
+          {
+            NS_FATAL_ERROR("Not supported");
+          }
+          else
+          {
+            // TODO pass the info to the meta
+            //
+            GetMeta()->ReceivedAck( SequenceNumber32(dss->GetDataAck()), Ptr<MpTcpSubFlow>(this));
+          }
+        }
       }
       else {
           //->GetSubType()

@@ -848,10 +848,20 @@ TcpOptionMpTcpDSN::GetSerializedSize(void) const
 void
 TcpOptionMpTcpDSN::Print(std::ostream& os) const
 {
-  os << "MP_DSN. Flags [" << GetFlags() << "]"
-      << "Data seq [" << GetDataAck() << "]"
-      << "Mapping size [" << GetMapping().GetDataLevelLength()
-      << "] Associated to subflow seq nb [" << GetMapping().GetSubflowSequenceNumber() << "]"
+  os << "MP_DSS";
+  //Flags [" << GetFlags() << "]";
+  if(GetFlags() & DataAckPresent)
+  {
+    os << "Acknowledges [" << GetDataAck() << "]";
+  }
+
+  if(GetFlags() & DSNMappingPresent)
+  {
+    os << "DSN:" << GetMapping();
+  }
+//      << "Data seq [" << GetDataAck() << "]"
+//      << "Mapping size [" << GetMapping().GetDataLevelLength()
+//      << "] Associated to subflow seq nb [" << GetMapping().GetSubflowSequenceNumber() << "]"
       ;
 }
 

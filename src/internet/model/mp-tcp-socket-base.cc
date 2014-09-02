@@ -763,7 +763,7 @@ MpTcpSocketBase::ReceivedAck( SequenceNumber32 ack
     }
   else if (ack > m_txBuffer.HeadSequence())
     { // Case 3: New ACK, reset m_dupAckCount and update m_txBuffer
-      NS_LOG_LOGIC ("New ack of " << ack );
+      NS_LOG_LOGIC ("New DataAck [" << ack << "]");
       NewAck(ack);
       m_dupAckCount = 0;
     }
@@ -1558,7 +1558,10 @@ MpTcpSocketBase::NewAck(SequenceNumber32 const& seq
 //,Ptr<MpTcpSubFlow> sf
 )
 {
+  NS_LOG_FUNCTION(this);
+
   // update tx buffer
+  // TODO
   TcpSocketBase::NewAck( seq  );
 
   // Retrieve the highest m_txBuffer
@@ -1586,7 +1589,7 @@ MpTcpSocketBase::SendPendingData(bool withAck)
 
 
   MappingVector mappings;
-  mappings.reserve( GetNSubflows() );
+  //mappings.reserve( GetNSubflows() );
   //
   m_scheduler->GenerateMappings(mappings);
 
@@ -1600,13 +1603,14 @@ MpTcpSocketBase::SendPendingData(bool withAck)
     NS_LOG_DEBUG("generated [" << mappings.size() << "] mappings");
 
     Ptr<MpTcpSubFlow> sf = GetSubflow(i);
-//    MpTcpMapping& mapping = it->second
+    MpTcpMapping& mapping = mappings[i];
 //    Retrieve data  Rename SendMappedData
-    SequenceNumber32 dataSeq = mappings[i].first;
-    uint16_t mappingSize = mappings[i].second;
+    //SequenceNumber32 dataSeq = mappings[i].first;
+    //uint16_t mappingSize = mappings[i].second;
 
-    NS_LOG_DEBUG("Sending mapping [seq "<< dataSeq << " size" << mappingSize << "] on subflow #" << i);
-    sf->SendMapping( m_txBuffer.CopyFromSequence(mappingSize, dataSeq ) , dataSeq  );
+    NS_LOG_DEBUG("Sending mapping "<< mapping << "] on subflow #" << i);
+    //sf->AddMapping();
+    sf->SendMapping( m_txBuffer.CopyFromSequence(mapping.GetDataLevelLength(), mapping.GetDataSequenceNumber()) , mapping  );
     sf->SendPendingData();
   }
 

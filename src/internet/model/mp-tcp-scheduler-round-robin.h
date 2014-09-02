@@ -26,7 +26,8 @@ class MpTcpSubFlow;
 
 //typedef std::vector< std::pair<uint8_t, std::pair< SequenceNumber32,uint32_t > > > MappingVector;
 //
-typedef std::vector< std::pair< SequenceNumber32,uint32_t > > MappingVector;
+typedef std::vector< MpTcpMapping > MappingVector;
+//typedef MappingList MappingVector;
 
 
 class MpTcpSchedulerRoundRobin
@@ -51,14 +52,10 @@ public:
 
   /**
   subflowId: pair(start,size)
+  TODO should take into account backup priorities of subflows
   */
   virtual int
-  GenerateMappings(
-//      MappingList&
-//  std::vector< std::pair<uint8_t, std::pair< SequenceNumber32, uint32_t > > >
-  MappingVector
-  &
-    );
+  GenerateMappings(MappingVector& );
 
   /**
   */

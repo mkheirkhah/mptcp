@@ -61,14 +61,44 @@ MpTcpSchedulerRoundRobin::GetSubflowToUseForEmptyPacket()
 // ca génère les mappings ensuite
 int
 MpTcpSchedulerRoundRobin::GenerateMappings(
-//  std::vector< std::pair<uint8_t, MappingList>& mappings
-  MappingVector
-  & mappings
+  MappingVector& mappings
   )
 {
   NS_LOG_FUNCTION(this);
   NS_ASSERT_MSG(m_metaSock,"Call SetMeta() before generating a mapping");
-  #if 0
+
+  // TODO creer fct GetTxSize
+//  if (m_metaSock->m_txBuffer.Size() == 0)
+//  {
+//    return false;                           // Nothing to send
+//  }
+
+//  SequenceNumber32 startSeq = 0;
+
+//  uint32_t amountOfDataToSend     = m_metaSock->m_txBuffer.SizeFromSequence(m_metaSock->m_nextTxSequence);
+  SequenceNumber32 metaNextTxSeq  = m_metaSock->m_nextTxSequence;
+//  uint8_t i = 0;
+  uint32_t amountOfDataToSend = 0;
+
+  for(int i = 0; i < (int)m_metaSock->GetNSubflows(); ++i)
+  {
+    Ptr<MpTcpSubFlow> sf = m_metaSock->GetSubflow(i);
+    uint32_t window = sf->AvailableWindow();
+    amountOfDataToSend = 0;
+    MpTcpMapping mapping;
+//    //is protected
+
+    if( window > 0)
+    {
+
+      amountOfDataToSend = std::min( window, m_metaSock->m_txBuffer.SizeFromSequence( metaNextTxSeq ) );
+    }
+    mapping.Configure( metaNextTxSeq , amountOfDataToSend);
+    mappings.push_back(  mapping );
+    metaNextTxSeq += amountOfDataToSend;
+  }
+
+    #if 0
   // MATT this should be done into subflows
   // This is a condition when main mptcp sendingBuffer is empty but they are some packets in a subflow's buffer
   // and also sub-flow is recovering from time-out.
@@ -109,39 +139,6 @@ MpTcpSchedulerRoundRobin::GenerateMappings(
         }
     }
   #endif
-  // TODO creer fct GetTxSize
-//  if (m_metaSock->m_txBuffer.Size() == 0)
-//  {
-//    return false;                           // Nothing to send
-//  }
-
-//  SequenceNumber32 startSeq = 0;
-
-//  uint32_t amountOfDataToSend     = m_metaSock->m_txBuffer.SizeFromSequence(m_metaSock->m_nextTxSequence);
-  SequenceNumber32 metaNextTxSeq  = m_metaSock->m_nextTxSequence;
-//  uint8_t i = 0;
-  uint32_t amountOfDataToSend = 0;
-
-  for(int i = 0; i < (int)m_metaSock->GetNSubflows(); ++i)
-  {
-    Ptr<MpTcpSubFlow> sf = m_metaSock->GetSubflow(i);
-    uint32_t window = sf->AvailableWindow();
-    amountOfDataToSend = 0;
-//    //is protected
-
-    if( window > 0)
-    {
-//      amountOfDataToSend
-      // generate mapping
-//      std::pair<SequenceNumber32, uint32_t> mapping = std::make_pair( metaNextTxSeq, std::max(window) );
-
-      // update value
-
-      amountOfDataToSend = std::min( window, m_metaSock->m_txBuffer.SizeFromSequence( metaNextTxSeq ) );
-    }
-    mappings.push_back(  std::make_pair( metaNextTxSeq, amountOfDataToSend) );
-    metaNextTxSeq += amountOfDataToSend;
-  }
 
   #if 0
   std::pair<SequenceNumber32, uint32_t> mapping;

@@ -257,7 +257,10 @@ protected:
   * \see Send
   **/
   virtual int
-  SendMapping(Ptr<Packet> p, SequenceNumber32 seq);
+  SendMapping(Ptr<Packet> p,
+              //SequenceNumber32 seq
+              MpTcpMapping& mapping
+              );
 
   /**
   This one overridesprevious one, adding MPTCP options when needed

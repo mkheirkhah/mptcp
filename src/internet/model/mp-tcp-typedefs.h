@@ -99,7 +99,7 @@ public:
   /**
    * Select the max it can accept
    */
-  SequenceNumber32 MaxSequence (void) const;
+  SequenceNumber32 MaxDataSequence (void) const;
 
 
   /**
