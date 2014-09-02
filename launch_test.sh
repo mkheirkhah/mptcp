@@ -5,7 +5,7 @@ NS_LOG="Socket:TcpSocketBase:MpTcpSocketBase:MpTcpSubflow:*=error|warn|prefix_al
 NS_LOG="$NS_LOG:MpTcpSchedulerRoundRobin"
 NS_LOG="$NS_LOG:TcpTestCase"
 NS_LOG="$NS_LOG:TcpL4Protocol"
-NS_LOG="$NS_LOG:TraceHelper"
+NS_LOG="$NS_LOG:TraceHelper:PointToPointHelper"
 
 #NS_LOG="$NS_LOG:MpTcpTestSuite=*|prefix_func:Socket=*"
 
@@ -21,6 +21,7 @@ if [ $WITH_GDB -gt 0 ]; then
 		EOF
 else
 	echo 'Without gdb'
+	# you can add --out to redirect output to afile instead of standard output
 	read -r  command <<-EOF
 		./waf --run "test-runner --suite=$SUITE"
 		EOF

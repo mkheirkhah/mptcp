@@ -50,6 +50,7 @@
 #include "ns3/tcp-l4-protocol.h"
 #include "ns3/trace-helper.h"
 #include "ns3/point-to-point-helper.h"
+#include "ns3/ipv4-address-helper.h"
 
 #include <string>
 
@@ -324,32 +325,74 @@ TcpTestCase::AddSimpleNetDevice (Ptr<Node> node, const char* ipaddr, const char*
   return dev;
 }
 
+#if 0
+Assign (const Ptr<NetDevice> &device)
+{
+  Ipv4InterfaceContainer retval;
+
+  Ptr<Node> node = device->GetNode ();
+  NS_ASSERT_MSG (node, "Ipv4AddressHelper::Assign(): NetDevice is not not associated "
+                   "with any node -> fail");
+
+  Ptr<Ipv4> ipv4 = node->GetObject<Ipv4> ();
+  NS_ASSERT_MSG (ipv4, "Ipv4AddressHelper::Assign(): NetDevice is associated"
+                 " with a node without IPv4 stack installed -> fail "
+                 "(maybe need to use InternetStackHelper?)");
+
+  int32_t interface = ipv4->GetInterfaceForDevice (device);
+  if (interface == -1)
+    {
+      interface = ipv4->AddInterface (device);
+    }
+  NS_ASSERT_MSG (interface >= 0, "Ipv4AddressHelper::Assign(): "
+                 "Interface index not found");
+
+  Ipv4InterfaceAddress ipv4Addr = Ipv4InterfaceAddress (, m_mask);
+  ipv4->AddAddress (interface, ipv4Addr);
+  ipv4->SetMetric (interface, 1);
+  ipv4->SetUp (interface);
+  retval.Add (ipv4, interface);
+  return retval;
+}
+#endif
+
 void
 TcpTestCase::SetupDefaultSim (void)
 {
   const char* netmask = "255.255.255.0";
-  const char* ipaddr0 = "192.168.1.1";
-  const char* ipaddr1 = "192.168.1.2";
+  const char* ipaddr0 = "192.168.1.0";
+//  const char* ipaddr1 = "192.168.1.2";
   Ptr<Node> node0 = CreateInternetNode ();
   Ptr<Node> node1 = CreateInternetNode ();
 
-  Ptr<SimpleNetDevice> dev0 = AddSimpleNetDevice (node0, ipaddr0, netmask);
-  Ptr<SimpleNetDevice> dev1 = AddSimpleNetDevice (node1, ipaddr1, netmask);
+  PointToPointHelper p2p;
+
+  p2p.SetDeviceAttribute ("DataRate", StringValue ("5Mbps"));
+  p2p.SetChannelAttribute ("Delay", StringValue ("2ms"));
+  NetDeviceContainer cont = p2p.Install(node0,node1);
+  p2p.EnablePcapAll("test",true);
+
+  Ipv4AddressHelper ipv4;
+  ipv4.SetBase(ipaddr0,netmask);
+  ipv4.Assign(cont);
+  //ipv4.Assign(node1);
+  //Ptr<SimpleNetDevice> dev0 = AddSimpleNetDevice (node0, ipaddr0, netmask);
+  //Ptr<SimpleNetDevice> dev1 = AddSimpleNetDevice (node1, ipaddr1, netmask);
 
   /// Added by matt for debugging purposes
   //EnablePcapAll ("tcp-bulk-send", false);
   //TCP
 //  PcapHelperForDevice helper;
-  PointToPointHelper helper;
-  helper.EnablePcapAll("test",true);
+  //PointToPointHelper helper;
+  //helper.EnablePcapAll("test",true);
   //helper.EnablePcapAll("testmptcp",false);
 
 
   //pcap.EnablePcapInternal("mptcp",dev,true,true);
 
-  Ptr<SimpleChannel> channel = CreateObject<SimpleChannel> ();
-  dev0->SetChannel (channel);
-  dev1->SetChannel (channel);
+  //Ptr<SimpleChannel> channel = CreateObject<SimpleChannel> ();
+  //dev0->SetChannel (channel);
+  //dev1->SetChannel (channel);
 
 //  Ptr<SocketFactory> sockFactory0 = node0->GetObject<MpTcpSocketFactory> ();
   Ptr<SocketFactory> sockFactory0 = node0->GetObject<TcpSocketFactory> ();
@@ -360,7 +403,7 @@ TcpTestCase::SetupDefaultSim (void)
 
   uint16_t port = 50000;
   InetSocketAddress serverlocaladdr (Ipv4Address::GetAny (), port);
-  InetSocketAddress serverremoteaddr (Ipv4Address (ipaddr0), port);
+  InetSocketAddress serverremoteaddr ( node0->GetObject<Ipv4>()->GetAddress(1,0).GetLocal(), port);
 
   server->Bind (serverlocaladdr);
   server->Listen ();

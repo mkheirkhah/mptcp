@@ -42,3 +42,4 @@ use "/NodeList/[i]/DeviceList/[i]" ?
 * need to define each component with a new name ? best way would be to allow REGEX on test name
 * In TcpSocketBase::CompleteFork, should ASSERT that addressTo and addressFrom are of the same kind
 * TcpSocketBase::NewAck remove the last SendPendingData
+* should be easier to use the helpers
