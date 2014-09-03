@@ -144,9 +144,18 @@ bool
 TcpRxBuffer::Add (Ptr<Packet> p, TcpHeader const& tcph)
 {
   NS_LOG_FUNCTION (this << p << tcph);
+  return Add (p, tcph.GetSequenceNumber () );
+}
+
+
+
+bool
+TcpRxBuffer::Add (Ptr<Packet> p, SequenceNumber32 const& _headSeq)
+{
+  NS_LOG_FUNCTION (this << p << "with headSeq [" << _headSeq << "]");
 
   uint32_t pktSize = p->GetSize ();
-  SequenceNumber32 headSeq = tcph.GetSequenceNumber ();
+  SequenceNumber32 headSeq = _headSeq; //tcph.GetSequenceNumber ();
   SequenceNumber32 tailSeq = headSeq + SequenceNumber32 (pktSize);
   NS_LOG_LOGIC ("Add pkt " << p << " len=" << pktSize << " seq=" << headSeq
                            << ", when NextRxSeq=" << m_nextRxSeq << ", buffsize=" << m_size);
@@ -191,7 +200,7 @@ TcpRxBuffer::Add (Ptr<Packet> p, TcpHeader const& tcph)
     }
   else
     {
-      uint32_t start = headSeq - tcph.GetSequenceNumber ();
+      uint32_t start = headSeq - _headSeq; //tcph.GetSequenceNumber ();
       uint32_t length = tailSeq - headSeq;
       p = p->CreateFragment (start, length);
       NS_ASSERT (length == p->GetSize ());

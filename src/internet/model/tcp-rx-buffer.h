@@ -117,6 +117,12 @@ public:
   bool Add (Ptr<Packet> p, TcpHeader const& tcph);
 
   /**
+  this version should replace the old one since ite removes a dependancy towards TcpHeader
+  **/
+  bool
+  Add (Ptr<Packet> p,  SequenceNumber32 const& _headSeq);
+
+  /**
    * Extract data from the head of the buffer as indicated by nextRxSeq.
    * The extracted data is going to be forwarded to the application.
    * The extracted data will be in order
