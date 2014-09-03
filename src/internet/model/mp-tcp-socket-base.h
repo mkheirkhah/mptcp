@@ -266,6 +266,16 @@ protected: // protected methods
 //  bool InitiateSubflows();            // Initiate new subflows
 
   /**
+  \param dataSeq Used to reconstruct the mapping
+  Currently used as callback for subflows
+  */
+  virtual void
+  OnSubflowRecv(
+                Ptr<MpTcpSubFlow> sf
+//                SequenceNumber32 dataSeq, Ptr<Socket> sock
+                );
+
+  /**
   When a subflow gets connected
   TODO rename into ConnectionSucceeded
   **/

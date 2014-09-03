@@ -303,31 +303,31 @@ public:
         ////////////////////////////////////////////////
         //// MP
         ////
-        Ptr<TcpOptionMpTcpDSN> dsn = CreateObject<TcpOptionMpTcpDSN>(),
-                dsn2 = CreateObject<TcpOptionMpTcpDSN>(),
-                dsn3 = CreateObject<TcpOptionMpTcpDSN>();
+        Ptr<TcpOptionMpTcpDSS> dsn = CreateObject<TcpOptionMpTcpDSS>(),
+                dsn2 = CreateObject<TcpOptionMpTcpDSS>(),
+                dsn3 = CreateObject<TcpOptionMpTcpDSS>();
         MpTcpMapping mapping;
         mapping.Configure( SequenceNumber32(54),32);
-        mapping.MapToSubflowSeqNumber( SequenceNumber32(40));
+        mapping.MapToSSN( SequenceNumber32(40));
 
 
         dsn->SetMapping(mapping);
 
 
         AddTestCase(
-                new TcpOptionMpTcpTestCase<TcpOptionMpTcpDSN> (dsn,"DSN mapping only"),
+                new TcpOptionMpTcpTestCase<TcpOptionMpTcpDSS> (dsn,"DSN mapping only"),
                 QUICK
                 );
 
         dsn2->SetDataAck(3210);
         AddTestCase(
-                new TcpOptionMpTcpTestCase<TcpOptionMpTcpDSN> (dsn2,"DataAck only"),
+                new TcpOptionMpTcpTestCase<TcpOptionMpTcpDSS> (dsn2,"DataAck only"),
                 QUICK
                 );
 
         dsn->SetDataAck(45000);
         AddTestCase(
-                new TcpOptionMpTcpTestCase<TcpOptionMpTcpDSN> (dsn,"DataAck + DSN mapping"),
+                new TcpOptionMpTcpTestCase<TcpOptionMpTcpDSS> (dsn,"DataAck + DSN mapping"),
                 QUICK
                 );
 

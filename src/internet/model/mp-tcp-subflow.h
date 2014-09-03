@@ -111,18 +111,44 @@ public:
   virtual bool
   SendPendingData(bool withAck = false);
 
+  bool
+  TranslateSSNtoDSN(SequenceNumber32 ssn,SequenceNumber32 &dsn);
+
   /**
   Disabled for now.
   SendMapping should be used instead.
   **/
   int
   Send(Ptr<Packet> p, uint32_t flags);
+
   /**
   * Removes all mappings that covered dataspace seq nbs lower than "ack"
   * \param dataAck
   */
   virtual void
-  DiscardTxMappingsUpToSeqNumber(SequenceNumber32 dataAck) ;
+  DiscardTxMappingsUpToDSN(SequenceNumber32 dataAck) ;
+
+  //! disabled
+  Ptr<Packet>
+  RecvFrom(uint32_t maxSize, uint32_t flags, Address &fromAddress);
+
+  //! disabled
+  Ptr<Packet>
+  Recv(uint32_t maxSize, uint32_t flags);
+
+  //! Disabled
+  Ptr<Packet>
+  Recv(void);
+
+  /**
+  * \param dsn will set the dsn of the beginning of the data
+  * \return this can return an EmptyPacket if on close
+  * Use a maxsize param ? if buffers linked then useless ?
+  *
+  * uint32_t maxSize,
+  */
+  virtual Ptr<Packet>
+  RecvWithMapping(SequenceNumber32 &dsn);
 
   /**
   * \

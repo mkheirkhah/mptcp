@@ -1188,6 +1188,38 @@ MpTcpSocketBase::DupAck(const TcpHeader& t, uint32_t count)
 //...........................................................................................
 
 
+//Ptr<Socket> sock
+//SequenceNumber32 dataSeq,
+void
+MpTcpSocketBase::OnSubflowRecv( Ptr<MpTcpSubFlow> sf )
+{
+  //!
+  NS_LOG_FUNCTION(this);
+
+//  Ptr<MpTcpSubFlow> sf = DynamicCast<MpTcpSubFlow>(sock);
+#if 0
+  //while (sock->GetRxAvailable () > 0 && m_currentSourceRxBytes < m_totalBytes)
+  //{
+  uint32_t toRead = std::min (m_sourceReadSize, sock->GetRxAvailable () );
+  //Ptr<Packet> p = sock->Recv (toRead, 0);
+  Ptr<Packet> p = sock->Recv ();
+  if (p == 0 && sock->GetErrno () != Socket::ERROR_NOTERROR)
+    {
+      NS_FATAL_ERROR ("Source could not read stream at byte " << m_currentSourceRxBytes);
+    }
+  NS_TEST_EXPECT_MSG_EQ ((m_currentSourceRxBytes + p->GetSize () <= m_totalBytes), true,
+                         "Source received too many bytes");
+  NS_LOG_DEBUG ("Source recv data=\"" << GetString (p) << "\"");
+  p->CopyData (&m_sourceRxPayload[m_currentSourceRxBytes], p->GetSize ());
+  m_currentSourceRxBytes += p->GetSize ();
+
+  if (m_currentSourceRxBytes == m_totalBytes)
+    {
+      sock->Close ();
+    }
+  #endif
+}
+
 
 // TODO rename ? CreateAndAdd? Add ? Start ? Initiate
 //int
@@ -1234,13 +1266,11 @@ MpTcpSocketBase::CreateSubflow(bool masterSocket)
   sFlow->m_masterSocket = masterSocket;
   NS_ASSERT_MSG( sFlow, "Contact ns3 team");
 
-//  sFlow->SetTcp( m_tcp );
+  // can't use that because we need the associated ssn to deduce the DSN
+  //sFlow->SetRecvCallback (MakeCallback (&MpTcpSocketBase::OnSubflowRecv, this));
+
   // TODO find associated device and bind to it
-  // find srcAddr
 //  sFlow->BindToNetDevice (this->FindOutputNetDevice() )
-  //
-
-
 //  if(!sFlow->Connect( dstAddr) )
 //  {
 //    NS_LOG_ERROR("Could not connect subflow");
@@ -1255,7 +1285,7 @@ MpTcpSocketBase::CreateSubflow(bool masterSocket)
 //  static routeId
 //  sFlow->m_routeId = m_subflows.size() - 1;
   // Should not be needed since bind register socket
-//  m_tcp->m_sockets.push_back(this); // appelé apres un bind ou dans completeFork
+//  m_tcp->m_sockets.push_back(this); // called after a bind or in a completeFork
   return sFlow;
 }
 
@@ -1570,7 +1600,7 @@ MpTcpSocketBase::NewAck(SequenceNumber32 const& seq
   // should be done from here for all subflows since
   // a same mapping could have been attributed to for allo
   // BUT can't be discarded if not acklowdged at subflow level so...
-//  sf->DiscardTxMappingsUpToSeqNumber( m_txBuffer.HeadSequence() );
+//  sf->DiscardTxMappingsUpToDSN( m_txBuffer.HeadSequence() );
 //    in that fct
 //  discard
 }
@@ -1610,7 +1640,7 @@ MpTcpSocketBase::SendPendingData(bool withAck)
 
     NS_LOG_DEBUG("Sending mapping "<< mapping << "] on subflow #" << i);
     //sf->AddMapping();
-    sf->SendMapping( m_txBuffer.CopyFromSequence(mapping.GetDataLevelLength(), mapping.GetDataSequenceNumber()) , mapping  );
+    sf->SendMapping( m_txBuffer.CopyFromSequence(mapping.GetDataLevelLength(), mapping.GetDSN()) , mapping  );
     sf->SendPendingData();
   }
 

@@ -538,7 +538,7 @@ we don't do the checksum either
                 Figure 9: Data Sequence Signal (DSS) Option
 
 */
-class TcpOptionMpTcpDSN : public TcpOptionMpTcp<TcpOptionMpTcpMain::MP_DSS>
+class TcpOptionMpTcpDSS : public TcpOptionMpTcp<TcpOptionMpTcpMain::MP_DSS>
 {
 
 public:
@@ -554,8 +554,8 @@ public:
 
   };
 
-  TcpOptionMpTcpDSN();
-  virtual ~TcpOptionMpTcpDSN();
+  TcpOptionMpTcpDSS();
+  virtual ~TcpOptionMpTcpDSS();
 
   // setter
   void SetMapping(MpTcpMapping mapping);
@@ -565,13 +565,13 @@ public:
 
   // getters
 //  virtual uint64_t
-//  GetDataSequenceNumber() const { return m_dataSequenceNumber; }
+//  GetDSN() const { return m_dataSequenceNumber; }
 //  virtual uint32_t
-//  GetSubflowSequenceNumber() const { return m_subflowSequenceNumber; }
+//  GetSSN() const { return m_subflowSequenceNumber; }
 //  virtual uint16_t
 //  GetDataLevelLength() const { return m_dataLevelLength; }
 
-  virtual bool operator==(const TcpOptionMpTcpDSN&) const;
+  virtual bool operator==(const TcpOptionMpTcpDSS&) const;
 
   /**
   * \brief Set seq nb of acked data at MPTP level

@@ -23,21 +23,41 @@ MpTcpMapping::SetMappingSize(uint16_t length)
   m_dataLevelLength = length;
 }
 
+bool
+MpTcpMapping::TranslateSSNToDSN(SequenceNumber32 ssn,SequenceNumber32& dsn) const
+{
+  if(IsInRange(ssn))
+  {
+//      dsn =
+    NS_FATAL_ERROR("TODO");
+    return true;
+  }
+
+  return false;
+}
+
 
 std::ostream&
 operator<<(std::ostream& os, const MpTcpMapping& mapping)
 {
   //
-  os << "Mapping [" << mapping.GetDataSequenceNumber() << "-" << mapping.MaxDataSequence ()
-  //of size [" << mapping.GetDataLevelLength() <<"] from DSN [" << mapping.GetDataSequenceNumber()
-    << "] to SSN [" <<  mapping.GetSubflowSequenceNumber() << "]";
+  os << "Mapping [" << mapping.GetDSN() << "-" << mapping.MaxDataSequence ()
+  //of size [" << mapping.GetDataLevelLength() <<"] from DSN [" << mapping.GetDSN()
+    << "] to SSN [" <<  mapping.GetSSN() << "]";
   return os;
 }
 
 void
-MpTcpMapping::SetDataSequenceNumber(SequenceNumber32 seq)
+MpTcpMapping::SetDSN(SequenceNumber32 seq)
 {
   m_dataSequenceNumber = seq;
+}
+
+
+void
+MpTcpMapping::MapToSSN( SequenceNumber32 seq)
+{
+  m_subflowSequenceNumber = seq;
 }
 
 
@@ -47,22 +67,22 @@ MpTcpMapping::operator==( const MpTcpMapping& mapping) const
   //!
   return (
     GetDataLevelLength() == mapping.GetDataLevelLength()
-    && GetDataSequenceNumber() == mapping.GetDataSequenceNumber()
-    && GetDataLevelLength()  == GetDataLevelLength()
+    && GetDSN() == mapping.GetDSN()
+//    && GetDataLevelLength()  == GetDataLevelLength()
     );
 }
 
 SequenceNumber32
 MpTcpMapping::MaxDataSequence  (void) const
 {
-  return ( GetDataSequenceNumber() + GetDataLevelLength() );
+  return ( GetDSN() + GetDataLevelLength() );
 }
 
 bool
 MpTcpMapping::operator<(MpTcpMapping const& m) const
 {
 
-  return (GetDataSequenceNumber() < m.GetDataSequenceNumber() );
+  return (GetDSN() < m.GetDSN() );
 }
 
 
@@ -71,7 +91,7 @@ MpTcpMapping::IsInRange(SequenceNumber32 const& ack) const
 {
 
   return (
-    GetDataSequenceNumber() <= ack &&
+    GetDSN() <= ack &&
     // TODO >= ou > ?
      MaxDataSequence() >= ack
   );

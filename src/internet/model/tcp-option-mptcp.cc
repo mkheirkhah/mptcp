@@ -136,7 +136,7 @@ TcpOptionMpTcpMain::CreateMpTcpOption(uint8_t subtype)
       return CreateObject<TcpOptionMpTcpJoin>();
 
     case MP_DSS:
-      return CreateObject<TcpOptionMpTcpDSN>();
+      return CreateObject<TcpOptionMpTcpDSS>();
     case MP_FAIL:
     case MP_FASTCLOSE:
       NS_ASSERT_MSG(false,"Unsupported MPTCP options. Implement them !" );
@@ -790,7 +790,7 @@ TcpOptionMpTcpJoinSynAckReceived::GetSerializedSize (void) const
 ///////////////////////////////////////:
 //// MP_JOIN SYN_ACK
 ////
-TcpOptionMpTcpDSN::TcpOptionMpTcpDSN() :
+TcpOptionMpTcpDSS::TcpOptionMpTcpDSS() :
   TcpOptionMpTcp(),
   m_flags(0),
   m_dataAck(0)
@@ -802,13 +802,13 @@ TcpOptionMpTcpDSN::TcpOptionMpTcpDSN() :
 }
 
 
-TcpOptionMpTcpDSN::~TcpOptionMpTcpDSN()
+TcpOptionMpTcpDSS::~TcpOptionMpTcpDSS()
 {
   NS_LOG_FUNCTION(this);
 }
 
 void
-TcpOptionMpTcpDSN::SetMapping(MpTcpMapping mapping)
+TcpOptionMpTcpDSS::SetMapping(MpTcpMapping mapping)
 {
   m_mapping = mapping;
   m_flags |= DSNMappingPresent;
@@ -816,13 +816,13 @@ TcpOptionMpTcpDSN::SetMapping(MpTcpMapping mapping)
 }
 
 MpTcpMapping
-TcpOptionMpTcpDSN::GetMapping(void) const
+TcpOptionMpTcpDSS::GetMapping(void) const
 {
   return m_mapping;
 }
 
 uint32_t
-TcpOptionMpTcpDSN::GetSerializedSize(void) const
+TcpOptionMpTcpDSS::GetSerializedSize(void) const
 {
   uint32_t length = 4;
 //  4 + 4 + 4 +2 +2;
@@ -846,7 +846,7 @@ TcpOptionMpTcpDSN::GetSerializedSize(void) const
 }
 
 void
-TcpOptionMpTcpDSN::Print(std::ostream& os) const
+TcpOptionMpTcpDSS::Print(std::ostream& os) const
 {
   os << "MP_DSS";
   //Flags [" << GetFlags() << "]";
@@ -861,14 +861,14 @@ TcpOptionMpTcpDSN::Print(std::ostream& os) const
   }
 //      << "Data seq [" << GetDataAck() << "]"
 //      << "Mapping size [" << GetMapping().GetDataLevelLength()
-//      << "] Associated to subflow seq nb [" << GetMapping().GetSubflowSequenceNumber() << "]"
+//      << "] Associated to subflow seq nb [" << GetMapping().GetSSN() << "]"
       ;
 }
 
 //uint32_t GetDataAck() const { return m_dataAck; };
 
 void
-TcpOptionMpTcpDSN::Serialize (Buffer::Iterator i) const
+TcpOptionMpTcpDSS::Serialize (Buffer::Iterator i) const
 {
   //
   TcpOptionMpTcp::SerializeRef(i);
@@ -899,20 +899,20 @@ TcpOptionMpTcpDSN::Serialize (Buffer::Iterator i) const
     }
     else
     {
-      i.WriteHtonU32( m_mapping.GetDataSequenceNumber().GetValue() );
+      i.WriteHtonU32( m_mapping.GetDSN().GetValue() );
     }
-    i.WriteHtonU32( GetMapping().GetSubflowSequenceNumber().GetValue() );
+    i.WriteHtonU32( GetMapping().GetSSN().GetValue() );
     i.WriteHtonU16( GetMapping().GetDataLevelLength() );
     i.WriteHtonU16( 0 );  // Checksum
   }
 
-//  i.WriteHtonU64( GetMapping().GetDataSequenceNumber().GetValue() );
+  //  i.WriteHtonU64( GetMapping().GetDSN().GetValue() );
 
 }
 
 
 uint32_t
-TcpOptionMpTcpDSN::Deserialize (Buffer::Iterator i)
+TcpOptionMpTcpDSS::Deserialize (Buffer::Iterator i)
 {
   uint32_t length =  (uint32_t)i.ReadU8( );
 
@@ -965,7 +965,7 @@ TcpOptionMpTcpDSN::Deserialize (Buffer::Iterator i)
     {
        dataSeqNb = i.ReadNtohU32( );
     }
-    m_mapping.MapToSubflowSeqNumber( SequenceNumber32(i.ReadNtohU32())  );
+    m_mapping.MapToSSN( SequenceNumber32(i.ReadNtohU32())  );
 
     dataLevelLength = i.ReadNtohU16();
 
@@ -979,14 +979,14 @@ TcpOptionMpTcpDSN::Deserialize (Buffer::Iterator i)
 }
 
 void
-TcpOptionMpTcpDSN::SetDataAck(uint32_t dataAck)
+TcpOptionMpTcpDSS::SetDataAck(uint32_t dataAck)
 {
   m_dataAck = dataAck;
   m_flags |= DataAckPresent;
 }
 
 bool
-TcpOptionMpTcpDSN::operator==(const TcpOptionMpTcpDSN& opt) const
+TcpOptionMpTcpDSS::operator==(const TcpOptionMpTcpDSS& opt) const
 {
   //!
   return (m_flags == opt.m_flags
@@ -996,7 +996,7 @@ TcpOptionMpTcpDSN::operator==(const TcpOptionMpTcpDSN& opt) const
 }
 
 //void
-//TcpOptionMpTcpDSN::Configure(uint64_t dataSeqNb, uint32_t subflowSeqNb, uint16_t dataLength)
+//TcpOptionMpTcpDSS::Configure(uint64_t dataSeqNb, uint32_t subflowSeqNb, uint16_t dataLength)
 //{
 //  m_dataSequenceNumber = dataSeqNb;
 //  m_subflowSequenceNumber = subflowSeqNb;

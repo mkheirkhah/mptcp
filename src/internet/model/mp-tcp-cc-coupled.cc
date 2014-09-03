@@ -10,7 +10,7 @@ MpTcpCongestionCoupled::CalculateAlpha()
   // this method is called whenever a congestion happen in order to regulate the agressivety of m_subflows
   // m_alpha = cwnd_total * MAX(cwnd_i / rtt_i^2) / {SUM(cwnd_i / rtt_i))^2}   //RFC 6356 formula (2)
 
-  NS_LOG_FUNCTION_NOARGS ();
+  NS_LOG_FUNCTION(this);
   m_alpha = 0;
   double maxi = 0;
   double sumi = 0;

@@ -75,6 +75,8 @@ typedef enum
 /**
 TODO rename later into MpTcpDSNMapping
 if we were in C++11 could be a tuple
+DSN=Data Sequence Number (mptcp option level)
+SSN=Subflow Sequence Number (TCP legacy seq nb)
 
 \todo dataSeqNb should be a uint64_t but that has implications over a lot of code,
 especially TCP buffers so it should be thought out with ns3 people beforehand
@@ -85,21 +87,36 @@ public:
   MpTcpMapping();
 
   void Configure( SequenceNumber32  dataSeqNb, uint16_t mappingSize);
-  void MapToSubflowSeqNumber( SequenceNumber32 seq) { m_subflowSequenceNumber = seq;}
+  void MapToSSN( SequenceNumber32 seq);
   virtual ~MpTcpMapping() {};
 
 
   void
-  SetDataSequenceNumber(SequenceNumber32);
+  SetDSN(SequenceNumber32);
   void
   SetMappingSize(uint16_t);
 
-  bool IsInRange(SequenceNumber32 const& ack) const;
+  /**
+  * \param dsn Data seqNb
+  */
+  bool IsInRange(SequenceNumber32 const& dsn) const;
+
+  /**
+  * \param ssn Subflow sequence number
+  * \param dsn Data Sequence Number
+  * \return True if ssn belonged to this mapping, then a dsn would have been computed
+  **/
+  bool TranslateSSNToDSN(SequenceNumber32 ssn,SequenceNumber32& dsn) const;
 
   /**
    * Select the max it can accept
    */
   SequenceNumber32 MaxDataSequence (void) const;
+
+  /**
+
+  **/
+
 
 
   /**
@@ -113,11 +130,11 @@ public:
   virtual
   //uint64_t
   SequenceNumber32
-  GetDataSequenceNumber() const { return m_dataSequenceNumber; }
+  GetDSN() const { return m_dataSequenceNumber; }
 
   // TODO rename into GetMappedToSubflowSeqNb()
   virtual SequenceNumber32
-  GetSubflowSequenceNumber() const { return m_subflowSequenceNumber; }
+  GetSSN() const { return m_subflowSequenceNumber; }
 
   virtual uint16_t
   GetDataLevelLength() const { return m_dataLevelLength; }

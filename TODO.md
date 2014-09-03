@@ -44,3 +44,6 @@ use "/NodeList/[i]/DeviceList/[i]" ?
 * In TcpSocketBase::CompleteFork, should ASSERT that addressTo and addressFrom are of the same kind
 * TcpSocketBase::NewAck remove the last SendPendingData
 * should be easier to use the helpers (for instance to assign an IP, or trace pcap files)
+* TcpRxBuffer::IncNextRxSequence sounds like a bad idea; may break some things
+* Inherit from TracedValue to propose a safer TcpState machine 
+* Add a TcpRxBuffer::HeadSeqNb() const function
