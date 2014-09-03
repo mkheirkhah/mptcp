@@ -47,3 +47,4 @@ use "/NodeList/[i]/DeviceList/[i]" ?
 * TcpRxBuffer::IncNextRxSequence sounds like a bad idea; may break some things
 * Inherit from TracedValue to propose a safer TcpState machine 
 * Add a TcpRxBuffer::HeadSeqNb() const function
+* remove useless dependancy between TcpHeader and TcpRxBuffer::Add .  

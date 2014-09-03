@@ -1190,34 +1190,89 @@ MpTcpSocketBase::DupAck(const TcpHeader& t, uint32_t count)
 
 //Ptr<Socket> sock
 //SequenceNumber32 dataSeq,
+/**
+TODO the decision to ack is unclear with this structure.
+May return a bool to let subflow know if it should return a ack ?
+it would leave the possibility for meta to send ack on another subflow
+**/
 void
 MpTcpSocketBase::OnSubflowRecv( Ptr<MpTcpSubFlow> sf )
 {
   //!
   NS_LOG_FUNCTION(this);
 
+  NS_ASSERT(IsConnected());
 //  Ptr<MpTcpSubFlow> sf = DynamicCast<MpTcpSubFlow>(sock);
-#if 0
+
   //while (sock->GetRxAvailable () > 0 && m_currentSourceRxBytes < m_totalBytes)
   //{
-  uint32_t toRead = std::min (m_sourceReadSize, sock->GetRxAvailable () );
+//  uint32_t toRead = std::min (m_sourceReadSize, sock->GetRxAvailable () );
   //Ptr<Packet> p = sock->Recv (toRead, 0);
-  Ptr<Packet> p = sock->Recv ();
-  if (p == 0 && sock->GetErrno () != Socket::ERROR_NOTERROR)
-    {
-      NS_FATAL_ERROR ("Source could not read stream at byte " << m_currentSourceRxBytes);
-    }
-  NS_TEST_EXPECT_MSG_EQ ((m_currentSourceRxBytes + p->GetSize () <= m_totalBytes), true,
-                         "Source received too many bytes");
-  NS_LOG_DEBUG ("Source recv data=\"" << GetString (p) << "\"");
-  p->CopyData (&m_sourceRxPayload[m_currentSourceRxBytes], p->GetSize ());
-  m_currentSourceRxBytes += p->GetSize ();
+  SequenceNumber32 dsn;
+  Ptr<Packet> p = sf->RecvWithMapping (dsn);
 
-  if (m_currentSourceRxBytes == m_totalBytes)
-    {
-      sock->Close ();
+  if (p == 0 && sf->GetErrno () != Socket::ERROR_NOTERROR)
+  {
+    NS_FATAL_ERROR ("error");
+  }
+  NS_LOG_DEBUG ("Source recv data=\"" << p << "\"");
+  //p->CopyData (&m_sourceRxPayload[m_currentSourceRxBytes], p->GetSize ());
+  //m_currentSourceRxBytes += p->GetSize ();
+
+  // TODO
+  // Now we should add this data to the local buffer and notify
+//  m_rxBuffer.Add(p,dsn);
+
+  // Put into Rx buffer
+  SequenceNumber32 expectedSeq = m_rxBuffer.NextRxSequence();
+  if (!m_rxBuffer.Add(p, dsn))
+    { // Insert failed: No data or RX buffer full
+//      SendEmptyPacket(TcpHeader::ACK);
+      return;
     }
-  #endif
+  if (m_rxBuffer.Size() > m_rxBuffer.Available() || m_rxBuffer.NextRxSequence() > expectedSeq + p->GetSize())
+    { // A gap exists in the buffer, or we filled a gap: Always ACK
+//      SendEmptyPacket(TcpHeader::ACK);
+    }
+  else
+    {
+      // We've disabled Delayed ack  on this socket ?
+      // In-sequence packet: ACK if delayed ack count allows
+//      if (++m_delAckCount >= m_delAckMaxCount)
+//        {
+//          m_delAckEvent.Cancel();
+//          m_delAckCount = 0;
+//          SendEmptyPacket(TcpHeader::ACK);
+//        }
+//      else if (m_delAckEvent.IsExpired())
+//        {
+//          m_delAckEvent = Simulator::Schedule(m_delAckTimeout, &TcpSocketBase::DelAckTimeout, this);
+//          NS_LOG_LOGIC (this << " scheduled delayed ACK at " << (Simulator::Now () + Simulator::GetDelayLeft (m_delAckEvent)).GetSeconds ());
+//        }
+    }
+
+  // Notify app to receive if necessary
+  if (expectedSeq < m_rxBuffer.NextRxSequence())
+    { // NextRxSeq advanced, we have something to send to the app
+      if (!m_shutdownRecv)
+        {
+          NotifyDataRecv();
+        }
+      // Handle exceptions
+      if (m_closeNotified)
+        {
+          NS_LOG_WARN ("Why TCP " << this << " got data after close notification?");
+        }
+      // If we received FIN before and now completed all "holes" in rx buffer,
+      // invoke peer close procedure
+      // TODO this should be handled cautiously. TO reenable later with the correct
+      // MPTCP syntax
+//      if (m_rxBuffer.Finished() && (tcpHeader.GetFlags() & TcpHeader::FIN) == 0)
+//        {
+//          DoPeerClose();
+//        }
+    }
+
 }
 
 
