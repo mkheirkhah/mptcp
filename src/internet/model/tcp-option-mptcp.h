@@ -703,6 +703,35 @@ private:
 
                 Figure 14: Fast Close (MP_FASTCLOSE) Option
 
+
+  If Host A wants to force the closure of an MPTCP connection, the
+   MPTCP Fast Close procedure is as follows:
+
+   o  Host A sends an ACK containing the MP_FASTCLOSE option on one
+      subflow, containing the key of Host B as declared in the initial
+      connection handshake.  On all the other subflows, Host A sends a
+      regular TCP RST to close these subflows, and tears them down.
+      Host A now enters FASTCLOSE_WAIT state.
+
+   o  Upon receipt of an MP_FASTCLOSE, containing the valid key, Host B
+      answers on the same subflow with a TCP RST and tears down all
+      subflows.  Host B can now close the whole MPTCP connection (it
+      transitions directly to CLOSED state).
+
+   o  As soon as Host A has received the TCP RST on the remaining
+      subflow, it can close this subflow and tear down the whole
+      connection (transition from FASTCLOSE_WAIT to CLOSED states).  If
+      Host A receives an MP_FASTCLOSE instead of a TCP RST, both hosts
+      attempted fast closure simultaneously.  Host A should reply with a
+      TCP RST and tear down the connection.
+
+   o  If Host A does not receive a TCP RST in reply to its MP_FASTCLOSE
+      after one retransmission timeout (RTO) (the RTO of the subflow
+      where the MPTCP_RST has been sent), it SHOULD retransmit the
+      MP_FASTCLOSE.  The number of retransmissions SHOULD be limited to
+      avoid this connection from being retained for a long time, but
+      this limit is implementation specific.  A RECOMMENDED number is 3.
+
 **/
 class TcpOptionMpTcpFastClose : public TcpOptionMpTcp<TcpOptionMpTcpMain::MP_PRIO>
 {
@@ -746,6 +775,46 @@ private:
 };
 
 
+class TcpOptionMpTcpFallback : public TcpOptionMpTcp<TcpOptionMpTcpMain::MP_FAIL>
+{
+
+public:
+  TcpOptionMpTcpFallback();
+  virtual ~TcpOptionMpTcpFallback() {};
+
+
+
+  virtual bool operator==(const TcpOptionMpTcpFallback& ) const;
+
+
+//  static TypeId GetTypeId (void);
+//  virtual TypeId GetInstanceTypeId (void) const;
+
+  virtual void SetDSN(const uint64_t& dsn);
+  virtual uint64_t GetDSN() const { return m_dsn;}
+  /**
+
+  */
+  virtual void Print (std::ostream &os) const;
+
+  // OK
+  virtual void Serialize (Buffer::Iterator start) const;
+
+  // TODO
+  virtual uint32_t Deserialize (Buffer::Iterator start);
+
+  /**
+  */
+  virtual uint32_t GetSerializedSize (void) const;
+
+
+protected:
+private:
+  uint64_t m_dsn;
+
+
+
+};
 
 template<class T>
 bool

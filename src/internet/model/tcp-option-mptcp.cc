@@ -1516,6 +1516,76 @@ TcpOptionMpTcpFastClose::GetSerializedSize (void) const
   return 12;
 }
 
+///////////////////////////////////////////////////
+//// MP_FASTCLOSE to totally stop a flow of data
+////
+TcpOptionMpTcpFallback::TcpOptionMpTcpFallback() :
+  TcpOptionMpTcp(),
+  m_dsn(0)
+{
+  NS_LOG_FUNCTION(this);
+}
+
+
+void
+TcpOptionMpTcpFallback::SetDSN(const uint64_t& dsn)
+{
+  m_dsn = dsn;
+}
+
+
+void
+TcpOptionMpTcpFallback::Print (std::ostream &os) const
+{
+//  TcpOptionMpTcpMain::Print(os);
+  os << "MP_FastClose: Receiver key set to ["
+    << GetDSN() << "]";
+}
+
+bool
+TcpOptionMpTcpFallback::operator==(const TcpOptionMpTcpFallback& opt) const
+{
+
+  return (
+    GetDSN() == opt.GetDSN()
+
+    );
+}
+
+
+void
+TcpOptionMpTcpFallback::Serialize (Buffer::Iterator i) const
+{
+  TcpOptionMpTcp::SerializeRef(i);
+
+  i.WriteU8( (GetSubType() << 4) + (uint8_t)0 );
+  i.WriteHtonU64( GetDSN() );
+}
+
+
+uint32_t
+TcpOptionMpTcpFallback::Deserialize (Buffer::Iterator i)
+{
+  uint32_t length =  (uint32_t)i.ReadU8( );
+
+  NS_ASSERT( length == 12 );
+  //NS_ABORT_UNLESS
+
+  uint8_t subtype_and_backup = i.ReadU8();
+  NS_ASSERT( subtype_and_backup >> 4 == GetSubType()  );
+//  m_backupFlag = subtype_and_backup & 0x0f;
+
+  SetDSN( i.ReadNtohU64() );
+
+  return 12;
+}
+
+uint32_t
+TcpOptionMpTcpFallback::GetSerializedSize (void) const
+{
+  return 12;
+}
+
 
 
 } // namespace ns3
