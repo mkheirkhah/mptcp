@@ -105,8 +105,9 @@ public:
   * \param ssn Subflow sequence number
   * \param dsn Data Sequence Number
   * \return True if ssn belonged to this mapping, then a dsn would have been computed
-  **/
-  bool TranslateSSNToDSN(SequenceNumber32 ssn,SequenceNumber32& dsn) const;
+  *
+  */
+  bool TranslateSSNToDSN(const SequenceNumber32& ssn,SequenceNumber32& dsn) const;
 
   /**
    * Select the max it can accept
@@ -132,7 +133,7 @@ public:
   SequenceNumber32
   GetDSN() const { return m_dataSequenceNumber; }
 
-  // TODO rename into GetMappedToSubflowSeqNb()
+  // TODO rename into GetMappedSSN Head ?
   virtual SequenceNumber32
   GetSSN() const { return m_subflowSequenceNumber; }
 

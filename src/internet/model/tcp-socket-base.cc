@@ -2328,12 +2328,13 @@ TcpSocketBase::NewAck(SequenceNumber32 const& ack)
       NS_LOG_WARN (this << " Cancelled ReTxTimeout event which was set to expire at " <<
           (Simulator::Now () + Simulator::GetDelayLeft (m_retxEvent)).GetSeconds ());
       m_retxEvent.Cancel();
-
+      return;
     }
   if (m_txBuffer.Size() == 0)
     {
       throughput = 10000000 * 8 / (Simulator::Now().GetSeconds() - fLowStartTime);
       NS_LOG_UNCOND("goodput -> " << throughput / 1000000 << " Mbps {Tx Buffer is now empty}  P-AckHits:" << pAckHit);
+      return;
     }
   // Try to send more data
   SendPendingData(m_connected);

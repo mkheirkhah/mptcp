@@ -379,7 +379,7 @@ public:
         ////////////////////////////////////////////////
         //// MP_FASTCLOSE
         ////
-        Ptr<TcpOptionMpTcpFastClose> close;
+        Ptr<TcpOptionMpTcpFastClose> close= CreateObject<TcpOptionMpTcpFastClose>();
         close->SetPeerKey(3232);
 
         AddTestCase(

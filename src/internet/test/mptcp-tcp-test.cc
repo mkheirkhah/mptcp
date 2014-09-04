@@ -410,6 +410,7 @@ TcpTestCase::SetupDefaultSim (void)
   server->SetAcceptCallback (MakeNullCallback<bool, Ptr< Socket >, const Address &> (),
                              MakeCallback (&TcpTestCase::ServerHandleConnectionCreated,this));
 
+  NS_LOG_INFO( "test" << server);
   source->SetRecvCallback (MakeCallback (&TcpTestCase::SourceHandleRecv, this));
   source->SetSendCallback (MakeCallback (&TcpTestCase::SourceHandleSend, this));
 

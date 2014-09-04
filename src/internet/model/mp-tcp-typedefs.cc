@@ -24,12 +24,14 @@ MpTcpMapping::SetMappingSize(uint16_t length)
 }
 
 bool
-MpTcpMapping::TranslateSSNToDSN(SequenceNumber32 ssn,SequenceNumber32& dsn) const
+MpTcpMapping::TranslateSSNToDSN(const SequenceNumber32& ssn,SequenceNumber32& dsn) const
 {
   if(IsInRange(ssn))
   {
 //      dsn =
-    NS_FATAL_ERROR("TODO");
+//    NS_FATAL_ERROR("TODO");
+  // TODO check for seq wrapping ? PAWS
+    dsn = SequenceNumber32(ssn - GetSSN()) + GetDSN();
     return true;
   }
 

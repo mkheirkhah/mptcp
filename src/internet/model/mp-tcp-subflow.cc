@@ -227,25 +227,7 @@ MpTcpSubFlow::DoConnect()
 
       // code moved inside SendEmptyPacket
 
-      if( IsMaster() )
-      {
-        Ptr<TcpOptionMpTcpCapable> mpc =  CreateObject<TcpOptionMpTcpCapable>();
-        mpc->SetSenderKey( m_metaSocket->GetLocalKey() );
-        header.AppendOption( mpc );
-      }
-      else
-      {
-        // Join option InitialSyn
-        Ptr<TcpOptionMpTcpJoin> join =  CreateObject<TcpOptionMpTcpJoin>();
-        //TODO retrieve from meta
-//        join->SetLocalToken(0);
-        join->SetState(TcpOptionMpTcpJoin::Syn);
-        join->SetPeerToken(0);
-        join->SetNonce(0);
-//        join->SetAddressId(0);
-//        join->set
-        header.AppendOption( join );
-      }
+      AppendMpTcp3WHSOption(header);
 
       TcpSocketBase::SendEmptyPacket(header);
 //      NS_ASSERT( header.)
@@ -478,12 +460,13 @@ MpTcpSubFlow::SendDataPacket(TcpHeader header, SequenceNumber32 seq, uint32_t ma
 //  Ptr<ListErrorModel> rem = CreateObject<ListErrorModel>();
 //  rem->SetList(sampleList);
 
+  Ptr<TcpOptionMpTcpDSS> dsnOption = Create<TcpOptionMpTcpDSS>();
   // Add options afterwards if first packet of the mapping
   if(mapping.GetSSN() == seq  )
   {
     // Add DSN option
     NS_LOG_DEBUG("Adding DSN option");
-    Ptr<TcpOptionMpTcpDSS> dsnOption = Create<TcpOptionMpTcpDSS>();
+
     dsnOption->SetMapping( mapping );
     header.AppendOption( dsnOption );
   }
@@ -787,28 +770,8 @@ MpTcpSubFlow::CompleteFork(Ptr<Packet> p, const TcpHeader& h, const Address& fro
   GenerateEmptyPacketHeader( answerHeader, TcpHeader::SYN | TcpHeader::ACK );
 
   m_masterSocket = true;  //!< Only for the master socket is completeFork called
-  if( IsMaster() )
-  {
-    Ptr<TcpOptionMpTcpCapable> mpc = CreateObject<TcpOptionMpTcpCapable>();
-    mpc->SetSenderKey( GetMeta()->GetLocalKey() );
-    answerHeader.AppendOption( mpc );
-    NS_LOG_INFO ("CompleteFork: appended MP_CAPABLE option");
-  }
-  else
-  {
-    Ptr<TcpOptionMpTcpJoin> join = CreateObject<TcpOptionMpTcpJoin>();
-    join->SetState(TcpOptionMpTcpJoin::Ack);
-    //! TODO request from meta its id
-    uint8_t id = 0;
-    id = GetIdManager()->GetLocalAddrId( InetSocketAddress(m_endPoint->GetLocalAddress(),m_endPoint->GetLocalPort()) );
-    join->SetAddressId( id );
-    join->SetTruncatedHmac(2);
-    join->SetNonce(3);
 
-    answerHeader.AppendOption( join );
-
-    NS_LOG_INFO ("CompleteFork: appended MP_JOIN option");
-  }
+  AppendMpTcp3WHSOption(answerHeader);
 
 //  NS_ASSERT( answerHeader.HasOption(TcpOption::P))
   SendEmptyPacket(answerHeader);
@@ -829,7 +792,7 @@ MpTcpSubFlow::ConnectionSucceeded(void)
   //!
   //if(IsMaster()Ķ
      //GetMeta()->NotifyConnectionSucceeded();
-
+  m_connected = true;
   GetMeta()->OnSubflowEstablishment(this);
   TcpSocketBase::ConnectionSucceeded();
 }
@@ -881,20 +844,11 @@ MpTcpSubFlow::ProcessSynSent(Ptr<Packet> packet, const TcpHeader& tcpHeader)
 
 
       // check for option TODO fall back on TCP in that case
-      NS_ASSERT( tcpHeader.HasOption( TcpOption::MPTCP ) );
+//      NS_ASSERT( tcpHeader.HasOption( TcpOption::MPTCP ) );
 
 
 
-
-      // For now we assume there is only one option of MPTCP kind but there may be several
-      // TODO update the SOCIS code to achieve this
-      Ptr<TcpOption> option = tcpHeader.GetOption(TcpOption::MPTCP);
-      Ptr<TcpOptionMpTcpMain> opt2 = DynamicCast<TcpOptionMpTcpMain>(option);
-
-//    Ptr<TcpOption> answerOption;
-      TcpHeader answerHeader;
-      GenerateEmptyPacketHeader(answerHeader, TcpHeader::ACK);
-
+      // Check cryptographic materials
       if( IsMaster())
       {
         /**
@@ -906,21 +860,11 @@ MpTcpSubFlow::ProcessSynSent(Ptr<Packet> packet, const TcpHeader& tcpHeader)
         */
 
         // Expect an MP_CAPABLE option
-        NS_ASSERT( opt2->GetSubType() == TcpOptionMpTcpMain::MP_CAPABLE );
+        Ptr<TcpOptionMpTcpCapable> mpcRcvd;
+        NS_ASSERT_MSG( GetMpTcpOption(tcpHeader, mpcRcvd), "There must be an MP_CAPABLE option in the SYN Packet" );
 
-        Ptr<TcpOptionMpTcpCapable> mpcRcvd = DynamicCast<TcpOptionMpTcpCapable>(option);
-        NS_ASSERT_MSG( mpcRcvd,"Contact ns3 team" );
-        NS_LOG_INFO("peer key " << mpcRcvd->GetSenderKey() );
-
-        // Register that key
         GetMeta()->SetPeerKey( mpcRcvd->GetSenderKey() );
 
-        // Create final option
-        Ptr<TcpOptionMpTcpCapable> mpc = CreateObject<TcpOptionMpTcpCapable>();
-        mpc->SetSenderKey( GetMeta()->GetLocalKey() );
-        mpc->SetRemoteKey( GetMeta()->GetRemoteKey() );
-
-        answerHeader.AppendOption( mpc );
       }
       else
       {
@@ -938,37 +882,43 @@ MpTcpSubFlow::ProcessSynSent(Ptr<Packet> packet, const TcpHeader& tcpHeader)
          HMAC-A = HMAC(Key=(Key-A+Key-B), Msg=(R-A+R-B))
          HMAC-B = HMAC(Key=(Key-B+Key-A), Msg=(R-B+R-A))
           */
-        // expects MP_JOIN option
-        NS_ASSERT( opt2->GetSubType() == TcpOptionMpTcpMain::MP_JOIN );
-        Ptr<TcpOptionMpTcpJoin> join = DynamicCast<TcpOptionMpTcpJoin>(option);
-        // TODO use GetMpTcpOption()
+
+        Ptr<TcpOptionMpTcpJoin> join;
         // TODO should be less restrictive in case there is a loss
+
+        NS_ASSERT_MSG( GetMpTcpOption(tcpHeader, join), "There must be an MP_JOIN option in the SYN Packet" );
         NS_ASSERT_MSG( join && join->GetState() == TcpOptionMpTcpJoin::SynAck, "the MPTCP join option received is not of the expected 1 out of 3 MP_JOIN types." );
 
         // Here we should check the tokens
 //        uint8_t buf[20] =
 //        opt3->GetTruncatedHmac();
 
-        Ptr<TcpOptionMpTcpJoin> joinAck = CreateObject<TcpOptionMpTcpJoin>();
-        joinAck->SetState(TcpOptionMpTcpJoin::Ack);
-        joinAck->SetTruncatedHmac(0);
-        answerHeader.AppendOption( joinAck );
+
       }
 
       // TODO support IPv6
       GetIdManager()->AddRemoteAddr(0, m_endPoint->GetPeerAddress(), m_endPoint->GetPeerPort() );
 
+      TcpHeader answerHeader;
+      GenerateEmptyPacketHeader(answerHeader, TcpHeader::ACK);
+      AppendMpTcp3WHSOption(answerHeader);
 
       NS_LOG_INFO ("SYN_SENT -> ESTABLISHED");
       m_state = ESTABLISHED;
-      m_connected = true;
+
+      // TODO send ConnectionSucceeded or NotifyNewConnectionCreated ?
+//      GetMeta()->OnSubflowEstablishment(this);
+//      m_connected = true;
+
+
       m_retxEvent.Cancel();
       m_rxBuffer.SetNextRxSequence(tcpHeader.GetSequenceNumber() + SequenceNumber32(1));
       m_highTxMark = ++m_nextTxSequence;
       m_txBuffer.SetHeadSequence(m_nextTxSequence);
 
 
-
+      // TODO here we send a packet  with wrong seq number
+      // and another ack will be emitted just after
       SendEmptyPacket(answerHeader);
 
       // TODO check if that's ok
@@ -1001,7 +951,7 @@ MpTcpSubFlow::ProcessSynSent(Ptr<Packet> packet, const TcpHeader& tcpHeader)
 void
 MpTcpSubFlow::AppendMpTcp3WHSOption(TcpHeader& hdr) const
 {
-  NS_ASSERT(m_state == SYN_SENT || m_state == SYN_RCVD);
+  //NS_ASSERT(m_state == SYN_SENT || m_state == SYN_RCVD);
 
   if( IsMaster() )
   {
@@ -1436,6 +1386,7 @@ MpTcpSubFlow::NewAck(SequenceNumber32 const& ack)
     return;
   }
 
+
   TcpSocketBase::NewAck( ack );
 
   // WRONG  they can be sparse. This should be done by meta
@@ -1581,6 +1532,7 @@ MpTcpSubFlow::ReceivedData(Ptr<Packet> p, const TcpHeader& tcpHeader)
   // be called
 
   MpTcpMapping mapping;
+  bool sendAck = false;
 
   TcpHeader answerHeader;
   GenerateEmptyPacketHeader(answerHeader, TcpHeader::ACK);
@@ -1624,13 +1576,14 @@ MpTcpSubFlow::ReceivedData(Ptr<Packet> p, const TcpHeader& tcpHeader)
   {
     // we received new data
     // We should pass it to the meta
-    GetMeta()->OnSubflowRecv( this );
+
 
     if (m_rxBuffer.Size() > m_rxBuffer.Available() || m_rxBuffer.NextRxSequence() > expectedSeq + p->GetSize())
       { // A gap exists in the buffer, or we filled a gap: Always ACK
         // TODO
-        dss->SetDataAck(GetMeta()->m_rxBuffer.NextRxSequence().GetValue());
-        SendEmptyPacket(answerHeader);
+        sendAck = true;
+//        dss->SetDataAck(GetMeta()->m_rxBuffer.NextRxSequence().GetValue());
+//        SendEmptyPacket(answerHeader);
       }
     else
       { // In-sequĶence packet: ACK if delayed ack count allows
@@ -1639,8 +1592,9 @@ MpTcpSubFlow::ReceivedData(Ptr<Packet> p, const TcpHeader& tcpHeader)
   //        {
   //          m_delAckEvent.Cancel();
   //          m_delAckCount = 0;
-            dss->SetDataAck(GetMeta()->m_rxBuffer.NextRxSequence().GetValue());
-            SendEmptyPacket(answerHeader);
+            sendAck = true;
+//            dss->SetDataAck(GetMeta()->m_rxBuffer.NextRxSequence().GetValue());
+//            SendEmptyPacket(answerHeader);
   //        }
   //      else if (m_delAckEvent.IsExpired())
   //        {
@@ -1659,10 +1613,11 @@ MpTcpSubFlow::ReceivedData(Ptr<Packet> p, const TcpHeader& tcpHeader)
         {
           // rename into RecvFromSubflow RecvData ?
           // NotifyMetaOfRcvdData
-          GetMeta()->OnSubflowRecv( this);
+//          GetMeta()->OnSubflowRecv( this);
 
           // TODO should not be called for now
-          NotifyDataRecv();
+//          NotifyDataRecv();
+           GetMeta()->OnSubflowRecv( this );
         }
       // Handle exceptions
       if (m_closeNotified)
@@ -1675,6 +1630,14 @@ MpTcpSubFlow::ReceivedData(Ptr<Packet> p, const TcpHeader& tcpHeader)
         {
           DoPeerClose();
         }
+    }
+
+    // For now we always sent an ack
+    dss->SetDataAck(GetMeta()->m_rxBuffer.NextRxSequence().GetValue());
+    // should be always true hack to allow compilation
+    if(sendAck) {
+        answerHeader.AppendOption(dss);
+    SendEmptyPacket(answerHeader);
     }
 
   // TODO handle out of order case look at parent's member.
@@ -1761,15 +1724,16 @@ MpTcpSubFlow::ReceivedAck(Ptr<Packet> p, const TcpHeader& header)
       {
         // TODO pass the info to the meta
         //
-        GetMeta()->ReceivedAck( SequenceNumber32(dss->GetDataAck()), Ptr<MpTcpSubFlow>(this));
+
       }
+       GetMeta()->ReceivedAck( SequenceNumber32(dss->GetDataAck()), Ptr<MpTcpSubFlow>(this));
     }
-}
+  } // end of dss option handling
 //      else {
 //          //->GetSubType()
 //        NS_LOG_WARN("Strange MPTCP option in packet " << opt );
 //      }
-
+//NotifyDataRecv
   // if packet size > 0 then it will call ReceivedData
   TcpSocketBase::ReceivedAck(p, header );
 

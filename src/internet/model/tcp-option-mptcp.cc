@@ -840,16 +840,23 @@ TcpOptionMpTcpDSS::GetSerializedSize(void) const
 void
 TcpOptionMpTcpDSS::Print(std::ostream& os) const
 {
+//  static
   os << "MP_DSS: ";
   //Flags [" << GetFlags() << "]";
   if(GetFlags() & DataAckPresent)
   {
     os << "Acknowledges [" << GetDataAck() << "]";
+    if(GetFlags() & DataAckOf8Bytes){
+      os << "(8bytes DACK)";
+    }
   }
 
   if(GetFlags() & DSNMappingPresent)
   {
     os << "DSN:" << GetMapping();
+    if(GetFlags() & DSNOfEightBytes){
+      os << "(8bytes mapping)";
+    }
   }
 //      << "Data seq [" << GetDataAck() << "]"
 //      << "Mapping size [" << GetMapping().GetDataLevelLength()
