@@ -1,4 +1,4 @@
-WITH_GDB=0
+WITH_GDB=1
 SUITE="mptcp-tcp"
 #SUITE="mptcp-option"
 NS_LOG="Socket:TcpSocketBase:MpTcpSocketBase:MpTcpSubflow:*=error|warn|prefix_all" 

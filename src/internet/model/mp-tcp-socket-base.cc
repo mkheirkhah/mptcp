@@ -447,10 +447,11 @@ MpTcpSocketBase::OnSubflowEstablishment(Ptr<MpTcpSubFlow> subflow)
   {
     NS_LOG_INFO("Master subflow established, moving meta from " << TcpStateName[m_state] << "to ESTABLISHED state");
     m_state = ESTABLISHED;
-    m_connected = true;
+
     // TODO relay connection establishement to sthg else ?
     // TODO  should move
     // NS_LOG_INFO("Moving from temporary to active");
+    // will set m_connected to true;
     Simulator::ScheduleNow(&MpTcpSocketBase::ConnectionSucceeded, this);
   }
 
@@ -1565,6 +1566,7 @@ MpTcpSocketBase::Connect(Ipv4Address servAddr, uint16_t servPort)
 void
 MpTcpSocketBase::ConnectionSucceeded(void)
 {
+  NS_LOG_FUNCTION(this);
    m_connected = true;
    TcpSocketBase::ConnectionSucceeded();
 }

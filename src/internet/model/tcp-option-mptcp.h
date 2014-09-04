@@ -174,7 +174,7 @@ public:
 //    return GetTypeId();
 //  }
 
-  virtual uint8_t
+  uint8_t
   GetSubType (void) const {
     return SUBTYPE;
   };
@@ -783,6 +783,36 @@ private:
   uint8_t m_addrId;   //!< May be unset
   bool m_backupFlag;  //!<
 };
+
+
+
+
+template<class T>
+bool
+GetMpTcpOption(const TcpHeader& header, Ptr<T>& ret)
+{
+  TcpHeader::TcpOptionList l;
+  header.GetOptions(l);
+  for(TcpHeader::TcpOptionList::const_iterator it = l.begin(); it != l.end(); ++it)
+  {
+    if( (*it)->GetKind() == TcpOption::MPTCP)
+    {
+      Ptr<TcpOptionMpTcpMain> opt = DynamicCast<TcpOptionMpTcpMain>(*it);
+      NS_ASSERT(opt);
+      T temp;
+      if( opt->GetSubType() == temp.GetSubType()  )
+      {
+        //!
+        ret = DynamicCast<T>(opt);
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+
+
 
 } // namespace ns3
 

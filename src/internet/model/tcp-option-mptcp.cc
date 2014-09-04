@@ -315,7 +315,7 @@ TcpOptionMpTcpJoin::SetPeerToken(uint32_t token)
 void
 TcpOptionMpTcpJoin::Print (std::ostream &os) const
 {
-  os << "MP_JOIN" ;
+  os << "MP_JOIN: " ;
   switch(m_state)
   {
     case Uninitialized:
@@ -848,7 +848,7 @@ TcpOptionMpTcpDSS::GetSerializedSize(void) const
 void
 TcpOptionMpTcpDSS::Print(std::ostream& os) const
 {
-  os << "MP_DSS";
+  os << "MP_DSS: ";
   //Flags [" << GetFlags() << "]";
   if(GetFlags() & DataAckPresent)
   {

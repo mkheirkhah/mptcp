@@ -27,6 +27,7 @@
 #include "ns3/tcp-socket-base.h"
 #include "ns3/tcp-header.h"
 #include "ns3/mp-tcp-typedefs.h"
+//#include "ns3/tcp-option-mptcp.h"
 
 using namespace std;
 
@@ -79,6 +80,34 @@ public:
   */
   virtual bool
   StopAdvertisingAddress(Ipv4Address);
+
+  /**
+  Would be nice to fit somewhere else. Even in global scope ?
+  **/
+
+//  template<class T>
+//  static bool
+//  GetMpTcpOption(const TcpHeader& header, Ptr<T> ret)
+//  {
+//    TcpHeader::TcpOptionList l;
+//    header.GetOptions(l);
+//    for(TcpHeader::TcpOptionList::const_iterator it = l.begin(); it != l.end(); ++it)
+//    {
+//      if( (*it)->GetKind() == TcpOption::MPTCP)
+//      {
+//        Ptr<TcpOptionMpTcpMain> opt = DynamicCast<TcpOptionMpTcpMain>(*it);
+//        NS_ASSERT(opt);
+//        T temp;
+//        if( opt->GetSubType() == temp.GetSubType()  )
+//        {
+//          //!
+//          ret = DynamicCast<T>(opt);
+//          return true;
+//        }
+//      }
+//    }
+//    return false;
+//  }
 
 
   /**
@@ -266,8 +295,14 @@ protected:
   int
   DoConnect();
 
+  /**
+  *
+  */
+  void
+  AppendMpTcp3WHSOption(TcpHeader& hdr) const;
+
   Ptr<MpTcpSocketBase>
-  GetMeta();
+  GetMeta() const;
 
   virtual void
   ReceivedAck(Ptr<Packet>, const TcpHeader&); // Received an ACK packet
