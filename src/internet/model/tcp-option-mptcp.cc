@@ -83,14 +83,6 @@ TcpOptionMpTcpMain::Print (std::ostream &os) const
 }
 
 
-std::ostream &
-TcpOptionMpTcpMain::operator << (std::ostream &os) const
-{
-
-  os << "Hello world";
-  return os;
-}
-
 
 std::string
 TcpOptionMpTcpMain::SubTypetoString(uint8_t flags, char delimiter)
@@ -201,14 +193,14 @@ TcpOptionMpTcpCapable::operator==(const TcpOptionMpTcpCapable& opt) const
 
 
 void
-TcpOptionMpTcpCapable::SetSenderKey(uint64_t senderKey)
+TcpOptionMpTcpCapable::SetSenderKey(const uint64_t& senderKey)
 {
   NS_LOG_FUNCTION(this);
   m_senderKey = senderKey;
 }
 
 void
-TcpOptionMpTcpCapable::SetRemoteKey(uint64_t remoteKey)
+TcpOptionMpTcpCapable::SetRemoteKey(const uint64_t& remoteKey)
 {
   NS_LOG_FUNCTION(this);
   m_length = 20;
@@ -1449,6 +1441,79 @@ TcpOptionMpTcpChangePriority::operator==(const TcpOptionMpTcpChangePriority& opt
 //    && GetAddressId() ==
     && m_addrId == opt.m_addrId
     );
+}
+
+
+
+
+///////////////////////////////////////////////////
+//// MP_FASTCLOSE to totally stop a flow of data
+////
+TcpOptionMpTcpFastClose::TcpOptionMpTcpFastClose() :
+  TcpOptionMpTcp(),
+  m_peerKey(0)
+{
+  NS_LOG_FUNCTION(this);
+}
+
+
+void
+TcpOptionMpTcpFastClose::SetPeerKey(const uint64_t& remoteKey)
+{
+  m_peerKey = remoteKey;
+}
+
+
+void
+TcpOptionMpTcpFastClose::Print (std::ostream &os) const
+{
+//  TcpOptionMpTcpMain::Print(os);
+  os << "MP_FastClose: Receiver key set to ["
+    << GetPeerKey() << "]";
+}
+
+bool
+TcpOptionMpTcpFastClose::operator==(const TcpOptionMpTcpFastClose& opt) const
+{
+
+  return (
+    GetPeerKey() == opt.GetPeerKey()
+
+    );
+}
+
+
+void
+TcpOptionMpTcpFastClose::Serialize (Buffer::Iterator i) const
+{
+  TcpOptionMpTcp::SerializeRef(i);
+
+  i.WriteU8( (GetSubType() << 4) + (uint8_t)0 );
+  i.WriteHtonU64( GetPeerKey() );
+}
+
+
+uint32_t
+TcpOptionMpTcpFastClose::Deserialize (Buffer::Iterator i)
+{
+  uint32_t length =  (uint32_t)i.ReadU8( );
+
+  NS_ASSERT( length == 12 );
+  //NS_ABORT_UNLESS
+
+  uint8_t subtype_and_backup = i.ReadU8();
+  NS_ASSERT( subtype_and_backup >> 4 == GetSubType()  );
+//  m_backupFlag = subtype_and_backup & 0x0f;
+
+  SetPeerKey( i.ReadNtohU64() );
+
+  return 12;
+}
+
+uint32_t
+TcpOptionMpTcpFastClose::GetSerializedSize (void) const
+{
+  return 12;
 }
 
 

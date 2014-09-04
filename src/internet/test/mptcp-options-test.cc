@@ -333,7 +333,7 @@ public:
 
 
         ////////////////////////////////////////////////
-        //// MP TcpOptionMpTcpJoinInitialSyn
+        //// MP_JOIN Initial syn
         ////
         Ptr<TcpOptionMpTcpJoin> syn = CreateObject<TcpOptionMpTcpJoin>(),
                     syn2 = CreateObject<TcpOptionMpTcpJoin>();
@@ -348,9 +348,8 @@ public:
                 );
 
 
-//#if 0
         ////////////////////////////////////////////////
-        //// MP TcpOptionMpTcpJoinSynReceived
+        //// MP_JOIN synRcvd
         ////
         Ptr<TcpOptionMpTcpJoin> jsr = CreateObject<TcpOptionMpTcpJoin>(),
             jsr2 = CreateObject<TcpOptionMpTcpJoin>();
@@ -365,7 +364,7 @@ public:
 
 
         ////////////////////////////////////////////////
-        //// MP TcpOptionMpTcpJoinSynReceived
+        //// MP_JOIN SynAck
         ////
         Ptr<TcpOptionMpTcpJoin> jsar = CreateObject<TcpOptionMpTcpJoin>();
         uint8_t hmac[20] = {3,0};
@@ -375,6 +374,19 @@ public:
                 new TcpOptionMpTcpTestCase<TcpOptionMpTcpJoin> ( jsar, "MP_JOIN SynAck Received"),
                 QUICK
                 );
+
+
+        ////////////////////////////////////////////////
+        //// MP_FASTCLOSE
+        ////
+        Ptr<TcpOptionMpTcpFastClose> close;
+        close->SetPeerKey(3232);
+
+        AddTestCase(
+                new TcpOptionMpTcpTestCase<TcpOptionMpTcpFastClose> ( close, "MP_Fastclose"),
+                QUICK
+                );
+
 
 //#endif
 //     Ptr<UniformRandomVariable> x = CreateObject<UniformRandomVariable> ();

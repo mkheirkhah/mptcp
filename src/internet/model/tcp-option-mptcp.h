@@ -115,7 +115,7 @@ public:
   virtual void
   Serialize (Buffer::Iterator start) const = 0;
 
-  std::ostream & operator << (std::ostream &os) const;
+//  std::ostream & operator << (std::ostream &os) const;
 
   /**
   *
@@ -232,8 +232,8 @@ public:
   */
   virtual bool IsChecksumRequired() const;
   // setters
-  virtual void SetSenderKey(uint64_t senderKey);
-  virtual void SetRemoteKey(uint64_t remoteKey);
+  virtual void SetSenderKey(const uint64_t& senderKey);
+  virtual void SetRemoteKey(const uint64_t& remoteKey);
 
 
   virtual bool HasReceiverKey() const { return GetSerializedSize() == 20; };
@@ -414,102 +414,6 @@ protected:
 };
 
 
-#if 0
-
-/**
-TODO negociate the random part
-                           1                   2                   3
-       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-      +---------------+---------------+-------+-----+-+---------------+
-      |     Kind      |  Length = 16  |Subtype|     |B|   Address ID  |
-      +---------------+---------------+-------+-----+-+---------------+
-      |                                                               |
-      |                Sender's Truncated HMAC (64 bits)              |
-      |                                                               |
-      +---------------------------------------------------------------+
-      |                Sender's Random Number (32 bits)               |
-      +---------------------------------------------------------------+
-
-    Figure 6: Join Connection (MP_JOIN) Option (for Responding SYN/ACK)
-*/
-class TcpOptionMpTcpJoinSynReceived : public TcpOptionMpTcp<TcpOptionMpTcpMain::MP_JOIN>
-{
-
-public:
-
-  TcpOptionMpTcpJoinSynReceived();
-  virtual ~TcpOptionMpTcpJoinSynReceived();
-
-  virtual bool operator==(const TcpOptionMpTcpJoinSynReceived&) const;
-
-  // Setters
-  virtual void SetTruncatedHmac(uint64_t ) ;
-   virtual uint64_t GetTruncatedHmac() const { return m_truncatedHmac; };
-  virtual void SetNonce(uint32_t ) ;
-
-  // Getters
-
-  virtual uint64_t GetNonce() const { return m_nonce; };
-
-  virtual uint8_t GetAddressId() const { return m_addressId; }
-  virtual void SetAddressId(uint8_t addrId) { m_addressId =  addrId; }
-
-  virtual void Print (std::ostream &os) const;
-  virtual void Serialize (Buffer::Iterator start) const;
-  virtual uint32_t Deserialize (Buffer::Iterator start);
-  virtual uint32_t GetSerializedSize (void) const;
-
-protected:
-  uint8_t m_addressId;
-  uint8_t m_flags;
-
-  uint64_t m_truncatedHmac;
-  uint32_t m_nonce;
-
-};
-/**
-                           1                   2                   3
-       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-      +---------------+---------------+-------+-----------------------+
-      |     Kind      |  Length = 24  |Subtype|      (reserved)       |
-      +---------------+---------------+-------+-----------------------+
-      |                                                               |
-      |                                                               |
-      |                   Sender's HMAC (160 bits)                    |
-      |                                                               |
-      |                                                               |
-      +---------------------------------------------------------------+
-
-        Figure 7: Join Connection (MP_JOIN) Option (for Third ACK)
-*/
-class TcpOptionMpTcpJoinSynAckReceived : public TcpOptionMpTcp<TcpOptionMpTcpMain::MP_JOIN>
-{
-
-public:
-
-  TcpOptionMpTcpJoinSynAckReceived();
-  virtual ~TcpOptionMpTcpJoinSynAckReceived();
-
-  virtual bool operator==(const TcpOptionMpTcpJoinSynAckReceived&) const;
-
-  virtual const uint8_t* GetHmac() const { return &m_hmac[0];};
-  virtual void SetHmac(uint8_t hmac[20]) ;
-
-
-  virtual void Print (std::ostream &os) const;
-  virtual void Serialize (Buffer::Iterator ) const;
-  virtual uint32_t Deserialize (Buffer::Iterator start);
-  virtual uint32_t GetSerializedSize (void) const;
-
-protected:
-  uint8_t m_hmac[20]; // should amount to the 160 bits
-//  uint8_t m_pathId;
-//  uint32_t m_receiverToken;
-//  uint32_t m_senderToken;
-
-};
-
-#endif
 
 /**
 
@@ -784,6 +688,62 @@ private:
   bool m_backupFlag;  //!<
 };
 
+/**
+\verbatim
+
+                            1                   2                   3
+        0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+       +---------------+---------------+-------+-----------------------+
+       |     Kind      |    Length     |Subtype|      (reserved)       |
+       +---------------+---------------+-------+-----------------------+
+       |                      Option Receiver's Key                    |
+       |                            (64 bits)                          |
+       |                                                               |
+       +---------------------------------------------------------------+
+
+                Figure 14: Fast Close (MP_FASTCLOSE) Option
+
+**/
+class TcpOptionMpTcpFastClose : public TcpOptionMpTcp<TcpOptionMpTcpMain::MP_PRIO>
+{
+
+public:
+  TcpOptionMpTcpFastClose();
+  virtual ~TcpOptionMpTcpFastClose() {};
+
+
+
+  virtual bool operator==(const TcpOptionMpTcpFastClose& ) const;
+
+
+//  static TypeId GetTypeId (void);
+//  virtual TypeId GetInstanceTypeId (void) const;
+
+  virtual void SetPeerKey(const uint64_t& remoteKey);
+  virtual uint64_t GetPeerKey() const { return m_peerKey;}
+  /**
+
+  */
+  virtual void Print (std::ostream &os) const;
+
+  // OK
+  virtual void Serialize (Buffer::Iterator start) const;
+
+  // TODO
+  virtual uint32_t Deserialize (Buffer::Iterator start);
+
+  /**
+  */
+  virtual uint32_t GetSerializedSize (void) const;
+
+
+protected:
+private:
+  uint64_t m_peerKey;
+
+
+
+};
 
 
 
