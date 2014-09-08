@@ -455,7 +455,9 @@ TcpSocketBase::Send(Ptr<Packet> p, uint32_t flags)
       // Submit the data to lower layers
       NS_LOG_LOGIC ("txBufSize=" << m_txBuffer.Size () << " state " << TcpStateName[m_state]);
       if (m_state == ESTABLISHED || m_state == CLOSE_WAIT)
-        { // Try to send the data out
+        {
+          NS_LOG_DEBUG("m_nextTxSequence [" << m_nextTxSequence << "]");
+          // Try to send the data out
           SendPendingData(m_connected);
         }
       return p->GetSize();
@@ -1448,7 +1450,7 @@ TcpSocketBase::GenerateEmptyPacketHeader(TcpHeader& header, uint8_t flags)
   NS_LOG_DEBUG (this << " with flags " << flags);
 //  Ptr<Packet> p = Create<Packet>();
 //  TcpHeader header;
-  SequenceNumber32 s = m_nextTxSequence;
+//  SequenceNumber32 s = ;
 
 
   if (m_endPoint == 0 && m_endPoint6 == 0)
@@ -1458,7 +1460,7 @@ TcpSocketBase::GenerateEmptyPacketHeader(TcpHeader& header, uint8_t flags)
     }
 
   header.SetFlags(flags);
-  header.SetSequenceNumber(s);
+  header.SetSequenceNumber(m_nextTxSequence);
   header.SetAckNumber(m_rxBuffer.NextRxSequence());
   if (m_endPoint != 0)
     {
@@ -1535,9 +1537,10 @@ void
 TcpSocketBase::SendPacket(TcpHeader header, Ptr<Packet> p)
 {
   // TODO log header at least ?
-  NS_LOG_FUNCTION(header);
+  NS_LOG_FUNCTION(header << " Final");
 
   //header.SetSequenceNumber()
+  // TODO should be done outside, previously
   header.SetAckNumber(m_rxBuffer.NextRxSequence());
 
   // Check dest/src/seq nb are ok
@@ -1614,14 +1617,17 @@ TcpSocketBase::SendPacket(TcpHeader header, Ptr<Packet> p)
           << Simulator::Now ().GetSeconds () << " to expire at time "
           << (Simulator::Now () + m_rto.Get ()).GetSeconds ()
           );
+      // TODO will cause a pb with MPTCP subflows (likely)
       m_retxEvent = Simulator::Schedule(m_rto, (void (TcpSocketBase::*)(uint8_t )  )&TcpSocketBase::SendEmptyPacket, this, (uint8_t)flags);
     }
 }
 
 
 uint32_t
-TcpSocketBase::SendDataPacket(TcpHeader header, SequenceNumber32 seq,uint32_t maxSize)
+TcpSocketBase::SendDataPacket(TcpHeader& header, SequenceNumber32 seq,uint32_t maxSize)
 {
+  NS_LOG_FUNCTION(this << header );
+  NS_LOG_FUNCTION("SEQ [" << seq << "]");
 //  Ptr<Packet> p = CreateObject<Packet>();
   Ptr<Packet> p = m_txBuffer.CopyFromSequence(maxSize, seq);
 
@@ -1646,7 +1652,7 @@ TcpSocketBase::SendDataPacket(TcpHeader header, SequenceNumber32 seq,uint32_t ma
           m_state = LAST_ACK;
         }
     }
-
+  NS_LOG_FUNCTION("SEQ [" << seq << "]");
    header.SetSequenceNumber(seq);
 
   // Packet should be drop
@@ -1659,6 +1665,7 @@ TcpSocketBase::SendDataPacket(TcpHeader header, SequenceNumber32 seq,uint32_t ma
   else
     {
       SendPacket(header,p);
+      // TODO could be removed (matt) since replaced by SendPacket
 //      if (m_endPoint)
 //        {
 //          m_tcp->SendPacket(p, header, m_endPoint->GetLocalAddress(), m_endPoint->GetPeerAddress(), m_boundnetdevice);
@@ -1688,6 +1695,7 @@ uint32_t
 TcpSocketBase::SendDataPacket(SequenceNumber32 seq, uint32_t maxSize, bool withAck)
 {
   NS_LOG_FUNCTION (this << "seq" << seq << "with max size " << maxSize << "and ack"<< withAck);  //NS_LOG_INFO("SendDataPacket -> SeqNb: " << seq);
+  NS_LOG_FUNCTION("SEQ [" << seq << "]");
   TcpHeader header;
 
   GenerateEmptyPacketHeader(header, withAck ? TcpHeader::ACK : 0);
@@ -2136,6 +2144,7 @@ TcpSocketBase::SendPendingData(bool withAck)
       return false; // Is this the right way to handle this condition?
     }
   uint32_t nPacketsSent = 0;
+  NS_LOG_DEBUG("m_nextTxSequence [" << m_nextTxSequence << "]");
   while (m_txBuffer.SizeFromSequence(m_nextTxSequence))
     {
       uint32_t w = AvailableWindow(); // Get available window size
@@ -2168,7 +2177,9 @@ TcpSocketBase::SendPendingData(bool withAck)
       uint32_t s = std::min(w, m_segmentSize);  // Send no more than window
       uint32_t sz = SendDataPacket(m_nextTxSequence, s, withAck);
       nPacketsSent++;                             // Count sent this loop
+      NS_LOG_DEBUG("m_nextTxSequence [" << m_nextTxSequence << "]");
       m_nextTxSequence += sz;                     // Advance next tx sequence
+      NS_LOG_DEBUG("m_nextTxSequence [" << m_nextTxSequence << "]");
     }NS_LOG_LOGIC ("SendPendingData sent " << nPacketsSent << " packets");
   return (nPacketsSent > 0);
 }

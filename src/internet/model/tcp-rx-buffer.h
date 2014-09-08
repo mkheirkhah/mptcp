@@ -52,6 +52,19 @@ public:
   TcpRxBuffer (uint32_t n = 0);
   virtual ~TcpRxBuffer ();
 
+  /**
+   * Returns the first byte's sequence number
+   * \returns the first byte's sequence number
+   */
+   // TODO
+//  SequenceNumber32 HeadSequence (void) const;
+
+  /**
+   * Returns the last byte's sequence number + 1
+   * \returns the last byte's sequence number + 1
+   */
+//  SequenceNumber32 TailSequence (void) const;
+
   // Accessors
   /**
    * \brief Get Next Rx Sequence number

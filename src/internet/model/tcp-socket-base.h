@@ -272,8 +272,12 @@ protected:
   virtual void
   SendEmptyPacket(TcpHeader& header);
 
+  /**
+  Added by matt
+  Pass header by ref
+  */
   virtual uint32_t
-  SendDataPacket(TcpHeader header,SequenceNumber32 seq,uint32_t maxSize);
+  SendDataPacket(TcpHeader& header,SequenceNumber32 seq,uint32_t maxSize);
 
   // this one should be private
 private:

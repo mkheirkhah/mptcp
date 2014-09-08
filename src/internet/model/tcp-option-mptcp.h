@@ -76,8 +76,8 @@ public:
   };
 
 
-  TcpOptionMpTcpMain();
-  virtual ~TcpOptionMpTcpMain();
+  TcpOptionMpTcpMain(void);
+  virtual ~TcpOptionMpTcpMain(void);
 
 
   static TypeId GetTypeId (void);
@@ -157,7 +157,7 @@ public:
     // can't use arguments since would compel to declare a logging component
 //    NS_LOG_FUNCTION_NOARGS();
   };
-  virtual ~TcpOptionMpTcp () {
+  virtual ~TcpOptionMpTcp (void) {
 //    NS_LOG_FUNCTION_NOARGS();
   };
 
@@ -206,8 +206,8 @@ The MP_CAPABLE option is carried on the SYN, SYN/ACK, and ACK packets
 class TcpOptionMpTcpCapable : public TcpOptionMpTcp<TcpOptionMpTcpMain::MP_CAPABLE>
 {
 public:
-  TcpOptionMpTcpCapable();
-  virtual ~TcpOptionMpTcpCapable ();
+  TcpOptionMpTcpCapable(void);
+  virtual ~TcpOptionMpTcpCapable (void);
 
   enum SubTypes
   {
@@ -226,20 +226,20 @@ public:
   /**
   * \ brief For now only version 0 exists
   */
-  virtual uint8_t GetVersion() const { return 0;}
+  virtual uint8_t GetVersion(void) const { return 0;}
   /**
   Quoting RFC6284 The leftmost bit, labeled "A", SHOULD be set to 1 to indicate "Checksum Required"
   */
-  virtual bool IsChecksumRequired() const;
+  virtual bool IsChecksumRequired(void) const;
   // setters
   virtual void SetSenderKey(const uint64_t& senderKey);
   virtual void SetRemoteKey(const uint64_t& remoteKey);
 
 
-  virtual bool HasReceiverKey() const { return GetSerializedSize() == 20; };
+  virtual bool HasReceiverKey(void) const { return GetSerializedSize() == 20; };
 
-  virtual uint64_t GetSenderKey() const { return m_senderKey;}
-  virtual uint64_t GetPeerKey() const { return m_remoteKey;}
+  virtual uint64_t GetSenderKey(void) const { return m_senderKey;}
+  virtual uint64_t GetPeerKey(void) const { return m_remoteKey;}
 
   // TODO SetCryptoAlgorithm(
 
@@ -340,19 +340,19 @@ public:
   Ack    = 24
   };
 
-  TcpOptionMpTcpJoin();
-  virtual ~TcpOptionMpTcpJoin();
+  TcpOptionMpTcpJoin(void);
+  virtual ~TcpOptionMpTcpJoin(void);
 
   virtual bool operator==(const TcpOptionMpTcpJoin&) const;
 
 
-  State GetState() const { return m_state;}
+  State GetState(void) const { return m_state;}
 
   /**
   this part is for SYN
   **/
   virtual uint32_t
-  GetNonce() const;
+  GetNonce(void) const;
   virtual void
   SetNonce(uint32_t) ;
 
@@ -361,13 +361,13 @@ public:
   this part is for SYN/ACK
   **/
   virtual void SetTruncatedHmac(uint64_t ) ;
-  virtual uint64_t GetTruncatedHmac() const;
+  virtual uint64_t GetTruncatedHmac(void) const;
 
 
   /**
   this part is for ACK. Not implemented yet. Always 0
   **/
-  virtual const uint8_t* GetHmac() const;
+  virtual const uint8_t* GetHmac(void) const;
   virtual void SetHmac(uint8_t hmac[20]) ;
 
 
@@ -379,11 +379,11 @@ public:
 //  virtual void SetBackupFlag
   // Getters
   virtual uint32_t
-  GetPeerToken() const ;
+  GetPeerToken(void) const ;
 
-//  virtual uint32_t GetLocalToken() const { return m_localToken; }
+//  virtual uint32_t GetLocalToken(void) const { return m_localToken; }
   virtual uint8_t
-  GetAddressId() const;
+  GetAddressId(void) const;
 
   virtual void
   SetAddressId(uint8_t addrId);
@@ -458,22 +458,14 @@ public:
 
   };
 
-  TcpOptionMpTcpDSS();
-  virtual ~TcpOptionMpTcpDSS();
+  TcpOptionMpTcpDSS(void);
+  virtual ~TcpOptionMpTcpDSS(void);
 
   // setter
   void SetMapping(MpTcpMapping mapping);
-  MpTcpMapping GetMapping( ) const;
-  uint8_t GetFlags() const { return m_flags;};
+  MpTcpMapping GetMapping(void) const;
+  uint8_t GetFlags(void) const { return m_flags;};
 //  virtual void Configure(uint64_t, uint32_t, uint16_t);
-
-  // getters
-//  virtual uint64_t
-//  GetDSN() const { return m_dataSequenceNumber; }
-//  virtual uint32_t
-//  GetSSN() const { return m_subflowSequenceNumber; }
-//  virtual uint16_t
-//  GetDataLevelLength() const { return m_dataLevelLength; }
 
   virtual bool operator==(const TcpOptionMpTcpDSS&) const;
 
@@ -481,7 +473,7 @@ public:
   * \brief Set seq nb of acked data at MPTP level
   */
   virtual void SetDataAck(uint32_t);
-  virtual uint32_t GetDataAck() const { return m_dataAck; };
+  virtual uint32_t GetDataAck(void) const { return m_dataAck; };
 
 
   virtual void Print (std::ostream &os) const;
@@ -522,8 +514,8 @@ class TcpOptionMpTcpAddAddress : public TcpOptionMpTcp<TcpOptionMpTcpMain::MP_AD
 
 public:
 
-  TcpOptionMpTcpAddAddress();
-  virtual ~TcpOptionMpTcpAddAddress();
+  TcpOptionMpTcpAddAddress(void);
+  virtual ~TcpOptionMpTcpAddAddress(void);
 
   /**
   we always send the port, even if it's 0 ?
@@ -532,7 +524,7 @@ public:
    address on the same port as is already in use by the subflow on which
    the MP_ADD_ADDR signal was sent"
   */
-//  virtual bool IsPortEmbedded() ;
+//  virtual bool IsPortEmbedded(void) ;
 
   /**
   * Expects InetXSocketAddress
@@ -549,9 +541,9 @@ public:
   virtual uint8_t GetAddressVersion(void) const;
   virtual InetSocketAddress GetAddress(void) const;
   virtual Inet6SocketAddress GetAddress6(void) const;
-  virtual uint8_t GetAddressId() const;
+  virtual uint8_t GetAddressId(void) const;
 
-//  virtual void IsIpv6() const { return (m_length == 26); };
+//  virtual void IsIpv6(void) const { return (m_length == 26); };
   virtual void Print (std::ostream &os) const;
   //ok
   virtual void Serialize (Buffer::Iterator start) const;
@@ -588,8 +580,8 @@ class TcpOptionMpTcpRemoveAddress : public TcpOptionMpTcp<TcpOptionMpTcpMain::MP
 {
 
 public:
-  TcpOptionMpTcpRemoveAddress ();
-  virtual ~TcpOptionMpTcpRemoveAddress ();
+  TcpOptionMpTcpRemoveAddress (void);
+  virtual ~TcpOptionMpTcpRemoveAddress (void);
 
   void GetAddresses(std::vector<uint8_t>& addresses);
   void AddAddressId( uint8_t );
@@ -630,17 +622,17 @@ class TcpOptionMpTcpChangePriority : public TcpOptionMpTcp<TcpOptionMpTcpMain::M
 {
 
 public:
-  TcpOptionMpTcpChangePriority();
-  virtual ~TcpOptionMpTcpChangePriority() {};
+  TcpOptionMpTcpChangePriority(void);
+  virtual ~TcpOptionMpTcpChangePriority(void) {};
 
   virtual void SetBackupFlag(bool value) { m_backupFlag = value; }
   virtual void SetAddressId(uint8_t addrId);
 
   // Helper function : could be inlined
-  virtual bool EmbeddedAddressId() const;
+  virtual bool EmbeddedAddressId(void) const;
   virtual bool GetAddressId(uint8_t& addrId) const;
 
-  virtual bool GetPriority() const { return m_backupFlag;};
+  virtual bool GetPriority(void) const { return m_backupFlag;};
 
   virtual bool operator==(const TcpOptionMpTcpChangePriority& ) const;
 
@@ -737,8 +729,8 @@ class TcpOptionMpTcpFastClose : public TcpOptionMpTcp<TcpOptionMpTcpMain::MP_PRI
 {
 
 public:
-  TcpOptionMpTcpFastClose();
-  virtual ~TcpOptionMpTcpFastClose() {};
+  TcpOptionMpTcpFastClose(void);
+  virtual ~TcpOptionMpTcpFastClose(void) {};
 
 
 
@@ -749,7 +741,7 @@ public:
 //  virtual TypeId GetInstanceTypeId (void) const;
 
   virtual void SetPeerKey(const uint64_t& remoteKey);
-  virtual uint64_t GetPeerKey() const { return m_peerKey;}
+  virtual uint64_t GetPeerKey(void) const { return m_peerKey;}
   /**
 
   */
@@ -779,8 +771,8 @@ class TcpOptionMpTcpFallback : public TcpOptionMpTcp<TcpOptionMpTcpMain::MP_FAIL
 {
 
 public:
-  TcpOptionMpTcpFallback();
-  virtual ~TcpOptionMpTcpFallback() {};
+  TcpOptionMpTcpFallback(void);
+  virtual ~TcpOptionMpTcpFallback(void) {};
 
 
 
@@ -791,7 +783,7 @@ public:
 //  virtual TypeId GetInstanceTypeId (void) const;
 
   virtual void SetDSN(const uint64_t& dsn);
-  virtual uint64_t GetDSN() const { return m_dsn;}
+  virtual uint64_t GetDSN(void) const { return m_dsn;}
   /**
 
   */

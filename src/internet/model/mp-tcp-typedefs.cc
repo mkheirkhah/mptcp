@@ -4,7 +4,7 @@
 #include "ns3/log.h"
 
 
-NS_LOG_COMPONENT_DEFINE("MpTcpTypeDefs");
+NS_LOG_COMPONENT_DEFINE("MpTcpMapping");
 
 namespace ns3
 {
@@ -18,7 +18,7 @@ MpTcpMapping::MpTcpMapping() :
 }
 
 void
-MpTcpMapping::SetMappingSize(uint16_t length)
+MpTcpMapping::SetMappingSize(uint16_t const& length)
 {
   m_dataLevelLength = length;
 }
@@ -26,12 +26,12 @@ MpTcpMapping::SetMappingSize(uint16_t length)
 bool
 MpTcpMapping::TranslateSSNToDSN(const SequenceNumber32& ssn,SequenceNumber32& dsn) const
 {
-  if(IsInRange(ssn))
+  if(IsSSNInRange(ssn))
   {
 //      dsn =
 //    NS_FATAL_ERROR("TODO");
   // TODO check for seq wrapping ? PAWS
-    dsn = SequenceNumber32(ssn - GetSSN()) + GetDSN();
+    dsn = SequenceNumber32(ssn - HeadSSN()) + HeadDSN();
     return true;
   }
 
@@ -43,60 +43,77 @@ std::ostream&
 operator<<(std::ostream& os, const MpTcpMapping& mapping)
 {
   //
-  os << "Mapping [" << mapping.GetDSN() << "-" << mapping.MaxDataSequence ()
-  //of size [" << mapping.GetDataLevelLength() <<"] from DSN [" << mapping.GetDSN()
-    << "] to SSN [" <<  mapping.GetSSN() << "]";
+  os << " DSN [" << mapping.HeadDSN() << "-" << mapping.TailDSN ()
+  //of size [" << mapping.GetLength() <<"] from DSN [" << mapping.HeadDSN()
+    << "] mapped to SSN [" <<  mapping.HeadSSN() << "]";
   return os;
 }
 
 void
-MpTcpMapping::SetDSN(SequenceNumber32 seq)
+MpTcpMapping::SetDSN(SequenceNumber32 const& seq)
 {
   m_dataSequenceNumber = seq;
 }
 
 
 void
-MpTcpMapping::MapToSSN( SequenceNumber32 seq)
+MpTcpMapping::MapToSSN( SequenceNumber32 const& seq)
 {
+  NS_LOG_FUNCTION(this << " mapping to ssn ["<< seq << "]");
   m_subflowSequenceNumber = seq;
 }
 
+bool
+MpTcpMapping::Intersect(const MpTcpMapping& mapping) const
+{
+  //!
+  return( IsSSNInRange( mapping.HeadSSN()) || IsSSNInRange( mapping.TailSSN())
+         || IsDSNInRange( mapping.HeadDSN()) || IsDSNInRange( mapping.TailDSN()) );
+}
 
 bool
 MpTcpMapping::operator==( const MpTcpMapping& mapping) const
 {
   //!
   return (
-    GetDataLevelLength() == mapping.GetDataLevelLength()
-    && GetDSN() == mapping.GetDSN()
-//    && GetDataLevelLength()  == GetDataLevelLength()
+    GetLength() == mapping.GetLength()
+    && HeadDSN() == mapping.HeadDSN()
+//    && GetLength()  == GetLength()
     );
 }
 
 SequenceNumber32
-MpTcpMapping::MaxDataSequence  (void) const
+MpTcpMapping::TailDSN(void) const
 {
-  return ( GetDSN() + GetDataLevelLength() );
+  return(HeadDSN()+GetLength()-1);
+}
+
+SequenceNumber32
+MpTcpMapping::TailSSN(void) const
+{
+  return(HeadSSN()+GetLength()-1);
 }
 
 bool
 MpTcpMapping::operator<(MpTcpMapping const& m) const
 {
 
-  return (GetDSN() < m.GetDSN() );
+  return (HeadDSN() < m.HeadDSN());
 }
 
 
 bool
-MpTcpMapping::IsInRange(SequenceNumber32 const& ack) const
+MpTcpMapping::IsSSNInRange(SequenceNumber32 const& ssn) const
 {
 
-  return (
-    GetDSN() <= ack &&
-    // TODO >= ou > ?
-     MaxDataSequence() >= ack
-  );
+  return ( HeadSSN() <= ssn && TailSSN() >= ssn );
+}
+
+bool
+MpTcpMapping::IsDSNInRange(SequenceNumber32 const& dsn) const
+{
+
+  return ( HeadDSN() <= dsn && TailDSN() >= dsn );
 }
 
 
@@ -110,19 +127,188 @@ MpTcpMapping::Configure( SequenceNumber32  dataSeqNb, uint16_t mappingSize)
   m_dataLevelLength = mappingSize;
 }
 
-
-
-/*
-MpTcpAddressInfo::MpTcpAddressInfo() :
-    addrID(0), ipv4Addr(Ipv4Address::GetZero()), mask(Ipv4Mask::GetZero())
+///////////////////////////////////////////////////////////
+///// MpTcpMappingContainer
+/////
+MpTcpMappingContainer::MpTcpMappingContainer(void) :
+  m_txBuffer(0),
+  m_rxBuffer(0)
 {
+
 }
 
-MpTcpAddressInfo::~MpTcpAddressInfo()
+MpTcpMappingContainer::~MpTcpMappingContainer(void)
 {
-  addrID = 0;
-  ipv4Addr = Ipv4Address::GetZero();
+
 }
-*/
+
+void
+MpTcpMappingContainer::Dump()
+{
+  NS_LOG_UNCOND("\n\n==== Dumping list of mappings ====");
+  for( MappingList::iterator it = m_mappings.begin(); it != m_mappings.end(); it++ )
+  {
+
+    NS_LOG_UNCOND( *it );
+
+  }
+  NS_LOG_UNCOND("==== End of dump ====\n");
+}
+//
+//void
+//MpTcpMappingContainer::DiscardMappingsUpToSSN(const SequenceNumber32& ssn)
+//{
+//  //!
+//  for( MappingList::iterator it = m_mappings.begin(); it != m_mappings.end(); it++ )
+//  {
+//
+//    NS_LOG_UNCOND( *it );
+//
+//  }
+//
+//}
+
+
+  //!
+int
+MpTcpMappingContainer::AddMappingEnforceSSN(const MpTcpMapping& mapping)
+{
+  for( MappingList::iterator it = m_mappings.begin(); it != m_mappings.end(); it++ )
+  {
+
+    if(it->Intersect(mapping)   )
+    {
+      NS_LOG_WARN("Mappings " << mapping << " intersect with " << *it );
+      return -1;
+    }
+
+  }
+  m_mappings.insert(mapping);
+  return 0;
+}
+
+
+int
+MpTcpMappingContainer::AddMappingLooseSSN(MpTcpMapping& mapping)
+{
+  NS_ASSERT(m_txBuffer);
+  // TODO look for duplicatas
+  mapping.MapToSSN( FirstUnmappedSSN() );
+
+  return AddMappingEnforceSSN(mapping);
+
+}
+
+//SequenceNumber32
+//MpTcpMappingContainer::FirstMappedSSN(void) const
+//{
+//  //!
+//}
+
+SequenceNumber32
+MpTcpMappingContainer::FirstUnmappedSSN(void) const
+{
+  NS_ASSERT(m_txBuffer);
+  if(m_mappings.empty())
+  {
+//    if(m_rxBuffer){
+//      return m_rxBuffer->TailSequence();
+//    }
+//    else {
+//      NS_ASSERT
+      // associate to first byte in buffer. This should never happen ?
+      return m_txBuffer->HeadSequence();
+//    }
+  }
+//  else {
+    // they are sorted
+    return m_mappings.back().TailSSN() + 1;
+//  }
+}
+
+bool
+MpTcpMappingContainer::TranslateSSNtoDSN(const SequenceNumber32& ssn,SequenceNumber32 &dsn)
+{
+  // first find if a mapping exists
+  MpTcpMapping mapping;
+  if(!GetMappingForSSN( ssn, mapping) )
+  {
+    //!
+    return false;
+  }
+
+  return mapping.TranslateSSNToDSN(ssn,dsn);
+}
+
+void
+MpTcpMappingContainer::DiscardMappingsUpToSSN(const SequenceNumber32& ssn)
+{
+  NS_LOG_INFO("Discarding mappings up to " << ssn);
+  MappingList& l = m_mappings;
+  // TODO use reverse iterator and then clear from first found to the begin
+  for( MappingList::iterator it = l.begin(); it != l.end(); it++ )
+  {
+    //HeadDSN
+    if( it->TailSSN() < ssn )
+    {
+      //it =
+//      NS_ASSERT( );
+      // TODO check mapping transfer was completed on this subflow
+//      if( m_txBuffer.HeadSequence() <  )
+//      {
+//
+//      }
+      l.erase(it);
+    }
+  }
+}
+
+#if 0
+void
+MpTcpMappingContainer::DiscardMappingsUpToDSN(const SequenceNumber32& dsn)
+{
+  NS_LOG_INFO("Discarding mappings up to " << dsn);
+  MappingList& l = m_mappings;
+  for( MappingList::iterator it = l.begin(); it != l.end(); it++ )
+  {
+    //HeadDSN
+    if( it->TailDSN() < dsn )
+    {
+      //it =
+//      NS_ASSERT( );
+      // TODO check mapping transfer was completed on this subflow
+//      if( m_txBuffer.HeadSequence() <  )
+//      {
+//
+//      }
+      l.erase(it);
+    }
+  }
+}
+
+#endif
+
+bool
+MpTcpMappingContainer::GetMappingForSSN(const SequenceNumber32& ssn, MpTcpMapping& mapping)
+{
+  MappingList& l = m_mappings;
+  for( MappingList::const_iterator it = l.begin(); it != l.end(); it++ )
+  {
+    // check seq nb is within the DSN range
+    if (
+      it->IsSSNInRange( ssn )
+//    (subflowSeqNb >= it->HeadSSN() ) &&
+//      (subflowSeqNb < it->HeadSSN() + it->GetLength())
+    )
+    {
+      mapping = *it;
+      return true;
+    }
+  }
+
+  return false;
+}
+
+
 
 } // namespace ns3

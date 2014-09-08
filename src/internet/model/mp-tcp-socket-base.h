@@ -75,6 +75,13 @@ public: // public methods
   **/
   virtual bool IsMpTcpEnabled() const;
 
+  /** Limit the size of in-flight data by cwnd and receiver's rxwin */
+  virtual uint32_t
+  Window (void);
+
+  virtual void
+  PersistTimeout();
+
   /**
   \brief Generates random key
   **/
@@ -376,9 +383,6 @@ protected: // protected methods
   //const
   virtual uint32_t CalculateTotalCWND();
 
-
-  virtual uint32_t
-  Window();
   virtual uint16_t
   AdvertisedWindowSize();
 
@@ -388,6 +392,9 @@ protected: // protected methods
   // Manage data Tx/Rx
   virtual Ptr<TcpSocketBase> Fork(void);
 
+
+  virtual void
+  ReTxTimeout();
 
   /**
   */

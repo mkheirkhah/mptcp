@@ -243,6 +243,7 @@ def build(bld):
         'test/mptcp-test.cc',
         'test/mptcp-options-test.cc',
         'test/mptcp-tcp-test.cc',
+        'test/mptcp-mapping-test.cc',
         ]
     headers = bld(features='ns3header')
     headers.module = 'internet'

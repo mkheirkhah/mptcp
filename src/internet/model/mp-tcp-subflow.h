@@ -140,8 +140,6 @@ public:
   virtual bool
   SendPendingData(bool withAck = false);
 
-  bool
-  TranslateSSNtoDSN(SequenceNumber32 ssn,SequenceNumber32 &dsn);
 
   /**
   Disabled for now.
@@ -150,12 +148,7 @@ public:
   int
   Send(Ptr<Packet> p, uint32_t flags);
 
-  /**
-  * Removes all mappings that covered dataspace seq nbs lower than "ack"
-  * \param dataAck
-  */
-  virtual void
-  DiscardTxMappingsUpToDSN(SequenceNumber32 dataAck) ;
+
 
   //! disabled
   Ptr<Packet>
@@ -174,6 +167,7 @@ public:
   * \return this can return an EmptyPacket if on close
   * Use a maxsize param ? if buffers linked then useless ?
   *
+  * There may be packets belonging to different mappings. This function should be called until it returns an empty packet
   * uint32_t maxSize,
   */
   virtual Ptr<Packet>
@@ -237,12 +231,7 @@ public:
   Ptr<MpTcpPathIdManager>
   GetIdManager();
 
-  /**
-  * \param l list
-  * \param m pass on the mapping you want to retrieve
-  */
-  bool
-  GetMappingForSegment( const MappingList& l, SequenceNumber32 ack, MpTcpMapping& m);
+
 
 //  MpTcpMapping getSegmentOfACK( uint32_t ack);
 
@@ -274,8 +263,7 @@ protected:
   */
   bool
   AddPeerMapping(const MpTcpMapping& mapping);
-  virtual void
-  DiscardMappingsUpTo(uint32_t ack);
+
 
   /**
   * Overrides parent in order to warn meta
@@ -309,9 +297,17 @@ protected:
   virtual void
   ReceivedData(Ptr<Packet>, const TcpHeader&);
 
+  /**
+  */
+  uint32_t
+  SendDataPacket(SequenceNumber32 seq, uint32_t maxSize, bool withAck);
+
+  /**
+
+  */
   uint32_t
 //  SendDataPacket(SequenceNumber32 seq, uint32_t maxSize, bool withAck); // Send a data packet
-  SendDataPacket(TcpHeader header, SequenceNumber32 seq,uint32_t maxSize);
+  SendDataPacket(TcpHeader& header, const SequenceNumber32& ssn, uint32_t maxSize);
 
   /**
   * Like send, but pass on the global seq number associated with
@@ -374,10 +370,10 @@ protected:
 //  uint32_t m_dupAckCount;     // DupACK counter TO REMOVE exist in parent
 
   // Use Ptr here so that we don't have to unallocate memory manually ?
-//  std::list<DSNMapping *> m_mapDSN;  //!< List of all sent packets
 //  typedef std::list<MpTcpMapping> MappingList
-  MappingList m_TxMappings;  //!< List of all sent packets
-  MappingList m_RxMappings;  //!< List of all sent packets
+//  MappingList
+  MpTcpMappingContainer m_TxMappings;  //!< List of mappings to send
+  MpTcpMappingContainer m_RxMappings;  //!< List of mappings to receive
 
   // parent should provide it ?
   Ptr<RttMeanDeviation> rtt;  // RTT calculator

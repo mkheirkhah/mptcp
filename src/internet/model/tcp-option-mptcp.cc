@@ -859,8 +859,8 @@ TcpOptionMpTcpDSS::Print(std::ostream& os) const
     }
   }
 //      << "Data seq [" << GetDataAck() << "]"
-//      << "Mapping size [" << GetMapping().GetDataLevelLength()
-//      << "] Associated to subflow seq nb [" << GetMapping().GetSSN() << "]"
+//      << "Mapping size [" << GetMapping().GetLength()
+//      << "] Associated to subflow seq nb [" << GetMapping().HeadSSN() << "]"
       ;
 }
 
@@ -898,10 +898,10 @@ TcpOptionMpTcpDSS::Serialize (Buffer::Iterator i) const
     }
     else
     {
-      i.WriteHtonU32( m_mapping.GetDSN().GetValue() );
+      i.WriteHtonU32( m_mapping.HeadDSN().GetValue() );
     }
-    i.WriteHtonU32( GetMapping().GetSSN().GetValue() );
-    i.WriteHtonU16( GetMapping().GetDataLevelLength() );
+    i.WriteHtonU32( GetMapping().HeadSSN().GetValue() );
+    i.WriteHtonU16( GetMapping().GetLength() );
     i.WriteHtonU16( 0 );  // Checksum
   }
 

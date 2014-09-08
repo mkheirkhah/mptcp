@@ -60,20 +60,11 @@ MpTcpSchedulerRoundRobin::GetSubflowToUseForEmptyPacket()
 // std::pair< start,size , subflow>
 // ca génère les mappings ensuite
 int
-MpTcpSchedulerRoundRobin::GenerateMappings(
-  MappingVector& mappings
-  )
+MpTcpSchedulerRoundRobin::GenerateMappings(MappingVector& mappings)
 {
   NS_LOG_FUNCTION(this);
   NS_ASSERT_MSG(m_metaSock,"Call SetMeta() before generating a mapping");
 
-  // TODO creer fct GetTxSize
-//  if (m_metaSock->m_txBuffer.Size() == 0)
-//  {
-//    return false;                           // Nothing to send
-//  }
-
-//  SequenceNumber32 startSeq = 0;
 
 //  uint32_t amountOfDataToSend     = m_metaSock->m_txBuffer.SizeFromSequence(m_metaSock->m_nextTxSequence);
   SequenceNumber32 metaNextTxSeq  = m_metaSock->m_nextTxSequence;

@@ -24,20 +24,8 @@
 namespace ns3
 {
 
-/**
-MP kinds
-TODO remove ?
-**/
-#if 0
-typedef enum
-{
-  MP_NONE,        // 0
-  MP_MPC,         // 1
-  MP_ADDADDR,        // 2
-  MP_JOIN
-} MpStates_t;
-#endif
 
+#if 0
 typedef enum
 {
   Uncoupled_TCPs,       // 0
@@ -51,25 +39,7 @@ typedef enum
 {
   Round_Robin
 } DataDistribAlgo_t;
-
-typedef enum
-{
-  NoPR_Algo,
-} PacketReorder_t;
-
-typedef enum
-{
-  Slow_Start,
-  Congestion_Avoidance,
-} Phase_t;
-
-//typedef enum
-//{
-//  NO_ACTION,
-//  ADDR_TX,
-//  INIT_SUBFLOWS
-//} MpActions_t;
-
+#endif
 
 
 /**
@@ -84,22 +54,41 @@ especially TCP buffers so it should be thought out with ns3 people beforehand
 class MpTcpMapping
 {
 public:
-  MpTcpMapping();
+  MpTcpMapping(void);
 
+
+  /**
+
+  **/
   void Configure( SequenceNumber32  dataSeqNb, uint16_t mappingSize);
-  void MapToSSN( SequenceNumber32 seq);
-  virtual ~MpTcpMapping() {};
 
+  void MapToSSN( SequenceNumber32 const& seq);
+
+  virtual ~MpTcpMapping(void) {};
+
+  /**
+  \return True if mappings share DSN space
+  Check if there is an overlap over DSN space or SSN space
+  Decline to DSN and SSN ?
+  */
+  bool
+  Intersect(const MpTcpMapping&) const;
 
   void
-  SetDSN(SequenceNumber32);
+  SetDSN(SequenceNumber32 const&);
+
   void
-  SetMappingSize(uint16_t);
+  SetMappingSize(uint16_t const&);
 
   /**
   * \param dsn Data seqNb
   */
-  bool IsInRange(SequenceNumber32 const& dsn) const;
+  bool IsSSNInRange(SequenceNumber32 const& ssn) const;
+
+  /**
+  * \param dsn Data seqNb
+  */
+  bool IsDSNInRange(SequenceNumber32 const& dsn) const;
 
   /**
   * \param ssn Subflow sequence number
@@ -107,12 +96,14 @@ public:
   * \return True if ssn belonged to this mapping, then a dsn would have been computed
   *
   */
-  bool TranslateSSNToDSN(const SequenceNumber32& ssn,SequenceNumber32& dsn) const;
+  bool
+  TranslateSSNToDSN(const SequenceNumber32& ssn,SequenceNumber32& dsn) const;
 
   /**
-   * Select the max it can accept
+   *  <= X <= TailDSN dsn
    */
-  SequenceNumber32 MaxDataSequence (void) const;
+  SequenceNumber32 TailDSN (void) const;
+  SequenceNumber32 TailSSN (void) const;
 
   /**
 
@@ -131,15 +122,18 @@ public:
   virtual
   //uint64_t
   SequenceNumber32
-  GetDSN() const { return m_dataSequenceNumber; }
+  HeadDSN() const { return m_dataSequenceNumber; }
 
   // TODO rename into GetMappedSSN Head ?
   virtual SequenceNumber32
-  GetSSN() const { return m_subflowSequenceNumber; }
+  HeadSSN() const { return m_subflowSequenceNumber; }
 
   virtual uint16_t
-  GetDataLevelLength() const { return m_dataLevelLength; }
+  GetLength() const { return m_dataLevelLength; }
 
+  /**
+  Does not checks if they are mapped to the same SSN
+  */
   virtual bool operator==( const MpTcpMapping&) const;
 
 
@@ -150,100 +144,134 @@ protected:
   SequenceNumber32 m_dataSequenceNumber;   //!< MPTCP level
   SequenceNumber32 m_subflowSequenceNumber;  //!<
   uint16_t m_dataLevelLength;  //!< mapping length / size
+//  bool m_send;  //!< Set to true if mapping already sent & acknowledged ?
+};
 
+
+typedef std::set<MpTcpMapping> MappingList;
+
+
+/**
+Depending on modifications allowed in upstream ns3, it may some day inherit from TcpTxbuffer etc ...
+Meanwhile we have a pointer towards the buffers.
+* \class MpTcpMappingContainer
+* Mapping handling
+Once a mapping has been advertised on a subflow, it must be honored. If the remote host already received the data
+(because it was sent in parallel over another subflow), then the received data must be discarded.
+
+*/
+class MpTcpMappingContainer
+{
+  public:
+    MpTcpMappingContainer(void);
+    virtual ~MpTcpMappingContainer(void);
+
+    /**
+    **/
+    bool
+    TranslateSSNtoDSN(const SequenceNumber32& ssn,SequenceNumber32 &dsn);
+
+    /**
+    * Removes all mappings that covered dataspace seq nbs strictly lower than "dsn"
+    * \param dsn
+    */
+//    virtual void
+//    DiscardMappingsUpToDSN(const SequenceNumber32& dsn) ;
+
+
+  /**
+  SequenceNumber32 ?
+  **/
+  void
+  DiscardMappingsUpToSSN(const SequenceNumber32& ssn);
+
+  /**
+  return lowest SSN number
+  \return SSN
+  Makes no sense
+  */
+//  SequenceNumber32 FirstMappedSSN (void) const;
+
+  /**
+  REturn last mapped SSN.
+  If Empty will take the one from the buff.
+  */
+  SequenceNumber32 FirstUnmappedSSN(void) const;
+
+//  TcpRxBuffer
+//  TcpTxBuffer
+
+    /**
+    For debug purpose. Dump all registered mappings
+    **/
+    void
+    Dump();
+
+  // TODO
+  /**
+  Will map the mapping to the first unmapped SSN
+  \return <0 in case of error
+  */
+  int
+  AddMappingLooseSSN(MpTcpMapping&);
+
+  /**
+  Check for overlap.
+  **/
+  int
+  AddMappingEnforceSSN(const MpTcpMapping&);
+
+    /**
+    * \param l list
+    * \param m pass on the mapping you want to retrieve
+    */
+    bool
+    GetMappingForSSN( const SequenceNumber32& ssn, MpTcpMapping& m);
+
+    #if 0
+  //const MappingList& l,
+  /**
+   * Returns the first byte's sequence number
+   * \returns the first byte's sequence number
+   */
+   // TODO rename into head DSN, /SSN ?
+  SequenceNumber32 HeadSequence (void) const;
+
+  /**
+   * Returns the last byte's sequence number + 1
+   * \returns the last byte's sequence number + 1
+   */
+  SequenceNumber32 TailSequence (void) const;
+
+  #endif
+
+//  TracedValue<SequenceNumber32> m_highestMappedSSN; //!<
+
+    bool m_receiveMode;
+    TcpTxBuffer* m_txBuffer;
+    TcpRxBuffer* m_rxBuffer;
+  protected:
+    MappingList m_mappings;     //!<
 };
 
 /**
 This should be a set to prevent duplication and keep it ordered
 */
-typedef std::set<MpTcpMapping> MappingList;
 
 std::ostream& operator<<(std::ostream &os, const MpTcpMapping& mapping);
 
-/**
-TODO remove
-**/
-#if 0
-class DSNMapping
-{
-public:
-  // TODO remove that constructor ? since never used
-//  DSNMapping();
-  /**
-  **/
-  DSNMapping(
-    uint8_t sFlowIdx,
-  uint64_t dSeqNum, uint16_t dLvlLen, uint32_t sflowSeqNum, uint32_t ack, Ptr<Packet> pkt
-    );
-
-  //DSNMapping (const DSNMapping &res);
-  virtual ~DSNMapping();
-  bool operator <(const DSNMapping& rhs) const;
-
-  // TODO replace with SequenceNumber32 class ?
-  uint64_t dataSeqNumber;   //!< DATA ACK (MPTCP level)
-  uint16_t dataLevelLength; //!<
-  uint32_t subflowSeqNumber;  //!< Subflow
-  uint32_t acknowledgement; //!<
-  uint32_t dupAckCount; //!<
-
-  /* If DSN mappings are registered in the subflow, then it becomes useless ? unless it is referenced by meta
-  looks like it, in case meta needs to resend data. But then the subflowIndex must be always valid wich is not true
-  in the current implementation.
-  */
-  uint8_t subflowIndex; //!< Used twice
-  uint8_t *packet;      //!<
-};
-
-//typedef std::list<DSNMapping*> MappingList;
-
-/*
-class MpTcpAddressInfo
-{
-public:
-  MpTcpAddressInfo();
-  ~MpTcpAddressInfo();
-  uint8_t addrID;
-  Ipv4Address ipv4Addr;
-  Ipv4Mask mask;
-};
-*/
 
 
+//class MpTcpTxBuffer : public TcpTxBuffer
+//{
+//  protected:
+//    //Ajouter les mappings
+//};
+//
+//class MpTcpRxBuffer : public TcpRxBuffer
+//{
+//};
 
-class MpTcpTxBuffer : public TcpTxBuffer
-{
-  protected:
-    //Ajouter les mappings
-};
-
-class MpTcpRxBuffer : public TcpRxBuffer
-{
-};
-
-/**
-\todo replace with TcpRxBuffer etc... TcpTxBuffer ? why not Extend ?
-MpTcpTxBuffer ?
-
-*/
-class DataBuffer
-{
-public:
-  DataBuffer();
-  DataBuffer(uint32_t size);
-  ~DataBuffer();
-  std::queue<uint8_t> buffer;
-  uint32_t bufMaxSize;
-  uint32_t Add(uint8_t* buf, uint32_t size);
-  uint32_t Retrieve(uint8_t* buf, uint32_t size);
-  Ptr<Packet> CreatePacket(uint32_t size);
-  uint32_t ReadPacket(Ptr<Packet> pkt, uint32_t dataLen);
-  bool Empty();
-  bool Full();
-  uint32_t PendingData();
-  uint32_t FreeSpaceSize();
-};
-#endif
 
 } //namespace ns3
 #endif //MP_TCP_TYPEDEFS_H
