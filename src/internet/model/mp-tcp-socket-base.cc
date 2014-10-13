@@ -313,6 +313,8 @@ MpTcpSocketBase::CompleteFork(Ptr<Packet> p, const TcpHeader& mptcpHeader, const
   NS_ASSERT( GetMpTcpOption(mptcpHeader, mpc) );
 
   m_server = true;
+      // Aussi le from address
+//      subflow->
 
   NS_LOG_INFO("peer key " << mpc->GetSenderKey() );
 
@@ -335,6 +337,7 @@ MpTcpSocketBase::CompleteFork(Ptr<Packet> p, const TcpHeader& mptcpHeader, const
   NS_LOG_INFO(this << " LISTEN -> SYN_RCVD");
   NS_ASSERT_MSG(sFlow,"Contact ns3 team");
 
+
   // We deallocate the endpoint so that the subflow can reallocate it
 
 
@@ -348,7 +351,14 @@ MpTcpSocketBase::CompleteFork(Ptr<Packet> p, const TcpHeader& mptcpHeader, const
 
   Simulator::ScheduleNow(&MpTcpSubFlow::CompleteFork, sFlow, p, mptcpHeader, fromAddress, toAddress);
 
-
+//  Simulator::ScheduleNow(&MpTcpSocketBase:: , this, fromAddress);
+  m_connected = true;
+  NotifyNewConnectionCreated(this,fromAddress);
+  // As this connection is established, the socket is available to send data now
+  if (GetTxAvailable() > 0)
+  {
+    NotifySend(GetTxAvailable());
+  }
   // Update currentSubflow in case close just after 3WHS.
 //  NS_LOG_UNCOND("CompleteFork -> receivingBufferSize: " << m_recvingBuffer->bufMaxSize);
   NS_LOG_INFO(this << "  MPTCP connection is initiated (Receiver): ");
@@ -399,14 +409,22 @@ MpTcpSocketBase::OnSubflowEstablishment(Ptr<MpTcpSubFlow> subflow)
   if(subflow->IsMaster())
   {
     //<< (m_server) ? "server" : "client"
-    NS_LOG_INFO("Master subflow established, moving meta(server:" <<m_server << ") from " << TcpStateName[m_state] << "to ESTABLISHED state");
+    NS_LOG_INFO("Master subflow established, moving meta(server:" << m_server << ") from " << TcpStateName[m_state] << "to ESTABLISHED state");
     m_state = ESTABLISHED;
+
 
     // TODO relay connection establishement to sthg else ?
     // TODO  should move
     // NS_LOG_INFO("Moving from temporary to active");
     // will set m_connected to true;
-    Simulator::ScheduleNow(&MpTcpSocketBase::ConnectionSucceeded, this);
+//    NotifyNewConnectionCreated
+
+    // TODO move that to the SYN_RCVD
+    if(! m_server)
+    {
+      // If client
+      Simulator::ScheduleNow(&MpTcpSocketBase::ConnectionSucceeded, this);
+    }
   }
 
   //[subflow->m_positionInVector] = ;
@@ -600,6 +618,8 @@ MpTcpSocketBase::ReceivedAck( SequenceNumber32 dack
 //  uint32_t ack = (tcpHeader.GetAckNumber()).GetValue();
 //  uint32_t tmp = ((ack - initialSeqNb) / m_segmentSize) % mod;
 //  ACK.push_back(std::make_pair(Simulator::Now().GetSeconds(), tmp));
+
+  // TOdO
 
 
   if (dack < m_txBuffer.HeadSequence())
@@ -868,6 +888,14 @@ MpTcpSocketBase::DupAck(const TcpHeader& t, uint32_t count)
 //...........................................................................................
 
 
+/** Inherit from Socket class: Get the max number of bytes an app can read */
+uint32_t
+MpTcpSocketBase::GetRxAvailable(void) const
+{
+  NS_LOG_FUNCTION (this);
+  return m_rxBuffer.Available();
+}
+
 //Ptr<Socket> sock
 //SequenceNumber32 dataSeq,
 /**
@@ -894,40 +922,50 @@ MpTcpSocketBase::OnSubflowRecv( Ptr<MpTcpSubFlow> sf )
   SequenceNumber32 expectedSeq = m_rxBuffer.NextRxSequence();
 
   Ptr<Packet> p;
-  while(this->GetRxAvailable () > 0)
+
+  uint32_t canRead = m_rxBuffer.MaxBufferSize() - m_rxBuffer.Size();
+  NS_LOG_INFO("Rcv buf max size [" << GetRcvBufSize() << "]");
+  NS_LOG_INFO("Can read [" << canRead << "]");
+  while( (canRead > 0) && (sf->GetRxAvailable() > 0) )
   {
-    p = sf->RecvWithMapping ( this->GetRxAvailable (), dsn))
+    NS_LOG_INFO("sf->GetRxAvailable [" << sf->GetRxAvailable() << "]");
+
+    p = sf->RecvWithMapping ( canRead, dsn);
 
     // Pb here, htis will be extracted but will not be saved into the main buffer
     if( p->GetSize()  )
+    {
+      NS_LOG_DEBUG("Amount read from data not empty");
 
-    if (!m_rxBuffer.Add(p, dsn))
-      { // Insert failed: No data or RX buffer full
-  //      SendEmptyPacket(TcpHeader::ACK);
-        NS_LOG_ERROR("This should not happen !! DSN might be wrong ?! ");
-        return;
-      }
-    if (m_rxBuffer.Size() > m_rxBuffer.Available() || m_rxBuffer.NextRxSequence() > expectedSeq + p->GetSize())
-      { // A gap exists in the buffer, or we filled a gap: Always ACK
-  //      SendEmptyPacket(TcpHeader::ACK);
-      }
-    else
-      {
-        // We've disabled Delayed ack  on this socket ?
-        // In-sequence packet: ACK if delayed ack count allows
-  //      if (++m_delAckCount >= m_delAckMaxCount)
-  //        {
-  //          m_delAckEvent.Cancel();
-  //          m_delAckCount = 0;
-  //          SendEmptyPacket(TcpHeader::ACK);
-  //        }
-  //      else if (m_delAckEvent.IsExpired())
-  //        {
-  //          m_delAckEvent = Simulator::Schedule(m_delAckTimeout, &TcpSocketBase::DelAckTimeout, this);
-  //          NS_LOG_LOGIC (this << " scheduled delayed ACK at " << (Simulator::Now () + Simulator::GetDelayLeft (m_delAckEvent)).GetSeconds ());
-  //        }
-      }
-
+      if (!m_rxBuffer.Add(p, dsn))
+        { // Insert failed: No data or RX buffer full
+    //      SendEmptyPacket(TcpHeader::ACK);
+          NS_LOG_ERROR("This should not happen !! DSN might be wrong ?! ");
+          return;
+        }
+      if (m_rxBuffer.Size() > m_rxBuffer.Available() || m_rxBuffer.NextRxSequence() > expectedSeq + p->GetSize())
+        { // A gap exists in the buffer, or we filled a gap: Always ACK
+    //      SendEmptyPacket(TcpHeader::ACK);
+          NS_LOG_DEBUG ("Look into !");
+        }
+      else
+        {
+            NS_LOG_DEBUG ("Delayed acks disabled");
+          // We've disabled Delayed ack  on this socket ?
+          // In-sequence packet: ACK if delayed ack count allows
+    //      if (++m_delAckCount >= m_delAckMaxCount)
+    //        {
+    //          m_delAckEvent.Cancel();
+    //          m_delAckCount = 0;
+    //          SendEmptyPacket(TcpHeader::ACK);
+    //        }
+    //      else if (m_delAckEvent.IsExpired())
+    //        {
+    //          m_delAckEvent = Simulator::Schedule(m_delAckTimeout, &TcpSocketBase::DelAckTimeout, this);
+    //          NS_LOG_LOGIC (this << " scheduled delayed ACK at " << (Simulator::Now () + Simulator::GetDelayLeft (m_delAckEvent)).GetSeconds ());
+    //        }
+        }
+    }
   }
 
   if (p == 0 )
@@ -943,7 +981,7 @@ MpTcpSocketBase::OnSubflowRecv( Ptr<MpTcpSubFlow> sf )
     }
   }
 
-  NS_LOG_DEBUG ("Source recv data=\"" << p << "\"");
+//  NS_LOG_DEBUG ("Recv data=\"" << GetString(p) << "\"");
   //p->CopyData (&m_sourceRxPayload[m_currentSourceRxBytes], p->GetSize ());
   //m_currentSourceRxBytes += p->GetSize ();
 
@@ -953,19 +991,23 @@ MpTcpSocketBase::OnSubflowRecv( Ptr<MpTcpSubFlow> sf )
 
   // Put into Rx buffer
 
-
+  // disabled since it is dooe in the loop
+#if 0
   //Add
   if (!m_rxBuffer.Add(p, dsn))
     { // Insert failed: No data or RX buffer full
 //      SendEmptyPacket(TcpHeader::ACK);
+      NS_LOG_DEBUG("Insertion in RxBuffer failed");
       return;
     }
   if (m_rxBuffer.Size() > m_rxBuffer.Available() || m_rxBuffer.NextRxSequence() > expectedSeq + p->GetSize())
     { // A gap exists in the buffer, or we filled a gap: Always ACK
 //      SendEmptyPacket(TcpHeader::ACK);
+      NS_LOG_DEBUG("A gap exists in the buffer !!");
     }
   else
     {
+            NS_LOG_DEBUG("delayed acks disabled");
       // We've disabled Delayed ack  on this socket ?
       // In-sequence packet: ACK if delayed ack count allows
 //      if (++m_delAckCount >= m_delAckMaxCount)
@@ -980,13 +1022,20 @@ MpTcpSocketBase::OnSubflowRecv( Ptr<MpTcpSubFlow> sf )
 //          NS_LOG_LOGIC (this << " scheduled delayed ACK at " << (Simulator::Now () + Simulator::GetDelayLeft (m_delAckEvent)).GetSeconds ());
 //        }
     }
+    #endif
 
   // Notify app to receive if necessary
+  NS_LOG_DEBUG("expectedSeq " << expectedSeq << " vs NextRxSequence " << m_rxBuffer.NextRxSequence() );
+
   if (expectedSeq < m_rxBuffer.NextRxSequence())
-    { // NextRxSeq advanced, we have something to send to the app
+    {
+      NS_LOG_LOGIC("Did the Rxbuffer advance ?");
+
+      // NextRxSeq advanced, we have something to send to the app
       if (!m_shutdownRecv)
         {
-          NS_LOG_LOGIC("Notify data Rcvd");
+          //<< m_receivedData
+          NS_LOG_LOGIC("Notify data Rcvd" );
           NotifyDataRecv();
         }
       // Handle exceptions
@@ -1075,12 +1124,18 @@ MpTcpSocketBase::CreateSubflow(bool masterSocket)
   return sFlow;
 }
 
+
+/**
+I ended up duplicating this code to update the meta r_Wnd,
+which would have been hackish otherwise
+
+**/
 void
 MpTcpSocketBase::DoForwardUp(Ptr<Packet> packet, Ipv4Header header, uint16_t port, Ptr<Ipv4Interface> incomingInterface)
 {
-
   NS_LOG_FUNCTION(this);
   TcpSocketBase::DoForwardUp(packet,header,port,incomingInterface);
+
 }
 
 
@@ -1093,6 +1148,8 @@ MpTcpSocketBase::Connect(const Address & toAddress)
 {
   NS_LOG_FUNCTION(this);
 
+  // TODO may have to set m_server to false here
+
   if( IsConnected() )
   {
     NS_LOG_WARN("Trying to connect meta while already connected");
@@ -1101,6 +1158,7 @@ MpTcpSocketBase::Connect(const Address & toAddress)
 
   if (m_state == CLOSED || m_state == LISTEN || m_state == SYN_SENT || m_state == LAST_ACK || m_state == CLOSE_WAIT)
     {
+      m_server = false;
 
       Ptr<MpTcpSubFlow> sFlow = CreateSubflow(true);
 
@@ -1375,7 +1433,7 @@ MpTcpSocketBase::NewAck(SequenceNumber32 const& dsn
 //,Ptr<MpTcpSubFlow> sf
 )
 {
-  NS_LOG_FUNCTION(this << " new ack " <<  dsn);
+  NS_LOG_FUNCTION(this << " new ack; expecting DSN [" <<  dsn << "]");
 
   // update tx buffer
   // TODO if I call this, it crashes because on the MpTcpBase client, there is no endpoint configured
@@ -1392,7 +1450,7 @@ MpTcpSocketBase::NewAck(SequenceNumber32 const& dsn
 //    in that fct
 //  discard
 
-  NS_LOG_FUNCTION (this << dsn);
+//  NS_LOG_FUNCTION (this << dsn);
 
   if (m_state != SYN_RCVD)
     { // Set RTO unless the ACK is received in SYN_RCVD state
@@ -1407,8 +1465,8 @@ MpTcpSocketBase::NewAck(SequenceNumber32 const& dsn
       m_retxEvent = Simulator::Schedule(m_rto, &MpTcpSocketBase::ReTxTimeout, this);
     }
 
-  // TODO
-//  #if 0
+  // TODO update m_rWnd
+//  m_rWnd.Get() == 0
   if (m_rWnd.Get() == 0 && m_persistEvent.IsExpired())
     { // Zero window: Enter persist state to send 1 byte to probe
       NS_LOG_LOGIC (this << "Enter zerowindow persist state");NS_LOG_LOGIC (this << "Cancelled ReTxTimeout event which was set to expire at " <<
@@ -1428,18 +1486,25 @@ MpTcpSocketBase::NewAck(SequenceNumber32 const& dsn
 
 
 
-  // TODO no I can't discard it yet. Depends on if
-  m_txBuffer.DiscardUpTo(dsn);
 
 
+  // TODO that should be triggered !!! it should ask the meta for data rather !
   if (GetTxAvailable() > 0)
     {
+      NS_LOG_INFO("Tx available");
       NotifySend(GetTxAvailable());
     }
+
   if (dsn > m_nextTxSequence)
     {
       m_nextTxSequence = dsn; // If advanced
     }
+  else {
+      // TODO no I can't discard it yet. Depends on if
+//    m_txBuffer.DiscardUpTo(dsn);
+  }
+
+  // m_txFueer
   if (m_txBuffer.Size() == 0 && m_state != FIN_WAIT_1 && m_state != CLOSING)
     { // No retransmit timer if no data to retransmit
       NS_LOG_WARN (this << " Cancelled ReTxTimeout event which was set to expire at " <<
@@ -1485,20 +1550,24 @@ MpTcpSocketBase::SendPendingData(bool withAck)
   //
   m_scheduler->GenerateMappings(mappings);
 
-  NS_ASSERT_MSG( mappings.size() == GetNSubflows(), "The number of mappings should be equal to the nb of already established subflows" );
+//  NS_ASSERT_MSG( mappings.size() == GetNSubflows(), "The number of mappings should be equal to the nb of already established subflows" );
 
+  NS_LOG_DEBUG("generated [" << mappings.size() << "] mappings");
+  // TODO dump mappings ?
   // Loop through mappings and send Data
-  for(int i = 0; i < (int)GetNSubflows() ; i++ )
+//  for(int i = 0; i < (int)GetNSubflows() ; i++ )
+  for( MappingVector::iterator it(mappings.begin()); it  != mappings.end(); it++ )
   {
-    NS_LOG_DEBUG("generated [" << mappings.size() << "] mappings");
 
-    Ptr<MpTcpSubFlow> sf = GetSubflow(i);
-    MpTcpMapping& mapping = mappings[i];
+
+    Ptr<MpTcpSubFlow> sf = GetSubflow(it->first);
+    MpTcpMapping& mapping = it->second;
 //    Retrieve data  Rename SendMappedData
     //SequenceNumber32 dataSeq = mappings[i].first;
     //uint16_t mappingSize = mappings[i].second;
 
-    NS_LOG_DEBUG("Sending mapping "<< mapping << "] on subflow #" << i);
+    NS_LOG_DEBUG("Sending mapping "<< mapping << "] on subflow #" << it->first);
+
     //sf->AddMapping();
     int ret = sf->SendMapping( m_txBuffer.CopyFromSequence(mapping.GetLength(), mapping.HeadDSN()) , mapping  );
     // TODO ensure mappings always work
@@ -2061,13 +2130,82 @@ MpTcpSocketBase::OnSubflowRetransmit(Ptr<MpTcpSubFlow> sf)
 }
 
 
+uint32_t
+MpTcpSocketBase::BytesInFlight()
+{
+  NS_LOG_FUNCTION(this << "test");
+  uint32_t total = 0;
+  for( SubflowList::const_iterator it = m_subflows[Established].begin(); it != m_subflows[Established].end(); it++ )
+  {
+    total += (*it)->BytesInFlight();
+  }
+
+//  Ptr<MpTcpSubFlow> sFlow = m_subflows[sFlowIdx];
+//  return sFlow->maxSeqNb - sFlow->highestAck;        //m_highTxMark - m_highestRxAck;
+  return total;
+}
+
+//uint32_t
+//TcpSocketBase::UnAckDataCount()
+// TODO buggy ?
+uint16_t
+MpTcpSocketBase::AdvertisedWindowSize()
+{
+  NS_LOG_FUNCTION(this);
+  return TcpSocketBase::AdvertisedWindowSize();
+//  NS_LOG_DEBUG("Advertised Window size of " << value );
+//  return value;
+}
 
 uint32_t
 MpTcpSocketBase::Window()
 {
   NS_LOG_FUNCTION (this);
-  return std::min( m_rWnd.Get(), m_cWnd.Get() );
+
+  //std::min, m_cWnd.Get() )
+  uint32_t totalcWnd = CalculateTotalCWND();
+    NS_LOG_LOGIC("remoteWin " << m_rWnd.Get() << ", totalCongWin:" << totalcWnd);
+//  return std::min(m_rWnd.Get(), totalcWnd);
+  return m_rWnd.Get();
 }
+
+
+uint32_t
+MpTcpSocketBase::AvailableWindow()
+{
+  NS_LOG_FUNCTION (this);
+  uint32_t unack = UnAckDataCount(); // Number of outstanding bytes
+  uint32_t win = Window(); // Number of bytes allowed to be outstanding
+  NS_LOG_LOGIC ("UnAckCount=" << unack << ", Win=" << win);
+  return (win < unack) ? 0 : (win - unack);
+}
+
+#if 0
+// TODO remove
+uint32_t
+MpTcpSocketBase::AvailableWindow(uint8_t sFlowIdx)
+{
+  NS_LOG_FUNCTION_NOARGS ();
+
+  Ptr<MpTcpSubFlow> sFlow = m_subflows[sFlowIdx];
+  uint32_t window = std::min(remoteRecvWnd, sFlow->cwnd.Get());
+  uint32_t unAcked = (sFlow->TxSeqNumber - (sFlow->highestAck + 1));
+  uint32_t freeCWND = (window < unAcked) ? 0 : (window - unAcked);
+  if (
+    (freeCWND < sFlow->GetSegSize() )
+    && (m_sendingBuffer->PendingData() >= sFlow->GetSegSize() )
+    )
+    {
+      NS_LOG_WARN(": ("<< (int)sFlowIdx <<") -> " << freeCWND << " => 0" << " MSS: " << sFlow->GetSegSize() );
+      return 0;
+    }
+  else
+    {
+      NS_LOG_WARN(": ("<< (int)sFlowIdx <<") -> " << freeCWND );
+      return freeCWND;
+    }
+}
+#endif
 
 Time
 MpTcpSocketBase::ComputeReTxTimeoutForSubflow( Ptr<MpTcpSubFlow> sf)
@@ -2115,7 +2253,7 @@ MpTcpSocketBase::DupAck(uint8_t sFlowIdx, DSNMapping* ptrDSN)
       // Plotting
       DupAcks.push_back(make_pair(Simulator::Now().GetSeconds(), sFlow->cwnd));
       sFlow->ssthreshtrack.push_back(make_pair(Simulator::Now().GetSeconds(), sFlow->GetSSThresh()));
-      NS_LOG_WARN ("DupAck-> FastRecovery. Increase cwnd by one MSS, from " << cwnd <<" -> " << sFlow->cwnd << " AvailableWindow: " << AvailableWindow(sFlowIdx));
+      NS_LOG_WARN ("DupAck-> FastRecovery. Increase cwnd by one MSS, from " << cwnd <<" -> " << sFlow->cwnd << " : " << (sFlowIdx));
 
       // Send more data into pipe if possible to get ACK clock going
       SendPendingData();
@@ -3291,30 +3429,7 @@ MpTcpSocketBase::IsLocalAddress(Ipv4Address addr)
 //}
 
 // const
-uint32_t
-MpTcpSocketBase::BytesInFlight()
-{
-  NS_LOG_FUNCTION(this << "test");
-  uint32_t total = 0;
-  for( SubflowList::const_iterator it = m_subflows[Established].begin(); it != m_subflows[Established].end(); it++ )
-  {
-    total += (*it)->BytesInFlight();
-  }
 
-//  Ptr<MpTcpSubFlow> sFlow = m_subflows[sFlowIdx];
-//  return sFlow->maxSeqNb - sFlow->highestAck;        //m_highTxMark - m_highestRxAck;
-  return total;
-}
-
-// TODO buggy ?
-uint16_t
-MpTcpSocketBase::AdvertisedWindowSize()
-{
-  NS_LOG_FUNCTION(this);
-  uint16_t value = TcpSocketBase::AdvertisedWindowSize();
-//  NS_LOG_DEBUG("Advertised Window size of " << value );
-  return value;
-}
 
 Ptr<Packet>
 MpTcpSocketBase::Recv(uint32_t maxSize, uint32_t flags)
@@ -3323,43 +3438,31 @@ MpTcpSocketBase::Recv(uint32_t maxSize, uint32_t flags)
   return TcpSocketBase::Recv(maxSize,flags);
 }
 
-#if 0
-// TODO remove
+
+
 uint32_t
-MpTcpSocketBase::AvailableWindow(uint8_t sFlowIdx)
+MpTcpSocketBase::GetTxAvailable(void) const
 {
-  NS_LOG_FUNCTION_NOARGS ();
-
-  Ptr<MpTcpSubFlow> sFlow = m_subflows[sFlowIdx];
-  uint32_t window = std::min(remoteRecvWnd, sFlow->cwnd.Get());
-  uint32_t unAcked = (sFlow->TxSeqNumber - (sFlow->highestAck + 1));
-  uint32_t freeCWND = (window < unAcked) ? 0 : (window - unAcked);
-  if (
-    (freeCWND < sFlow->GetSegSize() )
-    && (m_sendingBuffer->PendingData() >= sFlow->GetSegSize() )
-    )
-    {
-      NS_LOG_WARN("AvailableWindow: ("<< (int)sFlowIdx <<") -> " << freeCWND << " => 0" << " MSS: " << sFlow->GetSegSize() );
-      return 0;
-    }
-  else
-    {
-      NS_LOG_WARN("AvailableWindow: ("<< (int)sFlowIdx <<") -> " << freeCWND );
-      return freeCWND;
-    }
+  NS_LOG_FUNCTION (this);
+  uint32_t value = m_txBuffer.Available();
+  NS_LOG_DEBUG("Tx available " << value);
+  return value;
 }
-#endif
-
-// TODO use also a TcpTxBuffer ? MpTcpTxBuffer ?
-//uint32_t
-//MpTcpSocketBase::GetTxAvailable()
-//{
-//  NS_LOG_FUNCTION_NOARGS();
-//  return m_sendingBuffer->FreeSpaceSize();
-//}
 
 //this would not accomodate with google option that proposes to add payload in
 // syn packets MPTCP
+/**
+This function should be overridable since it may depend on the CC, cf RFC:
+
+   To compute cwnd_total, it is an easy mistake to sum up cwnd_i across
+   all subflows: when a flow is in fast retransmit, its cwnd is
+   typically inflated and no longer represents the real congestion
+   window.  The correct behavior is to use the ssthresh (slow start
+   threshold) value for flows in fast retransmit when computing
+   cwnd_total.  To cater to connections that are app limited, the
+   computation should consider the minimum between flight_size_i and
+   cwnd_i, and flight_size_i and ssthresh_i, where appropriate.
+**/
 uint32_t
 MpTcpSocketBase::CalculateTotalCWND()
 {

@@ -70,22 +70,53 @@ MpTcpSchedulerRoundRobin::GenerateMappings(MappingVector& mappings)
   SequenceNumber32 metaNextTxSeq  = m_metaSock->m_nextTxSequence;
 //  uint8_t i = 0;
   uint32_t amountOfDataToSend = 0;
+  uint32_t window = m_metaSock->AvailableWindow();
 
-  for(int i = 0; i < (int)m_metaSock->GetNSubflows(); ++i)
+  if(window <= 0)
   {
-    Ptr<MpTcpSubFlow> sf = m_metaSock->GetSubflow(i);
-    uint32_t window = sf->AvailableWindow();
+      NS_LOG_DEBUG("No window available [" << window << "] (TODO shoulb be in persist state ?)");
+    return -1; // TODO ?
+  }
+
+  // TODO rewrite pr que cela fasse comme dans
+  while( m_metaSock->m_txBuffer.SizeFromSequence( metaNextTxSeq ) )
+  {
+    // TODO check how the windows work
+    //m_metaSock->
+      uint32_t w = AvailableWindow(); // Get available window size
+      NS_LOG_LOGIC ("TcpSocketBase " << this << " SendPendingData" <<
+          " w " << w <<
+          " rxwin " << m_rWnd <<
+          " segsize " << m_segmentSize <<
+          " nextTxSeq " << m_nextTxSequence <<
+          " highestRxAck " << m_txBuffer.HeadSequence () <<
+          " pd->Size " << m_txBuffer.Size () <<
+          " pd->SFS " << m_txBuffer.SizeFromSequence (m_nextTxSequence));
+
+  }
+
+//  for(int i = 0; i < (int)m_metaSock->GetNSubflows(); ++i)
+//  {
+    Ptr<MpTcpSubFlow> sf = m_metaSock->GetSubflow(m_lastUsedFlowId);
+
+    m_lastUsedFlowId = (m_lastUsedFlowId + 1) %m_metaSock->GetNSubflows();
     amountOfDataToSend = 0;
     MpTcpMapping mapping;
 //    //is protected
 
-    if( window > 0)
-    {
+//    if( window > 0)
+//    {
+    NS_LOG_DEBUG("Window available [" << window << "]");
+    amountOfDataToSend = std::min( window, m_metaSock->m_txBuffer.SizeFromSequence( metaNextTxSeq ) );
+    NS_LOG_DEBUG("Amount of data to send [" << amountOfDataToSend  << "]");
+//    }
+//    else {
+//        NS_LOG_DEBUG("No window available [" << window << "]");
+//      continue;
+//    }
 
-      amountOfDataToSend = std::min( window, m_metaSock->m_txBuffer.SizeFromSequence( metaNextTxSeq ) );
-    }
     mapping.Configure( metaNextTxSeq , amountOfDataToSend);
-    mappings.push_back(  mapping );
+    mappings.push_back(  std::make_pair( i, mapping) );
     metaNextTxSeq += amountOfDataToSend;
   }
 

@@ -26,7 +26,8 @@ class MpTcpSubFlow;
 
 //typedef std::vector< std::pair<uint8_t, std::pair< SequenceNumber32,uint32_t > > > MappingVector;
 //
-typedef std::vector< MpTcpMapping > MappingVector;
+//typedef std::vector< MpTcpMapping > MappingVector;
+typedef std::vector< std::pair<uint8_t, MpTcpMapping > > MappingVector;
 //typedef MappingList MappingVector;
 
 

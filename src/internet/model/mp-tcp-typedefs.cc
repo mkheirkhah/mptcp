@@ -43,9 +43,9 @@ std::ostream&
 operator<<(std::ostream& os, const MpTcpMapping& mapping)
 {
   //
-  os << " DSN [" << mapping.HeadDSN() << "-" << mapping.TailDSN ()
+  os << "DSN [" << mapping.HeadDSN() << "-" << mapping.TailDSN ()
   //of size [" << mapping.GetLength() <<"] from DSN [" << mapping.HeadDSN()
-    << "] mapped to SSN [" <<  mapping.HeadSSN() << "]";
+    << "] mapped to SSN [" <<  mapping.HeadSSN() << "-" <<  mapping.TailSSN() << "]";
   return os;
 }
 
@@ -222,7 +222,7 @@ MpTcpMappingContainer::FirstUnmappedSSN(void) const
   }
 //  else {
     // they are sorted
-    return m_mappings.back().TailSSN() + 1;
+  return m_mappings.end()->TailSSN() + 1;
 //  }
 }
 

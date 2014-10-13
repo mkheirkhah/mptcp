@@ -841,11 +841,11 @@ void
 TcpOptionMpTcpDSS::Print(std::ostream& os) const
 {
 //  static
-  os << "MP_DSS: ";
+//  os << "MP_DSS: ";
   //Flags [" << GetFlags() << "]";
   if(GetFlags() & DataAckPresent)
   {
-    os << "Acknowledges [" << GetDataAck() << "]";
+    os << "Acknowledges [" << GetDataAck() << "] ";
     if(GetFlags() & DataAckOf8Bytes){
       os << "(8bytes DACK)";
     }

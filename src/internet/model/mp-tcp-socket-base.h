@@ -69,7 +69,19 @@ public: // public methods
 //  MpTcpSocketBase(Ptr<Node> node);
   virtual ~MpTcpSocketBase();
 
+  // Window Management
+  virtual uint32_t
+  BytesInFlight();  // Return total bytes in flight of a subflow
 
+  //const
+  virtual uint32_t CalculateTotalCWND();
+
+  virtual uint16_t
+  AdvertisedWindowSize();
+
+  // TODO remove
+  virtual uint32_t
+  AvailableWindow();
   /**
   \warn This function should be called once a connection is established else
   **/
@@ -132,8 +144,8 @@ public: // public methods
 
 
 //  virtual int Close(uint8_t sFlowIdx);        // Closing subflow...
-//  uint32_t GetTxAvailable();                  // Return available space in sending buffer to application
-
+  virtual uint32_t GetTxAvailable() const;                  // Return available space in sending buffer to application
+  virtual uint32_t GetRxAvailable(void) const;
   /**
   TcpTxBuffer API need to be used in future!
   This would called SendPendingData() - TcpTxBuffer API need to be used in future!
@@ -376,18 +388,7 @@ protected: // protected methods
 //  void ProcessLastAck (uint8_t sFlowIdx, Ptr<Packet>, const TcpHeader&);
 
 
-  // Window Management
-  virtual uint32_t
-  BytesInFlight();  // Return total bytes in flight of a subflow
 
-  //const
-  virtual uint32_t CalculateTotalCWND();
-
-  virtual uint16_t
-  AdvertisedWindowSize();
-
-  // TODO remove
-//  uint32_t AvailableWindow(uint8_t sFlowIdx);
 
   // Manage data Tx/Rx
   virtual Ptr<TcpSocketBase> Fork(void);

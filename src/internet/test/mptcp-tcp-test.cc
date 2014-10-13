@@ -197,6 +197,7 @@ TcpTestCase::DoTeardown (void)
 void
 TcpTestCase::ServerHandleConnectionCreated (Ptr<Socket> s, const Address & addr)
 {
+  NS_LOG_DEBUG("ServerHandleConnectionCreated");
   s->SetRecvCallback (MakeCallback (&TcpTestCase::ServerHandleRecv, this));
   s->SetSendCallback (MakeCallback (&TcpTestCase::ServerHandleSend, this));
 }
@@ -204,6 +205,7 @@ TcpTestCase::ServerHandleConnectionCreated (Ptr<Socket> s, const Address & addr)
 void
 TcpTestCase::ServerHandleRecv (Ptr<Socket> sock)
 {
+  NS_LOG_DEBUG("ServerHandleRecv, Rx available [" << sock->GetRxAvailable () << "]");
   while (sock->GetRxAvailable () > 0)
     {
 
@@ -226,6 +228,7 @@ TcpTestCase::ServerHandleRecv (Ptr<Socket> sock)
 void
 TcpTestCase::ServerHandleSend (Ptr<Socket> sock, uint32_t available)
 {
+  NS_LOG_DEBUG("ServerHandleSend");
   while (sock->GetTxAvailable () > 0 && m_currentServerTxBytes < m_currentServerRxBytes)
     {
       uint32_t left = m_currentServerRxBytes - m_currentServerTxBytes;
@@ -246,6 +249,10 @@ TcpTestCase::ServerHandleSend (Ptr<Socket> sock, uint32_t available)
 void
 TcpTestCase::SourceHandleSend (Ptr<Socket> sock, uint32_t available)
 {
+  NS_LOG_DEBUG("SourceHandleSend with available = " << available
+                  << " m_currentSourceTxBytes=" << m_currentSourceTxBytes
+                  << "m_totalBytes=" << m_totalBytes
+                  );
   while (sock->GetTxAvailable () > 0 && m_currentSourceTxBytes < m_totalBytes)
     {
       uint32_t left = m_totalBytes - m_currentSourceTxBytes;
@@ -262,6 +269,7 @@ TcpTestCase::SourceHandleSend (Ptr<Socket> sock, uint32_t available)
 void
 TcpTestCase::SourceHandleRecv (Ptr<Socket> sock)
 {
+  NS_LOG_DEBUG("SourceHandleRecv");
   while (sock->GetRxAvailable () > 0 && m_currentSourceRxBytes < m_totalBytes)
     {
       uint32_t toRead = std::min (m_sourceReadSize, sock->GetRxAvailable ());

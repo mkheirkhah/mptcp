@@ -13,6 +13,7 @@
 
 
 #include <iostream>
+#include <cmath>
 #include "ns3/mp-tcp-typedefs.h"
 #include "ns3/simulator.h"
 #include "ns3/log.h"
@@ -287,7 +288,7 @@ MpTcpSubFlow::Close(void)
 // Does this constructor even make sense ? no ? to remove ?
 MpTcpSubFlow::MpTcpSubFlow(const MpTcpSubFlow& sock)
   : TcpSocketBase(sock),
-  m_cWnd(sock.m_cWnd),
+//  m_cWnd(sock.m_cWnd),
   m_ssThresh(sock.m_ssThresh),
   m_localNonce(sock.m_localNonce),
   m_remoteToken(sock.m_remoteToken)
@@ -371,19 +372,26 @@ Maybe we could allow this providing a mapping already exists ?
 int
 MpTcpSubFlow::Send(Ptr<Packet> p, uint32_t flags)
 {
-  NS_ASSERT_MSG(false,"Use sendmapping instead");
+  NS_FATAL_ERROR("Use sendmapping instead");
   return 0;
 }
 
 //, uint32_t maxSize
 // rename globalSeqNb ?
+
+/**
+//! GetLength()
+this fct asserts when the mapping length is 0 but in fact it can be possible
+when there is an infinite mapping
+**/
 int
 MpTcpSubFlow::SendMapping(Ptr<Packet> p, MpTcpMapping& mapping)
 {
   NS_LOG_FUNCTION (this << mapping);
   NS_ASSERT(p);
-  NS_ASSERT_MSG(mapping.GetLength() != 0,"Empty mapping" );
-  NS_ASSERT_MSG(mapping.GetLength() == p->GetSize(),"You should fill the mapping" );
+
+  NS_ASSERT_MSG(mapping.GetLength() != 0,"Mapping should not be empty" );
+  NS_ASSERT_MSG(mapping.GetLength() == p->GetSize(), "You should fill the mapping" );
   // backup its value because send will change it
   //SequenceNumber32 nextTxSeq = m_nextTxSequence;
 
@@ -531,12 +539,111 @@ MpTcpSubFlow::GetMeta() const
   //!
   return m_metaSocket;
 }
+/**
+I ended up duplicating this code to update the meta r_Wnd, which would have been hackish otherwise
 
+**/
 void
 MpTcpSubFlow::DoForwardUp(Ptr<Packet> packet, Ipv4Header header, uint16_t port, Ptr<Ipv4Interface> incomingInterface)
 {
   NS_LOG_FUNCTION(this);
-  TcpSocketBase::DoForwardUp(packet,header,port,incomingInterface);
+  //m_rWnd = tcpHeader.GetWindowSize();
+
+
+  NS_LOG_FUNCTION(this);
+
+  NS_LOG_LOGIC ("Socket " << this << " forward up " <<
+      m_endPoint->GetPeerAddress () <<
+      ":" << m_endPoint->GetPeerPort () <<
+      " to " << m_endPoint->GetLocalAddress () <<
+      ":" << m_endPoint->GetLocalPort ());
+  Address fromAddress = InetSocketAddress(header.GetSource(), port);
+  Address toAddress = InetSocketAddress(header.GetDestination(), m_endPoint->GetLocalPort());
+
+  //NS_LOG_INFO("Before: " << packet->GetSize());
+  // Peel off TCP header and do validity checking
+  TcpHeader tcpHeader;
+  packet->RemoveHeader(tcpHeader);
+  if (tcpHeader.GetFlags() & TcpHeader::ACK)
+    {
+      EstimateRtt(tcpHeader);
+    }
+  ReadOptions(tcpHeader);
+  //NS_LOG_INFO("After cuttingHeader: " << packet->GetSize());
+  // Update Rx window size, i.e. the flow control window
+  if (m_rWnd.Get() == 0 && tcpHeader.GetWindowSize() != 0)
+    { // persist probes end
+      NS_LOG_LOGIC (this << " Leaving zerowindow persist state");
+      m_persistEvent.Cancel();
+    }
+
+  m_rWnd = tcpHeader.GetWindowSize();
+  GetMeta()->m_rWnd = tcpHeader.GetWindowSize();
+  // Discard fully out of range data packets
+  if (packet->GetSize() && OutOfRange(tcpHeader.GetSequenceNumber(), tcpHeader.GetSequenceNumber() + packet->GetSize()))
+    {
+      NS_LOG_LOGIC ("At state " << TcpStateName[m_state] <<
+          " received packet of seq [" << tcpHeader.GetSequenceNumber () <<
+          ":" << tcpHeader.GetSequenceNumber () + packet->GetSize () <<
+          ") out of range [" << m_rxBuffer.NextRxSequence () << ":" <<
+          m_rxBuffer.MaxRxSequence () << ")");
+      // Acknowledgement should be sent for all unacceptable packets (RFC793, p.69)
+      if (m_state == ESTABLISHED && !(tcpHeader.GetFlags() & TcpHeader::RST))
+        {
+          SendEmptyPacket(TcpHeader::ACK);
+        }
+      return;
+    }
+
+  // TCP state machine code in different process functions
+  // C.f.: tcp_rcv_state_process() in tcp_input.c in Linux kernel
+  switch (m_state)
+    {
+  case ESTABLISHED:
+    ProcessEstablished(packet, tcpHeader);
+    break;
+  case LISTEN:
+    ProcessListen(packet, tcpHeader, fromAddress, toAddress);
+    break;
+  case TIME_WAIT:
+    // Do nothing
+    break;
+  case CLOSED:
+    // Send RST if the incoming packet is not a RST
+    if ((tcpHeader.GetFlags() & ~(TcpHeader::PSH | TcpHeader::URG)) != TcpHeader::RST)
+      { // Since m_endPoint is not configured yet, we cannot use SendRST here
+        TcpHeader h;
+        h.SetFlags(TcpHeader::RST);
+        h.SetSequenceNumber(m_nextTxSequence);
+        h.SetAckNumber(m_rxBuffer.NextRxSequence());
+        h.SetSourcePort(tcpHeader.GetDestinationPort());
+        h.SetDestinationPort(tcpHeader.GetSourcePort());
+        h.SetWindowSize(AdvertisedWindowSize());
+        AddOptions(h);
+        m_tcp->SendPacket(Create<Packet>(), h, header.GetDestination(), header.GetSource(), m_boundnetdevice);
+      }
+    break;
+  case SYN_SENT:
+    ProcessSynSent(packet, tcpHeader);
+    break;
+  case SYN_RCVD:
+    ProcessSynRcvd(packet, tcpHeader, fromAddress, toAddress);
+    break;
+  case FIN_WAIT_1:
+  case FIN_WAIT_2:
+  case CLOSE_WAIT:
+    ProcessWait(packet, tcpHeader);
+    break;
+  case CLOSING:
+    ProcessClosing(packet, tcpHeader);
+    break;
+  case LAST_ACK:
+    ProcessLastAck(packet, tcpHeader);
+    break;
+  default: // mute compiler
+    break;
+    }
+
 }
 
 void
@@ -993,6 +1100,7 @@ MpTcpSubFlow::BackupSubflow() const
   return m_backupSubflow;
 }
 
+
 /**
 should be able to advertise several in one packet if enough space
 It is possible
@@ -1281,10 +1389,10 @@ MpTcpSubFlow::Recv(void)
 // use with a maxsize ? rename to ReceivedMappedData
 // We should be able to precise what range of data we can support
 Ptr<Packet>
-MpTcpSubFlow::RecvWithMapping(uint32_t maxSize, SequenceNumber32 &dsn)
+MpTcpSubFlow::RecvWithMapping( uint32_t maxSize, SequenceNumber32 &dsn)
 {
   //!
-  NS_LOG_FUNCTION(this);
+  NS_LOG_FUNCTION(this << "maxSize ["<< maxSize << "]" );
 //  Ptr<Packet> p = TcpSocketBase::Recv();
 
   // I can reuse
@@ -1292,8 +1400,10 @@ MpTcpSubFlow::RecvWithMapping(uint32_t maxSize, SequenceNumber32 &dsn)
 
 
   //NS_ABORT_MSG_IF(flags, "use of flags is not supported in TcpSocketBase::Recv()");
-  if (m_rxBuffer.Size() == 0 && m_state == CLOSE_WAIT)
+//  if (m_rxBuffer.Size() == 0 && m_state == CLOSE_WAIT)
+  if (m_state == CLOSE_WAIT)
     {
+      NS_LOG_ERROR("CLOSE_WAIT");
       return Create<Packet>(); // Send EOF on connection close
     }
 
@@ -1310,15 +1420,18 @@ MpTcpSubFlow::RecvWithMapping(uint32_t maxSize, SequenceNumber32 &dsn)
   NS_LOG_LOGIC("Extracting from SSN [" << headSSN << "]");
   //SequenceNumber32 headDSN;
 
-  if(!m_RxMappings.TranslateSSNtoDSN(headSSN, dsn))
+//  m_RxMappings.
+  MpTcpMapping mapping;
+  if(!m_RxMappings.GetMappingForSSN(headSSN,mapping))
+//  if(!m_RxMappings.TranslateSSNtoDSN(headSSN, dsn))
   {
     m_RxMappings.Dump();
-    NS_FATAL_ERROR("Could not associate a mapping to ssn");
+    NS_FATAL_ERROR("Could not associate a mapping to ssn [" << headSSN << "]");
   }
 
   // extract at most the size of the mapping
   // If there is more data, it should be extracted through another call to RecvWithMapping
-  Ptr<Packet> outPacket = m_rxBuffer.Extract( std::min(maxSize, mapping.GetSize() ) );
+  Ptr<Packet> outPacket = m_rxBuffer.Extract( std::min(maxSize, (uint32_t)mapping.GetLength() ) );
   if (outPacket != 0 && outPacket->GetSize() != 0)
     {
       SocketAddressTag tag;
@@ -1360,7 +1473,7 @@ MpTcpSubFlow::ReceivedData(Ptr<Packet> p, const TcpHeader& tcpHeader)
   if(!m_RxMappings.GetMappingForSSN( tcpHeader.GetSequenceNumber(), mapping) )
   {
 
-    m_TxMappings.Dump();
+    m_RxMappings.Dump();
     NS_FATAL_ERROR("Could not find mapping associated ");
 
 //    NS_LOG_DEBUG("Could not find an adequate mapping for");
@@ -1436,7 +1549,7 @@ MpTcpSubFlow::ReceivedData(Ptr<Packet> p, const TcpHeader& tcpHeader)
         {
           // rename into RecvFromSubflow RecvData ?
           // NotifyMetaOfRcvdData
-//          GetMeta()->OnSubflowRecv( this);
+//          GetMeta()->Ŕcv( this);
 
           // TODO should not be called for now
 //          NotifyDataRecv();
@@ -1459,8 +1572,8 @@ MpTcpSubFlow::ReceivedData(Ptr<Packet> p, const TcpHeader& tcpHeader)
     dss->SetDataAck(GetMeta()->m_rxBuffer.NextRxSequence().GetValue());
     // should be always true hack to allow compilation
     if(sendAck) {
-        answerHeader.AppendOption(dss);
-    SendEmptyPacket(answerHeader);
+      answerHeader.AppendOption(dss);
+      SendEmptyPacket(answerHeader);
     }
 
   // TODO handle out of order case look at parent's member.
@@ -1477,6 +1590,40 @@ MpTcpSubFlow::ReceivedData(Ptr<Packet> p, const TcpHeader& tcpHeader)
 //  }
   // TODO see what we can free in our TxBuffer
 
+}
+
+// TODO unsure ?
+uint32_t
+MpTcpSubFlow::UnAckDataCount()
+{
+  NS_LOG_FUNCTION (this);
+  return GetMeta()->UnAckDataCount();
+}
+
+// TODO unsure ?
+uint32_t
+MpTcpSubFlow::BytesInFlight()
+{
+  NS_LOG_FUNCTION (this);
+  return GetMeta()->BytesInFlight();
+}
+
+// TODO unsure ?
+uint32_t
+MpTcpSubFlow::AvailableWindow()
+{
+  NS_LOG_FUNCTION (this);
+
+  return GetMeta()->AvailableWindow();
+}
+
+// TODO unsure ?
+uint32_t
+MpTcpSubFlow::Window (void)
+{
+  NS_LOG_FUNCTION (this);
+  //std::min (m_rWnd.Get (), m_cWnd.Get ())
+  return GetMeta()->Window();
 }
 
 uint16_t
@@ -1570,6 +1717,7 @@ MpTcpSubFlow::AddPeerMapping(const MpTcpMapping& mapping)
   // check in meta ? if it supervises everything ?
   NS_LOG_FUNCTION(this << mapping);
   NS_ASSERT(m_RxMappings.AddMappingEnforceSSN( mapping ) ==0 );
+  m_RxMappings.Dump();
   return true;
 }
 

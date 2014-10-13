@@ -58,6 +58,24 @@ public:
   MpTcpSubFlow(const MpTcpSubFlow&);
   virtual ~MpTcpSubFlow();
 
+
+  virtual uint32_t
+  UnAckDataCount();
+  virtual uint32_t
+  BytesInFlight();
+  virtual uint32_t
+  AvailableWindow();
+  virtual uint32_t
+  Window(void);               // Return the max possible number of unacked bytes
+  // Undefined for now
+//  virtual uint32_t
+//  AvailableWindow(void);      // Return unfilled portion of window
+  /**
+  \return Value advertised by the meta socket
+  */
+  virtual uint16_t
+  AdvertisedWindowSize(void);
+
   virtual void
   SetMeta(Ptr<MpTcpSocketBase> metaSocket);
 //  virtual int
@@ -171,7 +189,7 @@ public:
   * uint32_t maxSize,
   */
   virtual Ptr<Packet>
-  RecvWithMapping(SequenceNumber32 &dsn);
+  RecvWithMapping(uint32_t maxSize, SequenceNumber32 &dsn);
 
   /**
   * \
@@ -216,11 +234,8 @@ public:
   void
   ProcessSynSent(Ptr<Packet> packet, const TcpHeader& tcpHeader);
 
-  /**
-  \return Value advertised by the meta socket
-  */
-  virtual uint16_t
-  AdvertisedWindowSize(void);
+
+
 
   /**
   */
