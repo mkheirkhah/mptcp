@@ -65,7 +65,7 @@ public: // public methods
 //  virtual TypeId GetInstanceTypeId (void) const;
 
   MpTcpSocketBase();
-//  MpTcpSocketBase(const MpTcpSocketBase&);
+  MpTcpSocketBase(const MpTcpSocketBase&);
 //  MpTcpSocketBase(Ptr<Node> node);
   virtual ~MpTcpSocketBase();
 
@@ -146,16 +146,6 @@ public: // public methods
 //  virtual int Close(uint8_t sFlowIdx);        // Closing subflow...
   virtual uint32_t GetTxAvailable() const;                  // Return available space in sending buffer to application
   virtual uint32_t GetRxAvailable(void) const;
-  /**
-  TcpTxBuffer API need to be used in future!
-  This would called SendPendingData() - TcpTxBuffer API need to be used in future!
-  */
-//  bool SendBufferedData();
-//  int FillBuffer(uint8_t* buf, uint32_t size);// Fill sending buffer with data - TcpTxBuffer API need to be used in future!
-//  uint32_t Recv(uint8_t* buf, uint32_t size); // Receive data from receiveing buffer - TcpRxBuffe API need to be used in future!
-//  void allocateSendingBuffer(uint32_t size);  // Can be removed now as SetSndBufSize() is implemented instead!
-//  void allocateRecvingBuffer(uint32_t size);  // Can be removed now as SetRcvBufSize() is implemented instead!
-
 
   void
   DoForwardUp(Ptr<Packet> packet, Ipv4Header header, uint16_t port, Ptr<Ipv4Interface> incomingInterface);
@@ -561,15 +551,23 @@ protected: // protected variables
 //  MappingList m_unOrdered;  //!< buffer that hold the out of sequence received packet
 
   // Congestion control
+  /***
+  TODO the scheduler is so closely
+
+  ***/
   Ptr<MpTcpSchedulerRoundRobin> m_scheduler;  //!<
 //  Ptr<MpTcpCongestionControl> m_algoCC;  //!<  Algorithm for Congestion Control
 
 
   // Window management variables node->GetObject<TcpL4Protocol>();
   uint32_t m_ssThresh;           // Slow start threshold
-  uint32_t m_initialCWnd;        // Initial congestion window value
-  uint32_t remoteRecvWnd;        // Flow control window at remote side TODO rename ?
-  uint32_t m_segmentSize;          // Segment size
+  uint32_t m_initialCWnd;        //!< Initial congestion window value
+
+  // TODO alread
+//  uint32_t remoteRecvWnd;        // Flow control window at remote side TODO rename ?
+
+// Already defined in
+//  uint32_t m_segmentSize;          // Segment size
 
   TracedValue<uint32_t>  m_cWnd;         //< Congestion window
 

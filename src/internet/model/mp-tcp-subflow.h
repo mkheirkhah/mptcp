@@ -1,8 +1,7 @@
 /*
  * MultiPath-TCP (MPTCP) implementation.
- * Programmed by Morteza Kheirkhah from University of Sussex.
- * Some codes here are modeled from ns3::TCPNewReno implementation.
  * Email: m.kheirkhah@sussex.ac.uk
+ *        matthieu.coudron@lip6.fr
  */
 #ifndef MP_TCP_SUBFLOW_H
 #define MP_TCP_SUBFLOW_H
@@ -98,6 +97,10 @@ public:
   */
   virtual bool
   StopAdvertisingAddress(Ipv4Address);
+
+
+  void
+  DumpInfo() const;
 
   /**
   Would be nice to fit somewhere else. Even in global scope ?
@@ -290,6 +293,7 @@ protected:
   SetSSThresh(uint32_t threshold);
   virtual uint32_t
   GetSSThresh(void) const;
+
   virtual void
   SetInitialCwnd(uint32_t cwnd);
   virtual uint32_t
@@ -361,6 +365,7 @@ protected:
 //  virtual bool Finished();
 //  DSNMapping *GetunAckPkt();
 
+  void InitializeCwnd (void);
 
   uint16_t m_routeId;   //!< Subflow's ID (TODO rename into subflowId ). Position of this subflow in MetaSock's subflows std::vector
 

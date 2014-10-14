@@ -66,9 +66,26 @@ MpTcpSocketBase::GetTypeId(void)
 
 
 
+MpTcpSocketBase::MpTcpSocketBase(const MpTcpSocketBase& sock) :
+  TcpSocketBase(sock),
+  m_mpEnabled(sock.m_mpEnabled),
+  m_initialCWnd(sock.m_initialCWnd),
+  m_server(false),
+  m_localKey(0),
+  m_remoteKey(0),
+  m_doChecksum(sock.m_doChecksum)
+{
+  m_remotePathIdManager = Create<MpTcpPathIdManagerImpl>();
+  m_scheduler = Create<MpTcpSchedulerRoundRobin>();
+  m_scheduler->SetMeta(this);
+}
+
+
+// TODO implement a copy constructor
 MpTcpSocketBase::MpTcpSocketBase() :
   TcpSocketBase(),
   m_mpEnabled(false),
+  m_initialCWnd(20), // TODO reset to 1
   m_server(false),
   m_localKey(0),
   m_remoteKey(0),
@@ -80,6 +97,7 @@ MpTcpSocketBase::MpTcpSocketBase() :
   m_scheduler = Create<MpTcpSchedulerRoundRobin>();
   m_scheduler->SetMeta(this);
 
+  // TODO remove
   gnu.SetOutFile("allPlots.pdf");
 
   mod = 60; // ??
@@ -1099,6 +1117,7 @@ MpTcpSocketBase::CreateSubflow(bool masterSocket)
   //sFlow->SetConnectCallback( MakeCallback (&MpTcpSocketBase::OnSubflowEstablishment, Ptr<MpTcpSocketBase>(this) ) );
   sFlow->SetMeta(this);
   sFlow->m_masterSocket = masterSocket;
+  sFlow->SetInitialCwnd( GetInitialCwnd() );
   NS_ASSERT_MSG( sFlow, "Contact ns3 team");
 
   // can't use that because we need the associated ssn to deduce the DSN

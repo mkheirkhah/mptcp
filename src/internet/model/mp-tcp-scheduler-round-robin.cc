@@ -79,27 +79,37 @@ MpTcpSchedulerRoundRobin::GenerateMappings(MappingVector& mappings)
   }
 
   // TODO rewrite pr que cela fasse comme dans
-  while( m_metaSock->m_txBuffer.SizeFromSequence( metaNextTxSeq ) )
+//  int testedSf = 0;
+  int i = 0;
+  //, flowId = m_lastUsedFlowId;
+  for(
+      ;
+    m_metaSock->m_txBuffer.SizeFromSequence( metaNextTxSeq )
+    &&
+    i < (int)m_metaSock->GetNSubflows()
+    ;
+    i++, m_lastUsedFlowId = (m_lastUsedFlowId + 1) % m_metaSock->GetNSubflows()
+    )
   {
     // TODO check how the windows work
     //m_metaSock->
-      uint32_t w = AvailableWindow(); // Get available window size
-      NS_LOG_LOGIC ("TcpSocketBase " << this << " SendPendingData" <<
-          " w " << w <<
-          " rxwin " << m_rWnd <<
-          " segsize " << m_segmentSize <<
-          " nextTxSeq " << m_nextTxSequence <<
-          " highestRxAck " << m_txBuffer.HeadSequence () <<
-          " pd->Size " << m_txBuffer.Size () <<
-          " pd->SFS " << m_txBuffer.SizeFromSequence (m_nextTxSequence));
-
-  }
-
-//  for(int i = 0; i < (int)m_metaSock->GetNSubflows(); ++i)
-//  {
     Ptr<MpTcpSubFlow> sf = m_metaSock->GetSubflow(m_lastUsedFlowId);
+    uint32_t window = sf->AvailableWindow(); // Get available window size
+    sf->DumpInfo();
 
-    m_lastUsedFlowId = (m_lastUsedFlowId + 1) %m_metaSock->GetNSubflows();
+      // Quit if send disallowed
+//    if (sf->m_shutdownSend)
+//      {
+//        continue;
+////          m_errno = ERROR_SHUTDOWN;
+////          return false;
+//      }
+      // Stop sending if we need to wait for a larger Tx window (prevent silly window syndrome)
+//      if (w < sf->m_segmentSize && m_txBuffer.SizeFromSequence(m_nextTxSequence) > w)
+//        {
+//          break; // No more
+//        }
+
     amountOfDataToSend = 0;
     MpTcpMapping mapping;
 //    //is protected
@@ -109,6 +119,12 @@ MpTcpSchedulerRoundRobin::GenerateMappings(MappingVector& mappings)
     NS_LOG_DEBUG("Window available [" << window << "]");
     amountOfDataToSend = std::min( window, m_metaSock->m_txBuffer.SizeFromSequence( metaNextTxSeq ) );
     NS_LOG_DEBUG("Amount of data to send [" << amountOfDataToSend  << "]");
+    if(amountOfDataToSend <= 0)
+    {
+      NS_LOG_DEBUG("Most likely window is equal to 0 which should not happen");
+      continue;
+    }
+    NS_ASSERT_MSG(amountOfDataToSend > 0,"Most likely window is equal to 0 which should not happen");
 //    }
 //    else {
 //        NS_LOG_DEBUG("No window available [" << window << "]");
@@ -118,7 +134,33 @@ MpTcpSchedulerRoundRobin::GenerateMappings(MappingVector& mappings)
     mapping.Configure( metaNextTxSeq , amountOfDataToSend);
     mappings.push_back(  std::make_pair( i, mapping) );
     metaNextTxSeq += amountOfDataToSend;
+//    m_lastUsedFlowId = (m_lastUsedFlowId + 1) %m_metaSock->GetNSubflows();
   }
+
+//  for(int i = 0; i < (int)m_metaSock->GetNSubflows(); ++i)
+//  {
+
+
+
+//    amountOfDataToSend = 0;
+//    MpTcpMapping mapping;
+////    //is protected
+//
+////    if( window > 0)
+////    {
+//    NS_LOG_DEBUG("Window available [" << window << "]");
+//    amountOfDataToSend = std::min( window, m_metaSock->m_txBuffer.SizeFromSequence( metaNextTxSeq ) );
+//    NS_LOG_DEBUG("Amount of data to send [" << amountOfDataToSend  << "]");
+////    }
+////    else {
+////        NS_LOG_DEBUG("No window available [" << window << "]");
+////      continue;
+////    }
+//
+//    mapping.Configure( metaNextTxSeq , amountOfDataToSend);
+//    mappings.push_back(  std::make_pair( i, mapping) );
+//    metaNextTxSeq += amountOfDataToSend;
+//  }
 
     #if 0
   // MATT this should be done into subflows

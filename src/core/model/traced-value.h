@@ -87,7 +87,7 @@ public:
   void Disconnect (const CallbackBase &cb, std::string path) {
     m_cb.Disconnect (cb, path);
   }
-  void Set (const T &v) {
+  virtual void Set (const T &v) {
     if (m_v != v)
       {
         m_cb (m_v, v);

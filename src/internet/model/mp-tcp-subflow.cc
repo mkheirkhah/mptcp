@@ -43,9 +43,9 @@ MpTcpSubFlow::GetTypeId(void)
       .SetParent<TcpSocketBase>()
       .AddConstructor<MpTcpSubFlow>()
       // TODO should be inherited
-//      .AddTraceSource("cWindow",
-//          "The congestion control window to trace.",
-//           MakeTraceSourceAccessor(&MpTcpSubFlow::m_cWnd))
+      .AddTraceSource("cWindow",
+          "The congestion control window to trace.",
+           MakeTraceSourceAccessor(&MpTcpSubFlow::m_cWnd))
     ;
   return tid;
 }
@@ -71,6 +71,20 @@ MpTcpSubFlow::SetMeta(Ptr<MpTcpSocketBase> metaSocket)
   m_RxMappings.m_rxBuffer = &m_rxBuffer;
 
 //  return true;
+}
+
+void
+MpTcpSubFlow::DumpInfo() const
+{
+      NS_LOG_LOGIC ("MpTcpSubFlow " << this << " SendPendingData" <<
+//          " w " << w <<
+          " rxwin " << m_rWnd <<
+          " segsize " << m_segmentSize <<
+          " nextTxSeq " << m_nextTxSequence <<
+          " highestRxAck " << m_txBuffer.HeadSequence () <<
+          " pd->Size " << m_txBuffer.Size () <<
+          " pd->SFS " << m_txBuffer.SizeFromSequence (m_nextTxSequence)
+          );
 }
 
 Ptr<TcpSocketBase>
@@ -225,6 +239,7 @@ MpTcpSubFlow::DoConnect()
 {
   NS_LOG_FUNCTION (this);
 
+
   // A new connection is allowed only if this socket does not have a connection
   if (m_state == CLOSED || m_state == LISTEN || m_state == SYN_SENT || m_state == LAST_ACK || m_state == CLOSE_WAIT)
     { // send a SYN packet and change state into SYN_SENT
@@ -232,7 +247,7 @@ MpTcpSubFlow::DoConnect()
       GenerateEmptyPacketHeader(header,TcpHeader::SYN);
 
       // code moved inside SendEmptyPacket
-
+      InitializeCwnd ();
       AppendMpTcp3WHSOption(header);
 
       TcpSocketBase::SendEmptyPacket(header);
@@ -288,12 +303,13 @@ MpTcpSubFlow::Close(void)
 // Does this constructor even make sense ? no ? to remove ?
 MpTcpSubFlow::MpTcpSubFlow(const MpTcpSubFlow& sock)
   : TcpSocketBase(sock),
-//  m_cWnd(sock.m_cWnd),
+  m_cWnd(sock.m_cWnd),
   m_ssThresh(sock.m_ssThresh),
+  m_initialCWnd (sock.m_initialCWnd),
   m_localNonce(sock.m_localNonce),
   m_remoteToken(sock.m_remoteToken)
   // TODO
-//    m_initialCWnd (sock.m_initialCWnd),
+
 //    m_retxThresh (sock.m_retxThresh),
 //    m_inFastRec (false),
 //    m_limitedTx (sock.m_limitedTx)
@@ -309,6 +325,7 @@ MpTcpSubFlow::MpTcpSubFlow(
     TcpSocketBase(),
     m_routeId(0),
     m_ssThresh(65535),  // retrieve from meta CC set in parent's ?
+    m_initialCWnd(20),  // TODO reset to 1
 //    m_mapDSN(0),
     m_lastMeasuredRtt(Seconds(0.0)),
      // TODO move out to MpTcpCControl
@@ -676,6 +693,8 @@ MpTcpSubFlow::CompleteFork(Ptr<Packet> p, const TcpHeader& h, const Address& fro
   m_state = SYN_RCVD;
   m_cnCount = m_cnRetries;
 
+  InitializeCwnd();
+
   SetupCallback();
 
   // Set the sequence number and send SYN+ACK
@@ -697,6 +716,20 @@ MpTcpSubFlow::GetIdManager()
 {
   return GetMeta()->m_remotePathIdManager;
 }
+
+
+void
+MpTcpSubFlow::InitializeCwnd (void)
+{
+  NS_LOG_LOGIC(this << "InitialCWnd:" << m_initialCWnd << " SegmentSize:" << m_segmentSize);
+  /*
+   * Initialize congestion window, default to 1 MSS (RFC2001, sec.1) and must
+   * not be larger than 2 MSS (RFC2581, sec.3.1). Both m_initiaCWnd and
+   * m_segmentSize are set by the attribute system in ns3::TcpSocket.
+   */
+  m_cWnd = m_initialCWnd * m_segmentSize;
+}
+
 
 void
 MpTcpSubFlow::ConnectionSucceeded(void)
@@ -1597,7 +1630,8 @@ uint32_t
 MpTcpSubFlow::UnAckDataCount()
 {
   NS_LOG_FUNCTION (this);
-  return GetMeta()->UnAckDataCount();
+//  return GetMeta()->UnAckDataCount();
+  return TcpSocketBase::UnAckDataCount();
 }
 
 // TODO unsure ?
@@ -1605,7 +1639,7 @@ uint32_t
 MpTcpSubFlow::BytesInFlight()
 {
   NS_LOG_FUNCTION (this);
-  return GetMeta()->BytesInFlight();
+  return TcpSocketBase::BytesInFlight();
 }
 
 // TODO unsure ?
@@ -1614,7 +1648,8 @@ MpTcpSubFlow::AvailableWindow()
 {
   NS_LOG_FUNCTION (this);
 
-  return GetMeta()->AvailableWindow();
+  return TcpSocketBase::AvailableWindow();
+//  GetMeta()->AvailableWindow();
 }
 
 // TODO unsure ?
@@ -1622,8 +1657,8 @@ uint32_t
 MpTcpSubFlow::Window (void)
 {
   NS_LOG_FUNCTION (this);
-  //std::min (m_rWnd.Get (), m_cWnd.Get ())
-  return GetMeta()->Window();
+  return std::min (m_rWnd.Get (), m_cWnd.Get ());
+//  return GetMeta()->Window();
 }
 
 uint16_t

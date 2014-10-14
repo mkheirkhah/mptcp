@@ -251,13 +251,14 @@ TcpTestCase::SourceHandleSend (Ptr<Socket> sock, uint32_t available)
 {
   NS_LOG_DEBUG("SourceHandleSend with available = " << available
                   << " m_currentSourceTxBytes=" << m_currentSourceTxBytes
-                  << "m_totalBytes=" << m_totalBytes
+                  << " m_totalBytes=" << m_totalBytes
                   );
   while (sock->GetTxAvailable () > 0 && m_currentSourceTxBytes < m_totalBytes)
     {
       uint32_t left = m_totalBytes - m_currentSourceTxBytes;
       uint32_t toSend = std::min (left, sock->GetTxAvailable ());
       toSend = std::min (toSend, m_sourceWriteSize);
+      NS_LOG_DEBUG ("toSend=min(" << left << "," << m_sourceWriteSize << "\"");
       Ptr<Packet> p = Create<Packet> (&m_sourceTxPayload[m_currentSourceTxBytes], toSend);
       NS_LOG_DEBUG ("Source send data=\"" << GetString (p) << "\"");
       int sent = sock->Send (p);
@@ -517,8 +518,8 @@ public:
     // 4) server write size, and 5) server read size
     // with units of bytes
     AddTestCase (new TcpTestCase (13, 200, 200, 200, 200, false), TestCase::QUICK);
-    AddTestCase (new TcpTestCase (13, 1, 1, 1, 1, false), TestCase::QUICK);
-    AddTestCase (new TcpTestCase (100000, 100, 50, 100, 20, false), TestCase::QUICK);
+//    AddTestCase (new TcpTestCase (13, 1, 1, 1, 1, false), TestCase::QUICK);
+//    AddTestCase (new TcpTestCase (100000, 100, 50, 100, 20, false), TestCase::QUICK);
 
     // Disable IPv6 tests; not supported yet
 //    AddTestCase (new TcpTestCase (13, 200, 200, 200, 200, true), TestCase::QUICK);
