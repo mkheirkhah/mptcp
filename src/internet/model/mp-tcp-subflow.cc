@@ -437,7 +437,7 @@ MpTcpSubFlow::SendMapping(Ptr<Packet> p, MpTcpMapping& mapping)
     // TODO GetMappingForDSN
     // GetMappingForSSN
   //GetMappingForSegment(m_TxMappings,)
-  NS_ASSERT(m_TxMappings.AddMappingLooseSSN( mapping  ) == 0);
+  NS_ASSERT_MSG(m_TxMappings.AddMappingLooseSSN( mapping  ) >= 0,"2 mappings overlap");
 
   //}
   NS_LOG_DEBUG("mapped updated: " << mapping);
@@ -697,8 +697,14 @@ MpTcpSubFlow::CompleteFork(Ptr<Packet> p, const TcpHeader& h, const Address& fro
 
   SetupCallback();
 
+  // TODO upload
+  m_TxMappings.m_txBuffer = &m_txBuffer;
+  m_RxMappings.m_rxBuffer = &m_rxBuffer;
+
   // Set the sequence number and send SYN+ACK
   m_rxBuffer.SetNextRxSequence(h.GetSequenceNumber() + SequenceNumber32(1));
+
+
 
   TcpHeader answerHeader;
   GenerateEmptyPacketHeader( answerHeader, TcpHeader::SYN | TcpHeader::ACK );

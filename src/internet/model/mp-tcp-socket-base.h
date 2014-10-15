@@ -330,6 +330,7 @@ protected: // protected methods
    * It sends data by calling SendDataPacket() function.
    * Called by functions: ReceveidAck, NewAck
    * send as  much as possible
+   * \return true if it send mappings
    */
   virtual bool SendPendingData(bool withAck = false);
 

@@ -20,6 +20,7 @@ MpTcpMapping::MpTcpMapping() :
 void
 MpTcpMapping::SetMappingSize(uint16_t const& length)
 {
+  NS_LOG_LOGIC(this << length);
   m_dataLevelLength = length;
 }
 
@@ -50,16 +51,17 @@ operator<<(std::ostream& os, const MpTcpMapping& mapping)
 }
 
 void
-MpTcpMapping::SetDSN(SequenceNumber32 const& seq)
+MpTcpMapping::SetDSN(SequenceNumber32 const& dsn)
 {
-  m_dataSequenceNumber = seq;
+  NS_LOG_LOGIC(this << dsn);
+  m_dataSequenceNumber = dsn;
 }
 
 
 void
 MpTcpMapping::MapToSSN( SequenceNumber32 const& seq)
 {
-  NS_LOG_FUNCTION(this << " mapping to ssn ["<< seq << "]");
+  NS_LOG_LOGIC(this << " mapping to ssn ["<< seq << "]");
   m_subflowSequenceNumber = seq;
 }
 
@@ -83,6 +85,27 @@ MpTcpMapping::operator==( const MpTcpMapping& mapping) const
 }
 
 SequenceNumber32
+MpTcpMapping::HeadDSN() const
+{
+  return m_dataSequenceNumber;
+}
+
+// TODO rename into GetMappedSSN Head ?
+SequenceNumber32
+MpTcpMapping::HeadSSN() const
+{
+  return m_subflowSequenceNumber;
+}
+
+uint16_t
+MpTcpMapping::GetLength() const
+{
+  NS_LOG_FUNCTION(this);
+  return m_dataLevelLength;
+}
+
+
+SequenceNumber32
 MpTcpMapping::TailDSN(void) const
 {
   return(HeadDSN()+GetLength()-1);
@@ -91,6 +114,11 @@ MpTcpMapping::TailDSN(void) const
 SequenceNumber32
 MpTcpMapping::TailSSN(void) const
 {
+//  NS_LOG_UNCOND("TailSSN called");
+//  GetLength();
+//  NS_LOG_UNCOND("GetLength called");
+//  HeadSSN();
+//  NS_LOG_UNCOND("HeadSSN called");
   return(HeadSSN()+GetLength()-1);
 }
 
@@ -123,6 +151,7 @@ MpTcpMapping::Configure( SequenceNumber32  dataSeqNb, uint16_t mappingSize)
 //  m_dataSeqNumber(dataSeqNb),
 //  m_size(mappingSize)
 {
+  NS_LOG_LOGIC(this << "dsn ["<< dataSeqNb << "], mappingSize [" << mappingSize << "]");
   m_dataSequenceNumber = dataSeqNb;
   m_dataLevelLength = mappingSize;
 }
@@ -134,12 +163,12 @@ MpTcpMappingContainer::MpTcpMappingContainer(void) :
   m_txBuffer(0),
   m_rxBuffer(0)
 {
-
+  NS_LOG_LOGIC(this);
 }
 
 MpTcpMappingContainer::~MpTcpMappingContainer(void)
 {
-
+  NS_LOG_LOGIC(this);
 }
 
 void
@@ -191,7 +220,7 @@ MpTcpMappingContainer::AddMappingEnforceSSN(const MpTcpMapping& mapping)
 int
 MpTcpMappingContainer::AddMappingLooseSSN(MpTcpMapping& mapping)
 {
-  NS_ASSERT(m_txBuffer);
+  NS_ASSERT_MSG(m_txBuffer,"m_txBuffer not set");
   // TODO look for duplicatas
   mapping.MapToSSN( FirstUnmappedSSN() );
 
@@ -222,7 +251,9 @@ MpTcpMappingContainer::FirstUnmappedSSN(void) const
   }
 //  else {
     // they are sorted
-  return m_mappings.end()->TailSSN() + 1;
+  NS_LOG_INFO("\n\n====================\n\n");
+//  NS_LOG_INFO( *m_mappings.end() );
+  return m_mappings.rbegin()->TailSSN() + 1;
 //  }
 }
 

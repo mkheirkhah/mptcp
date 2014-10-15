@@ -122,14 +122,14 @@ public:
   virtual
   //uint64_t
   SequenceNumber32
-  HeadDSN() const { return m_dataSequenceNumber; }
+  HeadDSN() const; // { return m_dataSequenceNumber; }
 
   // TODO rename into GetMappedSSN Head ?
   virtual SequenceNumber32
-  HeadSSN() const { return m_subflowSequenceNumber; }
+  HeadSSN() const; // { return m_subflowSequenceNumber; }
 
   virtual uint16_t
-  GetLength() const { return m_dataLevelLength; }
+  GetLength() const ; //{ return m_dataLevelLength; }
 
   /**
   Does not checks if they are mapped to the same SSN
@@ -210,23 +210,24 @@ class MpTcpMappingContainer
   // TODO
   /**
   Will map the mapping to the first unmapped SSN
-  \return <0 in case of error
+  \return Same value as for AddMappingEnforceSSN
   */
   int
   AddMappingLooseSSN(MpTcpMapping&);
 
   /**
   Check for overlap.
+  \return < 0 if the mapping overlaps with an existing one, 0 otherwise
   **/
   int
   AddMappingEnforceSSN(const MpTcpMapping&);
 
-    /**
-    * \param l list
-    * \param m pass on the mapping you want to retrieve
-    */
-    bool
-    GetMappingForSSN( const SequenceNumber32& ssn, MpTcpMapping& m);
+  /**
+  * \param l list
+  * \param m pass on the mapping you want to retrieve
+  */
+  bool
+  GetMappingForSSN( const SequenceNumber32& ssn, MpTcpMapping& m);
 
     #if 0
   //const MappingList& l,

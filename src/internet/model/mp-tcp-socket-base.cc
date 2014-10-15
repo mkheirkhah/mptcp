@@ -1562,7 +1562,7 @@ MpTcpSocketBase::SendPendingData(bool withAck)
 
 //  MappingList mappings;
   //start/size
-
+  int nbMappingsDispatched = 0; // mimic nbPackets in TcpSocketBase::SendPendingData
 
   MappingVector mappings;
   //mappings.reserve( GetNSubflows() );
@@ -1585,16 +1585,41 @@ MpTcpSocketBase::SendPendingData(bool withAck)
     //SequenceNumber32 dataSeq = mappings[i].first;
     //uint16_t mappingSize = mappings[i].second;
 
-    NS_LOG_DEBUG("Sending mapping "<< mapping << "] on subflow #" << it->first);
+    NS_LOG_DEBUG("Sending mapping "<< mapping << " on subflow #" << it->first);
 
     //sf->AddMapping();
     int ret = sf->SendMapping( m_txBuffer.CopyFromSequence(mapping.GetLength(), mapping.HeadDSN()) , mapping  );
+
+
+
+    if( ret < 0)
+    {
+      // TODO dump the mappings ?
+      NS_FATAL_ERROR("Could not send mapping. The generated mappings");
+    }
+
+    // if successfully sent,
+    nbMappingsDispatched++;
+
     // TODO ensure mappings always work
-    NS_ASSERT(ret > 0);
-    sf->SendPendingData();
+//    NS_ASSERT(ret > 0);
+    bool sentPacket = sf->SendPendingData();
+    NS_LOG_DEBUG("Packet sent ? >> " << sentPacket );
+//      uint32_t s = std::min(w, m_segmentSize);  // Send no more than window
+//      uint32_t sz = SendDataPacket(m_nextTxSequence, s, withAck);
+//      nPacketsSent++;                             // Count sent this loop
+      NS_LOG_DEBUG("m_nextTxSequence [" << m_nextTxSequence << "]");
+//      m_nextTxSequence += sz;                     // Advance next tx sequence
+
+      // Maybe the max is unneeded; I put it here
+      m_nextTxSequence = std::max(m_nextTxSequence.Get(), mapping.TailDSN() + 1);                // Advance next tx sequence
+
+      NS_LOG_DEBUG("m_nextTxSequence [" << m_nextTxSequence << "]");
+//    }NS_LOG_LOGIC ("SendPendingData sent " << nPacketsSent << " packets");
   }
 
-  return true;
+//  NS_LOG_LOGIC ("Dispatched " << nPacketsSent << " mappings");
+  return nbMappingsDispatched > 0;
 }
 
 int

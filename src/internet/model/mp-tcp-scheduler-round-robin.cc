@@ -67,16 +67,18 @@ MpTcpSchedulerRoundRobin::GenerateMappings(MappingVector& mappings)
 
 
 //  uint32_t amountOfDataToSend     = m_metaSock->m_txBuffer.SizeFromSequence(m_metaSock->m_nextTxSequence);
-  SequenceNumber32 metaNextTxSeq  = m_metaSock->m_nextTxSequence;
+  SequenceNumber32 metaNextTxSeq = m_metaSock->m_nextTxSequence;
 //  uint8_t i = 0;
   uint32_t amountOfDataToSend = 0;
   uint32_t window = m_metaSock->AvailableWindow();
 
   if(window <= 0)
   {
-      NS_LOG_DEBUG("No window available [" << window << "] (TODO shoulb be in persist state ?)");
+    NS_LOG_DEBUG("No window available [" << window << "] (TODO shoulb be in persist state ?)");
     return -1; // TODO ?
   }
+
+//  NS_LOG_DEBUG()metaNextTxSeq
 
   // TODO rewrite pr que cela fasse comme dans
 //  int testedSf = 0;
