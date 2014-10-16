@@ -228,11 +228,18 @@ TcpTestCase::ServerHandleRecv (Ptr<Socket> sock)
 void
 TcpTestCase::ServerHandleSend (Ptr<Socket> sock, uint32_t available)
 {
-  NS_LOG_DEBUG("ServerHandleSend");
+  NS_LOG_DEBUG("ServerHandleSend: TxAvailable=" << available
+        << " m_currentServerTxBytes=" << m_currentServerTxBytes
+        << " m_currentServerRxBytes=" << m_currentServerRxBytes
+
+        );
+
+  // en fait la seconde condition est zarb : kesako ?
   while (sock->GetTxAvailable () > 0 && m_currentServerTxBytes < m_currentServerRxBytes)
     {
       uint32_t left = m_currentServerRxBytes - m_currentServerTxBytes;
       uint32_t toSend = std::min (left, sock->GetTxAvailable ());
+      NS_LOG_DEBUG ("toSend=min(nbBytesLeft=" << left << ",m_serverWriteSize=" << m_serverWriteSize << ")");
       toSend = std::min (toSend, m_serverWriteSize);
       Ptr<Packet> p = Create<Packet> (&m_serverRxPayload[m_currentServerTxBytes], toSend);
       NS_LOG_DEBUG ("Server send data=\"" << GetString (p) << "\"");

@@ -396,6 +396,21 @@ MpTcpSubFlow::Send(Ptr<Packet> p, uint32_t flags)
 //, uint32_t maxSize
 // rename globalSeqNb ?
 
+void
+MpTcpSubFlow::SendEmptyPacket(uint8_t flags)
+{
+  NS_LOG_FUNCTION(this << " flags" << flags);
+  TcpSocketBase::SendEmptyPacket(flags);
+}
+
+
+void
+MpTcpSubFlow::SendEmptyPacket(TcpHeader& header)
+{
+  NS_LOG_FUNCTION(this << header);
+  TcpSocketBase::SendEmptyPacket(header);
+}
+
 /**
 //! GetLength()
 this fct asserts when the mapping length is 0 but in fact it can be possible
@@ -903,6 +918,18 @@ MpTcpSubFlow::ProcessSynSent(Ptr<Packet> packet, const TcpHeader& tcpHeader)
       CloseAndNotify();
     }
 }
+
+
+//void
+//MpTcpSubFlow::SendEmptyPacket(TcpHeader& header)
+//{
+//  // Automatically append DSS
+//  if(header.GetFlags() & TcpHeader::ACK)
+//  {
+//
+//  }
+//}
+
 
 //TcpOptionMpTcpJoin::State
 void
@@ -1453,7 +1480,8 @@ MpTcpSubFlow::RecvWithMapping( uint32_t maxSize, SequenceNumber32 &dsn)
   //////////////////////////////////////////Y//
   /// we want to retrieve the SSN of the first byte that
   /// will be extracted from the TcpRxBuffer
-  /// TODO That would do a nice addition to the TcpTxBuffer
+  /// TODO That would do a nice addition to the TcpRxBuffer
+  // sthg liek GetHead/MinSeq
   SequenceNumber32 headSSN = m_rxBuffer.NextRxSequence()-m_rxBuffer.Available();
 
   NS_LOG_LOGIC("Extracting from SSN [" << headSSN << "]");
@@ -1461,34 +1489,39 @@ MpTcpSubFlow::RecvWithMapping( uint32_t maxSize, SequenceNumber32 &dsn)
 
 //  m_RxMappings.
   MpTcpMapping mapping;
-  if(!m_RxMappings.GetMappingForSSN(headSSN,mapping))
-//  if(!m_RxMappings.TranslateSSNtoDSN(headSSN, dsn))
+//  if(!m_RxMappings.GetMappingForSSN(headSSN,mapping))
+  if(!m_RxMappings.TranslateSSNtoDSN(headSSN, dsn))
   {
     m_RxMappings.Dump();
     NS_FATAL_ERROR("Could not associate a mapping to ssn [" << headSSN << "]");
   }
-
+//  dsn = mapping.
   // extract at most the size of the mapping
   // If there is more data, it should be extracted through another call to RecvWithMapping
-  Ptr<Packet> outPacket = m_rxBuffer.Extract( std::min(maxSize, (uint32_t)mapping.GetLength() ) );
-  if (outPacket != 0 && outPacket->GetSize() != 0)
-    {
-      SocketAddressTag tag;
-      if (m_endPoint != 0)
-        {
-          tag.SetAddress(InetSocketAddress(m_endPoint->GetPeerAddress(), m_endPoint->GetPeerPort()));
-        }
-      else if (m_endPoint6 != 0)
-        {
-          tag.SetAddress(Inet6SocketAddress(m_endPoint6->GetPeerAddress(), m_endPoint6->GetPeerPort()));
-        }
-      outPacket->AddPacketTag(tag);
-    }
-  // AddPacketTag
+
+  //std::min(maxSize, (uint32_t)mapping.GetLength() )
+  Ptr<Packet> outPacket = m_rxBuffer.Extract( maxSize );
+
   return outPacket;
 }
 
 //MpTcpSubFlow::TranslateSubflowSeqToDataSeq();
+
+
+void
+MpTcpSubFlow::AppendDataAck(TcpHeader& hdr)
+{
+  NS_LOG_FUNCTION(this);
+
+  Ptr<TcpOptionMpTcpDSS> dss = CreateObject<TcpOptionMpTcpDSS>();
+  dss->SetDataAck( GetMeta()->m_rxBuffer.NextRxSequence().GetValue() );
+
+  // TODO check the option is not in the header already
+//  NS_ASSERT_MSG( hdr.GetOption()GetOp)
+
+  hdr.AppendOption(dss);
+}
+
 
 /**
 TODO here I should look for an associated mapping. If there is not,
@@ -1499,6 +1532,10 @@ void
 MpTcpSubFlow::ReceivedData(Ptr<Packet> p, const TcpHeader& tcpHeader)
 {
   NS_LOG_FUNCTION (this << tcpHeader);
+//  NS_LOG_FUNCTION (this << tcpHeader);NS_LOG_LOGIC ("seq " << tcpHeader.GetSequenceNumber () <<
+//      " ack " << tcpHeader.GetAckNumber () <<
+//      " pkt size " << p->GetSize ()
+//      );
   // Following was moved to ReceivedAck sincethis is from there that ReceivedData can
   // be called
 
@@ -1527,7 +1564,7 @@ MpTcpSubFlow::ReceivedData(Ptr<Packet> p, const TcpHeader& tcpHeader)
 
   //TcpHeader ackHeader;
 //  GenerateEmptyPacketHeader(ackHeader,TcpHeader::ACK);
-  Ptr<TcpOptionMpTcpDSS> dss = CreateObject<TcpOptionMpTcpDSS>();
+//  Ptr<TcpOptionMpTcpDSS> dss = CreateObject<TcpOptionMpTcpDSS>();
 
   // TODO this function sends ACK without the mptcp DSS option .
   //TcpSocketBase::ReceivedData( p, mptcpHeader );
@@ -1539,11 +1576,13 @@ MpTcpSubFlow::ReceivedData(Ptr<Packet> p, const TcpHeader& tcpHeader)
       //" pkt size " << p->GetSize () );
 
   // Put into Rx buffer
-  SequenceNumber32 expectedSeq = m_rxBuffer.NextRxSequence();
+  SequenceNumber32 expectedSSN = m_rxBuffer.NextRxSequence();
   if (!m_rxBuffer.Add(p, tcpHeader))
     { // Insert failed: No data or RX buffer full
       NS_LOG_DEBUG("Insert failed, No data or RX buffer full");
-      dss->SetDataAck( GetMeta()->m_rxBuffer.NextRxSequence().GetValue() );
+
+//      dss->SetDataAck( GetMeta()->m_rxBuffer.NextRxSequence().GetValue() );
+      AppendDataAck( answerHeader);
       SendEmptyPacket(answerHeader);
       return;
     }
@@ -1553,7 +1592,7 @@ MpTcpSubFlow::ReceivedData(Ptr<Packet> p, const TcpHeader& tcpHeader)
     // We should pass it to the meta
 
 
-    if (m_rxBuffer.Size() > m_rxBuffer.Available() || m_rxBuffer.NextRxSequence() > expectedSeq + p->GetSize())
+    if (m_rxBuffer.Size() > m_rxBuffer.Available() || m_rxBuffer.NextRxSequence() > expectedSSN + p->GetSize())
       { // A gap exists in the buffer, or we filled a gap: Always ACK
         // TODO
         sendAck = true;
@@ -1582,7 +1621,7 @@ MpTcpSubFlow::ReceivedData(Ptr<Packet> p, const TcpHeader& tcpHeader)
 
 
   // Notify app to receive if necessary
-  if (expectedSeq < m_rxBuffer.NextRxSequence())
+  if (expectedSSN < m_rxBuffer.NextRxSequence())
     { // NextRxSeq advanced, we have something to send to the app
       if (!m_shutdownRecv)
         {
@@ -1591,8 +1630,10 @@ MpTcpSubFlow::ReceivedData(Ptr<Packet> p, const TcpHeader& tcpHeader)
 //          GetMeta()->Ŕcv( this);
 
           // TODO should not be called for now
+          // TODO should say if it needs to DATAACK ?
 //          NotifyDataRecv();
            GetMeta()->OnSubflowRecv( this );
+           sendAck = true;
         }
       // Handle exceptions
       if (m_closeNotified)
@@ -1608,10 +1649,12 @@ MpTcpSubFlow::ReceivedData(Ptr<Packet> p, const TcpHeader& tcpHeader)
     }
 
     // For now we always sent an ack
-    dss->SetDataAck(GetMeta()->m_rxBuffer.NextRxSequence().GetValue());
+    // TODO should increase
+//    dss->SetDataAck( GetMeta()->m_rxBuffer.NextRxSequence().GetValue() );
     // should be always true hack to allow compilation
     if(sendAck) {
-      answerHeader.AppendOption(dss);
+//      answerHeader.AppendOption(dss);
+      AppendDataAck(answerHeader);
       SendEmptyPacket(answerHeader);
     }
 

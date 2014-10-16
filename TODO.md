@@ -22,6 +22,7 @@ Generic:
 * test what happens when we remove the master socket while the connection keeps going. It should provoke problems since endpoint is not allocated anymore
 * Possibility for applications to provie their fine grain tuning
 * During 3WHS, we send 2 acks in a row, one with a wrong seq nb
+* delayed data acks ? (is it worth in mptcp ?) anyhow should be disabled by default
 
 
 Requests for ns3;

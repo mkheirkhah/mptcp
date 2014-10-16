@@ -339,7 +339,7 @@ protected: // protected methods
   // TODO remove, move to subflow
 //  void SendRST(uint8_t sFlowIdx);
 
-  /** Does nothing
+  /** disabled
   */
   virtual uint32_t
   SendDataPacket(SequenceNumber32 seq, uint32_t maxSize, bool withAck);
@@ -460,6 +460,10 @@ protected: // protected methods
    */
   virtual void
   NewAck(SequenceNumber32 const& dataLevelSeq);
+
+  //! disabled
+  virtual void
+  SendEmptyPacket(TcpHeader& header);
 
   // Not implemented yet
 //  virtual void

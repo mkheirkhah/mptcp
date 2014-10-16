@@ -100,7 +100,7 @@ MpTcpMapping::HeadSSN() const
 uint16_t
 MpTcpMapping::GetLength() const
 {
-  NS_LOG_FUNCTION(this);
+//  NS_LOG_FUNCTION(this);
   return m_dataLevelLength;
 }
 
@@ -249,12 +249,9 @@ MpTcpMappingContainer::FirstUnmappedSSN(void) const
       return m_txBuffer->HeadSequence();
 //    }
   }
-//  else {
     // they are sorted
-  NS_LOG_INFO("\n\n====================\n\n");
-//  NS_LOG_INFO( *m_mappings.end() );
+//  NS_LOG_INFO("\n\n====================\n\n");
   return m_mappings.rbegin()->TailSSN() + 1;
-//  }
 }
 
 bool
@@ -274,7 +271,7 @@ MpTcpMappingContainer::TranslateSSNtoDSN(const SequenceNumber32& ssn,SequenceNum
 void
 MpTcpMappingContainer::DiscardMappingsUpToSSN(const SequenceNumber32& ssn)
 {
-  NS_LOG_INFO("Discarding mappings up to " << ssn);
+  NS_LOG_LOGIC("Discarding mappings up to " << ssn);
   MappingList& l = m_mappings;
   // TODO use reverse iterator and then clear from first found to the begin
   for( MappingList::iterator it = l.begin(); it != l.end(); it++ )

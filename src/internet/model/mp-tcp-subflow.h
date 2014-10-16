@@ -308,6 +308,12 @@ protected:
   void
   AppendMpTcp3WHSOption(TcpHeader& hdr) const;
 
+  /**
+    GetMeta()->m_rxBuffer.NextRxSequence().GetValue()
+  **/
+  void
+  AppendDataAck(TcpHeader& hdr);
+
   Ptr<MpTcpSocketBase>
   GetMeta() const;
 
@@ -343,6 +349,11 @@ protected:
   */
 //  virtual void
 //  SendEmptyPacket(uint8_t flags);
+  virtual void
+  SendEmptyPacket(uint8_t flags); // Send a empty packet that carries a flag, e.g. ACK
+
+  virtual void
+  SendEmptyPacket(TcpHeader& header);
 
   virtual Ptr<TcpSocketBase>
   Fork(void); // Call CopyObject<> to clone me

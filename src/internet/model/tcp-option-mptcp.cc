@@ -980,6 +980,7 @@ TcpOptionMpTcpDSS::Deserialize (Buffer::Iterator i)
 void
 TcpOptionMpTcpDSS::SetDataAck(uint32_t dataAck)
 {
+  NS_LOG_LOGIC(this << dataAck);
   m_dataAck = dataAck;
   m_flags |= DataAckPresent;
 }
