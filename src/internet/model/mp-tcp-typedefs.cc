@@ -80,9 +80,19 @@ MpTcpMapping::operator==( const MpTcpMapping& mapping) const
   return (
     GetLength() == mapping.GetLength()
     && HeadDSN() == mapping.HeadDSN()
+    && HeadSSN() == mapping.HeadSSN()
 //    && GetLength()  == GetLength()
     );
 }
+
+bool
+MpTcpMapping::operator!=( const MpTcpMapping& mapping) const
+{
+  //!
+  return !( *this == mapping
+    );
+}
+
 
 SequenceNumber32
 MpTcpMapping::HeadDSN() const
@@ -204,9 +214,11 @@ MpTcpMappingContainer::AddMappingEnforceSSN(const MpTcpMapping& mapping)
 {
   for( MappingList::iterator it = m_mappings.begin(); it != m_mappings.end(); it++ )
   {
-
-    if(it->Intersect(mapping)   )
+    // Check if mappings overlap
+    if(it->Intersect(mapping) && mapping != *it )
     {
+
+      // Intersect
       NS_LOG_WARN("Mappings " << mapping << " intersect with " << *it );
       return -1;
     }
@@ -268,16 +280,17 @@ MpTcpMappingContainer::TranslateSSNtoDSN(const SequenceNumber32& ssn,SequenceNum
   return mapping.TranslateSSNToDSN(ssn,dsn);
 }
 
-void
-MpTcpMappingContainer::DiscardMappingsUpToSSN(const SequenceNumber32& ssn)
+int
+MpTcpMappingContainer::DiscardMappingsUpToDSN(const SequenceNumber32& dsn)
 {
-  NS_LOG_LOGIC("Discarding mappings up to " << ssn);
+  NS_LOG_LOGIC("Discarding mappings up with TailDSN < " << dsn);
   MappingList& l = m_mappings;
+  int erasedMappingCount = 0;
   // TODO use reverse iterator and then clear from first found to the begin
   for( MappingList::iterator it = l.begin(); it != l.end(); it++ )
   {
-    //HeadDSN
-    if( it->TailSSN() < ssn )
+    // check that meta socket
+    if( it->TailDSN() < dsn && it->TailSSN() < m_rxBuffer->NextRxSequence() )
     {
       //it =
 //      NS_ASSERT( );
@@ -286,9 +299,16 @@ MpTcpMappingContainer::DiscardMappingsUpToSSN(const SequenceNumber32& ssn)
 //      {
 //
 //      }
+      erasedMappingCount++;
       l.erase(it);
+
+      // TODO that should work
+//      l.erase(m_mappings.begin(), it);
+//      break;
     }
   }
+
+  return erasedMappingCount;
 }
 
 #if 0

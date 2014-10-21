@@ -132,10 +132,10 @@ public:
   GetLength() const ; //{ return m_dataLevelLength; }
 
   /**
-  Does not checks if they are mapped to the same SSN
+
   */
   virtual bool operator==( const MpTcpMapping&) const;
-
+  virtual bool operator!=( const MpTcpMapping& mapping) const;
 
 
   // TODO should be SequenceNumber64
@@ -181,9 +181,16 @@ class MpTcpMappingContainer
 
   /**
   SequenceNumber32 ?
+
+  This can be called only when dsn is in the meta socket Rx buffer and in order
+  (since it may renegate some data when out of order).
+  The mapping should also have been thoroughly fulfilled at the subflow level.
+
+
+  \return Number of mappings discarded. >= 0
   **/
-  void
-  DiscardMappingsUpToSSN(const SequenceNumber32& ssn);
+  int
+  DiscardMappingsUpToDSN(const SequenceNumber32& dsn);
 
   /**
   return lowest SSN number

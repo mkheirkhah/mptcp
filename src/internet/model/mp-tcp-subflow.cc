@@ -522,7 +522,7 @@ MpTcpSubFlow::Retransmit(void)
 {
   TcpSocketBase::Retransmit();
 
-  NS_FATAL_ERROR("TODO");
+  NS_FATAL_ERROR("TODO retransmit");
   // pass on mapping
   GetMeta()->OnSubflowRetransmit( this );
 
@@ -1303,56 +1303,7 @@ MpTcpSubFlow::StopAdvertisingAddress(Ipv4Address address)
 //}
 
 
-/**
-Discard mappings up to ack
-*/
-#if 0
-void
-MpTcpSubFlow::DiscardMappingsUpTo( uint32_t ack)
-{
-  //TODO remove
 
-  MappingList::iterator current = m_mapDSN.begin();
-  MappingList::iterator next = m_mapDSN.begin();
-  while (current != m_mapDSN.end())
-    {
-      ++next;
-      DSNMapping *ptrDSN = *current;
-      // All segments before ackSeqNum should be removed from the m_mapDSN list.
-      // Maybe equal part never run due to if condition above.
-      if (ptrDSN->subflowSeqNumber + ptrDSN->dataLevelLength <= ack)
-        {
-          NS_LOG_WARN("DiscardUp-> SeqNb: " << ptrDSN->subflowSeqNumber << " DSNMappingSize: " << m_mapDSN.size() - 1 << " Subflow(" << (int)m_routeId << ")");
-          next = m_mapDSN.erase(current);
-          delete ptrDSN;
-        }
-      current = next;
-    }
-
-}
-#endif
-
-//
-//bool
-//MpTcpSubFlow::GetMappingForSegment( const MappingList& l, SequenceNumber32 subflowSeqNb, MpTcpMapping& mapping)
-//{
-//  for( MappingList::const_iterator it = l.begin(); it != l.end(); it++ )
-//  {
-//    // check seq nb is within the DSN range
-//    if (
-//      it->IsSSNInRange( subflowSeqNb )
-////    (subflowSeqNb >= it->HeadSSN() ) &&
-////      (subflowSeqNb < it->HeadSSN() + it->GetLength())
-//    )
-//    {
-//      mapping = *it;
-//      return true;
-//    }
-//  }
-//
-//  return false;
-//}
-//
 
 
 // TODO check with its parent equivalent, may miss a few features

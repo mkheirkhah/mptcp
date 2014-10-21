@@ -525,8 +525,8 @@ public:
     // 4) server write size, and 5) server read size
     // with units of bytes
 //    AddTestCase (new TcpTestCase (13, 200, 200, 200, 200, false), TestCase::QUICK);
-    AddTestCase (new TcpTestCase (13, 1, 1, 1, 1, false), TestCase::QUICK);
-//    AddTestCase (new TcpTestCase (100000, 100, 50, 100, 20, false), TestCase::QUICK);
+//    AddTestCase (new TcpTestCase (13, 1, 1, 1, 1, false), TestCase::QUICK);
+    AddTestCase (new TcpTestCase (100000, 100, 50, 100, 20, false), TestCase::QUICK);
 
     // Disable IPv6 tests; not supported yet
 //    AddTestCase (new TcpTestCase (13, 200, 200, 200, 200, true), TestCase::QUICK);

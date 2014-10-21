@@ -1,4 +1,4 @@
-WITH_GDB=1
+WITH_GDB=0
 SUITE="mptcp-tcp"
 #SUITE="mptcp-option"
 #SUITE="mptcp-mapping"
@@ -13,24 +13,36 @@ NS_LOG="$NS_LOG:MpTcpMapping=*"
 #NS_LOG="$NS_LOG:TcpOptionMpTcp=*"
 #NS_LOG="$NS_LOG:TcpL4Protocol"
 #NS_LOG="$NS_LOG:TraceHelper:PointToPointHelper"
-OUT="xp.txt"
+OUTPUT_FILENAME="xp.txt"
 #NS_LOG="$NS_LOG:MpTcpTestSuite=*|prefix_func:Socket=*"
 
 export NS_LOG
 printenv|grep NS_LOG
 
+# to clear screen
+#clear
+
+
+if [ ! -z $OUTPUT_FILENAME ]; then
+	OUT=" --out=${OUTPUT_FILENAME}"
+fi
+
+OUT=" --out=test_results.txt"
+
+TOFILE=" > xp.txt 2>&1"
+
 if [ $WITH_GDB -gt 0 ]; then
 	#COMMAND=
 	echo 'gdb'
 	read -r  command <<-'EOF'
-		./waf --run test-runner --command-template="gdb -ex run --args %s --suite=$SUITE"
+		./waf --run test-runner --command-template="gdb -ex run --args %s --suite=$SUITE $OUT $TOFILE"
 		EOF
 else
 	echo 'Without gdb'
 	# you can add --out to redirect output to afile instead of standard output
 	#--verbose 
 	read -r  command <<-EOF
-		./waf --run "test-runner --suite=$SUITE  --out=$OUT"
+		./waf --run "test-runner --suite=$SUITE $OUT" $TOFILE
 		EOF
 
 fi

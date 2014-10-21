@@ -1021,6 +1021,9 @@ MpTcpSocketBase::OnSubflowRecv( Ptr<MpTcpSubFlow> sf )
           //<< m_receivedData
           NS_LOG_LOGIC("Notify data Rcvd" );
           NotifyDataRecv();
+
+          // discards  old mappings
+          sf->m_RxMappings.DiscardMappingsUpToDSN( m_rxBuffer.NextRxSequence() - 1 );
         }
       // Handle exceptions
       if (m_closeNotified)
