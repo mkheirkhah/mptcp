@@ -56,7 +56,7 @@ need
 to enable TCP timestamps. This is disabled by default (for performance
 optimization).
 	"""
-	# fields that tshark should export
+	# fields that tshark can export
 	# tcp.seq / tcp.ack / ip.src / frame.number / frame.number / frame.time
 	# exhaustive list https://www.wireshark.org/docs/dfref/f/frame.html
 	#"tcp.seq",

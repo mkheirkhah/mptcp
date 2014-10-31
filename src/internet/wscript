@@ -98,6 +98,10 @@ def configure(conf):
 def build(bld):
     # bridge and mpi dependencies are due to global routing
     obj = bld.create_ns3_module('internet', ['bridge', 'mpi', 'network', 'core'])
+    # obj.env.append_value("CXXFLAGS", "-I/Absolute-path-to-LIBDIR/include")
+    # obj.env.append_value("LINKFLAGS", ["-L/Absolute-path-to-LIBDIR/lib"])
+    # obj.env.append_value("LIB", ["gcrypto"])
+    obj.lib = ['crypto']
     obj.source = [
         'model/ip-l4-protocol.cc',
         'model/udp-header.cc',

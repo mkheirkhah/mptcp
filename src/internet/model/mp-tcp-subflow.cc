@@ -30,6 +30,9 @@
 #include "ns3/mp-tcp-id-manager.h"
 //#include "ns3/ipv4-address.h"
 
+
+#include <openssl/sha.h>
+
 NS_LOG_COMPONENT_DEFINE("MpTcpSubflow");
 
 namespace ns3 {
@@ -49,6 +52,40 @@ MpTcpSubFlow::GetTypeId(void)
     ;
   return tid;
 }
+
+uint32_t
+MpTcpSubFlow::GenerateTokenForKey(uint64_t key)
+{
+  const int KEY_SIZE_IN_BYTES = 8;
+  const int TOKEN_SIZE_IN_BYTES = 4;
+  Buffer keyBuff,tokenBuf(TOKEN_SIZE_IN_BYTES);
+  keyBuff.AddAtStart(KEY_SIZE_IN_BYTES);
+
+  Buffer::Iterator it = keyBuff.Begin();
+  it.WriteHtonU64(key);
+
+  uint32_t result = 0;
+//  unsigned char *SHA1(const unsigned char *d, size_t n, unsigned char *md);
+  uint8_t digest_buf[20];
+//  const uint8_t* test = (const uint8_t*)&key;
+  // Convert to network order
+  // TODO convert key to unsigned char
+	SHA1( keyBuff.PeekData(), KEY_SIZE_IN_BYTES, digest_buf);
+
+//	i = tokenBuf.Begin();
+//	i.Write
+//	Buffer()
+//  ReadNtohU32()
+  int i = 3;
+	// sha1 returns result in network order (little endian)
+	// here we convert to big endian
+        result = (digest_buf[i] << 0);
+        result |= (digest_buf[i-1] << 8);
+        result |= (digest_buf[i-2] << 16);
+        result |= (digest_buf[i-3] << 24);
+	return result;
+}
+
 
 
 TypeId
@@ -156,21 +193,21 @@ MpTcpSubFlow::GetInitialCwnd(void) const
 
 
 // Ideally this should be a sha1 but hey ns3 is for prototyping !
-uint32_t
-MpTcpSubFlow::GetLocalToken() const
-{
-//  NS_LOG_ERROR("Not implemented yet");
-  // TODO
-  return GetMeta()->GetLocalKey() >> 32 ;
-}
-
-uint32_t
-MpTcpSubFlow::GetRemoteToken() const
-{
-//  NS_LOG_ERROR("Not implemented yet");
-  return GetMeta()->GetLocalKey() >> 32 ;
-
-}
+//uint32_t
+//MpTcpSubFlow::GetLocalToken() const
+//{
+////  NS_LOG_ERROR("Not implemented yet");
+//  // TODO
+//  return GetMeta()->GetLocalKey() >> 32 ;
+//}
+//
+//uint32_t
+//MpTcpSubFlow::GetRemoteToken() const
+//{
+////  NS_LOG_ERROR("Not implemented yet");
+//  return GetMeta()->GetLocalKey() >> 32 ;
+//
+//}
 
 
 
@@ -969,9 +1006,12 @@ MpTcpSubFlow::AppendMpTcp3WHSOption(TcpHeader& hdr) const
     switch(hdr.GetFlags())
     {
       case TcpHeader::SYN:
-        join->SetState(TcpOptionMpTcpJoin::Syn);
-        join->SetPeerToken(0);
-        join->SetNonce(0);
+        {
+          join->SetState(TcpOptionMpTcpJoin::Syn);
+          uint32_t token = GenerateTokenForKey(GetMeta()->GetRemoteKey() );
+          join->SetPeerToken(token);
+          join->SetNonce(0);
+        }
         break;
 
       case TcpHeader::ACK:

@@ -104,112 +104,54 @@ protected:
     Buffer m_buffer;
 };
 
+
+typedef struct _crypto_material {
+uint64_t keySyn;
+uint64_t keySynAck;
+uint32_t expectedTokenSyn;
+uint32_t nonceSyn;
+uint32_t nonceSynAck;
+uint64_t expectedHmacSynAck;
+uint32_t expectedHmacAck;
+} crypto_materials_t;
+
+
 /**
-this tests MPTCP (de)serializing options by generating pcap files and
-comparing them to reference pcap files.
-*/
-#if 0
-class TcpOptionMpTcpCapableTestCase : public TcpOptionMpTcpTestCase<TcpOptionMpTcpCapable>
+Used to test key/token generation
+**/
+class MpTcpCryptoTest : public TestCase
 {
 public:
 
-    // TestSerialize/ TestDeserialize
-  TcpOptionMpTcpCapableTestCase();
-  virtual ~TcpOptionMpTcpCapableTestCase();
+  MpTcpCryptoTest(crypto_materials_t t) : TestCase("MPTCP crypto test with values ..."),m_c(t)
+  {
+    //!
+    NS_LOG_FUNCTION(this);
+  }
 
-  virtual void DoSetup(void);
-  virtual void DoRun(void);
-  virtual void DoTeardown (void);
+  virtual ~MpTcpCryptoTest()
+  {
+      NS_LOG_FUNCTION(this);
+  }
+
+  virtual void DoRun(void)
+  {
+    uint32_t result = MpTcpSubFlow::GenerateTokenForKey(m_c.keySynAck);
+    NS_LOG_INFO( "Generated token "<< result << ". Expected "<< m_c.expectedTokenSyn);
+    NS_TEST_EXPECT_MSG_EQ( m_c.expectedTokenSyn, result, "Token generated does not match key");
+//      MpTcpSubFlow::GenerateHMac(key,nonce);
+
+    //!
+  }
+
+protected:
+  crypto_materials_t m_c;
+//  uint64_t m_key;
+//  uint32_t m_expectedToken;
+//  uint32_t m_nonce;
 
 };
 
-
-TcpOptionMpTcpCapableTestCase::TcpOptionMpTcpCapableTestCase() :
-    TestCase("mptcp-option-mpcapable")
-{
-    NS_LOG_FUNCTION(this);
-}
-
-
-TcpOptionMpTcpCapableTestCase::~TcpOptionMpTcpCapableTestCase()
-{
-    NS_LOG_FUNCTION(this);
-}
-
-
-void
-TcpOptionMpTcpCapableTestCase::DoSetup(void)
-{
-    NS_LOG_INFO("Setup of MPTCP options test");
-}
-
-
-void
-TcpOptionMpTcpCapableTestCase::DoRun(void)
-{
-    // Generate TcpHeader
-//    Ipv4Header ipHeader;
-//
-//  TcpHeader h;
-//  h.SetFlags( TcpHeader::SYN );
-//  h.SetSequenceNumber(SequenceNumber32());
-//  h.SetAckNumber(SequenceNumber32());
-//  h.SetSourcePort(1);
-//  h.SetDestinationPort(2);
-//  h.SetWindowSize(10);
-
-    ///////////////////////////////////////////////////
-    /////    TestSerialize
-    /////
-    Buffer m_buffer;
-//    Ptr<TcpOptionMpTcpCapable> option = Create<TcpOptionMpTcpCapable>();
-    TcpOptionMpTcpCapable option, option2;
-    option.SetSenderKey(1);
-    option.SetRemoteKey(2);
-
-    NS_LOG_INFO( "option.GetSerializedSize ():" << option.GetSerializedSize () );
-    m_buffer.AddAtStart ( option.GetSerializedSize ());
-
-    option.Serialize ( m_buffer.Begin () );
-
-//    h.Serialize( buffer.Begin() );
-//    TcpOptionTS opt;
-
-    Buffer::Iterator start = m_buffer.Begin ();
-    uint8_t kind = start.ReadU8 ();
-
-    NS_TEST_EXPECT_MSG_EQ (kind, TcpOption::MPTCP, "Different kind found");
-
-//    option2.Deserialize (start);
-    uint32_t read = option2.Deserialize( start );
-
-    NS_TEST_EXPECT_MSG_EQ ( read, option.GetSerializedSize(), "PcapDiff(file, file) must always be false");
-    NS_TEST_EXPECT_MSG_EQ ( option.GetLocalKey(), option2.GetLocalKey(), "Keys should be identic");
-
-//    PcapFile
-//    uint32_t sec(0), usec(0);
-//    static bool 	Diff (std::string const &f1, std::string const &f2, uint32_t &sec, uint32_t &usec, uint32_t snapLen=SNAPLEN_DEFAULT
-//    bool diff = ns3::PcapFile::Diff (std::string const &f1, std::string const &f2, sec, usec, SNAPLEN_DEFAULT);
-//    std::string fullPath = CreateDataDirFilename();
-//    CreateTempDirFilename
-
-// 0x1e0c0081ec98f2ec7e8654d0
-//    NS_TEST_EXPECT_MSG_EQ (diff, false, "PcapDiff(file, file) must always be false");
-//    TcpOptionMpTcpCapable
-
-    /////////////////////////////////////////////////
-    /// DSS check
-//    0x1e142005b7d964e16860e7ac0000000100186118
-
-}
-
-
-void
-TcpOptionMpTcpCapableTestCase::DoTeardown(void)
-{
-
-}
-#endif // 0
 
 static class TcpOptionMpTcpTestSuite : public TestSuite
 {
@@ -218,7 +160,31 @@ public:
  : TestSuite ("mptcp-option", UNIT)
  {
 //    for (uint8_t i=0; i< 40; i += 10)
-//    {
+//    {ça n
+
+    // Notice the 'U' suffix at the end of the number . By default compiler
+    // considers int as signed, thus triggering a warning
+
+    crypto_materials_t c = {
+      .keySyn = 17578475652852252522U,
+      .keySynAck = 4250710109353306436U,
+      /*expectedTokenSyn computed from SynAck key */
+      .expectedTokenSyn = 109896498,
+//      .expectedTokenSyn = 109896498,
+      .nonceSyn = 4179070691,
+      .nonceSynAck = 786372555,
+      .expectedHmacSynAck = 17675966670101668951U,
+      .expectedHmacAck = 0
+//    wireshark presents it into 5 bytes, why ?
+//      104752622
+//1348310848
+//1453523503
+//3525837167
+//3796638235
+    };
+
+    AddTestCase( new MpTcpCryptoTest(c), QUICK );
+
 
         ////////////////////////////////////////////////
         //// MP CAPABLE
