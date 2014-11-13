@@ -24,6 +24,12 @@
 namespace ns3
 {
 
+/*
+Only sha1 standardized for now
+*/
+typedef enum {
+MPTCP_SHA1
+} mptcp_crypto_t;
 
 #if 0
 typedef enum

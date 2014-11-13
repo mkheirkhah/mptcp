@@ -53,38 +53,7 @@ MpTcpSubFlow::GetTypeId(void)
   return tid;
 }
 
-uint32_t
-MpTcpSubFlow::GenerateTokenForKey(uint64_t key)
-{
-  const int KEY_SIZE_IN_BYTES = 8;
-  const int TOKEN_SIZE_IN_BYTES = 4;
-  Buffer keyBuff,tokenBuf(TOKEN_SIZE_IN_BYTES);
-  keyBuff.AddAtStart(KEY_SIZE_IN_BYTES);
 
-  Buffer::Iterator it = keyBuff.Begin();
-  it.WriteHtonU64(key);
-
-  uint32_t result = 0;
-//  unsigned char *SHA1(const unsigned char *d, size_t n, unsigned char *md);
-  uint8_t digest_buf[20];
-//  const uint8_t* test = (const uint8_t*)&key;
-  // Convert to network order
-  // TODO convert key to unsigned char
-	SHA1( keyBuff.PeekData(), KEY_SIZE_IN_BYTES, digest_buf);
-
-//	i = tokenBuf.Begin();
-//	i.Write
-//	Buffer()
-//  ReadNtohU32()
-  int i = 3;
-	// sha1 returns result in network order (little endian)
-	// here we convert to big endian
-        result = (digest_buf[i] << 0);
-        result |= (digest_buf[i-1] << 8);
-        result |= (digest_buf[i-2] << 16);
-        result |= (digest_buf[i-3] << 24);
-	return result;
-}
 
 
 
@@ -1008,7 +977,12 @@ MpTcpSubFlow::AppendMpTcp3WHSOption(TcpHeader& hdr) const
       case TcpHeader::SYN:
         {
           join->SetState(TcpOptionMpTcpJoin::Syn);
-          uint32_t token = GenerateTokenForKey(GetMeta()->GetRemoteKey() );
+          uint32_t token = 0;
+          uint64_t idsn = 0;
+//          int result = 0;
+//          result =
+          MpTcpSocketBase::GenerateTokenForKey( MPTCP_SHA1, GetMeta()->GetRemoteKey(), token, idsn );
+
           join->SetPeerToken(token);
           join->SetNonce(0);
         }
@@ -1032,8 +1006,8 @@ MpTcpSubFlow::AppendMpTcp3WHSOption(TcpHeader& hdr) const
           NS_FATAL_ERROR("TODO");
   //        id = GetIdManager()->GetLocalAddrId( InetSocketAddress(m_endPoint->GetLocalAddress(),m_endPoint->GetLocalPort()) );
           join->SetAddressId( id );
-          join->SetTruncatedHmac(424242);
-          join->SetNonce(4242);
+          join->SetTruncatedHmac(424242); // who cares
+          join->SetNonce(4242); //! truly random :)
         }
         break;
 

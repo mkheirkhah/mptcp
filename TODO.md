@@ -9,7 +9,9 @@ List of tests:
 	* MPTCP CC falls back to legacy TCP (will need some work on upstream side)
 * Tokens stay the same along the connection
 
+
 Generic:
+* Unmultiplex attribute MPTCP connection according to token
 * IPv6 support
 * add the possibility of setting priorities, ie the ability for a subflow to act as backup. Also take into account at scheduling level
 * implement callback support : need to change ns3 ? (matt)

@@ -73,6 +73,10 @@ public: // public methods
   virtual uint32_t
   BytesInFlight();  // Return total bytes in flight of a subflow
 
+
+  static
+  void GenerateTokenForKey( mptcp_crypto_t alg, uint64_t key, uint32_t& token, uint64_t& idsn);
+
   //const
   virtual uint32_t CalculateTotalCWND();
 
@@ -185,7 +189,7 @@ public: // public methods
 
   // Path management related functions
 
-  virtual int GenerateToken(uint32_t& token ) const;
+//  virtual int GenerateToken(uint32_t& token ) const;
 
   virtual void Destroy(void);
   /**
@@ -589,6 +593,8 @@ protected: // protected variables
 private:
   // TODO rename into m_localKey  and move tokens into subflow (maybe not even needed)
   uint64_t m_localKey;  //!< Store local host token, generated during the 3-way handshake
+  uint32_t m_localToken;
+
   uint64_t m_remoteKey; //!< Store remote host token
   bool     m_doChecksum;  //!< Compute the checksum. Negociated during 3WHS
 private:

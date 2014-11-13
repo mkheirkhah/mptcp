@@ -30,6 +30,7 @@
 #include "ns3/mp-tcp-id-manager-impl.h"
 #include "ns3/tcp-option-mptcp.h"
 #include "ns3/callback.h"
+#include <openssl/sha.h>
 
 NS_LOG_COMPONENT_DEFINE("MpTcpSocketBase");
 
@@ -71,7 +72,8 @@ MpTcpSocketBase::MpTcpSocketBase(const MpTcpSocketBase& sock) :
   m_mpEnabled(sock.m_mpEnabled),
   m_initialCWnd(sock.m_initialCWnd),
   m_server(false),
-  m_localKey(0),
+  m_localKey(sock.m_localKey),
+  m_localToken(sock.m_localToken),
   m_remoteKey(0),
   m_doChecksum(sock.m_doChecksum)
 {
@@ -88,6 +90,7 @@ MpTcpSocketBase::MpTcpSocketBase() :
   m_initialCWnd(20), // TODO reset to 1
   m_server(false),
   m_localKey(0),
+  m_localToken(0),
   m_remoteKey(0),
   m_doChecksum(false)
 {
@@ -101,6 +104,23 @@ MpTcpSocketBase::MpTcpSocketBase() :
   gnu.SetOutFile("allPlots.pdf");
 
   mod = 60; // ??
+
+  m_localKey = GenerateKey();
+  uint64_t idsn = 0;
+  GenerateTokenForKey( MPTCP_SHA1, m_localKey, m_localToken, idsn );
+
+  /**
+   mortezah added initialSeq in Tcpsocketbase but that's not valid
+   ns3 rely on m_highTxMark
+
+  /!\ seq nb must be 64 bits for mptcp but that would mean rewriting lots of code so
+
+  TODO add a SetInitialSeqNb member into TcpSocketBase
+  **/
+  m_nextTxSequence = (uint32_t)idsn;
+//  m_highTxMark = (uint32_t)idsn;
+
+
   // done by default ?
 //  Callback<void, Ptr<Socket> > vPS = MakeNullCallback<void, Ptr<Socket> >();
 //  Callback<void, Ptr<Socket>, const Address &> vPSA = MakeNullCallback<void, Ptr<Socket>, const Address &>();
@@ -338,8 +358,20 @@ MpTcpSocketBase::CompleteFork(Ptr<Packet> p, const TcpHeader& mptcpHeader, const
 
   // Register keys
   SetPeerKey( mpc->GetSenderKey() );
-  m_localKey = GenerateKey();
 
+  // got moved to constructor
+//  m_localKey = GenerateKey();
+//  uint64_t idsn = 0;
+//  GenerateTokenForKey( MPTCP_SHA1, m_localKey, m_localToken, idsn );
+//
+//  /**
+//   mortezah added initialSeq in Tcpsocketbase but that's not valid
+//   ns3 rely on m_highTxMark
+//
+//  /!\ seq nb must be 64 bits for mptcp but that would mean rewriting lots of code so
+//
+//  **/
+//  m_highTxMark = (uint32_t)idsn;
 
   // We only setup destroy callback for MPTCP connection's endPoints, not on subflows endpoints.
   SetupCallback();
@@ -1144,6 +1176,7 @@ MpTcpSocketBase::Connect(const Address & toAddress)
     return -ERROR_ISCONN; // INVAL ?
   }
 
+  //! TODO should generate a key
   if (m_state == CLOSED || m_state == LISTEN || m_state == SYN_SENT || m_state == LAST_ACK || m_state == CLOSE_WAIT)
     {
       m_server = false;
@@ -1739,19 +1772,69 @@ MpTcpSocketBase::ReTxTimeout()
 //    }
 //}
 
-int
-MpTcpSocketBase::GenerateToken(uint32_t& token) const
+void
+MpTcpSocketBase::GenerateTokenForKey( mptcp_crypto_t alg, uint64_t key, uint32_t& token, uint64_t& idsn)
 {
-  // if connection not established yet then we've got not key to generate the token
-  if( IsConnected() )
-  {
-    // TODO hash keys
-    token = 2;
-    return 0;
-  }
+  NS_ASSERT_MSG(alg == MPTCP_SHA1, "Only sha1 hmac currently supported (and standardised !)");
 
-  return -ERROR_NOTCONN;
+  const int DIGEST_SIZE_IN_BYTES = SHA_DIGEST_LENGTH; //20
+
+  const int KEY_SIZE_IN_BYTES = 8;
+//  const int TOKEN_SIZE_IN_BYTES = 4;
+  Buffer keyBuff, digestBuf;
+  keyBuff.AddAtStart(KEY_SIZE_IN_BYTES);
+  digestBuf.AddAtStart(DIGEST_SIZE_IN_BYTES);
+
+  Buffer::Iterator it = keyBuff.Begin();
+  it.WriteHtonU64(key);
+
+//  uint32_t result = 0;
+//  unsigned char *SHA1(const unsigned char *d, size_t n, unsigned char *md);
+  uint8_t digest[DIGEST_SIZE_IN_BYTES];
+//  const uint8_t* test = (const uint8_t*)&key;
+  // Convert to network order
+  // computes hash of KEY_SIZE_IN_BYTES bytes in keyBuff
+// TODO according to openssl doc (https://www.openssl.org/docs/crypto/EVP_DigestInit.html#)
+// we should use  EVP_MD_CTX *mdctx; instead of sha1
+	SHA1( keyBuff.PeekData(), KEY_SIZE_IN_BYTES, digest);
+
+	Buffer::Iterator it_digest = digestBuf.Begin();
+	it_digest.Write( digest , DIGEST_SIZE_IN_BYTES ); // strlen( (const char*)digest)
+	it_digest = digestBuf.Begin();
+//	idsn = it_digest.ReadNtohU64();
+//	i = tokenBuf.Begin();
+//	i.Write
+//	Buffer()
+//  ReadNtohU32()
+//  it_digest = digestBuf.Begin();
+  token = it_digest.ReadNtohU32();
+  it_digest.Next( 8 );
+
+  idsn = it_digest.ReadNtohU64();
+//  int i = 3;
+	// sha1 returns result in network order (little endian)
+	// here we convert to big endian
+//        result = (digest_buf[i] << 0);
+//        result |= (digest_buf[i-1] << 8);
+//        result |= (digest_buf[i-2] << 16);
+//        result |= (digest_buf[i-3] << 24);
+
+//	return 0;
 }
+
+//int
+//MpTcpSocketBase::GenerateToken(uint32_t& token) const
+//{
+//  // if connection not established yet then we've got not key to generate the token
+//  if( IsConnected() )
+//  {
+//    // TODO hash keys
+//    token = 2;
+//    return 0;
+//  }
+//
+//  return -ERROR_NOTCONN;
+//}
 
 
 
