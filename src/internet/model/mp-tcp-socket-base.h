@@ -156,8 +156,8 @@ public: // public methods
   virtual void
   DoPeerClose(void); // FIN is in sequence, notify app and respond with a FIN
 
-  void
-  ClosingOnEmpty(TcpHeader& header);
+//  virtual void
+//  ClosingOnEmpty(TcpHeader& header);
 
   virtual int
   DoClose(void); // Close a socket by sending RST, FIN, or FIN+ACK, depend on the current state

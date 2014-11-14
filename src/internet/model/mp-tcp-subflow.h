@@ -206,6 +206,8 @@ public:
 //  PeerClose(Ptr<Packet>, const TcpHeader&); // Received a FIN from peer, notify rx buffer
 //  virtual void
 //  DoPeerClose(void); // FIN is in sequence, notify app and respond with a FIN
+  virtual void
+  ClosingOnEmpty(TcpHeader& header);
 
   virtual void
   ParseDSS(Ptr<Packet> p, const TcpHeader& header, Ptr<TcpOptionMpTcpDSS> dss);
@@ -328,12 +330,13 @@ protected:
   void
   AppendMpTcp3WHSOption(TcpHeader& hdr) const;
 
-
+  void
+  AppendDataFin(TcpHeader& header) const;
   /**
     GetMeta()->m_rxBuffer.NextRxSequence().GetValue()
   **/
   void
-  AppendDataAck(TcpHeader& hdr);
+  AppendDataAck(TcpHeader& hdr) const;
 
   Ptr<MpTcpSocketBase>
   GetMeta() const;

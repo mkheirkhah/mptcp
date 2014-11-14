@@ -2905,39 +2905,39 @@ MpTcpSocketBase::StoreUnOrderedData(DSNMapping *ptr1)
 #endif
 
 
-void
-MpTcpSocketBase::ClosingOnEmpty(TcpHeader& header)
-{
-  /* TODO the question is: is that ever called ?
-  */
-  NS_LOG_INFO("closing called");
-
-    header.SetFlags( header.GetFlags() | TcpHeader::FIN);
-    // flags |= TcpHeader::FIN;
-    if (m_state == ESTABLISHED)
-    { // On active close: I am the first one to send FIN
-      NS_LOG_INFO ("ESTABLISHED -> FIN_WAIT_1");
-      m_state = FIN_WAIT_1;
-      // TODO get DSS, if none
-      Ptr<TcpOptionMpTcpDSS> dss;
-
-      //! TODO add GetOrCreate member
-      if(!GetMpTcpOption(header, dss))
-      {
-        // !
-        dss = Create<TcpOptionMpTcpDSS>();
-
-      }
-      dss->SetDataFin(true);
-      header.AppendOption(dss);
-
-    }
-    else if (m_state == CLOSE_WAIT)
-    { // On passive close: Peer sent me FIN already
-      NS_LOG_INFO ("CLOSE_WAIT -> LAST_ACK");
-      m_state = LAST_ACK;
-    }
-}
+//void
+//MpTcpSocketBase::ClosingOnEmpty(TcpHeader& header)
+//{
+//  /* TODO the question is: is that ever called ?
+//  */
+//  NS_LOG_INFO("closing called");
+//
+//    header.SetFlags( header.GetFlags() | TcpHeader::FIN);
+//    // flags |= TcpHeader::FIN;
+//    if (m_state == ESTABLISHED)
+//    { // On active close: I am the first one to send FIN
+//      NS_LOG_INFO ("ESTABLISHED -> FIN_WAIT_1");
+//      m_state = FIN_WAIT_1;
+//      // TODO get DSS, if none
+//      Ptr<TcpOptionMpTcpDSS> dss;
+//
+//      //! TODO add GetOrCreate member
+//      if(!GetMpTcpOption(header, dss))
+//      {
+//        // !
+//        dss = Create<TcpOptionMpTcpDSS>();
+//
+//      }
+//      dss->SetDataFin(true);
+//      header.AppendOption(dss);
+//
+//    }
+//    else if (m_state == CLOSE_WAIT)
+//    { // On passive close: Peer sent me FIN already
+//      NS_LOG_INFO ("CLOSE_WAIT -> LAST_ACK");
+//      m_state = LAST_ACK;
+//    }
+//}
 
 
 /** Inherit from Socket class: Kill this socket and signal the peer (if any) */
@@ -2964,6 +2964,9 @@ MpTcpSocketBase::Close(void)
         }
       return 0;
     }
+
+
+
 
   //!
   return DoClose();
@@ -3199,49 +3202,64 @@ MpTcpSocketBase::SendEmptyPacket(TcpHeader& header)
 int
 MpTcpSocketBase::DoClose()
 {
- #if 0
-  NS_LOG_FUNCTION (this << (int)sFlowIdx << m_subflows.size());
+  NS_LOG_FUNCTION(this);
 
-  Ptr<MpTcpSubFlow> sFlow = m_subflows[sFlowIdx];
-  //NS_LOG_INFO("DoClose -> Socket src/des (" << sFlow->sAddr << ":" << sFlow->sPort << "/" << sFlow->dAddr << ":" << sFlow->m_dPort << ")" << " state: " << TcpStateName[sFlow->state]);
-  switch (sFlow->state)
-    {
+  // TODO close all subflows
+  // TODO send a data fin
+  TcpHeader header;
+
+
+
+  switch (m_state)
+  {
   case SYN_RCVD:
   case ESTABLISHED:
 // send FIN to close the peer
-    SendEmptyPacket(sFlowIdx, TcpHeader::FIN);
-    NS_LOG_INFO ("("<< (int) sFlow->m_routeId<< ") ESTABLISHED -> FIN_WAIT_1 {DoClose} FIN is sent as separate pkt");
-    sFlow->state = FIN_WAIT_1;
-    break;
+      GenerateEmptyPacketHeader(header,TcpHeader::FIN);
+      SendEmptyPacket(TcpHeader::FIN);
+      GetSubflow(0)->SendEmptyPacket(header);
+      NS_LOG_INFO ("ESTABLISHED -> FIN_WAIT_1");
+      m_state = FIN_WAIT_1;
+      for( SubflowList::const_iterator it = m_subflows[Established].begin(); it != m_subflows[Established].end(); it++ )
+      {
+          Ptr<MpTcpSubFlow> sf = *it;
+          sf->Close();
+      }
+      break;
+
   case CLOSE_WAIT:
-// send FIN+ACK to close the peer (in normal scenario receiver should use this when she got FIN from sender)
-    SendEmptyPacket(sFlowIdx, TcpHeader::FIN | TcpHeader::ACK);
-    NS_LOG_INFO ("("<< (int) sFlow->m_routeId<< ") CLOSE_WAIT -> LAST_ACK {DoClose}");
-    sFlow->state = LAST_ACK;
-    break;
+// send FIN+ACK to close the peer
+      GenerateEmptyPacketHeader(header,TcpHeader::FIN | TcpHeader::ACK);
+      GetSubflow(0)->SendEmptyPacket(header);
+//      SendEmptyPacket(TcpHeader::FIN | TcpHeader::ACK);
+      NS_LOG_INFO ("CLOSE_WAIT -> LAST_ACK");
+      m_state = LAST_ACK;
+      for( SubflowList::const_iterator it = m_subflows[Established].begin(); it != m_subflows[Established].end(); it++ )
+      {
+          Ptr<MpTcpSubFlow> sf = *it;
+          sf->Close();
+      }
+      break;
+
   case SYN_SENT:
   case CLOSING:
 // Send RST if application closes in SYN_SENT and CLOSING
-    NS_LOG_INFO("DoClose -> Socket src/des (" << sFlow->sAddr << ":" << sFlow->sPort << "/" << sFlow->dAddr << ":" << sFlow->m_dPort << ")" << " sFlow->state: " << TcpStateName[sFlow->state]);
-//    SendRST(sFlowIdx);
-//    CloseAndNotify(sFlowIdx);
-    break;
+      SendRST();
+      CloseAndNotify();
+      break;
   case LISTEN:
   case LAST_ACK:
 // In these three states, move to CLOSED and tear down the end point
-    CloseAndNotify(sFlowIdx);
-    break;
+      CloseAndNotify();
+      break;
   case CLOSED:
   case FIN_WAIT_1:
   case FIN_WAIT_2:
   case TIME_WAIT:
   default: /* mute compiler */
-//NS_LOG_INFO("DoClose -> DoNotting since subflow's state is " << TcpStateName[sFlow->state] << "(" << sFlow->m_routeId<< ")");
 // Do nothing in these four states
-    break;
-    }
-
-#endif
+      break;
+  }
   return 0;
 }
 

@@ -809,6 +809,10 @@ private:
 
 };
 
+/*
+\param ret save found option in ret
+\return true if option existed
+*/
 template<class T>
 bool
 GetMpTcpOption(const TcpHeader& header, Ptr<T>& ret)
@@ -833,6 +837,21 @@ GetMpTcpOption(const TcpHeader& header, Ptr<T>& ret)
   return false;
 }
 
+/**
+Like GetMpTcpOption but if does not find the option then it creates one
+\see GetMpTcpOption
+\return false if it had to create the option
+**/
+template<class T>
+bool
+GetOrCreateMpTcpOption(const TcpHeader& header, Ptr<T>& ret)
+{
+  if(!GetMpTcpOption(header,ret)){
+    ret = Create<T>();
+    return false;
+  }
+  return true;
+}
 
 
 

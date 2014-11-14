@@ -1499,10 +1499,12 @@ MpTcpSubFlow::RecvWithMapping( uint32_t maxSize, SequenceNumber32 &dsn)
 
 
 void
-MpTcpSubFlow::AppendDataAck(TcpHeader& hdr)
+MpTcpSubFlow::AppendDataAck(TcpHeader& hdr) const
 {
   NS_LOG_FUNCTION(this);
 
+//  Ptr<TcpOptionMpTcpDSS> dss;
+//  GetOrCreateMpTcpOption()
   Ptr<TcpOptionMpTcpDSS> dss = CreateObject<TcpOptionMpTcpDSS>();
   dss->SetDataAck( GetMeta()->m_rxBuffer.NextRxSequence().GetValue() );
 
@@ -1708,6 +1710,41 @@ MpTcpSubFlow::AdvertisedWindowSize(void)
 }
 
 void
+MpTcpSubFlow::ClosingOnEmpty(TcpHeader& header)
+{
+  /* TODO the question is: is that ever called ?
+  */
+  NS_LOG_FUNCTION(this << "mattator");
+
+    header.SetFlags( header.GetFlags() | TcpHeader::FIN);
+    // flags |= TcpHeader::FIN;
+    if (m_state == ESTABLISHED)
+    { // On active close: I am the first one to send FIN
+      NS_LOG_INFO ("ESTABLISHED -> FIN_WAIT_1");
+      m_state = FIN_WAIT_1;
+      // TODO get DSS, if none
+      Ptr<TcpOptionMpTcpDSS> dss;
+
+      //! TODO add GetOrCreate member
+      if(!GetMpTcpOption(header, dss))
+      {
+        // !
+        dss = Create<TcpOptionMpTcpDSS>();
+
+      }
+      dss->SetDataFin(true);
+      header.AppendOption(dss);
+
+    }
+    else if (m_state == CLOSE_WAIT)
+    { // On passive close: Peer sent me FIN already
+      NS_LOG_INFO ("CLOSE_WAIT -> LAST_ACK");
+      m_state = LAST_ACK;
+    }
+}
+
+
+void
 MpTcpSubFlow::ParseDSS(Ptr<Packet> p, const TcpHeader& header,Ptr<TcpOptionMpTcpDSS> dss)
 {
   //!
@@ -1756,6 +1793,14 @@ MpTcpSubFlow::ParseDSS(Ptr<Packet> p, const TcpHeader& header,Ptr<TcpOptionMpTcp
 
 }
 
+
+void
+MpTcpSubFlow::AppendDataFin(TcpHeader& header) const
+{
+
+  Ptr<TcpOptionMpTcpDSS> dss =
+
+}
 /*
 Upon ack receival we need to act depending on if it's new or not
 -if it's new it may allow us to discard a mapping
