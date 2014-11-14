@@ -35,6 +35,7 @@ namespace ns3
 
 class MpTcpSocketBase;
 class MpTcpPathIdManager;
+class TcpOptionMpTcpDSS;
 
 /**
  * \class MpTcpSubFlow
@@ -101,6 +102,8 @@ public:
   virtual bool
   StopAdvertisingAddress(Ipv4Address);
 
+  virtual void
+  NotifySend (uint32_t spaceAvailable);
 
   void
   DumpInfo() const;
@@ -196,6 +199,20 @@ public:
   */
   virtual Ptr<Packet>
   RecvWithMapping(uint32_t maxSize, SequenceNumber32 &dsn);
+
+
+  //! TODO should notify upper layer
+//  virtual void
+//  PeerClose(Ptr<Packet>, const TcpHeader&); // Received a FIN from peer, notify rx buffer
+//  virtual void
+//  DoPeerClose(void); // FIN is in sequence, notify app and respond with a FIN
+
+  virtual void
+  ParseDSS(Ptr<Packet> p, const TcpHeader& header, Ptr<TcpOptionMpTcpDSS> dss);
+
+    // State transition functions
+  virtual void
+  ProcessEstablished(Ptr<Packet>, const TcpHeader&); // Received a packet upon ESTABLISHED state
 
   /**
   * \

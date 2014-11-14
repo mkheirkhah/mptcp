@@ -504,6 +504,7 @@ MpTcpSubFlow::SendDataPacket(TcpHeader& header, const SequenceNumber32& ssn, uin
 //  Ptr<ListErrorModel> rem = CreateObject<ListErrorModel>();
 //  rem->SetList(sampleList);
 
+  // TODO use rather GetOrCreateOption(
   Ptr<TcpOptionMpTcpDSS> dsnOption = Create<TcpOptionMpTcpDSS>();
 
   // TODO don't send  mapping for every subsequent packet
@@ -577,6 +578,23 @@ MpTcpSubFlow::GetMeta() const
   //!
   return m_metaSocket;
 }
+
+
+
+void
+MpTcpSubFlow::ProcessEstablished(Ptr<Packet> packet, const TcpHeader& header)
+{
+  Ptr<TcpOptionMpTcpDSS> dss;
+
+  //! TODO in the long term, I should rather loop over options and assign a callback ?
+  if(GetMpTcpOption(header, dss))
+  {
+    ParseDSS(packet,header,dss);
+  }
+
+  TcpSocketBase::ProcessEstablished(packet,header);
+}
+
 /**
 I ended up duplicating this code to update the meta r_Wnd, which would have been hackish otherwise
 
@@ -1022,6 +1040,13 @@ MpTcpSubFlow::AppendMpTcp3WHSOption(TcpHeader& hdr) const
 
   //!
 //  if()
+}
+
+
+void
+MpTcpSubFlow::NotifySend (uint32_t spaceAvailable)
+{
+  GetMeta()->NotifySend(spaceAvailable);
 }
 
 // TODO and normally I should wait for a fourth ack
@@ -1682,7 +1707,54 @@ MpTcpSubFlow::AdvertisedWindowSize(void)
   return GetMeta()->AdvertisedWindowSize();
 }
 
+void
+MpTcpSubFlow::ParseDSS(Ptr<Packet> p, const TcpHeader& header,Ptr<TcpOptionMpTcpDSS> dss)
+{
+  //!
+  NS_ASSERT(dss);
 
+  uint8_t flags = dss->GetFlags();
+
+  // Look for mapping
+  if( flags & TcpOptionMpTcpDSS::DSNMappingPresent )
+  {
+    //!
+    if(flags & TcpOptionMpTcpDSS::DSNOfEightBytes)
+    {
+      NS_FATAL_ERROR("Not supported");
+    }
+    else
+    {
+      //!
+      AddPeerMapping(dss->GetMapping());
+    }
+  }
+
+  // looks for Data ACK
+  if(flags & TcpOptionMpTcpDSS::DataAckPresent)
+  {
+    if(flags & TcpOptionMpTcpDSS::DataAckOf8Bytes)
+    {
+      NS_FATAL_ERROR("Not supported");
+    }
+    else
+    {
+      // TODO pass the info to the meta
+      //
+
+    }
+
+    GetMeta()->ReceivedAck( SequenceNumber32(dss->GetDataAck()), Ptr<MpTcpSubFlow>(this));
+  }
+
+  //!
+  if( flags & TcpOptionMpTcpDSS::DataFin)
+  {
+    //! depending on the state
+    PeerClose(p, header);
+  }
+
+}
 
 /*
 Upon ack receival we need to act depending on if it's new or not
@@ -1695,64 +1767,7 @@ void
 MpTcpSubFlow::ReceivedAck(Ptr<Packet> p, const TcpHeader& header)
 {
   NS_LOG_FUNCTION (this << header);
-  //NS_LOG_ERROR("Not implemented. To implement ?");
 
-  // TODO need to check for DSN mappings
-//  TcpHeader::TcpOptionList l;
-//  header.GetOptions(l);
-//  for(TcpHeader::TcpOptionList::const_iterator it = l.begin(); it != l.end(); ++it)
-//  {
-//    if( (*it)->GetKind() == TcpOption::MPTCP)
-//    {
-//      Ptr<TcpOptionMpTcpMain> opt = DynamicCast<TcpOptionMpTcpMain>(*it);
-//      if(opt->GetSubType() == TcpOptionMpTcpMain::MP_DSS)
-//      {
-//        //
-//         = DynamicCast<TcpOptionMpTcpDSS>(opt);
-//        NS_LOG_INFO( dss);
-
-  Ptr<TcpOptionMpTcpDSS> dss;
-  if(GetMpTcpOption(header, dss))
-  {
-
-    uint8_t flags = dss->GetFlags();
-
-    // Look for mapping
-    if( flags & TcpOptionMpTcpDSS::DSNMappingPresent )
-    {
-      //!
-      if(flags & TcpOptionMpTcpDSS::DSNOfEightBytes)
-      {
-        NS_FATAL_ERROR("Not supported");
-      }
-      else
-      {
-        //!
-        AddPeerMapping(dss->GetMapping());
-      }
-    }
-
-    //
-    if(flags & TcpOptionMpTcpDSS::DataAckPresent)
-    {
-      if(flags & TcpOptionMpTcpDSS::DataAckOf8Bytes)
-      {
-        NS_FATAL_ERROR("Not supported");
-      }
-      else
-      {
-        // TODO pass the info to the meta
-        //
-
-      }
-       GetMeta()->ReceivedAck( SequenceNumber32(dss->GetDataAck()), Ptr<MpTcpSubFlow>(this));
-    }
-  } // end of dss option handling
-//      else {
-//          //->GetSubType()
-//        NS_LOG_WARN("Strange MPTCP option in packet " << opt );
-//      }
-//NotifyDataRecv
   // if packet size > 0 then it will call ReceivedData
   TcpSocketBase::ReceivedAck(p, header );
 

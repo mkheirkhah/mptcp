@@ -454,7 +454,7 @@ public:
     DataAckOf8Bytes = 2, //!< a  (should not be used for now)
     DSNMappingPresent = 4,  //!< M
     DSNOfEightBytes   = 8,      //!< m  (should not be used for now)
-    DataFin           = 16 //!< F . what's the datafin ?
+    DataFin           = 16 //!< F . set to indicate end of communication
 
   };
 
@@ -475,6 +475,7 @@ public:
   virtual void SetDataAck(uint32_t);
   virtual uint32_t GetDataAck(void) const { return m_dataAck; };
 
+  virtual void SetDataFin(bool );
 
   virtual void Print (std::ostream &os) const;
   // OK

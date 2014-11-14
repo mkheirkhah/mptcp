@@ -444,6 +444,7 @@ TcpSocketBase::Send(Ptr<Packet> p, uint32_t flags)
 {
   NS_LOG_FUNCTION (this << p);
   NS_ABORT_MSG_IF(flags, "use of flags is not supported in TcpSocketBase::Send()");
+  //! & !m_closeOnEmpty
   if (m_state == ESTABLISHED || m_state == SYN_SENT || m_state == CLOSE_WAIT)
     {
       // Store the packet into Tx buffer
@@ -467,6 +468,8 @@ TcpSocketBase::Send(Ptr<Packet> p, uint32_t flags)
       m_errno = ERROR_NOTCONN;
       return -1; // Send failure
     }
+
+    return 0;
 }
 
 /** Inherit from Socket class: In TcpSocketBase, it is same as Send() call */
@@ -1559,6 +1562,7 @@ TcpSocketBase::SendPacket(TcpHeader header, Ptr<Packet> p)
       NS_ASSERT( header.GetSourcePort() == m_endPoint6->GetLocalPort() );
       NS_ASSERT( header.GetDestinationPort() == m_endPoint6->GetPeerPort() );
     }
+
   /// TODO assert seq number of TCP header
   // En fait ca je peux pas le verifier sans avoir la longueur du paquet ip
 //  NS_ASSERT_MSG( header.GetLength() == p->GetSize() , "Packet size does not match header");
@@ -1622,6 +1626,22 @@ TcpSocketBase::SendPacket(TcpHeader header, Ptr<Packet> p)
     }
 }
 
+void
+TcpSocketBase::ClosingOnEmpty(TcpHeader& header)
+{
+      header.SetFlags( header.GetFlags() | TcpHeader::FIN);
+      // flags |= TcpHeader::FIN;
+      if (m_state == ESTABLISHED)
+        { // On active close: I am the first one to send FIN
+          NS_LOG_INFO ("ESTABLISHED -> FIN_WAIT_1");
+          m_state = FIN_WAIT_1;
+        }
+      else if (m_state == CLOSE_WAIT)
+        { // On passive close: Peer sent me FIN already
+          NS_LOG_INFO ("CLOSE_WAIT -> LAST_ACK");
+          m_state = LAST_ACK;
+        }
+}
 
 uint32_t
 TcpSocketBase::SendDataPacket(TcpHeader& header, SequenceNumber32 seq,uint32_t maxSize)
@@ -1639,18 +1659,8 @@ TcpSocketBase::SendDataPacket(TcpHeader& header, SequenceNumber32 seq,uint32_t m
 //  // TODO move that to SendPacket
   if (m_closeOnEmpty && (remainingData == 0))
     {
-      header.SetFlags( header.GetFlags() | TcpHeader::FIN);
-      // flags |= TcpHeader::FIN;
-      if (m_state == ESTABLISHED)
-        { // On active close: I am the first one to send FIN
-          NS_LOG_INFO ("ESTABLISHED -> FIN_WAIT_1");
-          m_state = FIN_WAIT_1;
-        }
-      else if (m_state == CLOSE_WAIT)
-        { // On passive close: Peer sent me FIN already
-          NS_LOG_INFO ("CLOSE_WAIT -> LAST_ACK");
-          m_state = LAST_ACK;
-        }
+      ClosingOnEmpty(header);
+
     }
   NS_LOG_FUNCTION("SEQ [" << seq << "]");
    header.SetSequenceNumber(seq);
@@ -1694,7 +1704,7 @@ TcpSocketBase::SendDataPacket(TcpHeader& header, SequenceNumber32 seq,uint32_t m
 uint32_t
 TcpSocketBase::SendDataPacket(SequenceNumber32 seq, uint32_t maxSize, bool withAck)
 {
-  NS_LOG_FUNCTION (this << "seq" << seq << "with max size " << maxSize << "and ack"<< withAck);  //NS_LOG_INFO("SendDataPacket -> SeqNb: " << seq);
+  NS_LOG_FUNCTION (this << "seq" << seq << "with max size " << maxSize << "and ack "<< withAck);  //NS_LOG_INFO("SendDataPacket -> SeqNb: " << seq);
   NS_LOG_FUNCTION("SEQ [" << seq << "]");
   TcpHeader header;
 

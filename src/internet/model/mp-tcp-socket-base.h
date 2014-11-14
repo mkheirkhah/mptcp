@@ -99,9 +99,9 @@ public: // public methods
   PersistTimeout();
 
   /**
-  \brief Generates random key
+  \brief Generates random key, setups isdn and token
   **/
-  virtual uint64_t GenerateKey() const;
+  virtual uint64_t GenerateKey();
 
   /**
   * TODO when is it considered
@@ -130,6 +130,7 @@ public: // public methods
    at the connection level.  Notably, it is only DATA_ACKed once all
    data has been successfully received at the connection level
   */
+  // socket function member
   virtual int Close(void);
 
   /**
@@ -146,6 +147,22 @@ public: // public methods
 //  virtual void
 //  PeerClose(Ptr<Packet>, const TcpHeader&); // Received a FIN from peer, notify rx buffer
 
+  /* called by subflow when it sees a DSS with the DATAFIN flag
+  Params are ignored
+  \param packet Ignored
+  */
+  virtual void
+  PeerClose(Ptr<Packet> packet, const TcpHeader&); // Received a FIN from peer, notify rx buffer
+  virtual void
+  DoPeerClose(void); // FIN is in sequence, notify app and respond with a FIN
+
+  void
+  ClosingOnEmpty(TcpHeader& header);
+
+  virtual int
+  DoClose(void); // Close a socket by sending RST, FIN, or FIN+ACK, depend on the current state
+//  virtual void
+//  CloseAndNotify(void); // To CLOSED state, notify upper layer, and deallocate end point
 
 //  virtual int Close(uint8_t sFlowIdx);        // Closing subflow...
   virtual uint32_t GetTxAvailable() const;                  // Return available space in sending buffer to application
@@ -595,7 +612,9 @@ private:
   uint64_t m_localKey;  //!< Store local host token, generated during the 3-way handshake
   uint32_t m_localToken;
 
-  uint64_t m_remoteKey; //!< Store remote host token
+  uint64_t m_peerKey; //!< Store remote host token
+  uint32_t m_peerToken;
+
   bool     m_doChecksum;  //!< Compute the checksum. Negociated during 3WHS
 private:
 // CloseSubflow

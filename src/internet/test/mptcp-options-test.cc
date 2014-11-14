@@ -304,7 +304,7 @@ public:
                 new TcpOptionMpTcpTestCase<TcpOptionMpTcpDSS> (dsn,"DSN mapping only"),
                 QUICK
                 );
-
+        dsn2->SetDataFin(true);
         dsn2->SetDataAck(3210);
         AddTestCase(
                 new TcpOptionMpTcpTestCase<TcpOptionMpTcpDSS> (dsn2,"DataAck only"),

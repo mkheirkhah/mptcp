@@ -799,6 +799,18 @@ TcpOptionMpTcpDSS::~TcpOptionMpTcpDSS()
   NS_LOG_FUNCTION(this);
 }
 
+
+void
+TcpOptionMpTcpDSS::SetDataFin(bool datafin)
+{
+  //!
+  if( datafin )
+    m_flags |=  DataFin;
+  else
+    m_flags &=  ~DataFin;
+}
+
+
 void
 TcpOptionMpTcpDSS::SetMapping(MpTcpMapping mapping)
 {
@@ -880,7 +892,7 @@ TcpOptionMpTcpDSS::Serialize (Buffer::Iterator i) const
     if( m_flags & DataAckOf8Bytes)
     {
       // Not implemented
-      NS_LOG_ERROR("Not implemented");
+      NS_FATAL_ERROR("Not implemented");
     }
     else
     {
@@ -894,7 +906,7 @@ TcpOptionMpTcpDSS::Serialize (Buffer::Iterator i) const
     if( m_flags & DSNOfEightBytes)
     {
       // Not implemented
-      NS_LOG_ERROR("Not implemented");
+      NS_FATAL_ERROR("Not implemented");
     }
     else
     {

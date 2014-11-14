@@ -277,7 +277,7 @@ TcpTestCase::SourceHandleSend (Ptr<Socket> sock, uint32_t available)
 void
 TcpTestCase::SourceHandleRecv (Ptr<Socket> sock)
 {
-  NS_LOG_DEBUG("SourceHandleRecv");
+  NS_LOG_DEBUG("SourceHandleRecv : m_currentSourceRxBytes=" << m_currentSourceRxBytes);
   while (sock->GetRxAvailable () > 0 && m_currentSourceRxBytes < m_totalBytes)
     {
       uint32_t toRead = std::min (m_sourceReadSize, sock->GetRxAvailable ());
@@ -288,12 +288,15 @@ TcpTestCase::SourceHandleRecv (Ptr<Socket> sock)
         }
       NS_TEST_EXPECT_MSG_EQ ((m_currentSourceRxBytes + p->GetSize () <= m_totalBytes), true,
                              "Source received too many bytes");
-      NS_LOG_DEBUG ("Source recv data=\"" << GetString (p) << "\"");
+
       p->CopyData (&m_sourceRxPayload[m_currentSourceRxBytes], p->GetSize ());
       m_currentSourceRxBytes += p->GetSize ();
+
+      NS_LOG_DEBUG ("Source recv data=\"" << GetString (p) << "\". m_currentSourceRxBytes=" << m_currentSourceRxBytes);
     }
   if (m_currentSourceRxBytes == m_totalBytes)
     {
+      NS_LOG_DEBUG ("Received all the data. Closing socket.");
       sock->Close ();
     }
 }
@@ -525,8 +528,8 @@ public:
     // 4) server write size, and 5) server read size
     // with units of bytes
 //    AddTestCase (new TcpTestCase (13, 200, 200, 200, 200, false), TestCase::QUICK);
-//    AddTestCase (new TcpTestCase (13, 1, 1, 1, 1, false), TestCase::QUICK);
-    AddTestCase (new TcpTestCase (100000, 100, 50, 100, 20, false), TestCase::QUICK);
+    AddTestCase (new TcpTestCase (13, 1, 1, 1, 1, false), TestCase::QUICK);
+//    AddTestCase (new TcpTestCase (100000, 100, 50, 100, 20, false), TestCase::QUICK);
 
     // Disable IPv6 tests; not supported yet
 //    AddTestCase (new TcpTestCase (13, 200, 200, 200, 200, true), TestCase::QUICK);

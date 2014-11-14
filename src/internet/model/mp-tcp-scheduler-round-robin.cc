@@ -139,72 +139,7 @@ MpTcpSchedulerRoundRobin::GenerateMappings(MappingVector& mappings)
 //    m_lastUsedFlowId = (m_lastUsedFlowId + 1) %m_metaSock->GetNSubflows();
   }
 
-//  for(int i = 0; i < (int)m_metaSock->GetNSubflows(); ++i)
-//  {
 
-
-
-//    amountOfDataToSend = 0;
-//    MpTcpMapping mapping;
-////    //is protected
-//
-////    if( window > 0)
-////    {
-//    NS_LOG_DEBUG("Window available [" << window << "]");
-//    amountOfDataToSend = std::min( window, m_metaSock->m_txBuffer.SizeFromSequence( metaNextTxSeq ) );
-//    NS_LOG_DEBUG("Amount of data to send [" << amountOfDataToSend  << "]");
-////    }
-////    else {
-////        NS_LOG_DEBUG("No window available [" << window << "]");
-////      continue;
-////    }
-//
-//    mapping.Configure( metaNextTxSeq , amountOfDataToSend);
-//    mappings.push_back(  std::make_pair( i, mapping) );
-//    metaNextTxSeq += amountOfDataToSend;
-//  }
-
-    #if 0
-  // MATT this should be done into subflows
-  // This is a condition when main mptcp sendingBuffer is empty but they are some packets in a subflow's buffer
-  // and also sub-flow is recovering from time-out.
-  // this may be a decision to let to the CC
-  if (sendingBuffer->Empty())
-    {
-
-    // TODO that part should be moved into subflows
-      Ptr<MpTcpSubFlow> sF = m_subflows[sFlowIdx];
-      NS_LOG_WARN("(" << (int) sFlowIdx << ") main SendingBuffer is EMPTY, but SubflowBuffer is: "
-          << sF->m_mapDSN.size()
-        );
-
-      // Sub-flow state is established, SendingBuffer is empty
-      // but subflowBuffer (m_mapDSN) is not empty and sub-flow is recovering from timeOut
-      // Note that the algorithm used for detecting whether sub-flow is in timeout need to be studied further.
-      if ( (sF->m_state == ESTABLISHED) &&
-          (sF->m_mapDSN.size() > 0) &&
-          (sF->maxSeqNb > sF->TxSeqNumber)
-          )
-        {
-          uint32_t window = std::min(AvailableWindow(sFlowIdx), sF->GetSegSize());
-          NS_LOG_ERROR("SendingBuffer Empty!, Sub-flow (" << (int)sFlowIdx << ") AvailableWindow" << window);
-
-          // Send all data packets in subflowBuffer (m_mapDSN) until subflow's available window is full.
-          while (window != 0 && window >= sF->GetSegSize())
-            { // In case case more than one packet can be sent, if subflow's window allow
-              if (SendDataPacket(sF->m_routeId, window, false) == 0)
-                return false;
-              window = std::min(AvailableWindow(sFlowIdx), sF->GetSegSize());
-            }
-        }
-
-      else
-        { // SendingBuffer & SubflowBuffer are EMPTY!!
-          NS_LOG_WARN ("MpTcpSocketBase::SendPendingData: SubflowBuffer is empty");
-          return false; // Nothing to re-send!!
-        }
-    }
-  #endif
 
   #if 0
   std::pair<SequenceNumber32, uint32_t> mapping;

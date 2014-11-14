@@ -71,15 +71,18 @@ MpTcpSocketBase::MpTcpSocketBase(const MpTcpSocketBase& sock) :
   TcpSocketBase(sock),
   m_mpEnabled(sock.m_mpEnabled),
   m_initialCWnd(sock.m_initialCWnd),
-  m_server(false),
+  m_server(sock.m_server), //! true, if I am forked
   m_localKey(sock.m_localKey),
   m_localToken(sock.m_localToken),
-  m_remoteKey(0),
+  m_peerKey(sock.m_peerKey),
+  m_peerToken(sock.m_peerToken),
   m_doChecksum(sock.m_doChecksum)
 {
   m_remotePathIdManager = Create<MpTcpPathIdManagerImpl>();
   m_scheduler = Create<MpTcpSchedulerRoundRobin>();
   m_scheduler->SetMeta(this);
+
+  //! TODO here I should generate a new Key
 }
 
 
@@ -88,10 +91,11 @@ MpTcpSocketBase::MpTcpSocketBase() :
   TcpSocketBase(),
   m_mpEnabled(false),
   m_initialCWnd(20), // TODO reset to 1
-  m_server(false),
+  m_server(true),
   m_localKey(0),
   m_localToken(0),
-  m_remoteKey(0),
+  m_peerKey(0),
+  m_peerToken(0),
   m_doChecksum(false)
 {
   NS_LOG_FUNCTION(this);
@@ -106,19 +110,20 @@ MpTcpSocketBase::MpTcpSocketBase() :
   mod = 60; // ??
 
   m_localKey = GenerateKey();
-  uint64_t idsn = 0;
-  GenerateTokenForKey( MPTCP_SHA1, m_localKey, m_localToken, idsn );
-
-  /**
-   mortezah added initialSeq in Tcpsocketbase but that's not valid
-   ns3 rely on m_highTxMark
-
-  /!\ seq nb must be 64 bits for mptcp but that would mean rewriting lots of code so
-
-  TODO add a SetInitialSeqNb member into TcpSocketBase
-  **/
-  m_nextTxSequence = (uint32_t)idsn;
-//  m_highTxMark = (uint32_t)idsn;
+//  uint64_t idsn = 0;
+//  GenerateTokenForKey( MPTCP_SHA1, m_localKey, m_localToken, idsn );
+//
+//  /**
+//   mortezah added initialSeq in Tcpsocketbase but that's not valid
+//   ns3 rely on m_highTxMark
+//
+//  /!\ seq nb must be 64 bits for mptcp but that would mean rewriting lots of code so
+//
+//  TODO add a SetInitialSeqNb member into TcpSocketBase
+//  **/
+//  m_nextTxSequence = (uint32_t)idsn;
+//  m_txBuffer.SetHeadSequence(m_nextTxSequence);
+////  m_highTxMark = (uint32_t)idsn;
 
 
   // done by default ?
@@ -178,7 +183,7 @@ MpTcpSocketBase::GetRemoteKey() const
   //NS_ASSERT_MSG( IsConnected(),"Can't get the remote key before establishing a connection" );
 //  {
     //remoteKey =
-  return m_remoteKey;
+  return m_peerKey;
 //    return 0;
   //}
   //return -ERROR_INVAL;
@@ -262,14 +267,21 @@ MpTcpSocketBase::EstimateRtt(const TcpHeader& TcpHeader)
 void
 MpTcpSocketBase::SetPeerKey(uint64_t remoteKey)
 {
-//  NS_ASSERT( m_remoteKey == 0);
+//  NS_ASSERT( m_peerKey == 0);
 //  NS_ASSERT( m_state != CLOSED);
-
-  m_remoteKey = (uint64_t)remoteKey;
+//(uint64_t)
+  uint64_t idsn = 0;
+  m_peerKey = remoteKey;
 
   // not  sure yet. Wait to see if SYN/ACK is acked
   m_mpEnabled = true;
-  NS_LOG_DEBUG("Peer key set to " << m_remoteKey);
+  NS_LOG_DEBUG("Peer key set to " << m_peerKey);
+
+
+
+  //! TODO generate remote token/IDSN
+  MpTcpSocketBase::GenerateTokenForKey(MPTCP_SHA1,m_peerKey,m_peerToken,idsn);
+  m_rxBuffer.SetNextRxSequence( SequenceNumber32( (uint32_t)idsn )); // + 1 ?
 }
 
 
@@ -358,6 +370,8 @@ MpTcpSocketBase::CompleteFork(Ptr<Packet> p, const TcpHeader& mptcpHeader, const
 
   // Register keys
   SetPeerKey( mpc->GetSenderKey() );
+
+
 
   // got moved to constructor
 //  m_localKey = GenerateKey();
@@ -473,15 +487,21 @@ MpTcpSocketBase::OnSubflowEstablishment(Ptr<MpTcpSubFlow> subflow)
     if(! m_server)
     {
       // If client
+      NS_LOG_DEBUG("I am client, am I ?");
       Simulator::ScheduleNow(&MpTcpSocketBase::ConnectionSucceeded, this);
     }
   }
 
-  //[subflow->m_positionInVector] = ;
 
+  //[subflow->m_positionInVector] = ;
+  NS_LOG_DEBUG("Moving subflow " << subflow << " from others to established");
   SubflowList::iterator it = std::find(m_subflows[Others].begin(),m_subflows[Others].end(), subflow );
   NS_ASSERT(it != m_subflows[Others].end() ); //! the subflow must exist
   m_subflows[Established].push_back(*it);
+
+  //! TODO it should call the meta
+  //! SetSendCallback (Callback<void, Ptr<Socket>, uint32_t> sendCb)
+//  subflow->SetSendCallback();
 
   m_subflows[Others].erase(it);
 
@@ -1409,7 +1429,7 @@ int
 MpTcpSocketBase::Bind()
 {
   NS_LOG_FUNCTION (this);
-  m_server = false;
+  m_server = true;
   m_endPoint = m_tcp->Allocate();  // Create endPoint with ephemeralPort
   if (0 == m_endPoint)
     {
@@ -1622,6 +1642,8 @@ MpTcpSocketBase::SendPendingData(bool withAck)
 //    }NS_LOG_LOGIC ("SendPendingData sent " << nPacketsSent << " packets");
   }
 
+//  m_closeOnEmpty
+
 //  NS_LOG_LOGIC ("Dispatched " << nPacketsSent << " mappings");
   return nbMappingsDispatched > 0;
 }
@@ -1735,7 +1757,10 @@ void
 MpTcpSocketBase::Retransmit()
 {
   NS_LOG_FUNCTION (this);
-  NS_FATAL_ERROR("TODO");
+//  NS_FATAL_ERROR("TODO");
+  NS_LOG_ERROR("TODO");
+
+  TcpSocketBase::Retransmit();
   #if 0
   Ptr<MpTcpSubFlow> sFlow = m_subflows[sFlowIdx];
   // Exit From Fast Recovery
@@ -1839,10 +1864,30 @@ MpTcpSocketBase::GenerateTokenForKey( mptcp_crypto_t alg, uint64_t key, uint32_t
 
 
 uint64_t
-MpTcpSocketBase::GenerateKey() const
+MpTcpSocketBase::GenerateKey()
 {
+  NS_ASSERT_MSG( m_localKey == 0,"Key already generated");
+
+  //! arbitrary function, TODO replace with ns3 random gneerator
+  m_localKey = (rand() % 1000 + 1);
+
+  uint64_t idsn = 0;
+  GenerateTokenForKey( MPTCP_SHA1, m_localKey, m_localToken, idsn );
+
+  /**
+   mortezah added initialSeq in Tcpsocketbase but that's not valid
+   ns3 rely on m_highTxMark
+
+  /!\ seq nb must be 64 bits for mptcp but that would mean rewriting lots of code so
+
+  TODO add a SetInitialSeqNb member into TcpSocketBase
+  **/
+  m_nextTxSequence = (uint32_t)idsn;
+  m_txBuffer.SetHeadSequence(m_nextTxSequence);
+//  m_highTxMark = (uint32_t)idsn;
+
   // TODO rather use NS3 random generator
-  return (rand() % 1000 + 1);
+  return m_localKey;
 }
 
 
@@ -1930,7 +1975,7 @@ MpTcpSocketBase::SendEmptyPacket(uint8_t sFlowIdx, uint8_t flags)
     }
   else if (sFlow->state == SYN_SENT && hasSyn && sFlow->m_routeId != 0)
     {
-      header.AddOptJOIN(OPT_JOIN, m_remoteKey, 0); // addID should be zero?
+      header.AddOptJOIN(OPT_JOIN, m_peerKey, 0); // addID should be zero?
       olen += 6;
     }
 
@@ -2859,11 +2904,81 @@ MpTcpSocketBase::StoreUnOrderedData(DSNMapping *ptr1)
 }
 #endif
 
-/** Peer sent me a FIN. Remember its sequence in rx buffer. */
-#if 0
+
 void
-MpTcpSocketBase::PeerClose(uint8_t sFlowIdx, Ptr<Packet> p, const TcpHeader& mptcpHeader)
+MpTcpSocketBase::ClosingOnEmpty(TcpHeader& header)
 {
+  /* TODO the question is: is that ever called ?
+  */
+  NS_LOG_INFO("closing called");
+
+    header.SetFlags( header.GetFlags() | TcpHeader::FIN);
+    // flags |= TcpHeader::FIN;
+    if (m_state == ESTABLISHED)
+    { // On active close: I am the first one to send FIN
+      NS_LOG_INFO ("ESTABLISHED -> FIN_WAIT_1");
+      m_state = FIN_WAIT_1;
+      // TODO get DSS, if none
+      Ptr<TcpOptionMpTcpDSS> dss;
+
+      //! TODO add GetOrCreate member
+      if(!GetMpTcpOption(header, dss))
+      {
+        // !
+        dss = Create<TcpOptionMpTcpDSS>();
+
+      }
+      dss->SetDataFin(true);
+      header.AppendOption(dss);
+
+    }
+    else if (m_state == CLOSE_WAIT)
+    { // On passive close: Peer sent me FIN already
+      NS_LOG_INFO ("CLOSE_WAIT -> LAST_ACK");
+      m_state = LAST_ACK;
+    }
+}
+
+
+/** Inherit from Socket class: Kill this socket and signal the peer (if any) */
+int
+MpTcpSocketBase::Close(void)
+{
+  NS_LOG_FUNCTION (this);
+  // First we check to see if there is any unread rx data
+  // Bug number 426 claims we should send reset in this case.
+// TODO reestablish ?
+  if (m_rxBuffer.Size() != 0)
+  {
+    NS_FATAL_ERROR("TODO ");
+      SendRST();
+      return 0;
+  }
+
+  if (m_txBuffer.SizeFromSequence(m_nextTxSequence) > 0)
+    { // App close with pending data must wait until all data transmitted
+      if (m_closeOnEmpty == false)
+        {
+          m_closeOnEmpty = true;
+          NS_LOG_INFO ("Socket " << this << " deferring close, state " << TcpStateName[m_state]);
+        }
+      return 0;
+    }
+
+  //!
+  return DoClose();
+}
+
+
+/** Peer sent me a FIN. Remember its sequence in rx buffer. */
+
+void
+MpTcpSocketBase::PeerClose(Ptr<Packet> p, const TcpHeader& mptcpHeader)
+{
+  NS_LOG_FUNCTION(this << " PEEER CLOSE CALLED !");
+
+
+  #if 0
   NS_LOG_FUNCTION (this << mptcpHeader);
   Ptr<MpTcpSubFlow> sFlow = m_subflows[sFlowIdx];
 
@@ -2905,12 +3020,15 @@ MpTcpSocketBase::PeerClose(uint8_t sFlowIdx, Ptr<Packet> p, const TcpHeader& mpt
     }
 
   DoPeerClose(sFlowIdx); // Change state, respond with ACK
+  #endif
 }
 
 /** Received a in-sequence FIN. Close down this socket. */
 void
-MpTcpSocketBase::DoPeerClose(uint8_t sFlowIdx)
+MpTcpSocketBase::DoPeerClose(void)
 {
+  NS_LOG_FUNCTION(this);
+  #if 0
   NS_LOG_FUNCTION((int)sFlowIdx);
   Ptr<MpTcpSubFlow> sFlow = m_subflows[sFlowIdx];
   NS_ASSERT(sFlow->state == ESTABLISHED || sFlow->state == SYN_RCVD);
@@ -2953,8 +3071,9 @@ MpTcpSocketBase::DoPeerClose(uint8_t sFlowIdx)
    SendEmptyPacket(TcpHeader::ACK);
    }
    */
+   #endif
 }
-#endif
+
 //
 //void
 //MpTcpSocketBase::LastAckTimeout(uint8_t sFlowIdx)
@@ -2973,6 +3092,7 @@ MpTcpSocketBase::DoPeerClose(uint8_t sFlowIdx)
 ////    }
 //}
 //
+
 
 #if 0
 // looks used only when closing the socket
@@ -3075,10 +3195,11 @@ MpTcpSocketBase::SendEmptyPacket(TcpHeader& header)
 
 /** Do the action to close the socket. Usually send a packet with appropriate
  flags depended on the current m_state. */
- #if 0
+
 int
-MpTcpSocketBase::DoClose(uint8_t sFlowIdx)
+MpTcpSocketBase::DoClose()
 {
+ #if 0
   NS_LOG_FUNCTION (this << (int)sFlowIdx << m_subflows.size());
 
   Ptr<MpTcpSubFlow> sFlow = m_subflows[sFlowIdx];
@@ -3119,14 +3240,15 @@ MpTcpSocketBase::DoClose(uint8_t sFlowIdx)
 // Do nothing in these four states
     break;
     }
+
+#endif
   return 0;
 }
 
-#endif
 
-int
-MpTcpSocketBase::Close(void)
-{
+//int
+//MpTcpSocketBase::Close(void)
+//{
   #if 0
   NS_LOG_FUNCTION(this);
   // Should attempt to close all subflows
@@ -3167,70 +3289,10 @@ MpTcpSocketBase::Close(void)
     }
   return true;
   #endif
+//
+//  return 0;
+//}
 
-  return 0;
-}
-
-// This function would calls NotifyNormalClose() where in turn calls mpTopology:HandlePeerClose where in turn calls close();
-#if 0
-bool
-MpTcpSocketBase::CloseMultipathConnection()
-{
-  NS_LOG_FUNCTION_NOARGS();
-  bool closed = false;
-  uint32_t cpt = 0;
-  for (uint32_t i = 0; i < m_subflows.size(); i++)
-    {
-      NS_LOG_LOGIC("Subflow (" << i << ") TxSeqNb (" << m_subflows[i]->TxSeqNumber << ") RxSeqNb = " << m_subflows[i]->RxSeqNumber << " highestAck (" << m_subflows[i]->highestAck << ") maxSeqNb (" << m_subflows[i]->maxSeqNb << ")");
-
-      if (m_subflows[i]->m_state == CLOSED)
-        cpt++;
-      if (m_subflows[i]->m_state == TIME_WAIT)
-        {
-          NS_LOG_INFO("("<< (int)m_subflows[i]->m_routeId<< ") "<< TcpStateName[m_subflows[i]->state] << " -> CLOSED {CloseMultipathConnection}");
-          m_subflows[i]->state = CLOSED;
-          cpt++;
-        }
-    }
-  if (cpt == m_subflows.size())
-    {
-      // We could remove client ... it should work but it generate plots for receiver as well.
-//      if (m_state == ESTABLISHED && client)
-      if (m_state == ESTABLISHED )
-        {
-          NS_LOG_INFO("CloseMultipathConnection -> GENERATE PLOTS SUCCESSFULLY -> HoOoOrA  pAck: "
-//              << pAck
-              );
-          //GenerateRTTPlot();
-          // TODO remove, should be done on per
-          GenerateCWNDPlot();
-          GenerateSendvsACK();
-          GenerateRTT();
-          GenerateCwndTracer();
-          GeneratePktCount();
-          generatePlots();
-        }
-      if (m_state != CLOSED)
-        {
-          NS_LOG_INFO("CloseMultipathConnection -> MPTCP connection is closed {" << this << "}, m_state: " << TcpStateName[m_state] << " -> CLOSED" << " CurrentSubflow (" << (int)m_currentSublow << ") SubflowsSize: " <<m_subflows.size());
-          m_state = CLOSED;
-          NotifyNormalClose();
-          m_endPoint->SetDestroyCallback(MakeNullCallback<void>()); // Remove callback to destroy()
-          m_tcp->DeAllocate(m_endPoint);                          // Deallocating the endPoint
-          if (m_subflows.size() > 0)
-            m_subflows[0]->m_endPoint = 0;
-          m_endPoint = 0;
-          std::vector<Ptr<TcpSocketBase> >::iterator it = std::find(m_tcp->m_sockets.begin(), m_tcp->m_sockets.end(), this);
-          if (it != m_tcp->m_sockets.end())
-            {
-              m_tcp->m_sockets.erase(it);
-            }
-          CancelAllSubflowTimers();
-        }
-    }
-  return closed;
-}
-#endif
 
 //same as parent ? remove ?
 bool

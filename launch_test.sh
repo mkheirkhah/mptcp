@@ -23,7 +23,7 @@ printenv|grep NS_LOG
 # to clear screen
 #clear
 
-
+# --out only concerns the results of the test, not the actual stdout
 if [ ! -z $OUTPUT_FILENAME ]; then
 	OUT=" --out=${OUTPUT_FILENAME}"
 fi
@@ -31,7 +31,7 @@ fi
 #OUT=" --out=test_results.txt"
 
 TOFILE=""
-#TOFILE=" > xp.txt 2>&1"
+TOFILE=" > xp.txt 2>&1"
 
 if [ $WITH_GDB -gt 0 ]; then
 	#COMMAND=
@@ -58,4 +58,5 @@ eval $command
 
 echo "Exported:\n$NS_LOG"
 echo "Executed Command:\n$command"
+
 

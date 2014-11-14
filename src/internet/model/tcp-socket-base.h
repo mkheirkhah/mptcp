@@ -303,8 +303,13 @@ public:
   bool
   OutOfRange(SequenceNumber32 head, SequenceNumber32 tail) const; // Check if a sequence number range is within the rx window
 
+  /* addition by matt, allows to set the data fin in a DSS when closing the metasocket
+  */
+  virtual void
+  ClosingOnEmpty(TcpHeader& header);
+
   // Helper functions: Connection close
-  int
+  virtual int
   DoClose(void); // Close a socket by sending RST, FIN, or FIN+ACK, depend on the current state
   virtual void
   CloseAndNotify(void); // To CLOSED state, notify upper layer, and deallocate end point
@@ -316,7 +321,7 @@ public:
   DeallocateEndPoint(void); // Deallocate m_endPoint
   virtual void
   PeerClose(Ptr<Packet>, const TcpHeader&); // Received a FIN from peer, notify rx buffer
-  void
+  virtual void
   DoPeerClose(void); // FIN is in sequence, notify app and respond with a FIN
   virtual void
   CancelAllTimers(void); // Cancel all timer when endpoint is deleted
