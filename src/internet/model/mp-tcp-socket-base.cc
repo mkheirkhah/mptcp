@@ -3217,6 +3217,7 @@ MpTcpSocketBase::DoClose()
 // send FIN to close the peer
       GenerateEmptyPacketHeader(header,TcpHeader::FIN);
       SendEmptyPacket(TcpHeader::FIN);
+      Append
       GetSubflow(0)->SendEmptyPacket(header);
       NS_LOG_INFO ("ESTABLISHED -> FIN_WAIT_1");
       m_state = FIN_WAIT_1;
