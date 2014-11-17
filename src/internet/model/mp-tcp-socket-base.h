@@ -54,6 +54,9 @@ launch an assert. You can notice those via the comments "//! Disabled"
 As such many inherited (protected) functions are overriden & left empty.
 
 TODO add callbacks in case of an MP_JOIN ? add_addr ?
+
+TODO should inherit from TcpSocket rather TcpSocketBase , would allow
+to set a 64 bits based buffer / sq nb
 **/
 class MpTcpSocketBase : public TcpSocketBase
 {
@@ -310,6 +313,12 @@ protected: // protected methods
   TODO rename into ConnectionSucceeded
   **/
   void OnSubflowEstablishment(Ptr<MpTcpSubFlow>);
+
+  /**
+  Should be called when subflows enters FIN_WAIT or LAST_ACK
+  */
+  void OnSubflowClosing(Ptr<MpTcpSubFlow>);
+
   /**
   Fails if
   **/
@@ -547,14 +556,18 @@ protected: // protected variables
 
   typedef std::vector<Ptr<MpTcpSubFlow> > SubflowList;
 
-  enum {
-    Established = 0,
-    Others = 1
-  };
+  typedef enum {
+    Established = 0, /* contains ESTABLISHED/CLOSE_WAIT */
+    // TODO rename to restart
+    Others = 1,  /* Composed of SYN_RCVD, SYN_SENT*/
+    Closing, /* CLOSE_WAIT, FIN_WAIT */
+    Maximum  /* keep it last, used to decalre array */
+  } mptcp_container_t;
+
   /**
   *
   */
-  SubflowList m_subflows[2];
+  SubflowList m_subflows[Maximum];
   //! 0 for established,
   //!< 1 for established
   //!< 2 for backups
@@ -617,6 +630,9 @@ private:
 
   bool     m_doChecksum;  //!< Compute the checksum. Negociated during 3WHS
 private:
+
+  /* Utility function used when a subflow changes state */
+  void MoveSubflow(Ptr<MpTcpSubFlow> sf,mptcp_container_t from,mptcp_container_t to);
 // CloseSubflow
 //  uint8_t AddLocalAddr(const Ipv4Address& address);
 //

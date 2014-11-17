@@ -804,12 +804,17 @@ void
 TcpOptionMpTcpDSS::SetDataFin(bool datafin)
 {
   //!
+  NS_LOG_LOGIC("Setting datafin");
   if( datafin ) {
-    NS_ASSERT_MSG( (m_mapping.GetLength() < ~(uint16_t) 0 ), "Datafin increments DSS length by 1");
+    uint16_t temp = 0;
+    temp = ~temp;
+    NS_LOG_INFO("TEMP => " << temp); //~(uint16_t) 0
+    NS_ASSERT_MSG( (m_mapping.GetLength() < temp ), "Datafin increments DSS length by 1");
     m_flags |=  DataFin;
   }
-  else
+  else {
     m_flags &=  ~DataFin;
+  }
 }
 
 

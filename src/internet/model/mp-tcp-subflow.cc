@@ -1723,24 +1723,28 @@ MpTcpSubFlow::ClosingOnEmpty(TcpHeader& header)
       NS_LOG_INFO ("ESTABLISHED -> FIN_WAIT_1");
       m_state = FIN_WAIT_1;
       // TODO get DSS, if none
-      Ptr<TcpOptionMpTcpDSS> dss;
-
-      //! TODO add GetOrCreateMpTcpOption member
-      if(!GetMpTcpOption(header, dss))
-      {
-        // !
-        dss = Create<TcpOptionMpTcpDSS>();
-
-      }
-      dss->SetDataFin(true);
-      header.AppendOption(dss);
+//      Ptr<TcpOptionMpTcpDSS> dss;
+//
+//      //! TODO add GetOrCreateMpTcpOption member
+//      if(!GetMpTcpOption(header, dss))
+//      {
+//        // !
+//        dss = Create<TcpOptionMpTcpDSS>();
+//
+//      }
+//      dss->SetDataFin(true);
+//      header.AppendOption(dss);
 
     }
     else if (m_state == CLOSE_WAIT)
-    { // On passive close: Peer sent me FIN already
+    {
+      // On passive close: Peer sent me FIN already
       NS_LOG_INFO ("CLOSE_WAIT -> LAST_ACK");
       m_state = LAST_ACK;
+
     }
+
+    GetMeta()->OnSubflowClosing(this);
 }
 
 

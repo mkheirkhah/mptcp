@@ -249,6 +249,7 @@ TcpTestCase::ServerHandleSend (Ptr<Socket> sock, uint32_t available)
     }
   if (m_currentServerTxBytes == m_totalBytes)
     {
+      NS_LOG_DEBUG ("Server received all the data. Closing socket.");
       sock->Close ();
     }
 }
@@ -296,7 +297,7 @@ TcpTestCase::SourceHandleRecv (Ptr<Socket> sock)
     }
   if (m_currentSourceRxBytes == m_totalBytes)
     {
-      NS_LOG_DEBUG ("Received all the data. Closing socket.");
+      NS_LOG_DEBUG ("Client received all the data. Closing socket.");
       sock->Close ();
     }
 }
