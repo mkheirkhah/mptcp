@@ -804,8 +804,10 @@ void
 TcpOptionMpTcpDSS::SetDataFin(bool datafin)
 {
   //!
-  if( datafin )
+  if( datafin ) {
+    NS_ASSERT_MSG( (m_mapping.GetLength() < ~(uint16_t) 0 ), "Datafin increments DSS length by 1");
     m_flags |=  DataFin;
+  }
   else
     m_flags &=  ~DataFin;
 }
@@ -814,6 +816,8 @@ TcpOptionMpTcpDSS::SetDataFin(bool datafin)
 void
 TcpOptionMpTcpDSS::SetMapping(MpTcpMapping mapping)
 {
+  NS_ASSERT_MSG( !(m_flags & DataFin) || (mapping.GetLength() < ~(uint16_t) 0 ), "Datafin increments DSS length by 1");
+
   m_mapping = mapping;
   m_flags |= DSNMappingPresent;
 //  m_flags |= DSNMappingPresent;
@@ -849,6 +853,24 @@ TcpOptionMpTcpDSS::GetSerializedSize(void) const
   return length;
 }
 
+uint32_t
+TcpOptionMpTcpDSS::GetDataAck(void) const {
+  NS_ASSERT( m_flags & DataAckPresent );
+  return m_dataAck;
+};
+
+//uint16_t GetLength() const
+//{
+//    /* when there is a data fin in a DSS, it adds 1 to the mapping length */
+//    if(flags & DataFin) {
+//
+//      return( GetMapping().GetLength() + 1 );
+//    }
+//    else {
+//      return( GetMapping().GetLength() );
+//    }
+//}
+
 void
 TcpOptionMpTcpDSS::Print(std::ostream& os) const
 {
@@ -869,6 +891,11 @@ TcpOptionMpTcpDSS::Print(std::ostream& os) const
     if(GetFlags() & DSNOfEightBytes){
       os << "(8bytes mapping)";
     }
+  }
+
+  if(GetFlags() & DataFin)
+  {
+    os << "Has datafin";
   }
 //      << "Data seq [" << GetDataAck() << "]"
 //      << "Mapping size [" << GetMapping().GetLength()
@@ -902,6 +929,9 @@ TcpOptionMpTcpDSS::Serialize (Buffer::Iterator i) const
 
   if( m_flags & DSNMappingPresent)
   {
+
+
+
 //    NS_LOG_INFO("Serializing DSN mapping");
     if( m_flags & DSNOfEightBytes)
     {
@@ -913,7 +943,16 @@ TcpOptionMpTcpDSS::Serialize (Buffer::Iterator i) const
       i.WriteHtonU32( m_mapping.HeadDSN().GetValue() );
     }
     i.WriteHtonU32( GetMapping().HeadSSN().GetValue() );
-    i.WriteHtonU16( GetMapping().GetLength() );
+
+    if(m_flags & DataFin) {
+
+      i.WriteHtonU16( GetMapping().GetLength() + 1 );
+    }
+    else {
+      i.WriteHtonU16( GetMapping().GetLength() );
+    }
+
+
     i.WriteHtonU16( 0 );  // Checksum
   }
 
@@ -979,6 +1018,11 @@ TcpOptionMpTcpDSS::Deserialize (Buffer::Iterator i)
     m_mapping.MapToSSN( SequenceNumber32(i.ReadNtohU32())  );
 
     dataLevelLength = i.ReadNtohU16();
+
+    if(m_flags & DataFin)
+    {
+        --dataLevelLength;
+    }
 
     m_mapping.Configure( SequenceNumber32(dataSeqNb ), dataLevelLength);
   }

@@ -2976,9 +2976,42 @@ MpTcpSocketBase::Close(void)
 /** Peer sent me a FIN. Remember its sequence in rx buffer. */
 
 void
-MpTcpSocketBase::PeerClose(Ptr<Packet> p, const TcpHeader& mptcpHeader)
+MpTcpSocketBase::PeerClose(Ptr<Packet> p, const TcpHeader& tcpHeader)
 {
-  NS_LOG_FUNCTION(this << " PEEER CLOSE CALLED !");
+  NS_LOG_FUNCTION(this << " PEEER CLOSE CALLED !" << tcpHeader);
+
+  // Copier/coller de
+
+  // Ignore all out of range packets
+  if (tcpHeader.GetSequenceNumber() < m_rxBuffer.NextRxSequence() || tcpHeader.GetSequenceNumber() > m_rxBuffer.MaxRxSequence())
+    {
+      return;
+    }
+
+  // For any case, remember the FIN position in rx buffer first
+  #error TODO
+  m_rxBuffer.SetFinSequence(
+                            tcpHeader.GetSequenceNumber() + SequenceNumber32(p->GetSize())
+                            );
+  NS_LOG_LOGIC ("Accepted FIN at seq " << tcpHeader.GetSequenceNumber () + SequenceNumber32 (p->GetSize ()));
+  // If there is any piggybacked data, process it
+  if (p->GetSize())
+    {
+      ReceivedData(p, tcpHeader);
+    }
+  // Return if FIN is out of sequence, otherwise move to CLOSE_WAIT state by DoPeerClose
+  if (!m_rxBuffer.Finished())
+    {
+      return;
+    }
+
+  // Simultaneous close: Application invoked Close() when we are processing this FIN packet
+  if (m_state == FIN_WAIT_1)
+    {
+      NS_LOG_INFO ("FIN_WAIT_1 -> CLOSING");
+      m_state = CLOSING;
+      return;
+    }
 
 
   #if 0
@@ -3207,7 +3240,7 @@ MpTcpSocketBase::DoClose()
   // TODO close all subflows
   // TODO send a data fin
   TcpHeader header;
-
+  Ptr<MpTcpSubFlow> subflow = GetSubflow(0);
 
 
   switch (m_state)
@@ -3215,10 +3248,10 @@ MpTcpSocketBase::DoClose()
   case SYN_RCVD:
   case ESTABLISHED:
 // send FIN to close the peer
-      GenerateEmptyPacketHeader(header,TcpHeader::FIN);
-      SendEmptyPacket(TcpHeader::FIN);
-      Append
-      GetSubflow(0)->SendEmptyPacket(header);
+      subflow->GenerateEmptyPacketHeader(header,TcpHeader::FIN);
+//      SendEmptyPacket(header);
+      MpTcpSubFlow::AppendDataFin(header);
+      subflow->SendEmptyPacket(header);
       NS_LOG_INFO ("ESTABLISHED -> FIN_WAIT_1");
       m_state = FIN_WAIT_1;
       for( SubflowList::const_iterator it = m_subflows[Established].begin(); it != m_subflows[Established].end(); it++ )
@@ -3230,8 +3263,8 @@ MpTcpSocketBase::DoClose()
 
   case CLOSE_WAIT:
 // send FIN+ACK to close the peer
-      GenerateEmptyPacketHeader(header,TcpHeader::FIN | TcpHeader::ACK);
-      GetSubflow(0)->SendEmptyPacket(header);
+      subflow->GenerateEmptyPacketHeader(header,TcpHeader::FIN | TcpHeader::ACK);
+      subflow->SendEmptyPacket(header);
 //      SendEmptyPacket(TcpHeader::FIN | TcpHeader::ACK);
       NS_LOG_INFO ("CLOSE_WAIT -> LAST_ACK");
       m_state = LAST_ACK;

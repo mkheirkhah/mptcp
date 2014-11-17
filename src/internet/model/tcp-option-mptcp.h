@@ -463,7 +463,12 @@ public:
 
   // setter
   void SetMapping(MpTcpMapping mapping);
+
+  /**
+  This returns a copy
+  **/
   MpTcpMapping GetMapping(void) const;
+
   uint8_t GetFlags(void) const { return m_flags;};
 //  virtual void Configure(uint64_t, uint32_t, uint16_t);
 
@@ -473,9 +478,15 @@ public:
   * \brief Set seq nb of acked data at MPTP level
   */
   virtual void SetDataAck(uint32_t);
-  virtual uint32_t GetDataAck(void) const { return m_dataAck; };
+  virtual uint32_t GetDataAck(void) const;
 
   virtual void SetDataFin(bool );
+
+  /**
+  \warning This is not the length of the mapping !
+  For instance if
+  **/
+//  virtual uint16_t GetLength() const;
 
   virtual void Print (std::ostream &os) const;
   // OK
@@ -857,4 +868,4 @@ GetOrCreateMpTcpOption(const TcpHeader& header, Ptr<T>& ret)
 
 } // namespace ns3
 
-#endif /* TCP_OPTION_SACK_PERMITTED_H */
+#endif /* TCP_OPTION_MPTCP */

@@ -287,11 +287,13 @@ public:
 
 
         ////////////////////////////////////////////////
-        //// MP
+        //// MP_DSS
         ////
         Ptr<TcpOptionMpTcpDSS> dsn = CreateObject<TcpOptionMpTcpDSS>(),
-                dsn2 = CreateObject<TcpOptionMpTcpDSS>(),
-                dsn3 = CreateObject<TcpOptionMpTcpDSS>();
+                dsn2 = CreateObject<TcpOptionMpTcpDSS>();
+//                dsn3 = CreateObject<TcpOptionMpTcpDSS>(),
+//                dsn4 = CreateObject<TcpOptionMpTcpDSS>()
+                ;
         MpTcpMapping mapping;
         mapping.Configure( SequenceNumber32(54),32);
         mapping.MapToSSN( SequenceNumber32(40));
@@ -316,6 +318,9 @@ public:
                 new TcpOptionMpTcpTestCase<TcpOptionMpTcpDSS> (dsn,"DataAck + DSN mapping"),
                 QUICK
                 );
+
+
+
 
 
         ////////////////////////////////////////////////

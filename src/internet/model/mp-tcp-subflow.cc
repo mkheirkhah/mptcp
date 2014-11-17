@@ -1725,7 +1725,7 @@ MpTcpSubFlow::ClosingOnEmpty(TcpHeader& header)
       // TODO get DSS, if none
       Ptr<TcpOptionMpTcpDSS> dss;
 
-      //! TODO add GetOrCreate member
+      //! TODO add GetOrCreateMpTcpOption member
       if(!GetMpTcpOption(header, dss))
       {
         // !
@@ -1788,19 +1788,23 @@ MpTcpSubFlow::ParseDSS(Ptr<Packet> p, const TcpHeader& header,Ptr<TcpOptionMpTcp
   if( flags & TcpOptionMpTcpDSS::DataFin)
   {
     //! depending on the state
-    PeerClose(p, header);
+    NS_LOG_DEBUG("Peer wants to close the connection");
+    GetMeta()->PeerClose(p, header);
   }
 
 }
 
 
 void
-MpTcpSubFlow::AppendDataFin(TcpHeader& header) const
+MpTcpSubFlow::AppendDataFin(TcpHeader& header)
+//const
 {
 
-  Ptr<TcpOptionMpTcpDSS> dss =
-
+  Ptr<TcpOptionMpTcpDSS> dss;
+  GetOrCreateMpTcpOption(header,dss);
+  dss->SetDataFin(true);
 }
+
 /*
 Upon ack receival we need to act depending on if it's new or not
 -if it's new it may allow us to discard a mapping

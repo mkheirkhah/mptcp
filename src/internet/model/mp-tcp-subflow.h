@@ -327,15 +327,16 @@ protected:
   /**
   *
   */
-  void
+  virtual void
   AppendMpTcp3WHSOption(TcpHeader& hdr) const;
 
-  void
-  AppendDataFin(TcpHeader& header) const;
+  /* put it outside ? */
+  static void
+  AppendDataFin(TcpHeader& header) ;
   /**
     GetMeta()->m_rxBuffer.NextRxSequence().GetValue()
   **/
-  void
+  virtual void
   AppendDataAck(TcpHeader& hdr) const;
 
   Ptr<MpTcpSocketBase>
