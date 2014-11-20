@@ -11,6 +11,7 @@ List of tests:
 
 
 Generic:
+* Note that new subflows MUST NOT be established (using the process documented in Section 3.2) until a Digital Signature Standard (DSS) option has been successfully received across th
 * Unmultiplex attribute MPTCP connection according to token
 * IPv6 support
 * add the possibility of setting priorities, ie the ability for a subflow to act as backup. Also take into account at scheduling level

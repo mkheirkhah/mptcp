@@ -1586,7 +1586,7 @@ TcpOptionMpTcpFastClose::GetSerializedSize (void) const
 }
 
 ///////////////////////////////////////////////////
-//// MP_FASTCLOSE to totally stop a flow of data
+//// MP_FAIL to totally stop a flow of data
 ////
 TcpOptionMpTcpFallback::TcpOptionMpTcpFallback() :
   TcpOptionMpTcp(),

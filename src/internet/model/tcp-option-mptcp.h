@@ -694,7 +694,9 @@ private:
 
 /**
 \verbatim
-
+if, for example, the operating system
+   is running out of resources.  In these cases, MPTCP should send the
+   MP_FASTCLOSE.
                             1                   2                   3
         0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
        +---------------+---------------+-------+-----------------------+
@@ -778,7 +780,15 @@ private:
 
 };
 
+/*
+Option used when pb is notcied at any point during a connection (payload changed etc)
+.Sends RST and MP_FAIL option
 
+Basically useless in ns3.
+
+Note that the MP_FAIL option requires the use of the full 64-bit sequence number, even if 32-bit sequence numbers are
+normally in use in the DSS signals on the path.
+*/
 class TcpOptionMpTcpFallback : public TcpOptionMpTcp<TcpOptionMpTcpMain::MP_FAIL>
 {
 

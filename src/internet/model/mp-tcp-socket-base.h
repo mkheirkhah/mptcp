@@ -183,7 +183,13 @@ public: // public methods
   */
   Ptr<MpTcpSubFlow> GetSubflow(uint8_t);
 
+  virtual void ClosingOnEmpty(TcpHeader& header);
 
+  /**
+  Sends RST on all subflows
+  and MP_FASTCLOSE on one of the subflows
+  */
+  virtual void SendRST(void);
   // Setter for congestion Control and data distribution algorithm
 //  void SetCongestionCtrlAlgo(CongestionCtrl_t ccalgo);  // This would be used by attribute system for setting congestion control
 //  void SetDataDistribAlgo(DataDistribAlgo_t ddalgo);    // Round Robin is only algorithms used.

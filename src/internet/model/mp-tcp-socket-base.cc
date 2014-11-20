@@ -963,6 +963,21 @@ MpTcpSocketBase::Connect(const Address & toAddress)
   return DoConnect();
 }
 
+/** This function closes the endpoint completely. Called upon RST_TX action. */
+void
+MpTcpSocketBase::SendRST(void)
+{
+  NS_LOG_FUNCTION (this);
+  NS_FATAL_ERROR("TODO");
+  // TODO: send an MPTCP_fail
+//  Ptr<TcpOptionMptcpFastClose> opt;
+
+//  SendEmptyPacket(TcpHeader::RST);
+  NotifyErrorClose();
+  DeallocateEndPoint();
+}
+
+
 int
 MpTcpSocketBase::DoConnect(void)
 {
@@ -1317,12 +1332,7 @@ MpTcpSocketBase::SendPendingData(bool withAck)
   //
   m_scheduler->GenerateMappings(mappings);
 
-  remainingData =
-  if (m_closeOnEmpty && (remainingData == 0))
-    {
-      ClosingOnEmpty(header);
 
-    }
 
 //  NS_ASSERT_MSG( mappings.size() == GetNSubflows(), "The number of mappings should be equal to the nb of already established subflows" );
 
@@ -1374,6 +1384,16 @@ MpTcpSocketBase::SendPendingData(bool withAck)
   }
 
 //  m_closeOnEmpty
+
+  uint32_t remainingData = m_txBuffer.SizeFromSequence(m_nextTxSequence );
+
+  if (m_closeOnEmpty && (remainingData == 0))
+    {
+      TcpHeader header;
+
+      ClosingOnEmpty(header);
+
+    }
 
 //  NS_LOG_LOGIC ("Dispatched " << nPacketsSent << " mappings");
   return nbMappingsDispatched > 0;
@@ -1814,15 +1834,15 @@ MpTcpSocketBase::SetNewAddrCallback(Callback<bool, Ptr<Socket>, Address, uint8_t
 }
 
 void
-MpTcpSocketBase::MoveSubflow(Ptr<MpTcpSubFlow> sf,mptcp_container_t from,mptcp_container_t to)
+MpTcpSocketBase::MoveSubflow(Ptr<MpTcpSubFlow> subflow,mptcp_container_t from,mptcp_container_t to)
 {
-  static char* containerNames[Maximum][] = {
+  static const char* containerNames[Maximum][20] = {
     "Established",
     "Others",
     "Closing",
     "Maximum"
 
-  }
+  };
 
   NS_LOG_DEBUG("Moving subflow " << subflow << " from " << containerNames[from] << " to " << containerNames[to]);
 
@@ -1891,7 +1911,9 @@ MpTcpSocketBase::OnSubflowClosing(Ptr<MpTcpSubFlow> sf)
     case FIN_WAIT_1:
     case CLOSE_WAIT:
     case LAST_ACK:
-  }
+    default:
+      break;
+  };
 
 
   MoveSubflow(sf,Established,Closing);
@@ -2690,6 +2712,7 @@ MpTcpSocketBase::ClosingOnEmpty(TcpHeader& header)
   /* TODO the question is: is that ever called ?
   */
   NS_LOG_INFO("closing on empty called");
+  //      GenerateEmptyPacketHeader(header);
 // sets the datafin
 //    header.SetFlags( header.GetFlags() | TcpHeader::FIN);
 //    // flags |= TcpHeader::FIN;
