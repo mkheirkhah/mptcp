@@ -164,7 +164,7 @@ TcpOptionMpTcpMain::CreateMpTcpOption(uint8_t subtype)
     case MP_DSS:
       return CreateObject<TcpOptionMpTcpDSS>();
     case MP_FAIL:
-      return CreateObject<TcpOptionMpTcpFallback>();
+      return CreateObject<TcpOptionMpTcpFail>();
 
     case MP_FASTCLOSE:
 //      NS_ASSERT_MSG(false,"Unsupported MPTCP options. Implement them !" );
@@ -199,7 +199,20 @@ TcpOptionMpTcpMain::SerializeRef (Buffer::Iterator& i) const
 
 }
 
+uint32_t
+TcpOptionMpTcpMain::DeserializeRef (Buffer::Iterator& i) const
+{
+//    Buffer::Iterator& i = start;
+    uint8_t kind = i.ReadU8();
+    uint32_t length = 0;
 
+    NS_ASSERT(kind == GetKind ());
+//    i.WriteU8 (); // Kind
+//    i.WriteU8 ( GetSerializedSize() ); // Length
+
+    length = (uint32_t)i.ReadU8( );
+    return length;
+}
 
 /////////////////////////////////////////////////////////
 ////////  MP_CAPABLE
@@ -282,8 +295,9 @@ TcpOptionMpTcpCapable::Serialize (Buffer::Iterator i) const
 uint32_t
 TcpOptionMpTcpCapable::Deserialize (Buffer::Iterator i)
 {
+  uint32_t length = TcpOptionMpTcpMain::DeserializeRef(i);
 
-  uint32_t length =  (uint32_t)i.ReadU8( );
+//   (uint32_t)i.ReadU8( );
   NS_LOG_UNCOND("length " << length);
   NS_ASSERT( length == 12 || length == 20 );
   //NS_ABORT_UNLESS
@@ -523,7 +537,7 @@ TcpOptionMpTcpJoin::Deserialize (Buffer::Iterator i)
   NS_ASSERT(m_state == Uninitialized);
 
 //  TcpOptionMpTcp::Deserialize(start);
-  uint32_t length = (uint32_t) i.ReadU8();
+  uint32_t length = TcpOptionMpTcpMain::DeserializeRef(i);
 //  NS_ASSERT( length == 12);
 
   uint8_t subtype_and_flags = i.ReadU8()  ;
@@ -568,6 +582,7 @@ TcpOptionMpTcpJoin::SetHmac(uint8_t hmac[20])
 {
   //
 //  std::copy(hmac, hmac+20,m_hmac);
+//  NS_FATAL_ERROR("Not implemented");
 }
 
 
@@ -815,7 +830,9 @@ TcpOptionMpTcpDSS::Serialize (Buffer::Iterator i) const
 uint32_t
 TcpOptionMpTcpDSS::Deserialize (Buffer::Iterator i)
 {
-  uint32_t length =  (uint32_t)i.ReadU8( );
+
+//  uint32_t length =  (uint32_t)i.ReadU8( );
+  uint32_t length =  TcpOptionMpTcpMain::DeserializeRef(i);
 
 
   // 4
@@ -1085,8 +1102,8 @@ TcpOptionMpTcpAddAddress::Serialize (Buffer::Iterator i) const
 uint32_t
 TcpOptionMpTcpAddAddress::Deserialize (Buffer::Iterator i)
 {
-  uint32_t length =  (uint32_t)i.ReadU8( );
-
+//  uint32_t length =  (uint32_t)i.ReadU8( );
+  uint32_t length =  TcpOptionMpTcpMain::DeserializeRef(i);
   NS_ASSERT( length == 10
 //      || length == 8
 //      || length == 20
@@ -1202,7 +1219,8 @@ TcpOptionMpTcpRemoveAddress::Serialize (Buffer::Iterator i) const
 uint32_t
 TcpOptionMpTcpRemoveAddress::Deserialize (Buffer::Iterator i)
 {
-  uint32_t length =  (uint32_t)i.ReadU8( );
+//  uint32_t length =  (uint32_t)i.ReadU8( );
+  uint32_t length =  TcpOptionMpTcpMain::DeserializeRef(i);
 
   NS_ASSERT_MSG( length > 3,"You probably forgot to add AddrId to the MPTCP Remove option");
   //NS_ABORT_UNLESS
@@ -1306,7 +1324,8 @@ TcpOptionMpTcpChangePriority::Serialize (Buffer::Iterator i) const
 uint32_t
 TcpOptionMpTcpChangePriority::Deserialize (Buffer::Iterator i)
 {
-  uint32_t length =  (uint32_t)i.ReadU8( );
+//  uint32_t length =  (uint32_t)i.ReadU8( );
+  uint32_t length =  TcpOptionMpTcpMain::DeserializeRef(i);
 
   NS_ASSERT( length == 3 || length == 4 );
   //NS_ABORT_UNLESS
@@ -1419,7 +1438,8 @@ TcpOptionMpTcpFastClose::Serialize (Buffer::Iterator i) const
 uint32_t
 TcpOptionMpTcpFastClose::Deserialize (Buffer::Iterator i)
 {
-  uint32_t length =  (uint32_t)i.ReadU8( );
+//  uint32_t length =  (uint32_t)i.ReadU8( );
+  uint32_t length =  TcpOptionMpTcpMain::DeserializeRef(i);
 
   NS_ASSERT( length == 12 );
   //NS_ABORT_UNLESS
@@ -1442,7 +1462,7 @@ TcpOptionMpTcpFastClose::GetSerializedSize (void) const
 ///////////////////////////////////////////////////
 //// MP_FAIL to totally stop a flow of data
 ////
-TcpOptionMpTcpFallback::TcpOptionMpTcpFallback() :
+TcpOptionMpTcpFail::TcpOptionMpTcpFail() :
   TcpOptionMpTcp(),
   m_dsn(0)
 {
@@ -1451,14 +1471,14 @@ TcpOptionMpTcpFallback::TcpOptionMpTcpFallback() :
 
 
 void
-TcpOptionMpTcpFallback::SetDSN(const uint64_t& dsn)
+TcpOptionMpTcpFail::SetDSN(const uint64_t& dsn)
 {
   m_dsn = dsn;
 }
 
 
 void
-TcpOptionMpTcpFallback::Print (std::ostream &os) const
+TcpOptionMpTcpFail::Print (std::ostream &os) const
 {
 //  TcpOptionMpTcpMain::Print(os);
   os << "MP_FastClose: Receiver key set to ["
@@ -1466,7 +1486,7 @@ TcpOptionMpTcpFallback::Print (std::ostream &os) const
 }
 
 bool
-TcpOptionMpTcpFallback::operator==(const TcpOptionMpTcpFallback& opt) const
+TcpOptionMpTcpFail::operator==(const TcpOptionMpTcpFail& opt) const
 {
 
   return (
@@ -1477,7 +1497,7 @@ TcpOptionMpTcpFallback::operator==(const TcpOptionMpTcpFallback& opt) const
 
 
 void
-TcpOptionMpTcpFallback::Serialize (Buffer::Iterator i) const
+TcpOptionMpTcpFail::Serialize (Buffer::Iterator i) const
 {
   TcpOptionMpTcp::SerializeRef(i);
 
@@ -1487,10 +1507,10 @@ TcpOptionMpTcpFallback::Serialize (Buffer::Iterator i) const
 
 
 uint32_t
-TcpOptionMpTcpFallback::Deserialize (Buffer::Iterator i)
+TcpOptionMpTcpFail::Deserialize (Buffer::Iterator i)
 {
-  uint32_t length =  (uint32_t)i.ReadU8( );
-
+//  uint32_t length =  (uint32_t)i.ReadU8( );
+  uint32_t length =  TcpOptionMpTcpMain::DeserializeRef(i);
   NS_ASSERT( length == 12 );
   //NS_ABORT_UNLESS
 
@@ -1504,7 +1524,7 @@ TcpOptionMpTcpFallback::Deserialize (Buffer::Iterator i)
 }
 
 uint32_t
-TcpOptionMpTcpFallback::GetSerializedSize (void) const
+TcpOptionMpTcpFail::GetSerializedSize (void) const
 {
   return 12;
 }

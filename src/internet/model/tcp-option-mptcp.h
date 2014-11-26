@@ -102,6 +102,13 @@ public:
   GetSerializedSize (void) const =0;
 
   /**
+  Check kind is ok and
+  \return length of
+  */
+  uint32_t
+  DeserializeRef (Buffer::Iterator& i) const;
+
+  /**
    \return TCP option type
   */
   virtual uint8_t
@@ -808,16 +815,16 @@ Basically useless in ns3.
 Note that the MP_FAIL option requires the use of the full 64-bit sequence number, even if 32-bit sequence numbers are
 normally in use in the DSS signals on the path.
 */
-class TcpOptionMpTcpFallback : public TcpOptionMpTcp<TcpOptionMpTcpMain::MP_FAIL>
+class TcpOptionMpTcpFail : public TcpOptionMpTcp<TcpOptionMpTcpMain::MP_FAIL>
 {
 
 public:
-  TcpOptionMpTcpFallback(void);
-  virtual ~TcpOptionMpTcpFallback(void) {};
+  TcpOptionMpTcpFail(void);
+  virtual ~TcpOptionMpTcpFail(void) {};
 
 
 
-  virtual bool operator==(const TcpOptionMpTcpFallback& ) const;
+  virtual bool operator==(const TcpOptionMpTcpFail& ) const;
 
 
 //  static TypeId GetTypeId (void);

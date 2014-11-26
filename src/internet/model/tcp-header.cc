@@ -352,6 +352,26 @@ TcpHeader::Serialize (Buffer::Iterator start)  const
 
 
 
+//void
+//TcpHeader::Print (std::ostream &os) const
+//{
+//os << m_sourcePort << " > " << m_destinationPort;
+//if (m_flags != 0)
+//{
+//os<<" [";
+//os<< FlagstoString(m_flags);
+//os<<"]";
+//}
+//os<<" Seq="<<m_sequenceNumber<<" Ack="<<m_ackNumber<<" Win="<<m_windowSize;
+//TcpOptionList::const_iterator op;
+//for (op = m_options.begin (); op != m_options.end (); ++op)
+//{
+//os << " " << (*op)->GetInstanceTypeId ().GetName () << "(";
+//(*op)->Print (os);
+//os << ")";
+//}
+//}
+
 
 uint32_t
 TcpHeader::Deserialize (Buffer::Iterator start)
@@ -392,9 +412,9 @@ TcpHeader::Deserialize (Buffer::Iterator start)
       // Should read length and subtype then create adequate Option
       // revert back the iterator after length
       // uint8_t length =
-        i.ReadU8(); // skip length
+        i.ReadU16(); // skip kind & length
         uint8_t subtype = i.ReadU8() >> 4;
-        i.Prev(2); // Go backward 2 bytes (length)
+        i.Prev(3); // Go backward 2 bytes (to length field)
         op = TcpOptionMpTcpMain::CreateMpTcpOption(subtype);
       }
       else if (TcpOption::IsKindKnown (kind))

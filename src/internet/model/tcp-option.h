@@ -73,7 +73,7 @@ public:
   virtual void Serialize (Buffer::Iterator start) const = 0;
 
   /**
-   * \brief Deserialize the Option from a buffer iterator
+   * \brief Deserialize the Option from a buffer iterator starting from kind field
    * \param start the buffer iterator
    * \returns the number of deserialized bytes
    */
