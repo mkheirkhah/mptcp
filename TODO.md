@@ -51,3 +51,4 @@ use "/NodeList/[i]/DeviceList/[i]" ?
 * Inherit from TracedValue to propose a safer TcpState machine 
 * Add a TcpRxBuffer::HeadSeqNb() const function
 * remove useless dependancy between TcpHeader and TcpRxBuffer::Add .  
+* Buffer::CheckNoZero can be simplified

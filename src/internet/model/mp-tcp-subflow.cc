@@ -9,8 +9,8 @@
  */
 #undef NS_LOG_APPEND_CONTEXT
 #define NS_LOG_APPEND_CONTEXT \
-  if (m_node) { std::clog << Simulator::Now ().GetSeconds () << " [node " << m_node->GetId () << "] "; }
-
+  if (m_node) { std::clog << Simulator::Now ().GetSeconds () << " [node " << m_node->GetId () << ": ] "; }
+//<< TcpStateName[m_node->GetTcp()->GetState()] <<
 
 #include <iostream>
 #include <cmath>
@@ -238,6 +238,14 @@ MpTcpSubFlow::SendEmptyPacket(TcpHeader& header)
 //  header.SetWindowSize(AdvertisedWindowSize());
 }
 #endif
+
+
+TcpStates_t
+MpTcpSubFlow::GetState() const
+{
+  //!
+  return m_state;
+}
 
 
 int
@@ -701,6 +709,87 @@ MpTcpSubFlow::DoForwardUp(Ptr<Packet> packet, Ipv4Header header, uint16_t port, 
     }
 
 }
+
+
+/** Received a packet upon CLOSE_WAIT, FIN_WAIT_1, or FIN_WAIT_2 states */
+void
+MpTcpSubFlow::ProcessWait(Ptr<Packet> packet, const TcpHeader& tcpHeader)
+{
+  NS_LOG_FUNCTION (this << tcpHeader);
+
+  Ptr<TcpOptionMpTcpDSS> dss;
+
+  //! TODO in the long term, I should rather loop over options and assign a callback ?
+  if(GetMpTcpOption(tcpHeader, dss))
+  {
+    ParseDSS(packet,tcpHeader,dss);
+  }
+
+  TcpSocketBase::ProcessWait(packet,tcpHeader);
+/*
+  // Extract the flags. PSH and URG are not honoured.
+  uint8_t tcpflags = tcpHeader.GetFlags() & ~(TcpHeader::PSH | TcpHeader::URG);
+
+  if (packet->GetSize() > 0 && tcpflags != TcpHeader::ACK)
+    { // Bare data, accept it
+      ReceivedData(packet, tcpHeader);
+    }
+  else if (tcpflags == TcpHeader::ACK)
+    { // Process the ACK, and if in FIN_WAIT_1, conditionally move to FIN_WAIT_2
+      ReceivedAck(packet, tcpHeader);
+      if (m_state == FIN_WAIT_1 && m_txBuffer.Size() == 0 && tcpHeader.GetAckNumber() == m_highTxMark + SequenceNumber32(1))
+        { // This ACK corresponds to the FIN sent
+          NS_LOG_INFO ("FIN_WAIT_1 -> FIN_WAIT_2");
+          m_state = FIN_WAIT_2;
+        }
+    }
+  else if (tcpflags == TcpHeader::FIN || tcpflags == (TcpHeader::FIN | TcpHeader::ACK))
+    { // Got FIN, respond with ACK and move to next state
+      if (tcpflags & TcpHeader::ACK)
+        { // Process the ACK first
+          ReceivedAck(packet, tcpHeader);
+        }
+      m_rxBuffer.SetFinSequence(tcpHeader.GetSequenceNumber());
+    }
+  else if (tcpflags == TcpHeader::SYN || tcpflags == (TcpHeader::SYN | TcpHeader::ACK))
+    { // Duplicated SYN or SYN+ACK, possibly due to spurious retransmission
+      return;
+    }
+  else
+    { // This is a RST or bad flags
+      if (tcpflags != TcpHeader::RST)
+        {
+          NS_LOG_LOGIC ("Illegal flag " << tcpflags << " received. Reset packet is sent.");
+          SendRST();
+        }
+      CloseAndNotify();
+      return;
+    }
+
+  // Check if the close responder sent an in-sequence FIN, if so, respond ACK
+  if ((m_state == FIN_WAIT_1 || m_state == FIN_WAIT_2) && m_rxBuffer.Finished())
+    {
+      if (m_state == FIN_WAIT_1)
+        {
+          NS_LOG_INFO ("FIN_WAIT_1 -> CLOSING");
+          m_state = CLOSING;
+          if (m_txBuffer.Size() == 0 && tcpHeader.GetAckNumber() == m_highTxMark + SequenceNumber32(1))
+            { // This ACK corresponds to the FIN sent
+              TimeWait();
+            }
+        }
+      else if (m_state == FIN_WAIT_2)
+        {
+          TimeWait();
+        }
+      SendEmptyPacket(TcpHeader::ACK);
+      if (!m_shutdownRecv)
+        {
+          NotifyDataRecv();
+        }
+    }*/
+}
+
 
 void
 MpTcpSubFlow::CompleteFork(Ptr<Packet> p, const TcpHeader& h, const Address& fromAddress, const Address& toAddress)
@@ -1497,7 +1586,7 @@ MpTcpSubFlow::RecvWithMapping( uint32_t maxSize, SequenceNumber32 &dsn)
 
 //MpTcpSubFlow::TranslateSubflowSeqToDataSeq();
 
-
+// TODO move to Meta
 void
 MpTcpSubFlow::AppendDataAck(TcpHeader& hdr) const
 {
@@ -1505,20 +1594,27 @@ MpTcpSubFlow::AppendDataAck(TcpHeader& hdr) const
 
 //  Ptr<TcpOptionMpTcpDSS> dss;
 //  GetOrCreateMpTcpOption()
-  Ptr<TcpOptionMpTcpDSS> dss = CreateObject<TcpOptionMpTcpDSS>();
+  Ptr<TcpOptionMpTcpDSS> dss;
+  GetOrCreateMpTcpOption(hdr,dss);
+
+  NS_ASSERT(dss->GetDataAck() == 0);
+
+//   = CreateObject<TcpOptionMpTcpDSS>();
   dss->SetDataAck( GetMeta()->m_rxBuffer.NextRxSequence().GetValue() );
 
   // TODO check the option is not in the header already
 //  NS_ASSERT_MSG( hdr.GetOption()GetOp)
 
-  hdr.AppendOption(dss);
+//  hdr.AppendOption(dss);
 }
 
 
 /**
-TODO here I should look for an associated mapping. If there is not,
-then I discard the stuff
+TODO here I should look for an associated mapping.
+If there is not, then I discard the stuff
 std::ostream& ns3::operator<<(std::ostream&,const ns3::TcpOptionMptcpMain&)
+
+TODO I should also notify the meta, maybe with an enum saying if it's new data/old etc...
 */
 void
 MpTcpSubFlow::ReceivedData(Ptr<Packet> p, const TcpHeader& tcpHeader)
@@ -1574,7 +1670,7 @@ MpTcpSubFlow::ReceivedData(Ptr<Packet> p, const TcpHeader& tcpHeader)
       NS_LOG_DEBUG("Insert failed, No data or RX buffer full");
 
 //      dss->SetDataAck( GetMeta()->m_rxBuffer.NextRxSequence().GetValue() );
-      AppendDataAck( answerHeader);
+      GetMeta()->AppendDataAck( answerHeader );
       SendEmptyPacket(answerHeader);
       return;
     }
@@ -1646,7 +1742,7 @@ MpTcpSubFlow::ReceivedData(Ptr<Packet> p, const TcpHeader& tcpHeader)
     // should be always true hack to allow compilation
     if(sendAck) {
 //      answerHeader.AppendOption(dss);
-      AppendDataAck(answerHeader);
+      GetMeta()->AppendDataAck(answerHeader);
       SendEmptyPacket(answerHeader);
     }
 
@@ -1806,7 +1902,7 @@ MpTcpSubFlow::AppendDataFin(TcpHeader& header)
 
   Ptr<TcpOptionMpTcpDSS> dss;
   GetOrCreateMpTcpOption(header,dss);
-  dss->SetDataFin(true);
+  dss->EnableDataFin();
 }
 
 /*

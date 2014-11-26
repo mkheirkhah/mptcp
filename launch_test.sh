@@ -36,11 +36,18 @@ TOFILE=" > xp.txt 2>&1"
 if [ $WITH_GDB -gt 0 ]; then
 	#COMMAND=
 	echo 'gdb'
+
+	# http://tldp.org/LDP/abs/html/here-docs.html
 	# in <<- , the '-' allows to ignore the prepended spaces
 	# the '
+	echo "run --suite=$SUITE $OUT $TOFILE" > run.test
 	read -r  command <<-EOF
-		./waf --run test-runner --command-template="gdb -ex run --args %s --suite=$SUITE $OUT $TOFILE"
+		./waf --run test-runner --command-template="gdb -x run.test --args %s " 
 		EOF
+
+	#read -r command <<-EOF
+		#gdb -ex run --args /home/teto/ns3/build/utils/ns3.19-test-runner-debug --suite=$SUITE $OUT $TOFILE
+	#EOF
 else
 	echo 'Without gdb'
 	# you can add --out to redirect output to afile instead of standard output

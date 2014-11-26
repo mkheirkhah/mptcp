@@ -25,7 +25,7 @@
 #include <ostream>
 #include "ns3/assert.h"
 
-#define noBUFFER_FREE_LIST 1
+#define BUFFER_FREE_LIST 1
 
 namespace ns3 {
 
@@ -39,7 +39,7 @@ namespace ns3 {
  * or appended by the user. Its implementation is optimized
  * to ensure that the number of buffer resizes is minimized,
  * by creating new Buffers of the maximum size ever used.
- * The correct maximum size is learned at runtime during use by
+ * The correct maximum size is learned at runtime during use by 
  * recording the maximum size of each packet.
  *
  * \internal
@@ -48,11 +48,11 @@ namespace ns3 {
  * the data bytes is shared among a lot of Buffer instances despite
  * data being added or removed from them.
  *
- * When multiple Buffer instances hold a reference to the same
+ * When multiple Buffer instances hold a reference to the same 
  * underlying BufferData object, they must be able to detect when
  * the operation they want to perform should trigger a copy of the
  * BufferData. If the BufferData::m_count field is one, it means that
- * there exist only one instance of Buffer which references the
+ * there exist only one instance of Buffer which references the 
  * BufferData instance so, it is safe to modify it. It is also
  * safe to modify the content of a BufferData if the modification
  * falls outside of the "dirty area" defined by the BufferData.
@@ -80,7 +80,7 @@ namespace ns3 {
  *                        |--------^ m_start
  *                        |-------------------^ m_zeroAreaStart
  *                        |-----------------------------^ m_end - (m_zeroAreaEnd - m_zeroAreaStart)
- * virtual byte buffer:           |xxxxxxxxxxxx0000000000000.........|
+ * Virtual byte buffer:           |xxxxxxxxxxxx0000000000000.........|
  *                        |--------^ m_start
  *                        |--------------------^ m_zeroAreaStart
  *                        |---------------------------------^ m_zeroAreaEnd
@@ -89,13 +89,13 @@ namespace ns3 {
  *
  * A simple state invariant is that m_start <= m_zeroStart <= m_zeroEnd <= m_end
  */
-class Buffer
+class Buffer 
 {
 public:
   /**
    * \brief iterator in a Buffer instance
    */
-  class Iterator
+  class Iterator 
   {
 public:
     inline Iterator ();
@@ -253,6 +253,13 @@ public:
     /**
      * \return the byte read in the buffer.
      *
+     * Read data, but do not advance the Iterator read.
+     */
+    inline uint8_t  PeekU8 (void);
+
+    /**
+     * \return the byte read in the buffer.
+     *
      * Read data and advance the Iterator by the number of bytes
      * read.
      */
@@ -334,10 +341,20 @@ public:
      * \param size number of bytes to copy
      *
      * Copy size bytes of data from the internal buffer to the
-     * input buffer and avance the Iterator by the number of
+     * input buffer and advance the Iterator by the number of
      * bytes read.
      */
     void Read (uint8_t *buffer, uint32_t size);
+
+    /**
+     * \param start start iterator of the buffer to copy data into
+     * \param size  number of bytes to copy
+     *
+     * Copy size bytes of data from the internal buffer to the input buffer via
+     * the provided iterator and advance the Iterator by the number of bytes
+     * read.
+     */
+    inline void Read (Iterator start, uint32_t size);
 
     /**
      * \brief Calculate the checksum.
@@ -361,37 +378,101 @@ public:
 
 private:
     friend class Buffer;
+    /**
+     * Constructor - initializes the iterator to point to the buffer start
+     *
+     * \param buffer the buffer this iterator refers to
+     */
     inline Iterator (Buffer const*buffer);
-    inline Iterator (Buffer const*buffer, bool);
+    /**
+     * Constructor - initializes the iterator to point to the buffer end
+     *
+     * \param buffer the buffer this iterator refers to
+     * \param dummy not used param
+     */
+    inline Iterator (Buffer const*buffer, bool dummy);
+    /**
+     * Initializes the iterator values
+     *
+     * \param buffer the buffer this iterator refers to
+     */
     inline void Construct (const Buffer *buffer);
+    /**
+     * Checks that the [start, end) is not in the "virtual zero area".
+     *
+     * \param start start buffer position
+     * \param end end buffer position
+     * \returns true if [start, end) is not in the "virtual zero area".
+     */
     bool CheckNoZero (uint32_t start, uint32_t end) const;
+    /**
+     * Checks that the buffer position is not in the "virtual zero area".
+     *
+     * \param i buffer position
+     * \returns true if not in the "virtual zero area".
+     */
     bool Check (uint32_t i) const;
+    /**
+     * \return the two bytes read in the buffer.
+     *
+     * Read data and advance the Iterator by the number of bytes
+     * read.
+     * The data is read in network format and return in host format.
+     *
+     * \warning this is the slow version, please use ReadNtohU16 (void)
+     */
     uint16_t SlowReadNtohU16 (void);
+    /**
+     * \return the four bytes read in the buffer.
+     *
+     * Read data and advance the Iterator by the number of bytes
+     * read.
+     * The data is read in network format and return in host format.
+     *
+     * \warning this is the slow version, please use ReadNtohU32 (void)
+     */
     uint32_t SlowReadNtohU32 (void);
+    /**
+     * \brief Returns an appropriate message indicating a read error
+     * \returns the error message
+     */
     std::string GetReadErrorMessage (void) const;
+    /**
+     * \brief Returns an appropriate message indicating a write error
+     *
+     * The message depends on the actual Buffer::Iterator status.
+     *
+     * \returns the error message
+     */
     std::string GetWriteErrorMessage (void) const;
 
-    /* offset in virtual bytes from the start of the data buffer to the
+    /**
+     * offset in virtual bytes from the start of the data buffer to the
      * start of the "virtual zero area".
      */
     uint32_t m_zeroStart;
-    /* offset in virtual bytes from the start of the data buffer to the
+    /**
+     * offset in virtual bytes from the start of the data buffer to the
      * end of the "virtual zero area".
      */
     uint32_t m_zeroEnd;
-    /* offset in virtual bytes from the start of the data buffer to the
+    /**
+     * offset in virtual bytes from the start of the data buffer to the
      * start of the data which can be read by this iterator
      */
     uint32_t m_dataStart;
-    /* offset in virtual bytes from the start of the data buffer to the
+    /**
+     * offset in virtual bytes from the start of the data buffer to the
      * end of the data which can be read by this iterator
      */
     uint32_t m_dataEnd;
-    /* offset in virtual bytes from the start of the data buffer to the
+    /**
+     * offset in virtual bytes from the start of the data buffer to the
      * current position represented by this iterator.
      */
     uint32_t m_current;
-    /* a pointer to the underlying byte buffer. All offsets are relative
+    /**
+     * a pointer to the underlying byte buffer. All offsets are relative
      * to this pointer.
      */
     uint8_t *m_data;
@@ -403,7 +484,7 @@ private:
   inline uint32_t GetSize (void) const;
 
   /**
-   * \return a pointer to the start of the internal
+   * \return a pointer to the start of the internal 
    * byte buffer.
    *
    * The returned pointer points to an area of
@@ -481,10 +562,17 @@ private:
    */
   inline Buffer::Iterator End (void) const;
 
+  /**
+   * \brief Create a full copy of the buffer, including
+   * all the internal structures.
+   *
+   * \returns a copy of the buffer
+   */
   Buffer CreateFullCopy (void) const;
 
   /**
-   * \return the number of bytes required for serialization
+   * \brief Return the number of bytes required for serialization.
+   * \return the number of bytes.
    */
   uint32_t GetSerializedSize (void) const;
 
@@ -493,9 +581,9 @@ private:
    * \param buffer points to serialization buffer
    * \param maxSize max number of bytes to write
    *
-   * This buffer's contents are serialized into the raw
-   * character buffer parameter. Note: The zero length
-   * data is not copied entirely. Only the length of
+   * This buffer's contents are serialized into the raw 
+   * character buffer parameter. Note: The zero length 
+   * data is not copied entirely. Only the length of 
    * zero byte data is serialized.
    */
   uint32_t Serialize (uint8_t* buffer, uint32_t maxSize) const;
@@ -505,28 +593,68 @@ private:
    * \param buffer points to buffer for deserialization
    * \param size number of bytes to deserialize
    *
-   * The raw character buffer is deserialized and all the
+   * The raw character buffer is deserialized and all the 
    * data is placed into this buffer.
    */
   uint32_t Deserialize (const uint8_t* buffer, uint32_t size);
 
+  /**
+   * \brief Returns the current buffer start offset
+   * \return the offset
+   */
   int32_t GetCurrentStartOffset (void) const;
+  /**
+   * \brief Returns the current buffer end offset
+   * \return the offset
+   */
   int32_t GetCurrentEndOffset (void) const;
 
-  /**
+  /** 
    * Copy the specified amount of data from the buffer to the given output stream.
-   *
+   * 
    * @param os the output stream
    * @param size the maximum amount of bytes to copy. If zero, nothing is copied.
    */
   void CopyData (std::ostream *os, uint32_t size) const;
 
+  /**
+   * Copy the specified amount of data from the buffer to the given buffer.
+   *
+   * @param buffer the output buffer
+   * @param size the maximum amount of bytes to copy. If zero, nothing is copied.
+   * @returns the amount of bytes copied
+   */
   uint32_t CopyData (uint8_t *buffer, uint32_t size) const;
 
+  /**
+   * \brief Copy constructor
+   * \param o the buffer to copy
+   */
   inline Buffer (Buffer const &o);
+  /**
+   * \brief Assignment operator
+   * \param o the buffer to copy
+   * \return a reference to the buffer
+   */
   Buffer &operator = (Buffer const &o);
   Buffer ();
+  /**
+   * \brief Constructor
+   *
+   * The buffer will be initialized with zeroes up to its size.
+   *
+   * \param dataSize the buffer size
+   */
   Buffer (uint32_t dataSize);
+  /**
+   * \brief Constructor
+   *
+   * If initialize is set to true, the buffer will be initialized
+   * with zeroes up to its size.
+   *
+   * \param dataSize the buffer size.
+   * \param initialize initialize the buffer with zeroes.
+   */
   Buffer (uint32_t dataSize, bool initialize);
   ~Buffer ();
 private:
@@ -546,82 +674,140 @@ private:
    */
   struct Data
   {
-    /* The reference count of an instance of this data structure.
+    /**
+     * The reference count of an instance of this data structure.
      * Each buffer which references an instance holds a count.
-       */
+     */
     uint32_t m_count;
-    /* the size of the m_data field below.
+    /**
+     * the size of the m_data field below.
      */
     uint32_t m_size;
-    /* offset from the start of the m_data field below to the
+    /**
+     * offset from the start of the m_data field below to the
      * start of the area in which user bytes were written.
      */
     uint32_t m_dirtyStart;
-    /* offset from the start of the m_data field below to the
+    /**
+     * offset from the start of the m_data field below to the
      * end of the area in which user bytes were written.
      */
     uint32_t m_dirtyEnd;
-    /* The real data buffer holds _at least_ one byte.
+    /**
+     * The real data buffer holds _at least_ one byte.
      * Its real size is stored in the m_size field.
      */
     uint8_t m_data[1];
   };
 
+  /**
+   * \brief Transform a "Virtual byte buffer" into a "Real byte buffer"
+   */
   void TransformIntoRealBuffer (void) const;
+  /**
+   * \brief Checks the internal buffer structures consistency
+   *
+   * Used only for debugging purposes.
+   *
+   * \returns true if the buffer status is consistent.
+   */
   bool CheckInternalState (void) const;
+
+  /**
+   * \brief Initializes the buffer with a number of zeroes.
+   *
+   * \param zeroSize the zeroes size
+   */
   void Initialize (uint32_t zeroSize);
+
+  /**
+   * \brief Get the buffer real size.
+   * \warning The real size is the actual memory used by the buffer.
+   * \returns the memory used by the buffer.
+   */
   uint32_t GetInternalSize (void) const;
+
+  /**
+   * \brief Get the buffer end position.
+   * \returns the buffer end index.
+   */
   uint32_t GetInternalEnd (void) const;
+
+  /**
+   * \brief Recycle the buffer memory
+   * \param data the buffer data storage
+   */
   static void Recycle (struct Buffer::Data *data);
+  /**
+   * \brief Create a buffer data storage
+   * \param size the storage size to create
+   * \returns a pointer to the created buffer storage
+   */
   static struct Buffer::Data *Create (uint32_t size);
+  /**
+   * \brief Allocate a buffer data storage
+   * \param reqSize the storage size to create
+   * \returns a pointer to the allocated buffer storage
+   */
   static struct Buffer::Data *Allocate (uint32_t reqSize);
+  /**
+   * \brief Deallocate the buffer memory
+   * \param data the buffer data storage
+   */
   static void Deallocate (struct Buffer::Data *data);
 
-  struct Data *m_data;
+  struct Data *m_data; //!< the buffer data storage
 
-  /* keep track of the maximum value of m_zeroAreaStart across
+  /**
+   * keep track of the maximum value of m_zeroAreaStart across
    * the lifetime of a Buffer instance. This variable is used
    * purely as a source of information for the heuristics which
    * decide on the position of the zero area in new buffers.
    * It is read from the Buffer destructor to update the global
    * heuristic data and these global heuristic data are used from
-   * the Buffer constructor to choose an initial value for
+   * the Buffer constructor to choose an initial value for 
    * m_zeroAreaStart.
    */
   uint32_t m_maxZeroAreaStart;
   /**
    * location in a newly-allocated buffer where you should start
-   * writing data. i.e., m_start should be initialized to this
+   * writing data. i.e., m_start should be initialized to this 
    * value.
    */
   static uint32_t g_recommendedStart;
 
-  /* offset to the start of the virtual zero area from the start
+  /**
+   * offset to the start of the virtual zero area from the start
    * of m_data->m_data
    */
   uint32_t m_zeroAreaStart;
-  /* offset to the end of the virtual zero area from the start
+  /**
+   * offset to the end of the virtual zero area from the start
    * of m_data->m_data
    */
   uint32_t m_zeroAreaEnd;
-  /* offset to the start of the data referenced by this Buffer
+  /**
+   * offset to the start of the data referenced by this Buffer
    * instance from the start of m_data->m_data
    */
   uint32_t m_start;
-  /* offset to the end of the data referenced by this Buffer
+  /**
+   * offset to the end of the data referenced by this Buffer
    * instance from the start of m_data->m_data
    */
   uint32_t m_end;
 
 #ifdef BUFFER_FREE_LIST
+  /// Container for buffer data
   typedef std::vector<struct Buffer::Data*> FreeList;
-  struct LocalStaticDestructor
+  /// Local static destructor structure
+  struct LocalStaticDestructor 
   {
     ~LocalStaticDestructor ();
   };
-  static uint32_t g_maxSize;
-  static FreeList *g_freeList;
-  static struct LocalStaticDestructor g_localStaticDestructor;
+  static uint32_t g_maxSize; //!< Max observed data size
+  static FreeList *g_freeList; //!< Buffer data container
+  static struct LocalStaticDestructor g_localStaticDestructor; //!< Local static destructor
 #endif
 };
 
@@ -662,25 +848,25 @@ Buffer::Iterator::Construct (const Buffer *buffer)
   m_data = buffer->m_data->m_data;
 }
 
-void
+void 
 Buffer::Iterator::Next (void)
 {
   NS_ASSERT (m_current + 1 <= m_dataEnd);
   m_current++;
 }
-void
+void 
 Buffer::Iterator::Prev (void)
 {
   NS_ASSERT (m_current >= 1);
   m_current--;
 }
-void
+void 
 Buffer::Iterator::Next (uint32_t delta)
 {
   NS_ASSERT (m_current + delta <= m_dataEnd);
   m_current += delta;
 }
-void
+void 
 Buffer::Iterator::Prev (uint32_t delta)
 {
   NS_ASSERT (m_current >= delta);
@@ -704,7 +890,7 @@ Buffer::Iterator::WriteU8 (uint8_t data)
     }
 }
 
-void
+void 
 Buffer::Iterator::WriteU8 (uint8_t  data, uint32_t len)
 {
   NS_ASSERT_MSG (CheckNoZero (m_current, m_current + len),
@@ -722,7 +908,7 @@ Buffer::Iterator::WriteU8 (uint8_t  data, uint32_t len)
     }
 }
 
-void
+void 
 Buffer::Iterator::WriteHtonU16 (uint16_t data)
 {
   NS_ASSERT_MSG (CheckNoZero (m_current, m_current + 2),
@@ -741,7 +927,7 @@ Buffer::Iterator::WriteHtonU16 (uint16_t data)
   m_current+= 2;
 }
 
-void
+void 
 Buffer::Iterator::WriteHtonU32 (uint32_t data)
 {
   NS_ASSERT_MSG (CheckNoZero (m_current, m_current + 4),
@@ -763,7 +949,7 @@ Buffer::Iterator::WriteHtonU32 (uint32_t data)
   m_current+= 4;
 }
 
-uint16_t
+uint16_t 
 Buffer::Iterator::ReadNtohU16 (void)
 {
   uint8_t *buffer;
@@ -787,7 +973,7 @@ Buffer::Iterator::ReadNtohU16 (void)
   return retval;
 }
 
-uint32_t
+uint32_t 
 Buffer::Iterator::ReadNtohU32 (void)
 {
   uint8_t *buffer;
@@ -816,7 +1002,7 @@ Buffer::Iterator::ReadNtohU32 (void)
 }
 
 uint8_t
-Buffer::Iterator::ReadU8 (void)
+Buffer::Iterator::PeekU8 (void)
 {
   NS_ASSERT_MSG (m_current >= m_dataStart &&
                  m_current <= m_dataEnd,
@@ -825,23 +1011,28 @@ Buffer::Iterator::ReadU8 (void)
   if (m_current < m_zeroStart)
     {
       uint8_t data = m_data[m_current];
-      m_current++;
       return data;
     }
   else if (m_current < m_zeroEnd)
     {
-      m_current++;
       return 0;
     }
   else
     {
       uint8_t data = m_data[m_current - (m_zeroEnd-m_zeroStart)];
-      m_current++;
       return data;
     }
 }
 
-uint16_t
+uint8_t
+Buffer::Iterator::ReadU8 (void)
+{
+  uint8_t ret = PeekU8 ();
+  m_current ++;
+  return ret;
+}
+
+uint16_t 
 Buffer::Iterator::ReadU16 (void)
 {
   uint8_t byte0 = ReadU8 ();
@@ -852,6 +1043,16 @@ Buffer::Iterator::ReadU16 (void)
 
   return data;
 }
+
+void
+Buffer::Iterator::Read (Buffer::Iterator start, uint32_t size)
+{
+  Buffer::Iterator end = *this;
+  end.Next (size);
+  
+  start.Write (*this, end);
+}
+
 
 Buffer::Buffer (Buffer const&o)
   : m_data (o.m_data),
@@ -865,19 +1066,19 @@ Buffer::Buffer (Buffer const&o)
   NS_ASSERT (CheckInternalState ());
 }
 
-uint32_t
+uint32_t 
 Buffer::GetSize (void) const
 {
   return m_end - m_start;
 }
 
-Buffer::Iterator
+Buffer::Iterator 
 Buffer::Begin (void) const
 {
   NS_ASSERT (CheckInternalState ());
   return Buffer::Iterator (this);
 }
-Buffer::Iterator
+Buffer::Iterator 
 Buffer::End (void) const
 {
   NS_ASSERT (CheckInternalState ());

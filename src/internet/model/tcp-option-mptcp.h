@@ -43,6 +43,8 @@ http://www.iana.org/assignments/tcp-parameters/tcp-parameters.xhtml
 0xf 	(PRIVATE) 	Private Use within controlled testbe
  */
 // TODO rename to MpTcpSubType
+std::string
+TcpHeaderFlagsToString(uint8_t flags, const char delimiter='|');
 
 class TcpOptionMpTcpCapable;
 
@@ -441,6 +443,13 @@ we don't do the checksum either
 
                 Figure 9: Data Sequence Signal (DSS) Option
 
+   Note that the checksum is only present in this option if the use of
+   MPTCP checksumming has been negotiated at the MP_CAPABLE handshake
+   (see Section 3.1).  The presence of the checksum can be inferred from
+   the length of the option.
+
+   Maybe the checksum interactions should be moved to the TcpHeader instead
+
 */
 class TcpOptionMpTcpDSS : public TcpOptionMpTcp<TcpOptionMpTcpMain::MP_DSS>
 {
@@ -455,6 +464,7 @@ public:
     DSNMappingPresent = 4,  //!< M
     DSNOfEightBytes   = 8,      //!< m  (should not be used for now)
     DataFin           = 16 //!< F . set to indicate end of communication
+//    CheckSumPresent   = 32  //!< Not computed for now
 
   };
 
@@ -480,7 +490,13 @@ public:
   virtual void SetDataAck(uint32_t);
   virtual uint32_t GetDataAck(void) const;
 
-  virtual void SetDataFin(bool );
+  //! Unimplemented
+  virtual uint16_t GetChecksum(void) const;
+
+  /**
+  * Enable also a mapping flag
+  **/
+  virtual void EnableDataFin();
 
   /**
   \warning This is not the length of the mapping !
@@ -495,8 +511,11 @@ public:
   virtual uint32_t GetSerializedSize (void) const;
 
 protected:
+  bool m_hasChecksum;
+  uint16_t m_checksum;  //!< Unused
   MpTcpMapping m_mapping;
   uint8_t m_flags;
+
 //  uint64_t m_dataAck; //!< Can be On 32 bits dependings on the flags
   uint32_t m_dataAck; //!< Can be On 32 bits dependings on the flags. Data Acked by this option
 };
@@ -860,15 +879,17 @@ GetMpTcpOption(const TcpHeader& header, Ptr<T>& ret)
 
 /**
 Like GetMpTcpOption but if does not find the option then it creates one
+and append it to the the header
 \see GetMpTcpOption
 \return false if it had to create the option
 **/
 template<class T>
 bool
-GetOrCreateMpTcpOption(const TcpHeader& header, Ptr<T>& ret)
+GetOrCreateMpTcpOption(TcpHeader& header, Ptr<T>& ret)
 {
   if(!GetMpTcpOption(header,ret)){
     ret = Create<T>();
+    header.AppendOption(ret);
     return false;
   }
   return true;

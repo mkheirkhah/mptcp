@@ -49,6 +49,7 @@
 #include "rtt-estimator.h"
 #include "ns3/gnuplot.h" // Morteza
 #include "ns3/error-model.h" //Morteza
+#include "ns3/tcp-option-mptcp.h" //Matt
 #include <algorithm>
 #include <iostream>
 #include <fstream>
@@ -973,7 +974,7 @@ TcpSocketBase::ProcessEstablished(Ptr<Packet> packet, const TcpHeader& tcpHeader
       if (tcpflags != TcpHeader::RST)
         { // this must be an invalid flag, send reset
 
-          NS_LOG_LOGIC ("Illegal flag " << TcpHeader::FlagstoString(tcpflags) << " received. Reset packet is sent.");
+          NS_LOG_LOGIC ("Illegal flag " << TcpHeaderFlagsToString(tcpflags) << " received. Reset packet is sent.");
           SendRST();
         }
       CloseAndNotify();
@@ -1104,7 +1105,7 @@ TcpSocketBase::ProcessSynSent(Ptr<Packet> packet, const TcpHeader& tcpHeader)
     { // Other in-sequence input
       if (tcpflags != TcpHeader::RST)
         { // When (1) rx of FIN+ACK; (2) rx of FIN; (3) rx of bad flags
-          NS_LOG_LOGIC ("Illegal flag " << TcpHeader::FlagstoString(tcpflags,'|') << std::dec << " received. Reset packet is sent.");
+          NS_LOG_LOGIC ("Illegal flag " << TcpHeaderFlagsToString(tcpflags,'|') << std::dec << " received. Reset packet is sent.");
           SendRST();
         }
       CloseAndNotify();

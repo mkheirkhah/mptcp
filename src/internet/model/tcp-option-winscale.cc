@@ -20,7 +20,9 @@
  */
 
 #include "tcp-option-winscale.h"
+#include "ns3/log.h"
 
+NS_LOG_COMPONENT_DEFINE ("TcpOptionWinScale");
 namespace ns3 {
 
 NS_OBJECT_ENSURE_REGISTERED (TcpOptionWinScale);
@@ -54,7 +56,7 @@ TcpOptionWinScale::GetInstanceTypeId (void) const
 void
 TcpOptionWinScale::Print (std::ostream &os) const
 {
-  os << m_scale;
+  os << static_cast<int> (m_scale);
 }
 
 uint32_t
@@ -70,16 +72,27 @@ TcpOptionWinScale::Serialize (Buffer::Iterator start) const
   i.WriteU8 (GetKind ()); // Kind
   i.WriteU8 (3); // Length
   i.WriteU8 (m_scale); // Max segment size
-} 
+}
 
 uint32_t
 TcpOptionWinScale::Deserialize (Buffer::Iterator start)
 {
   Buffer::Iterator i = start;
+
+  uint8_t readKind = i.ReadU8 ();
+  if (readKind != GetKind ())
+    {
+      NS_LOG_WARN ("Malformed Window Scale option");
+      return 0;
+    }
   uint8_t size = i.ReadU8 ();
-  NS_ASSERT (size == 3);
+  if (size != 3)
+    {
+      NS_LOG_WARN ("Malformed Window Scale option");
+      return 0;
+    }
   m_scale = i.ReadU8 ();
-  return 3;
+  return GetSerializedSize ();
 }
 
 uint8_t

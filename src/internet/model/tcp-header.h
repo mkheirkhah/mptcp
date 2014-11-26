@@ -81,12 +81,6 @@ public:
   void SetAckNumber (SequenceNumber32 ackNumber);
 
   /**
-   * \brief Set the length of the header
-   * \param length the length of this TcpHeader
-   */
-  void SetLength (uint8_t length);
-
-  /**
    * \brief Set flags of the header
    * \param flags the flags for this TcpHeader
    */
@@ -106,10 +100,10 @@ public:
 
 //Getters
 
- /**
-  * \brief Get the source port
-  * \return The source port for this TcpHeader
-  */
+  /**
+   * \brief Get the source port
+   * \return The source port for this TcpHeader
+   */
   uint16_t GetSourcePort () const;
 
   /**
@@ -131,7 +125,11 @@ public:
   SequenceNumber32 GetAckNumber () const;
 
   /**
-   * \brief Get the length
+   * \brief Get the length in words
+   *
+   * A word is 4 bytes; without Tcp Options, header is 5 words (20 bytes).
+   * With options, it can reach up to 15 words (60 bytes).
+   *
    * \return the length of this TcpHeader
    */
   uint8_t GetLength () const;
@@ -160,8 +158,15 @@ public:
    * \return Whether the header contains a specific kind of option, or 0
    */
   Ptr<TcpOption> GetOption (uint8_t kind) const;
+
+  /** Hack by matt */
   typedef std::list< Ptr<TcpOption> > TcpOptionList; //!< List of TcpOption
-  void GetOptions (TcpOptionList& ) const;
+    void
+    GetOptions (TcpHeader::TcpOptionList& l) const;
+
+    std::string
+    FlagstoString(uint8_t flags, const char delimiter='|') const;
+
 
   /**
    * \brief Check if the header has the option specified
@@ -174,7 +179,7 @@ public:
    * \brief Append an option to the TCP header
    * \param option The option to append
    */
-  void AppendOption (Ptr<TcpOption> option);
+  bool AppendOption (Ptr<TcpOption> option);
 
   /**
    * \brief Initialize the TCP checksum.
@@ -233,14 +238,18 @@ public:
   /**
    * \brief TCP flag field values
    */
-  typedef enum { NONE = 0, FIN = 1, SYN = 2, RST = 4, PSH = 8, ACK = 16,
-                 URG = 32, ECE = 64, CWR = 128} Flags_t;
-
-
-  /**
-   * \brief
-   */
-  static std::string FlagstoString(uint8_t flags, char delimiter=' ');
+  typedef enum
+  {
+    NONE = 0,   //!< No flags
+    FIN  = 1,   //!< FIN
+    SYN  = 2,   //!< SYN
+    RST  = 4,   //!< Reset
+    PSH  = 8,   //!< Push
+    ACK  = 16,  //!< Ack
+    URG  = 32,  //!< Urgent
+    ECE  = 64,  //!< ECE
+    CWR  = 128  //!< CWR
+  } Flags_t;
 
   /**
    * \brief Get the type ID.
@@ -259,6 +268,8 @@ public:
    */
   bool IsChecksumOk (void) const;
 
+  friend bool operator== (const TcpHeader &lhs, const TcpHeader &rhs);
+
 private:
   /**
    * \brief Calculate the header checksum
@@ -266,11 +277,22 @@ private:
    * \returns the checksum
    */
   uint16_t CalculateHeaderChecksum (uint16_t size) const;
+
+  /**
+   * \brief Calculates the header length (in words)
+   *
+   * Given the standard size of the header, the method checks for options
+   * and calculates the real length (in words).
+   *
+   * \return header length in 4-byte words
+   */
+  uint8_t CalculateHeaderLength () const;
+
   uint16_t m_sourcePort;        //!< Source port
   uint16_t m_destinationPort;   //!< Destination port
   SequenceNumber32 m_sequenceNumber;  //!< Sequence number
   SequenceNumber32 m_ackNumber;       //!< ACK number
-  uint8_t m_length;             //!< Length (really a uint4_t)
+  uint8_t m_length;             //!< Length (really a uint4_t) in words.
   uint8_t m_flags;              //!< Flags (really a uint6_t)
   uint16_t m_windowSize;        //!< Window size
   uint16_t m_urgentPointer;     //!< Urgent pointer
@@ -285,6 +307,8 @@ private:
 
 
   TcpOptionList m_options; //!< TcpOption present in the header
+  uint8_t m_optionsLen; //!< Tcp options length.
+  static const uint8_t m_maxOptionsLen = 40; //!< Maximum options length
 };
 
 } // namespace ns3

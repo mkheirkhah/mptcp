@@ -22,11 +22,12 @@
 #define TCP_OPTION_TS_H
 
 #include "tcp-option.h"
+#include "ns3/timer.h"
 
 namespace ns3 {
 
 /**
- * Defines the TCP option of kind 8 (timestamp option) as in RFC1323
+ * Defines the TCP option of kind 8 (timestamp option) as in \RFC{1323}
  */
 
 class TcpOptionTS : public TcpOption
@@ -35,6 +36,10 @@ public:
   TcpOptionTS ();
   virtual ~TcpOptionTS ();
 
+  /**
+   * \brief Get the type ID.
+   * \return the object TypeId
+   */
   static TypeId GetTypeId (void);
   virtual TypeId GetInstanceTypeId (void) const;
 
@@ -45,13 +50,57 @@ public:
   virtual uint8_t GetKind (void) const;
   virtual uint32_t GetSerializedSize (void) const;
 
+  /**
+   * \brief Get the timestamp stored in the Option
+   * \return the timestamp
+   */
   uint32_t GetTimestamp (void) const;
+  /**
+   * \brief Get the timestamp echo stored in the Option
+   * \return the timestamp echo
+   */
   uint32_t GetEcho (void) const;
+  /**
+   * \brief Set the timestamp stored in the Option
+   * \param ts the timestamp
+   */
   void SetTimestamp (uint32_t ts);
+  /**
+   * \brief Set the timestamp echo stored in the Option
+   * \param ts the timestamp echo
+   */
   void SetEcho (uint32_t ts);
+
+  /**
+    * \brief Return an uint32_t value which represent "now"
+    *
+    * The value returned is usually used as Timestamp option for the
+    * TCP header; when the value will be echoed back, calculating the RTT
+    * will be an easy matter.
+    *
+    * The RFC does not mention any units for this value; following what
+    * is implemented in OS, we use milliseconds. Any change to this must be
+    * reflected to EstimateRttFromTs.
+    *
+    * \see EstimateRttFromTs
+    * \return The Timestamp value to use
+    */
+  static uint32_t NowToTsValue ();
+
+  /**
+   * \brief Estimate the Time elapsed from a TS echo value
+   *
+   * The echoTime should be a value returned from NowToTsValue.
+   *
+   * \param echoTime Echoed value from other side
+   * \see NowToTsValue
+   * \return The measured RTT
+   */
+  static Time ElapsedTimeFromTsValue (uint32_t echoTime);
+
 protected:
-  uint32_t m_timestamp; // local timestamp
-  uint32_t m_echo; // echo timestamp
+  uint32_t m_timestamp; //!< local timestamp
+  uint32_t m_echo; //!< echo timestamp
 };
 
 } // namespace ns3

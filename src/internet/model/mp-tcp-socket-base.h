@@ -77,6 +77,9 @@ public: // public methods
   BytesInFlight();  // Return total bytes in flight of a subflow
 
 
+  void
+  ProcessWait(Ptr<Packet> packet, const TcpHeader& tcpHeader);
+
   static
   void GenerateTokenForKey( mptcp_crypto_t alg, uint64_t key, uint32_t& token, uint64_t& idsn);
 
@@ -276,6 +279,7 @@ protected: // protected methods
   friend class Tcp;
   friend class MpTcpSubFlow;
 
+  void CloseAllSubflows();
 
 //  virtual int SetLocalToken(uint32_t token) const;
 
@@ -314,6 +318,13 @@ protected: // protected methods
 //                SequenceNumber32 dataSeq, Ptr<Socket> sock
                 );
 
+
+  virtual void
+  TimeWait();
+
+  virtual void
+  AppendDataAck(TcpHeader& hdr) const;
+
   /**
   When a subflow gets connected
   TODO rename into ConnectionSucceeded
@@ -330,7 +341,6 @@ protected: // protected methods
   **/
 //  bool AddLocalAddress(uint8_t&, Port);
 // Should generate an Id
-
 
 //  void SetAddrEventCallback(Callback<bool, Ptr<Socket>, Address, uint8_t> remoteAddAddrCb,
 //                          Callback<void, uint8_t> remoteRemAddrCb);
@@ -395,7 +405,7 @@ protected: // protected methods
 //  void CancelAllTimers(uint8_t sFlowIdx);
 //  void DeallocateEndPoint(uint8_t sFlowIdx);
   void CancelAllSubflowTimers(void);
-  void TimeWait(uint8_t sFlowIdx);
+//  void TimeWait(uint8_t sFlowIdx);
 
   void ProcessListen  (Ptr<Packet>, const TcpHeader&, const Address&, const Address&);
 

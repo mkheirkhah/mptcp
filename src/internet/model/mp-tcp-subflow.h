@@ -58,6 +58,8 @@ public:
   MpTcpSubFlow(const MpTcpSubFlow&);
   virtual ~MpTcpSubFlow();
 
+  TcpStates_t
+  GetState() const;
 
   virtual uint32_t
   UnAckDataCount();
@@ -256,10 +258,11 @@ public:
   ProcessSynRcvd(Ptr<Packet> packet, const TcpHeader& tcpHeader, const Address& fromAddress,
     const Address& toAddress);
 
-  void
+  virtual void
   ProcessSynSent(Ptr<Packet> packet, const TcpHeader& tcpHeader);
 
-
+  virtual void
+  ProcessWait(Ptr<Packet> packet, const TcpHeader& tcpHeader);
 
 
   /**

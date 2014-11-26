@@ -21,9 +21,13 @@
 #include <stdint.h>
 #include <iostream>
 #include "tcp-header.h"
+#include "tcp-option.h"
 #include "ns3/buffer.h"
 #include "ns3/address-utils.h"
+#include "ns3/log.h"
 #include "ns3/tcp-option-mptcp.h"
+
+NS_LOG_COMPONENT_DEFINE ("TcpHeader");
 
 namespace ns3 {
 
@@ -39,44 +43,14 @@ TcpHeader::TcpHeader ()
     m_windowSize (0xffff),
     m_urgentPointer (0),
     m_calcChecksum (false),
-    m_goodChecksum (true)
+    m_goodChecksum (true),
+    m_optionsLen (0)
 {
 }
 
 TcpHeader::~TcpHeader ()
 {
 }
-
-std::string
-TcpHeader::FlagstoString(uint8_t flags, char delimiter)
-{
-  //
-  static const char* flagNames[8] = {
-    //"NONE",
-    "FIN",
-    "SYN",
-    "RST",
-    "PSH",
-    "ACK",
-    "URG",
-    "ECE",
-    "CWR"
-  };
-
-  std::string flagsDescription = "";
-
-  for(int i = 0; i < 8; ++i)
-  {
-    if( flags & (1 << i) )
-    {
-      if(flagsDescription.length() > 0) flagsDescription += delimiter;
-      flagsDescription.append( flagNames[i] );
-
-    }
-  }
-  return flagsDescription;
-}
-
 
 void
 TcpHeader::EnableChecksums (void)
@@ -106,12 +80,6 @@ void
 TcpHeader::SetAckNumber (SequenceNumber32 ackNumber)
 {
   m_ackNumber = ackNumber;
-}
-
-void
-TcpHeader::SetLength (uint8_t length)
-{
-  m_length = length;
 }
 
 void
@@ -229,7 +197,7 @@ TcpHeader::CalculateHeaderChecksum (uint16_t size) const
 
   WriteTo (it, m_source);
   WriteTo (it, m_destination);
-  if (Ipv4Address::IsMatchingType(m_source))
+  if (Ipv4Address::IsMatchingType (m_source))
     {
       it.WriteU8 (0); /* protocol */
       it.WriteU8 (m_protocol); /* protocol */
@@ -283,7 +251,39 @@ TcpHeader::Print (std::ostream &os)  const
   if (m_flags != 0)
     {
       os<<" [";
-      os<< FlagstoString(m_flags);
+      if ((m_flags & FIN) != 0)
+        {
+          os<<" FIN ";
+        }
+      if ((m_flags & SYN) != 0)
+        {
+          os<<" SYN ";
+        }
+      if ((m_flags & RST) != 0)
+        {
+          os<<" RST ";
+        }
+      if ((m_flags & PSH) != 0)
+        {
+          os<<" PSH ";
+        }
+      if ((m_flags & ACK) != 0)
+        {
+          os<<" ACK ";
+        }
+      if ((m_flags & URG) != 0)
+        {
+          os<<" URG ";
+        }
+      if ((m_flags & ECE) != 0)
+        {
+          os<<" ECE ";
+        }
+      if ((m_flags & CWR) != 0)
+        {
+          os<<" CWR ";
+        }
+
       os<<"]";
     }
 
@@ -302,7 +302,7 @@ TcpHeader::Print (std::ostream &os)  const
 uint32_t
 TcpHeader::GetSerializedSize (void)  const
 {
-  return 4*GetLength ();
+  return CalculateHeaderLength () * 4;
 }
 
 void
@@ -318,21 +318,24 @@ TcpHeader::Serialize (Buffer::Iterator start)  const
   i.WriteHtonU16 (0);
   i.WriteHtonU16 (m_urgentPointer);
 
-  // Serialize options if they exists
-  unsigned optionLen = 0;
+  // Serialize options if they exist
+  // This implementation does not presently try to align options on word
+  // boundaries using NOP options
+  uint32_t optionLen = 0;
   TcpOptionList::const_iterator op;
   for (op = m_options.begin (); op != m_options.end (); ++op)
     {
       optionLen += (*op)->GetSerializedSize ();
-      (*op)->Serialize(i);
+      (*op)->Serialize (i);
       i.Next ((*op)->GetSerializedSize ());
     }
 
+  // padding to word alignment; add ENDs and/or pad values (they are the same)
   while (optionLen % 4)
-    {
-      ++optionLen;
-      i.WriteU8 (0);
-    }
+  {
+    i.WriteU8 (TcpOption::END);
+    ++optionLen;
+  }
 
   // Make checksum
   if(m_calcChecksum)
@@ -346,6 +349,9 @@ TcpHeader::Serialize (Buffer::Iterator start)  const
       i.WriteU16 (checksum);
     }
 }
+
+
+
 
 uint32_t
 TcpHeader::Deserialize (Buffer::Iterator start)
@@ -364,45 +370,74 @@ TcpHeader::Deserialize (Buffer::Iterator start)
 
   // Deserialize options if they exist
   m_options.clear ();
-  unsigned optionLen = (m_length - 5) * 4;
+  uint32_t optionLen = (m_length - 5) * 4;
+  if (optionLen > 40)
+    {
+      NS_LOG_ERROR ("Illegal TCP option length " << optionLen << "; options discarded");
+      return 20;
+    }
   while (optionLen)
     {
-      uint8_t kind = i.ReadU8 ();
+      uint8_t kind = i.PeekU8 ();
+      Ptr<TcpOption> op;
+      uint32_t optionSize;
 
-      /** ~HACK by MATT
+     /** ~HACK by MATT
       * the other option would be to merge all MPTCP options into a single one
       * It would not be OOP but component base paradigm. Why not ? less understandable ?
       */
-      Ptr<TcpOption> op;
+//      Ptr<TcpOption> op;
       if( kind == TcpOption::MPTCP)
       {
-        // Should read length and subtype then create adequate Option
-        // revert back the iterator after length
-//        uint8_t length =
+      // Should read length and subtype then create adequate Option
+      // revert back the iterator after length
+      // uint8_t length =
         i.ReadU8(); // skip length
         uint8_t subtype = i.ReadU8() >> 4;
         i.Prev(2); // Go backward 2 bytes (length)
         op = TcpOptionMpTcpMain::CreateMpTcpOption(subtype);
       }
-      else
-      {
-        op = TcpOption::CreateOption (kind);
-      }
-      optionLen -= op->Deserialize (i);
-      i.Next (op->GetSerializedSize () - 1);
-
-      if (op->GetKind () != 0)
+      else if (TcpOption::IsKindKnown (kind))
         {
+          op = TcpOption::CreateOption (kind);
+        }
+      else
+        {
+          op = TcpOption::CreateOption (TcpOption::UNKNOWN);
+          NS_LOG_WARN ("Option kind " << static_cast<int> (kind) << " unknown, skipping.");
+        }
+
+      optionSize = op->Deserialize (i);
+      if (optionSize != op->GetSerializedSize ())
+        {
+          NS_LOG_ERROR ("Option did not deserialize correctly");
+          break;
+        }
+      if (optionLen >= optionSize)
+        {
+          optionLen -= optionSize;
+          i.Next (optionSize);
           m_options.push_back (op);
         }
       else
         {
-          while(optionLen)
+          NS_LOG_ERROR ("Option exceeds TCP option space; option discarded");
+          break;
+        }
+      if (op->GetKind () == TcpOption::END)
+        {
+          while (optionLen)
             {
+              // Discard padding bytes without adding to option list
               i.Next (1);
               --optionLen;
             }
         }
+    }
+
+  if (m_length != CalculateHeaderLength ())
+    {
+      NS_LOG_ERROR ("Mismatch between calculated length and in-header value");
     }
 
   // Do checksum
@@ -417,33 +452,54 @@ TcpHeader::Deserialize (Buffer::Iterator start)
   return GetSerializedSize ();
 }
 
-void
+uint8_t
+TcpHeader::CalculateHeaderLength () const
+{
+  uint32_t len = 20;
+  TcpOptionList::const_iterator i;
+
+  for (i = m_options.begin (); i != m_options.end (); ++i)
+    {
+      len += (*i)->GetSerializedSize ();
+    }
+  // Option list may not include padding; need to pad up to word boundary
+  if (len % 4)
+    {
+      len += 4 - (len % 4);
+    }
+  return len >> 2;
+}
+
+bool
 TcpHeader::AppendOption (Ptr<TcpOption> option)
 {
-  if (option->GetKind () != 0)
+  if (m_optionsLen + option->GetSerializedSize () <= m_maxOptionsLen)
     {
-      m_options.push_back (option);
+      if (!TcpOption::IsKindKnown (option->GetKind ()))
+        {
+          NS_LOG_WARN ("The option kind " << static_cast<int> (option->GetKind ()) << " is unknown");
+          return false;
+        }
+
+      if (option->GetKind () != TcpOption::END)
+        {
+          m_options.push_back (option);
+          m_optionsLen += option->GetSerializedSize ();
+
+          uint32_t totalLen = 20 + 3 + m_optionsLen;
+          m_length = totalLen >> 2;
+        }
+
+      return true;
     }
 
-  // Update length
-  unsigned totalLen = 20;
-  for (TcpOptionList::iterator i = m_options.begin (); i != m_options.end (); ++i)
-    {
-      totalLen += (*i)->GetSerializedSize ();
-    }
-
-  if (totalLen > 20)
-    {
-      totalLen += 3;
-    }
-
-  m_length = totalLen >> 2;
+  return false;
 }
 
 void
 TcpHeader::GetOptions (TcpHeader::TcpOptionList& l) const
 {
-  l = m_options;
+l = m_options;
 }
 
 Ptr<TcpOption>
@@ -451,7 +507,7 @@ TcpHeader::GetOption (uint8_t kind) const
 {
   TcpOptionList::const_iterator i;
 
-  for (i = m_options.begin (); i != m_options.end () ; ++i)
+  for (i = m_options.begin (); i != m_options.end (); ++i)
     {
       if ((*i)->GetKind () == kind)
         {
@@ -467,7 +523,7 @@ TcpHeader::HasOption (uint8_t kind) const
 {
   TcpOptionList::const_iterator i;
 
-  for (i = m_options.begin (); i != m_options.end () ; ++i)
+  for (i = m_options.begin (); i != m_options.end (); ++i)
     {
       if ((*i)->GetKind () == kind)
         {
@@ -476,6 +532,20 @@ TcpHeader::HasOption (uint8_t kind) const
     }
 
   return false;
+}
+
+bool
+operator== (const TcpHeader &lhs, const TcpHeader &rhs)
+{
+  return (
+    lhs.m_sourcePort      == rhs.m_sourcePort      &&
+    lhs.m_destinationPort == rhs.m_destinationPort &&
+    lhs.m_sequenceNumber  == rhs.m_sequenceNumber  &&
+    lhs.m_ackNumber       == rhs.m_ackNumber       &&
+    lhs.m_flags           == rhs.m_flags           &&
+    lhs.m_windowSize      == rhs.m_windowSize      &&
+    lhs.m_urgentPointer   == rhs.m_urgentPointer
+    );
 }
 
 } // namespace ns3

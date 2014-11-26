@@ -19,7 +19,9 @@
  */
 
 #include "tcp-option-ts.h"
+#include "ns3/log.h"
 
+NS_LOG_COMPONENT_DEFINE ("TcpOptionTS");
 namespace ns3 {
 
 NS_OBJECT_ENSURE_REGISTERED (TcpOptionTS);
@@ -77,11 +79,23 @@ uint32_t
 TcpOptionTS::Deserialize (Buffer::Iterator start)
 {
   Buffer::Iterator i = start;
+
+  uint8_t readKind = i.ReadU8 ();
+  if (readKind != GetKind ())
+    {
+      NS_LOG_WARN ("Malformed Timestamp option");
+      return 0;
+    }
+
   uint8_t size = i.ReadU8 ();
-  NS_ASSERT (size == 10);
+  if (size != 10)
+    {
+      NS_LOG_WARN ("Malformed Timestamp option");
+      return 0;
+    }
   m_timestamp = i.ReadNtohU32 ();
   m_echo = i.ReadNtohU32 ();
-  return 10;
+  return GetSerializedSize ();
 }
 
 uint8_t
@@ -112,6 +126,31 @@ void
 TcpOptionTS::SetEcho (uint32_t ts)
 {
   m_echo = ts;
+}
+
+uint32_t
+TcpOptionTS::NowToTsValue ()
+{
+  uint64_t now = (uint64_t) Simulator::Now ().GetMilliSeconds ();
+
+  // high: (now & 0xFFFFFFFF00000000ULL) >> 32;
+  // low: now & 0xFFFFFFFF
+  return (now & 0xFFFFFFFF);
+}
+
+Time
+TcpOptionTS::ElapsedTimeFromTsValue (uint32_t echoTime)
+{
+  uint64_t now64 = (uint64_t) Simulator::Now ().GetMilliSeconds ();
+  uint32_t now32 = now64 & 0xFFFFFFFF;
+
+  Time ret = Seconds (0.0);
+  if (now32 > echoTime)
+    {
+      ret = MilliSeconds (now32 - echoTime);
+    }
+
+  return ret;
 }
 
 } // namespace ns3
