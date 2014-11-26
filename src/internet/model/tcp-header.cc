@@ -519,7 +519,7 @@ TcpHeader::AppendOption (Ptr<TcpOption> option)
 void
 TcpHeader::GetOptions (TcpHeader::TcpOptionList& l) const
 {
-l = m_options;
+  l = m_options;
 }
 
 Ptr<TcpOption>

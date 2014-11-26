@@ -1,4 +1,4 @@
-WITH_GDB=0
+WITH_GDB=1
 SUITE="mptcp-tcp"
 #SUITE="mptcp-option"
 #SUITE="mptcp-mapping"
@@ -10,6 +10,7 @@ NS_LOG="$NS_LOG:MpTcpSubflow=*:MpTcpSocketBase=*"
 NS_LOG="$NS_LOG:TcpTestSuite=*"
 NS_LOG="$NS_LOG:TcpRxBuffer:TcpTxBuffer"
 NS_LOG="$NS_LOG:MpTcpMapping=*"
+NS_LOG="$NS_LOG:TcpHeader=*"
 #NS_LOG="$NS_LOG:TcpOptionMpTcp=*"
 #NS_LOG="$NS_LOG:MpTcpOptionsTestSuite=*"
 #NS_LOG="$NS_LOG:TcpL4Protocol"

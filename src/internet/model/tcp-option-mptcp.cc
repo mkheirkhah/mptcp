@@ -684,31 +684,12 @@ TcpOptionMpTcpDSS::GetMapping(void) const
   return m_mapping;
 }
 
+
 uint32_t
 TcpOptionMpTcpDSS::GetSerializedSize(void) const
 {
-  uint32_t length = 4;
-
-  if( m_flags & DataAckPresent)
-  {
-    length += 4;
-    if( m_flags & DataAckOf8Bytes)  length += 4;
-
-  }
-
-
-  if( m_flags & DSNMappingPresent)
-  {
-    length += 12;
-    if( m_flags & DSNOfEightBytes)  length += 4;
-  }
-
-  if(m_hasChecksum) {
-    length += 2;
-  }
-//  NS_LOG_UNCOND( "size " << length);
-
-  return length;
+  uint32_t len = GetSizeFromFlags(m_flags) + ((m_hasChecksum) ? 2 : 0);
+  return len;
 }
 
 uint32_t
@@ -716,6 +697,14 @@ TcpOptionMpTcpDSS::GetDataAck(void) const {
   NS_ASSERT( m_flags & DataAckPresent );
   return m_dataAck;
 };
+
+
+void
+TcpOptionMpTcpDSS::SetChecksum(uint16_t checksum) {
+  m_hasChecksum = true;
+
+}
+
 
 uint16_t
 TcpOptionMpTcpDSS::GetChecksum(void) const {
@@ -807,8 +796,11 @@ TcpOptionMpTcpDSS::Serialize (Buffer::Iterator i) const
     {
       i.WriteHtonU32( m_mapping.HeadDSN().GetValue() );
     }
+
+    // Write relative SSN
     i.WriteHtonU32( GetMapping().HeadSSN().GetValue() );
 
+    // Write length
     if(m_flags & DataFin) {
 
       i.WriteHtonU16( GetMapping().GetLength() + 1 );
@@ -818,14 +810,38 @@ TcpOptionMpTcpDSS::Serialize (Buffer::Iterator i) const
     }
   }
 
-//  if( m_flags & ChecksumPresent)
-//  {
-//    i.WriteHtonU16( 0 );  //!< Checksum
-//  }
+  if(m_hasChecksum)
+  {
+    i.WriteHtonU16( m_checksum );  //!< Checksum
+  }
   //  i.WriteHtonU64( GetMapping().GetDSN().GetValue() );
 
 }
 
+uint32_t
+TcpOptionMpTcpDSS::GetSizeFromFlags(uint16_t flags)
+{
+
+  uint32_t length = 4;
+
+  if( flags & DataAckPresent)
+  {
+    length += 4;
+    if( flags & DataAckOf8Bytes)  length += 4;
+
+  }
+
+
+  if( flags & DSNMappingPresent)
+  {
+    length += 10; // data length (2) + ssn (4) + DSN min size (4)
+    if( flags & DSNOfEightBytes)  length += 4;
+  }
+
+//  NS_LOG_UNCOND( "size " << length);
+
+  return length;
+}
 
 uint32_t
 TcpOptionMpTcpDSS::Deserialize (Buffer::Iterator i)
@@ -838,7 +854,7 @@ TcpOptionMpTcpDSS::Deserialize (Buffer::Iterator i)
   // 4
   // +4   or  + 8
   // +12 or + 16
-  NS_ASSERT( (length % 4) == 0 && length <= 28);
+
 //    length == 4 // if it's 4, it doesn't carry anything :/
 //    || length== 8 || length == 12   // Only carries DataAck
 //    || length == 16 || length == 20 // Only carries DSN mapping
@@ -850,6 +866,15 @@ TcpOptionMpTcpDSS::Deserialize (Buffer::Iterator i)
 //  NS_LOG_UNCOND("subtype " << (int)subtype_and_reserved << "compared to REAL one" << (int)GetSubType() );
   NS_ASSERT( (subtype_and_reserved >> 4) == GetSubType()  );
   m_flags = i.ReadU8();
+
+  uint32_t shouldBeLength = GetSizeFromFlags(m_flags);
+
+  //!
+  NS_ASSERT(shouldBeLength == length || shouldBeLength + 2 == length);
+
+  if(shouldBeLength + 2 == length) {
+    m_hasChecksum = true;
+  }
 
 //  NS_LOG_INFO ("Deserialized flags " << (int)m_flags);
   if( m_flags & DataAckPresent)
@@ -918,7 +943,7 @@ TcpOptionMpTcpDSS::operator==(const TcpOptionMpTcpDSS& opt) const
 {
   //!
   bool ret = m_flags == opt.m_flags;
-
+  ret &= opt.m_checksum == m_checksum;
   ret &= opt.m_mapping == m_mapping;
   ret &= opt.m_dataAck == m_dataAck;
   return ( ret

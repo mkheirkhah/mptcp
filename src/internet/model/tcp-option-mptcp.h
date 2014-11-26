@@ -498,6 +498,7 @@ public:
   virtual uint32_t GetDataAck(void) const;
 
   //! Unimplemented
+  virtual void SetChecksum(uint16_t);
   virtual uint16_t GetChecksum(void) const;
 
   /**
@@ -517,7 +518,12 @@ public:
   virtual uint32_t Deserialize (Buffer::Iterator start);
   virtual uint32_t GetSerializedSize (void) const;
 
+    // coudl be made static
+  static uint32_t GetSizeFromFlags(uint16_t flags) ;
+
 protected:
+
+
   bool m_hasChecksum;
   uint16_t m_checksum;  //!< Unused
   MpTcpMapping m_mapping;

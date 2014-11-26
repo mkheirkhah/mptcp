@@ -2956,7 +2956,7 @@ MpTcpSocketBase::DoClose()
   case ESTABLISHED:
 // send FIN to close the peer
 //
-      subflow->GenerateEmptyPacketHeader(header,TcpHeader::FIN | TcpHeader::ACK);
+      subflow->GenerateEmptyPacketHeader(header,TcpHeader::ACK);
 //      SendEmptyPacket(header);
       MpTcpSubFlow::AppendDataFin(header);
       subflow->SendEmptyPacket(header);

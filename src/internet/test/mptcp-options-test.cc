@@ -77,7 +77,7 @@ public:
     {
         T option;
         Buffer::Iterator start = m_buffer.Begin ();
-        uint8_t kind = start.ReadU8 ();
+        uint8_t kind = start.PeekU8 ();
 
 
 
@@ -86,7 +86,8 @@ public:
 
         uint32_t read = option.Deserialize( start );
 
-        NS_TEST_EXPECT_MSG_EQ ( read, option.GetSerializedSize(), "PcapDiff(file, file) must always be false");
+          NS_LOG_INFO("original LEN = " << option.GetSerializedSize() );
+        NS_TEST_EXPECT_MSG_EQ ( read, option.GetSerializedSize(), "");
 
         bool res= (*m_option == option);
         NS_TEST_EXPECT_MSG_EQ ( res,true, "Option loaded after serializing/deserializing are not equal. you should investigate ");
@@ -289,49 +290,63 @@ public:
         ////////////////////////////////////////////////
         //// MP_DSS
         ////
-        Ptr<TcpOptionMpTcpDSS> dsn = CreateObject<TcpOptionMpTcpDSS>(),
-                dsn2 = CreateObject<TcpOptionMpTcpDSS>(),
-                dsn3 = CreateObject<TcpOptionMpTcpDSS>(),
-                dsn4 = CreateObject<TcpOptionMpTcpDSS>()
-                ;
-        MpTcpMapping mapping;
-        mapping.Configure( SequenceNumber32(54),32);
-        mapping.MapToSSN( SequenceNumber32(40));
+        uint16_t checksum=32321;
+
+        for(int i = 0; i < 2; ++i){
+
+          Ptr<TcpOptionMpTcpDSS> dsn = CreateObject<TcpOptionMpTcpDSS>(),
+                  dsn2 = CreateObject<TcpOptionMpTcpDSS>(),
+                  dsn3 = CreateObject<TcpOptionMpTcpDSS>(),
+                  dsn4 = CreateObject<TcpOptionMpTcpDSS>()
+                  ;
+          if(i > 0) {
+            dsn->SetChecksum(checksum);
+            dsn2->SetChecksum(checksum);
+            dsn3->SetChecksum(checksum);
+            dsn4->SetChecksum(checksum);
+          }
 
 
-        dsn->SetMapping(mapping);
+
+          MpTcpMapping mapping;
+          mapping.Configure( SequenceNumber32(54),32);
+          mapping.MapToSSN( SequenceNumber32(40));
 
 
-        AddTestCase(
-                new TcpOptionMpTcpTestCase<TcpOptionMpTcpDSS> (dsn,"DSN mapping only"),
-                QUICK
-                );
+          dsn->SetMapping(mapping);
 
-        dsn2->SetDataAck(3210);
-        AddTestCase(
-                new TcpOptionMpTcpTestCase<TcpOptionMpTcpDSS> (dsn2,"DataAck only"),
-                QUICK
-                );
 
-        dsn->SetDataAck(45000);
-        AddTestCase(
-                new TcpOptionMpTcpTestCase<TcpOptionMpTcpDSS> (dsn,"DataAck + DSN mapping"),
-                QUICK
-                );
+          AddTestCase(
+                  new TcpOptionMpTcpTestCase<TcpOptionMpTcpDSS> (dsn,"DSN mapping only"),
+                  QUICK
+                  );
 
-        dsn3->EnableDataFin();
-        AddTestCase(
-                new TcpOptionMpTcpTestCase<TcpOptionMpTcpDSS> (dsn3,"DataFin only"),
-                QUICK
-                );
+          dsn2->SetDataAck(3210);
+          AddTestCase(
+                  new TcpOptionMpTcpTestCase<TcpOptionMpTcpDSS> (dsn2,"DataAck only"),
+                  QUICK
+                  );
 
-        dsn->EnableDataFin();
-        dsn->SetDataAck(45000);
-        AddTestCase(
-                new TcpOptionMpTcpTestCase<TcpOptionMpTcpDSS> (dsn,"DataAck + DSN mapping + Datafin"),
-                QUICK
-                );
+          dsn->SetDataAck(45000);
+          AddTestCase(
+                  new TcpOptionMpTcpTestCase<TcpOptionMpTcpDSS> (dsn,"DataAck + DSN mapping"),
+                  QUICK
+                  );
 
+          dsn3->EnableDataFin();
+          AddTestCase(
+                  new TcpOptionMpTcpTestCase<TcpOptionMpTcpDSS> (dsn3,"DataFin only"),
+                  QUICK
+                  );
+
+          dsn->EnableDataFin();
+          dsn->SetDataAck(45000);
+          AddTestCase(
+                  new TcpOptionMpTcpTestCase<TcpOptionMpTcpDSS> (dsn,"DataAck + DSN mapping + Datafin"),
+                  QUICK
+                  );
+
+        }
         ////////////////////////////////////////////////
         //// MP_JOIN Initial syn
         ////
