@@ -178,6 +178,7 @@ public:
   /**
    * \brief Append an option to the TCP header
    * \param option The option to append
+   * \warn its size can't be changed afterwards else it will create problems
    */
   bool AppendOption (Ptr<TcpOption> option);
 

@@ -1045,6 +1045,7 @@ MpTcpSubFlow::ProcessSynSent(Ptr<Packet> packet, const TcpHeader& tcpHeader)
 
 
 //TcpOptionMpTcpJoin::State
+// TODO move to meta and adapt meta state
 void
 MpTcpSubFlow::AppendMpTcp3WHSOption(TcpHeader& hdr) const
 {
@@ -1587,26 +1588,26 @@ MpTcpSubFlow::RecvWithMapping( uint32_t maxSize, SequenceNumber32 &dsn)
 //MpTcpSubFlow::TranslateSubflowSeqToDataSeq();
 
 // TODO move to Meta
-void
-MpTcpSubFlow::AppendDataAck(TcpHeader& hdr) const
-{
-  NS_LOG_FUNCTION(this);
-
+//void
+//MpTcpSubFlow::AppendDataAck(TcpHeader& hdr) const
+//{
+//  NS_LOG_FUNCTION(this);
+//
+////  Ptr<TcpOptionMpTcpDSS> dss;
+////  GetOrCreateMpTcpOption()
 //  Ptr<TcpOptionMpTcpDSS> dss;
-//  GetOrCreateMpTcpOption()
-  Ptr<TcpOptionMpTcpDSS> dss;
-  GetOrCreateMpTcpOption(hdr,dss);
-
-  NS_ASSERT(dss->GetDataAck() == 0);
-
-//   = CreateObject<TcpOptionMpTcpDSS>();
-  dss->SetDataAck( GetMeta()->m_rxBuffer.NextRxSequence().GetValue() );
-
-  // TODO check the option is not in the header already
-//  NS_ASSERT_MSG( hdr.GetOption()GetOp)
-
-//  hdr.AppendOption(dss);
-}
+//  GetOrCreateMpTcpOption(hdr,dss);
+//
+//  NS_ASSERT(dss->GetDataAck() == 0);
+//
+////   = CreateObject<TcpOptionMpTcpDSS>();
+//  dss->SetDataAck( GetMeta()->m_rxBuffer.NextRxSequence().GetValue() );
+//
+//  // TODO check the option is not in the header already
+////  NS_ASSERT_MSG( hdr.GetOption()GetOp)
+//
+////  hdr.AppendOption(dss);
+//}
 
 
 /**
@@ -1855,14 +1856,24 @@ MpTcpSubFlow::ParseDSS(Ptr<Packet> p, const TcpHeader& header,Ptr<TcpOptionMpTcp
   // Look for mapping
   if( flags & TcpOptionMpTcpDSS::DSNMappingPresent )
   {
-    //!
-    if(flags & TcpOptionMpTcpDSS::DSNOfEightBytes)
-    {
-      NS_FATAL_ERROR("Not supported");
+    if(dss->IsInfiniteMapping()) {
+      NS_FATAL_ERROR("Infinite mapping detected. Unsupported !");
     }
+    else if(dss->DataFinMappingOnly()){
+      //!
+      NS_LOG_LOGIC("Received DATAFIN mapping only");
+    }
+    // Maps actual data
     else
     {
       //!
+//   TODO here we should generate the actual mapping, converts to 64 if it were 32 bits etc....
+//      //!
+//      if(flags & TcpOptionMpTcpDSS::DSNOfEightBytes)
+//      {
+//        NS_FATAL_ERROR("Not supported");
+//      }
+      //! the mapping generated here is 32bits only
       AddPeerMapping(dss->GetMapping());
     }
   }
@@ -1895,15 +1906,6 @@ MpTcpSubFlow::ParseDSS(Ptr<Packet> p, const TcpHeader& header,Ptr<TcpOptionMpTcp
 }
 
 
-void
-MpTcpSubFlow::AppendDataFin(TcpHeader& header)
-//const
-{
-
-  Ptr<TcpOptionMpTcpDSS> dss;
-  GetOrCreateMpTcpOption(header,dss);
-  dss->EnableDataFin();
-}
 
 /*
 Upon ack receival we need to act depending on if it's new or not

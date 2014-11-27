@@ -34,6 +34,9 @@ fi
 TOFILE=""
 TOFILE=" > xp.txt 2>&1"
 
+VERBOSE="--verbose"
+#VERBOSE=""
+
 if [ $WITH_GDB -gt 0 ]; then
 	#COMMAND=
 	echo 'gdb'
@@ -41,9 +44,9 @@ if [ $WITH_GDB -gt 0 ]; then
 	# http://tldp.org/LDP/abs/html/here-docs.html
 	# in <<- , the '-' allows to ignore the prepended spaces
 	# the '
-	echo "run --suite=$SUITE $OUT $TOFILE" > run.test
+#	echo "run --suite=$SUITE $OUT $TOFILE" > run.test
 	read -r  command <<-EOF
-		./waf --run test-runner --command-template="gdb -x run.test --args %s " 
+		./waf --run test-runner --command-template="gdb -ex 'run --suite=$SUITE $VERBOSE $OUT $TOFILE' --args %s " 
 		EOF
 
 	#read -r command <<-EOF
@@ -54,7 +57,7 @@ else
 	# you can add --out to redirect output to afile instead of standard output
 	#--verbose 
 	read -r  command <<-EOF
-		./waf --run "test-runner --suite=$SUITE $OUT --verbose" $TOFILE
+		./waf --run "test-runner --suite=$SUITE $OUT $VERBOSE" $TOFILE
 		EOF
 
 fi

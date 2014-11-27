@@ -519,10 +519,12 @@ MpTcpSocketBase::AppendDataAck(TcpHeader& hdr) const
 {
   NS_LOG_FUNCTION(this);
 
-//  Ptr<TcpOptionMpTcpDSS> dss;
-//  GetOrCreateMpTcpOption()
   Ptr<TcpOptionMpTcpDSS> dss;
-  GetOrCreateMpTcpOption(hdr,dss);
+  GetOrCreateMpTcpOption(hdr, dss);
+//  Ptr<TcpOptionMpTcpDSS> dss;
+//  if(!GetMpTcpOption(hdr,dss)) {
+//    dss = TcpOptionMpTcpMain::CreateMpTcpOption(TcpOptionMpTcpMain::MP_DSS);
+//  }
 
   NS_ASSERT( (dss->GetFlags() & TcpOptionMpTcpDSS::DataAckPresent) == 0);
 
@@ -533,7 +535,7 @@ MpTcpSocketBase::AppendDataAck(TcpHeader& hdr) const
   // TODO check the option is not in the header already
 //  NS_ASSERT_MSG( hdr.GetOption()GetOp)
 
-//  hdr.AppendOption(dss);
+
 }
 
 
@@ -2762,10 +2764,11 @@ MpTcpSocketBase::PeerClose(Ptr<Packet> p, const TcpHeader& tcpHeader)
   NS_ASSERT( dss->GetFlags() & TcpOptionMpTcpDSS::DataFin);
 
   /* */
-  SequenceNumber32 dsn = dss->GetMapping().TailDSN();
-  if( dsn < m_rxBuffer.NextRxSequence() || m_rxBuffer.MaxRxSequence() > dsn) {
+  SequenceNumber32 dsn = SequenceNumber32 (dss->GetDataFinDSN() );
+  if( dsn < m_rxBuffer.NextRxSequence() || m_rxBuffer.MaxRxSequence() < dsn) {
       //!
-    NS_LOG_INFO("dsn " << dsn << "Out of range");
+    NS_LOG_INFO("dsn " << dsn << " out of expected range [ " << m_rxBuffer.NextRxSequence()  << " - " << m_rxBuffer.MaxRxSequence() << " ]" );
+    return ;
   }
   /*
  Notably, it is only DATA_ACKed once all
@@ -2782,10 +2785,18 @@ MpTcpSocketBase::PeerClose(Ptr<Packet> p, const TcpHeader& tcpHeader)
 //      return;
 //    }
 
+  // For any case, remember the FIN position in rx buffer first
+  //! +1 because the datafin doesn't count as payload
+  // TODO rename mapping into GetDataMapping
+  NS_LOG_LOGIC("Setting FIN sequence to " << dss->GetMapping().TailDSN());
+  m_rxBuffer.SetFinSequence(
+                            dss->GetMapping().TailDSN()
+                            );
+
   // Return if FIN is out of sequence, otherwise move to CLOSE_WAIT state by DoPeerClose
   if (!m_rxBuffer.Finished())
   {
-    NS_LOG_INFO("Out of range");
+    NS_LOG_WARN("Out of range");
     return;
   }
 
@@ -2793,11 +2804,7 @@ MpTcpSocketBase::PeerClose(Ptr<Packet> p, const TcpHeader& tcpHeader)
 //  #error TODO
 
 
-  //! +1 because the datafin doesn't count as payload
-  // TODO rename mapping into GetDataMapping
-  m_rxBuffer.SetFinSequence(
-                            dss->GetMapping().TailDSN()
-                            );
+
 
   NS_LOG_LOGIC ("Accepted DATA FIN at seq " << tcpHeader.GetSequenceNumber () + SequenceNumber32 (p->GetSize ()));
 
@@ -2805,12 +2812,12 @@ MpTcpSocketBase::PeerClose(Ptr<Packet> p, const TcpHeader& tcpHeader)
 //  m_state == FIN_WAIT_1;
 
   // Simultaneous close: Application invoked Close() when we are processing this FIN packet
-//  if (m_state == FIN_WAIT_1)
-//    {
-//      NS_LOG_INFO ("FIN_WAIT_1 -> CLOSING");
-//      m_state = CLOSING;
-//      return;
-//    }
+  if (m_state == FIN_WAIT_1)
+    {
+      NS_LOG_INFO ("FIN_WAIT_1 -> CLOSING");
+      m_state = CLOSING;
+      return;
+    }
   DoPeerClose();
 }
 
@@ -2936,6 +2943,20 @@ MpTcpSocketBase::SendEmptyPacket(TcpHeader& header)
   NS_FATAL_ERROR("Disabled. Should call subflow member");
 }
 
+void
+MpTcpSocketBase::AppendDataFin(TcpHeader& header) const
+//const
+{
+
+  Ptr<TcpOptionMpTcpDSS> dss;
+  GetOrCreateMpTcpOption(header,dss);
+//  if(!GetMpTcpOption(header,dss))
+//    dss = Create<>(TcpOptionMpTcpMain::MP_DSS);
+
+  dss->EnableDataFin( m_txBuffer.TailSequence() );
+}
+
+
 /** Do the action to close the socket. Usually send a packet with appropriate
  flags depended on the current m_state. */
 
@@ -2958,7 +2979,7 @@ MpTcpSocketBase::DoClose()
 //
       subflow->GenerateEmptyPacketHeader(header,TcpHeader::ACK);
 //      SendEmptyPacket(header);
-      MpTcpSubFlow::AppendDataFin(header);
+      AppendDataFin(header);
       subflow->SendEmptyPacket(header);
       NS_LOG_INFO ("ESTABLISHED -> FIN_WAIT_1");
       m_state = FIN_WAIT_1;

@@ -425,6 +425,8 @@ protected:
 
 
 /**
+Note that members asserts that flag is enabled before returning any value.
+
 
      The maximum
    length of this option, with all flags set, is 28 octets.
@@ -481,12 +483,27 @@ public:
   // setter
   void SetMapping(MpTcpMapping mapping);
 
+  /*
+  * \note don't assert flags
+  */
+  bool IsInfiniteMapping() const;
+
+  // TODO
+//  bool EnableInfiniteMapping() const;
+
+  /* False if infnite mapping, no mapping, or only datafin
+  */
+  bool
+  DataFinMappingOnly() const;
+
   /**
   This returns a copy
+  TODO this should return only when it contains  valid data mapping
+  TODO remove and generate mapping from meta
   **/
   MpTcpMapping GetMapping(void) const;
 
-  uint8_t GetFlags(void) const { return m_flags;};
+  uint8_t GetFlags(void) const;
 //  virtual void Configure(uint64_t, uint32_t, uint16_t);
 
   virtual bool operator==(const TcpOptionMpTcpDSS&) const;
@@ -504,13 +521,10 @@ public:
   /**
   * Enable also a mapping flag
   **/
-  virtual void EnableDataFin();
+  virtual void EnableDataFin(SequenceNumber32 fin_dsn);
+  // TODO uint32_t
+  uint64_t GetDataFinDSN() const;
 
-  /**
-  \warning This is not the length of the mapping !
-  For instance if
-  **/
-//  virtual uint16_t GetLength() const;
 
   virtual void Print (std::ostream &os) const;
   // OK
@@ -522,15 +536,25 @@ public:
   static uint32_t GetSizeFromFlags(uint16_t flags) ;
 
 protected:
+  /**
+  \warning This is not the length of the mapping !
+  For instance if
+  rename to GetDataLevelLength
+  **/
+  virtual uint16_t GetDataLevelLength() const;
 
 
   bool m_hasChecksum;
   uint16_t m_checksum;  //!< Unused
-  MpTcpMapping m_mapping;
+//  MpTcpMapping m_mapping;
   uint8_t m_flags;
 
-//  uint64_t m_dataAck; //!< Can be On 32 bits dependings on the flags
-  uint32_t m_dataAck; //!< Can be On 32 bits dependings on the flags. Data Acked by this option
+  // In fact for now we use only 32 LSB
+  uint64_t m_dataAck; //!< Can be On 32 bits dependings on the flags
+  uint64_t m_dsn; //!< Can be On 32 bits dependings on the flags
+  uint32_t m_ssn; //!< Can be On 32 bits dependings on the flags
+  uint16_t m_dataLevelLength;  //!<
+//  uint32_t m_dataAck; //!< Can be On 32 bits dependings on the flags. Data Acked by this option
 };
 
 

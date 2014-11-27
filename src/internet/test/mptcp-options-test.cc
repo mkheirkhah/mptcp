@@ -294,55 +294,65 @@ public:
 
         for(int i = 0; i < 2; ++i){
 
-          Ptr<TcpOptionMpTcpDSS> dsn = CreateObject<TcpOptionMpTcpDSS>(),
-                  dsn2 = CreateObject<TcpOptionMpTcpDSS>(),
-                  dsn3 = CreateObject<TcpOptionMpTcpDSS>(),
-                  dsn4 = CreateObject<TcpOptionMpTcpDSS>()
+          Ptr<TcpOptionMpTcpDSS> dss1 = CreateObject<TcpOptionMpTcpDSS>(),
+                  dss2 = CreateObject<TcpOptionMpTcpDSS>(),
+                  dss3 = CreateObject<TcpOptionMpTcpDSS>(),
+                  dss4 = CreateObject<TcpOptionMpTcpDSS>()
                   ;
           if(i > 0) {
-            dsn->SetChecksum(checksum);
-            dsn2->SetChecksum(checksum);
-            dsn3->SetChecksum(checksum);
-            dsn4->SetChecksum(checksum);
+            dss1->SetChecksum(checksum);
+            dss2->SetChecksum(checksum);
+            dss3->SetChecksum(checksum);
+            dss4->SetChecksum(checksum);
           }
 
 
 
           MpTcpMapping mapping;
-          mapping.Configure( SequenceNumber32(54),32);
-          mapping.MapToSSN( SequenceNumber32(40));
+          uint32_t dataLvlLen = 32;
+          uint64_t dsn = 54;
+          uint32_t ssn = 40;
+          mapping.Configure( SequenceNumber32(dsn), dataLvlLen);
+          mapping.MapToSSN( SequenceNumber32(ssn));
 
 
-          dsn->SetMapping(mapping);
+          dss1->SetMapping(mapping);
 
 
           AddTestCase(
-                  new TcpOptionMpTcpTestCase<TcpOptionMpTcpDSS> (dsn,"DSN mapping only"),
+                  new TcpOptionMpTcpTestCase<TcpOptionMpTcpDSS> (dss1,"DSN mapping only"),
                   QUICK
                   );
 
-          dsn2->SetDataAck(3210);
+          dss1->EnableDataFin( SequenceNumber32(dsn + dataLvlLen + 1) );
           AddTestCase(
-                  new TcpOptionMpTcpTestCase<TcpOptionMpTcpDSS> (dsn2,"DataAck only"),
+                  new TcpOptionMpTcpTestCase<TcpOptionMpTcpDSS> (dss1,"DSN mapping + DFIN"),
                   QUICK
                   );
 
-          dsn->SetDataAck(45000);
+          dss1->SetDataAck(45000);
           AddTestCase(
-                  new TcpOptionMpTcpTestCase<TcpOptionMpTcpDSS> (dsn,"DataAck + DSN mapping"),
+                  new TcpOptionMpTcpTestCase<TcpOptionMpTcpDSS> (dss1,"DataAck + DSN mapping + DFIN"),
                   QUICK
                   );
 
-          dsn3->EnableDataFin();
+          dss2->SetDataAck(3210);
           AddTestCase(
-                  new TcpOptionMpTcpTestCase<TcpOptionMpTcpDSS> (dsn3,"DataFin only"),
+                  new TcpOptionMpTcpTestCase<TcpOptionMpTcpDSS> (dss2,"DataAck only"),
                   QUICK
                   );
 
-          dsn->EnableDataFin();
-          dsn->SetDataAck(45000);
+
+          dss3->EnableDataFin( SequenceNumber32(45) );
           AddTestCase(
-                  new TcpOptionMpTcpTestCase<TcpOptionMpTcpDSS> (dsn,"DataAck + DSN mapping + Datafin"),
+                  new TcpOptionMpTcpTestCase<TcpOptionMpTcpDSS> (dss3,"DataFin only"),
+                  QUICK
+                  );
+
+          dss4->EnableDataFin( SequenceNumber32(32) );
+          dss4->SetDataAck(45000);
+          AddTestCase(
+                  new TcpOptionMpTcpTestCase<TcpOptionMpTcpDSS> (dss4,"DataAck + DSN mapping + Datafin"),
                   QUICK
                   );
 

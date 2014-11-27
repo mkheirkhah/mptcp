@@ -127,7 +127,7 @@ TcpHeader::GetAckNumber () const
 uint8_t
 TcpHeader::GetLength () const
 {
-  return m_length;
+  return CalculateHeaderLength();
 }
 
 uint8_t
@@ -330,6 +330,11 @@ TcpHeader::Serialize (Buffer::Iterator start)  const
       i.Next ((*op)->GetSerializedSize ());
     }
 
+  if(optionLen > m_maxOptionsLen) {
+    //! build alist of options and display it
+    NS_FATAL_ERROR("Too many options");
+  }
+
   // padding to word alignment; add ENDs and/or pad values (they are the same)
   while (optionLen % 4)
   {
@@ -393,7 +398,7 @@ TcpHeader::Deserialize (Buffer::Iterator start)
   uint32_t optionLen = (m_length - 5) * 4;
   if (optionLen > 40)
     {
-      NS_LOG_ERROR ("Illegal TCP option length " << optionLen << "; options discarded");
+      NS_FATAL_ERROR ("Illegal TCP option length " << optionLen << "; options discarded");
       return 20;
     }
   while (optionLen)
@@ -441,7 +446,7 @@ TcpHeader::Deserialize (Buffer::Iterator start)
         }
       else
         {
-          NS_LOG_ERROR ("Option exceeds TCP option space; option discarded");
+          NS_FATAL_ERROR("Option exceeds TCP option space; option discarded");
           break;
         }
       if (op->GetKind () == TcpOption::END)
@@ -457,7 +462,7 @@ TcpHeader::Deserialize (Buffer::Iterator start)
 
   if (m_length != CalculateHeaderLength ())
     {
-      NS_LOG_ERROR ("Mismatch between calculated length and in-header value");
+      NS_FATAL_ERROR ("Mismatch between calculated length and in-header value");
     }
 
   // Do checksum
@@ -493,8 +498,8 @@ TcpHeader::CalculateHeaderLength () const
 bool
 TcpHeader::AppendOption (Ptr<TcpOption> option)
 {
-  if (m_optionsLen + option->GetSerializedSize () <= m_maxOptionsLen)
-    {
+//  if (m_optionsLen + option->GetSerializedSize () <= m_maxOptionsLen)
+//    {
       if (!TcpOption::IsKindKnown (option->GetKind ()))
         {
           NS_LOG_WARN ("The option kind " << static_cast<int> (option->GetKind ()) << " is unknown");
@@ -504,16 +509,16 @@ TcpHeader::AppendOption (Ptr<TcpOption> option)
       if (option->GetKind () != TcpOption::END)
         {
           m_options.push_back (option);
-          m_optionsLen += option->GetSerializedSize ();
-
-          uint32_t totalLen = 20 + 3 + m_optionsLen;
-          m_length = totalLen >> 2;
+//          m_optionsLen += option->GetSerializedSize ();
+//
+//          uint32_t totalLen = 20 + 3 + m_optionsLen;
+//          m_length = totalLen >> 2;
         }
 
       return true;
-    }
+//    }
 
-  return false;
+//  return false;
 }
 
 void

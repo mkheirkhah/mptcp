@@ -325,6 +325,10 @@ protected: // protected methods
   virtual void
   AppendDataAck(TcpHeader& hdr) const;
 
+  /* put it outside ? */
+  virtual void
+  AppendDataFin(TcpHeader& header) const;
+
   /**
   When a subflow gets connected
   TODO rename into ConnectionSucceeded
@@ -335,6 +339,7 @@ protected: // protected methods
   Should be called when subflows enters FIN_WAIT or LAST_ACK
   */
   void OnSubflowClosing(Ptr<MpTcpSubFlow>);
+
 
   /**
   Fails if

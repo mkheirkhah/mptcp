@@ -211,6 +211,13 @@ public:
   virtual void
   ClosingOnEmpty(TcpHeader& header);
 
+  /*
+  TODO move to meta.
+  This should generate an *absolute*
+  mapping with 64bits DSN etc...
+
+
+  */
   virtual void
   ParseDSS(Ptr<Packet> p, const TcpHeader& header, Ptr<TcpOptionMpTcpDSS> dss);
 
@@ -328,19 +335,20 @@ protected:
   DoConnect();
 
   /**
-  *
+  * TODO in fact, instead of relying on IsMaster etc...
+  * this should depend on meta's state , if it is wait or not
+  * and thus it should be pushed in meta (would also remove the need for crypto accessors)
   */
   virtual void
   AppendMpTcp3WHSOption(TcpHeader& hdr) const;
 
-  /* put it outside ? */
-  static void
-  AppendDataFin(TcpHeader& header) ;
+
+
   /**
     GetMeta()->m_rxBuffer.NextRxSequence().GetValue()
   **/
-  virtual void
-  AppendDataAck(TcpHeader& hdr) const;
+//  virtual void
+//  AppendDataAck(TcpHeader& hdr) const;
 
   Ptr<MpTcpSocketBase>
   GetMeta() const;
