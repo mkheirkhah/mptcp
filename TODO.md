@@ -11,6 +11,7 @@ List of tests:
 
 
 Generic:
+* provide in meta a list of pending options that can be consumed by subflow
 * Note that new subflows MUST NOT be established (using the process documented in Section 3.2) until a Digital Signature Standard (DSS) option has been successfully received across th
 * Unmultiplex attribute MPTCP connection according to token
 * IPv6 support
@@ -29,6 +30,7 @@ Generic:
 
 
 Requests for ns3;
+* the CloseAndNotify member name is badly chosen since it does not close the socket but signal a closed state
 * add an IsConnected member to TcpSocketBase ?
 * TcpSocketBase should have all members virtual. MpTcpSubflow::CancelAllTimers should call its parent's but it is not virtual
 * same for DoConnect

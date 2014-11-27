@@ -33,7 +33,6 @@ class MpTcpCongestionControl;
 
 /**
  * \class MpTcpSocketBase
-TODO rename in MetaSocket ?
 
 This is the MPTCP meta socket the application talks with
 this socket. New subflows, as well as the first one (the master
@@ -53,12 +52,22 @@ launch an assert. You can notice those via the comments "//! Disabled"
 
 As such many inherited (protected) functions are overriden & left empty.
 
-TODO add callbacks in case of an MP_JOIN ? add_addr ?
 
-TODO should inherit from TcpSocket rather TcpSocketBase , would allow
-to set a 64 bits based buffer / sq nb
+TODO:
+-rename in MetaSocket ?
+-should inherit from TcpSocket rather TcpSocketBase
+-should use 64 bits based buffer / sq nb
+-the children should parse MPTCP option and relay them to the father
+//  ProcessJoin(Ptr<TcpOptionMpTcpJoin>, Ptr<MpTcpSubFlow> sf);
+//  ProcessCapable(Ptr<TcpOptionMpTcpJoin>, Ptr<MpTcpSubFlow> sf);
+//  ProcessAddAddr(Ptr<TcpOptionMpTcpJoin>, Ptr<MpTcpSubFlow> sf);
+//  ProcessRemAddr(Ptr<TcpOptionMpTcpJoin>, Ptr<MpTcpSubFlow> sf);
+//  ProcessDSS(Ptr<TcpOptionMpTcpJoin>, Ptr<MpTcpSubFlow> sf);
+
+// TODO inherit MpTcpSocket or TcpSocket but  would need to recreate 64bits buffer
 **/
 class MpTcpSocketBase : public TcpSocketBase
+
 {
 public: // public methods
 
@@ -97,12 +106,27 @@ public: // public methods
   **/
   virtual bool IsMpTcpEnabled() const;
 
+
+  virtual void CloseAndNotify(void);
+
   /** Limit the size of in-flight data by cwnd and receiver's rxwin */
   virtual uint32_t
   Window (void);
 
   virtual void
   PersistTimeout();
+
+  /* equivalent to PeerClose
+  OnDataFin */
+  virtual void
+  PeerClose( SequenceNumber32 fin_seq, Ptr<MpTcpSubFlow> sf);
+
+  virtual void
+  OnInfiniteMapping(Ptr<TcpOptionMpTcpDSS> dss,Ptr<MpTcpSubFlow> sf);
+
+  /* equivalent to TCP Rst */
+  virtual void
+  SendFastClose(Ptr<MpTcpSubFlow> sf);
 
   /**
   \brief Generates random key, setups isdn and token
@@ -179,7 +203,7 @@ public: // public methods
   /**
   \return Number of connected subflows (that is that ran the 3whs)
   */
-  std::vector< Ptr<MpTcpSubFlow> >::size_type GetNSubflows() const;
+  std::vector< Ptr<MpTcpSubFlow> >::size_type GetNActiveSubflows() const;
   // uint8
   /**
   * \return an established subflow
@@ -250,7 +274,13 @@ public: // public methods
   void GetAllAdvertisedDestinations(std::vector<InetSocketAddress>& );
 
 public: // public variables
-
+  typedef enum {
+    Established = 0, /* contains ESTABLISHED/CLOSE_WAIT */
+    // TODO rename to restart
+    Others = 1,  /* Composed of SYN_RCVD, SYN_SENT*/
+    Closing, /* CLOSE_WAIT, FIN_WAIT */
+    Maximum  /* keep it last, used to decalre array */
+  } mptcp_container_t;
   // TODO move back to protected/private later on
 
 
@@ -308,6 +338,11 @@ protected: // protected methods
   // TODO remove should be done by helper instead
 //  bool InitiateSubflows();            // Initiate new subflows
 
+  /*
+  */
+  void
+  OnSubflowClosed( Ptr<MpTcpSubFlow> sf);
+
   /**
   \param dataSeq Used to reconstruct the mapping
   Currently used as callback for subflows
@@ -319,6 +354,8 @@ protected: // protected methods
                 );
 
 
+  /* close all subflows
+  */
   virtual void
   TimeWait();
 
@@ -450,12 +487,14 @@ protected: // protected methods
 
   //! Disabled
   virtual void ReceivedAck ( Ptr<Packet>, const TcpHeader&); // Received an ACK packet
+
   //! Disabled
   virtual void ReceivedData ( Ptr<Packet>, const TcpHeader&); // Recv of a data, put into buffer, call L7 to get it if necessary
 
-  virtual void ReceivedAck( SequenceNumber32 ack
-  , Ptr<MpTcpSubFlow> sf
-  );
+  virtual void ProcessDSS( Ptr<TcpOptionMpTcpDSS> dss, Ptr<MpTcpSubFlow> sf);
+  virtual void ProcessDSSClosing( Ptr<TcpOptionMpTcpDSS> dss, Ptr<MpTcpSubFlow> sf);
+  virtual void ProcessDSSWait( Ptr<TcpOptionMpTcpDSS> dss, Ptr<MpTcpSubFlow> sf);
+  virtual void ProcessDSSEstablished( Ptr<TcpOptionMpTcpDSS> dss, Ptr<MpTcpSubFlow> sf);
 
 
   /** Does nothing */
@@ -577,13 +616,7 @@ protected: // protected variables
 
   typedef std::vector<Ptr<MpTcpSubFlow> > SubflowList;
 
-  typedef enum {
-    Established = 0, /* contains ESTABLISHED/CLOSE_WAIT */
-    // TODO rename to restart
-    Others = 1,  /* Composed of SYN_RCVD, SYN_SENT*/
-    Closing, /* CLOSE_WAIT, FIN_WAIT */
-    Maximum  /* keep it last, used to decalre array */
-  } mptcp_container_t;
+
 
   /**
   *

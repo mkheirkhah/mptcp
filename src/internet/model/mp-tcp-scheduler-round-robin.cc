@@ -49,9 +49,9 @@ MpTcpSchedulerRoundRobin::SetMeta(Ptr<MpTcpSocketBase> metaSock)
 Ptr<MpTcpSubFlow>
 MpTcpSchedulerRoundRobin::GetSubflowToUseForEmptyPacket()
 {
-  NS_ASSERT(m_metaSock->GetNSubflows() > 0 );
+  NS_ASSERT(m_metaSock->GetNActiveSubflows() > 0 );
   return  m_metaSock->GetSubflow(0);
-//  m_lastUsedFlowId = (m_lastUsedFlowId + 1) % m_metaSock->GetNSubflows();
+//  m_lastUsedFlowId = (m_lastUsedFlowId + 1) % m_metaSock->GetNActiveSubflows();
 //  return m_metaSock->GetSubFlow(m_lastUsedFlowId);
 }
 
@@ -88,9 +88,9 @@ MpTcpSchedulerRoundRobin::GenerateMappings(MappingVector& mappings)
       ;
     m_metaSock->m_txBuffer.SizeFromSequence( metaNextTxSeq )
     &&
-    i < (int)m_metaSock->GetNSubflows()
+    i < (int)m_metaSock->GetNActiveSubflows()
     ;
-    i++, m_lastUsedFlowId = (m_lastUsedFlowId + 1) % m_metaSock->GetNSubflows()
+    i++, m_lastUsedFlowId = (m_lastUsedFlowId + 1) % m_metaSock->GetNActiveSubflows()
     )
   {
     // TODO check how the windows work
@@ -136,7 +136,7 @@ MpTcpSchedulerRoundRobin::GenerateMappings(MappingVector& mappings)
     mapping.Configure( metaNextTxSeq , amountOfDataToSend);
     mappings.push_back( std::make_pair( i, mapping) );
     metaNextTxSeq += amountOfDataToSend;
-//    m_lastUsedFlowId = (m_lastUsedFlowId + 1) %m_metaSock->GetNSubflows();
+//    m_lastUsedFlowId = (m_lastUsedFlowId + 1) %m_metaSock->GetNActiveSubflows();
   }
 
 
@@ -146,7 +146,7 @@ MpTcpSchedulerRoundRobin::GenerateMappings(MappingVector& mappings)
   while(amountOfDataToSend > 0)
   {
 
-    if(i >= m_metaSock->GetNSubflows())
+    if(i >= m_metaSock->GetNActiveSubflows())
     {
 //      NS_LOG_DEBUG("reached limit of number of subflows");
       break;
@@ -171,7 +171,7 @@ MpTcpSchedulerRoundRobin::GenerateMappings(MappingVector& mappings)
 
 
 
-  for(int i = 0; i < m_metaSock->GetNSubflows(); i++ )
+  for(int i = 0; i < m_metaSock->GetNActiveSubflows(); i++ )
   {
     Ptr<MpTcpSubFlow> sf = m_metaSock->GetSubflow(i);
     //std::min(
@@ -197,7 +197,7 @@ MpTcpSchedulerRoundRobin::GenerateMappings(MappingVector& mappings)
       uint8_t count = 0;
 //      uint32_t window = 0;
       // Search for a subflow with available windows
-      while (count < m_metaSock->GetNSubflows())
+      while (count < m_metaSock->GetNActiveSubflows())
         {
           count++;
           window = std::min(

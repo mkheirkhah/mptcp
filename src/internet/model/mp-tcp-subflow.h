@@ -342,7 +342,8 @@ protected:
   virtual void
   AppendMpTcp3WHSOption(TcpHeader& hdr) const;
 
-
+  void
+  ProcessClosing(Ptr<Packet> packet, const TcpHeader& tcpHeader);
 
   /**
     GetMeta()->m_rxBuffer.NextRxSequence().GetValue()

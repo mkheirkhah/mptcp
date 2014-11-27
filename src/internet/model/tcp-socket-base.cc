@@ -702,8 +702,8 @@ TcpSocketBase::CloseAndNotify(void)
   NS_LOG_INFO (TcpStateName[m_state] << " -> CLOSED");
   CancelAllTimers();
   m_state = CLOSED;
-  GenerateCWND();
-  GenerateRTT();
+//  GenerateCWND();
+//  GenerateRTT();
   //GenerateSendvsACK();
 
 }

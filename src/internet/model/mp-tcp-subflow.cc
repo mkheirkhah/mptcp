@@ -392,8 +392,8 @@ void
 MpTcpSubFlow::CloseAndNotify(void)
 {
   //TODO
-//  m_metaSocket->CloseSubflow( m_routeId );
   TcpSocketBase::CloseAndNotify();
+  GetMeta()->OnSubflowClosed( this );
 }
 
 
@@ -709,7 +709,15 @@ MpTcpSubFlow::DoForwardUp(Ptr<Packet> packet, Ipv4Header header, uint16_t port, 
     }
 
 }
+void
+MpTcpSubFlow::ProcessClosing(Ptr<Packet> packet, const TcpHeader& tcpHeader)
+{
+  NS_LOG_FUNCTION (this << tcpHeader);
 
+//  ProcessOptions()
+
+  return TcpSocketBase::ProcessClosing(packet,tcpHeader);
+}
 
 /** Received a packet upon CLOSE_WAIT, FIN_WAIT_1, or FIN_WAIT_2 states */
 void
@@ -726,68 +734,7 @@ MpTcpSubFlow::ProcessWait(Ptr<Packet> packet, const TcpHeader& tcpHeader)
   }
 
   TcpSocketBase::ProcessWait(packet,tcpHeader);
-/*
-  // Extract the flags. PSH and URG are not honoured.
-  uint8_t tcpflags = tcpHeader.GetFlags() & ~(TcpHeader::PSH | TcpHeader::URG);
 
-  if (packet->GetSize() > 0 && tcpflags != TcpHeader::ACK)
-    { // Bare data, accept it
-      ReceivedData(packet, tcpHeader);
-    }
-  else if (tcpflags == TcpHeader::ACK)
-    { // Process the ACK, and if in FIN_WAIT_1, conditionally move to FIN_WAIT_2
-      ReceivedAck(packet, tcpHeader);
-      if (m_state == FIN_WAIT_1 && m_txBuffer.Size() == 0 && tcpHeader.GetAckNumber() == m_highTxMark + SequenceNumber32(1))
-        { // This ACK corresponds to the FIN sent
-          NS_LOG_INFO ("FIN_WAIT_1 -> FIN_WAIT_2");
-          m_state = FIN_WAIT_2;
-        }
-    }
-  else if (tcpflags == TcpHeader::FIN || tcpflags == (TcpHeader::FIN | TcpHeader::ACK))
-    { // Got FIN, respond with ACK and move to next state
-      if (tcpflags & TcpHeader::ACK)
-        { // Process the ACK first
-          ReceivedAck(packet, tcpHeader);
-        }
-      m_rxBuffer.SetFinSequence(tcpHeader.GetSequenceNumber());
-    }
-  else if (tcpflags == TcpHeader::SYN || tcpflags == (TcpHeader::SYN | TcpHeader::ACK))
-    { // Duplicated SYN or SYN+ACK, possibly due to spurious retransmission
-      return;
-    }
-  else
-    { // This is a RST or bad flags
-      if (tcpflags != TcpHeader::RST)
-        {
-          NS_LOG_LOGIC ("Illegal flag " << tcpflags << " received. Reset packet is sent.");
-          SendRST();
-        }
-      CloseAndNotify();
-      return;
-    }
-
-  // Check if the close responder sent an in-sequence FIN, if so, respond ACK
-  if ((m_state == FIN_WAIT_1 || m_state == FIN_WAIT_2) && m_rxBuffer.Finished())
-    {
-      if (m_state == FIN_WAIT_1)
-        {
-          NS_LOG_INFO ("FIN_WAIT_1 -> CLOSING");
-          m_state = CLOSING;
-          if (m_txBuffer.Size() == 0 && tcpHeader.GetAckNumber() == m_highTxMark + SequenceNumber32(1))
-            { // This ACK corresponds to the FIN sent
-              TimeWait();
-            }
-        }
-      else if (m_state == FIN_WAIT_2)
-        {
-          TimeWait();
-        }
-      SendEmptyPacket(TcpHeader::ACK);
-      if (!m_shutdownRecv)
-        {
-          NotifyDataRecv();
-        }
-    }*/
 }
 
 
@@ -1844,64 +1791,67 @@ MpTcpSubFlow::ClosingOnEmpty(TcpHeader& header)
     GetMeta()->OnSubflowClosing(this);
 }
 
-
+//! TODO call directly parent
 void
 MpTcpSubFlow::ParseDSS(Ptr<Packet> p, const TcpHeader& header,Ptr<TcpOptionMpTcpDSS> dss)
 {
   //!
   NS_ASSERT(dss);
+  GetMeta()->ProcessDSS( dss, Ptr<MpTcpSubFlow>(this));
 
-  uint8_t flags = dss->GetFlags();
-
-  // Look for mapping
-  if( flags & TcpOptionMpTcpDSS::DSNMappingPresent )
-  {
-    if(dss->IsInfiniteMapping()) {
-      NS_FATAL_ERROR("Infinite mapping detected. Unsupported !");
-    }
-    else if(dss->DataFinMappingOnly()){
-      //!
-      NS_LOG_LOGIC("Received DATAFIN mapping only");
-    }
-    // Maps actual data
-    else
-    {
-      //!
-//   TODO here we should generate the actual mapping, converts to 64 if it were 32 bits etc....
+//  uint8_t flags = dss->GetFlags();
+//
+//  // Look for mapping
+//  if( flags & TcpOptionMpTcpDSS::DSNMappingPresent )
+//  {
+//    if(dss->IsInfiniteMapping()) {
+//      NS_FATAL_ERROR("Infinite mapping detected. Unsupported !");
+//    }
+//    else if(dss->DataFinMappingOnly()){
 //      //!
-//      if(flags & TcpOptionMpTcpDSS::DSNOfEightBytes)
-//      {
-//        NS_FATAL_ERROR("Not supported");
-//      }
-      //! the mapping generated here is 32bits only
-      AddPeerMapping(dss->GetMapping());
-    }
-  }
-
-  // looks for Data ACK
-  if(flags & TcpOptionMpTcpDSS::DataAckPresent)
-  {
-    if(flags & TcpOptionMpTcpDSS::DataAckOf8Bytes)
-    {
-      NS_FATAL_ERROR("Not supported");
-    }
-    else
-    {
-      // TODO pass the info to the meta
-      //
-
-    }
-
-    GetMeta()->ReceivedAck( SequenceNumber32(dss->GetDataAck()), Ptr<MpTcpSubFlow>(this));
-  }
+//      NS_LOG_LOGIC("Received DATAFIN mapping only");
+//
+//    }
+//    // Maps actual data
+//    else
+//    {
+//      //!
+////   TODO here we should generate the actual mapping, converts to 64 if it were 32 bits etc....
+////      //!
+////      if(flags & TcpOptionMpTcpDSS::DSNOfEightBytes)
+////      {
+////        NS_FATAL_ERROR("Not supported");
+////      }
+//      //! the mapping generated here is 32bits only
+//      AddPeerMapping(dss->GetMapping());
+//    }
+//  }
+//
+//  // looks for Data ACK
+//  if(flags & TcpOptionMpTcpDSS::DataAckPresent)
+//  {
+//    if(flags & TcpOptionMpTcpDSS::DataAckOf8Bytes)
+//    {
+//      NS_FATAL_ERROR("Not supported");
+//    }
+//    else
+//    {
+//      // TODO pass the info to the meta
+//      //
+//
+//    }
+//
+//
+//  }
 
   //!
-  if( flags & TcpOptionMpTcpDSS::DataFin)
-  {
-    //! depending on the state
-    NS_LOG_DEBUG("Peer wants to close the connection");
-    GetMeta()->PeerClose(p, header);
-  }
+//  if( flags & TcpOptionMpTcpDSS::DataFin)
+//  {
+//    //! depending on the state
+//    NS_LOG_DEBUG("Peer wants to close the connection");
+//    GetMeta()->OnDataFin( SequenceNumber32 (dss->GetDataFinDSN() ),this);
+////    GetMeta()->PeerClose();
+//  }
 
 }
 

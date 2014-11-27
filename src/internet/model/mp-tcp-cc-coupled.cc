@@ -15,7 +15,7 @@ MpTcpCongestionCoupled::CalculateAlpha()
   double maxi = 0;
   double sumi = 0;
 
-  for (uint32_t i = 0; i < m_metaSock->GetNSubflows(); i++)
+  for (uint32_t i = 0; i < m_metaSock->GetNActiveSubflows(); i++)
     {
       Ptr<MpTcpSubFlow> sFlow = m_metaSock->GetSubflow(i);
 
