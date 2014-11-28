@@ -1288,8 +1288,7 @@ MpTcpSocketBase::OnInfiniteMapping(Ptr<TcpOptionMpTcpDSS> dss,Ptr<MpTcpSubFlow> 
 // TODO call 64bits  version ?
 // It should know from which subflow it comes from
 void
-MpTcpSocketBase::NewAck(SequenceNumber32 const& dsn
-)
+MpTcpSocketBase::NewAck(SequenceNumber32 const& dsn)
 {
   NS_LOG_FUNCTION(this << " new dataack=[" <<  dsn << "]");
 
@@ -1316,18 +1315,19 @@ MpTcpSocketBase::NewAck(SequenceNumber32 const& dsn
 
 //  NS_LOG_FUNCTION (this << dsn);
 
-  if (m_state != SYN_RCVD)
-    { // Set RTO unless the ACK is received in SYN_RCVD state
-      NS_LOG_LOGIC (this << " Cancelled ReTxTimeout event which was set to expire at " <<
-          (Simulator::Now () + Simulator::GetDelayLeft (m_retxEvent)).GetSeconds ());
-      m_retxEvent.Cancel();
-      // On recieving a "New" ack we restart retransmission timer .. RFC 2988
-      m_rto = m_rtt->RetransmitTimeout();
-      NS_LOG_LOGIC (this << " Schedule ReTxTimeout at time " <<
-          Simulator::Now ().GetSeconds () << " to expire at time " <<
-          (Simulator::Now () + m_rto.Get ()).GetSeconds ());
-      m_retxEvent = Simulator::Schedule(m_rto, &MpTcpSocketBase::ReTxTimeout, this);
-    }
+// TODO reestablish
+//  if (m_state != SYN_RCVD)
+//    { // Set RTO unless the ACK is received in SYN_RCVD state
+//      NS_LOG_LOGIC (this << " Cancelled ReTxTimeout event which was set to expire at " <<
+//          (Simulator::Now () + Simulator::GetDelayLeft (m_retxEvent)).GetSeconds ());
+//      m_retxEvent.Cancel();
+//      // On recieving a "New" ack we restart retransmission timer .. RFC 2988
+//      m_rto = m_rtt->RetransmitTimeout();
+//      NS_LOG_LOGIC (this << " Schedule ReTxTimeout at time " <<
+//          Simulator::Now ().GetSeconds () << " to expire at time " <<
+//          (Simulator::Now () + m_rto.Get ()).GetSeconds ());
+//      m_retxEvent = Simulator::Schedule(m_rto, &MpTcpSocketBase::ReTxTimeout, this);
+//    }
 
   // TODO update m_rWnd
 //  m_rWnd.Get() == 0
@@ -1346,7 +1346,6 @@ MpTcpSocketBase::NewAck(SequenceNumber32 const& dsn
   // Note the highest ACK and tell app to send more
   NS_LOG_LOGIC ("TCP " << this << " NewAck " << dsn <<
       " numberAck " << (dsn - m_txBuffer.HeadSequence ())); // Number bytes ack'ed
-
 
 
 
@@ -2837,7 +2836,7 @@ MpTcpSocketBase::ProcessDSSWait( Ptr<TcpOptionMpTcpDSS> dss, Ptr<MpTcpSubFlow> s
 
     if (dack == m_rxBuffer.NextRxSequence())
     { // This ACK corresponds to the DATA FIN sent
-      NS_LOG_INFO("Ack corresponds to DFIN sent")
+      NS_LOG_INFO("Ack corresponds to DFIN sent");
       if(m_state == FIN_WAIT_1) {
         NS_LOG_INFO(" FIN_WAIT_1 -> FIN_WAIT_2");
         m_state= FIN_WAIT_2;
