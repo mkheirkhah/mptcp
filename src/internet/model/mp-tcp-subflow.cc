@@ -925,6 +925,11 @@ MpTcpSubFlow::ProcessSynSent(Ptr<Packet> packet, const TcpHeader& tcpHeader)
 
       }
 
+      m_retxEvent.Cancel();
+      m_rxBuffer.SetNextRxSequence(tcpHeader.GetSequenceNumber() + SequenceNumber32(1));
+      m_highTxMark = ++m_nextTxSequence;
+      m_txBuffer.SetHeadSequence(m_nextTxSequence);
+
       // TODO support IPv6
       GetIdManager()->AddRemoteAddr(0, m_endPoint->GetPeerAddress(), m_endPoint->GetPeerPort() );
 
@@ -940,10 +945,7 @@ MpTcpSubFlow::ProcessSynSent(Ptr<Packet> packet, const TcpHeader& tcpHeader)
 //      m_connected = true;
 
 
-      m_retxEvent.Cancel();
-      m_rxBuffer.SetNextRxSequence(tcpHeader.GetSequenceNumber() + SequenceNumber32(1));
-      m_highTxMark = ++m_nextTxSequence;
-      m_txBuffer.SetHeadSequence(m_nextTxSequence);
+
 
 
       // TODO here we send a packet  with wrong seq number

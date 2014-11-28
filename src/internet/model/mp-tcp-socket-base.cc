@@ -2836,8 +2836,8 @@ MpTcpSocketBase::ProcessDSSWait( Ptr<TcpOptionMpTcpDSS> dss, Ptr<MpTcpSubFlow> s
     SequenceNumber32 dack(dss->GetDataAck() );
 
     if (dack == m_rxBuffer.NextRxSequence())
-    { // This ACK corresponds to the FIN sent
-
+    { // This ACK corresponds to the DATA FIN sent
+      NS_LOG_INFO("Ack corresponds to DFIN sent")
       if(m_state == FIN_WAIT_1) {
         NS_LOG_INFO(" FIN_WAIT_1 -> FIN_WAIT_2");
         m_state= FIN_WAIT_2;
