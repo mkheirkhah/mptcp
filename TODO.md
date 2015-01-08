@@ -3,7 +3,6 @@ TODO list:
 List of tests:
 * Subflow management
 	* ADDADDR/REMADDR tests. Should not be able to add same ADDRID with different IPs for instance (matt)
-* remove dependancy on outer modules (matt)
 * In case remote host is not MPTCP compliant
 	* We can't add subflows
 	* MPTCP CC falls back to legacy TCP (will need some work on upstream side)

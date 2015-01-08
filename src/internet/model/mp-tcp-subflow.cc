@@ -537,7 +537,7 @@ MpTcpSubFlow::Retransmit(void)
 {
   TcpSocketBase::Retransmit();
 
-  NS_FATAL_ERROR("TODO retransmit");
+//  NS_FATAL_ERROR("TODO retransmit");
   // pass on mapping
   GetMeta()->OnSubflowRetransmit( this );
 

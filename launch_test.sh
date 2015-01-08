@@ -1,4 +1,4 @@
-WITH_GDB=1
+WITH_GDB=0
 SUITE="mptcp-tcp"
 #SUITE="mptcp-option"
 #SUITE="mptcp-mapping"
