@@ -111,6 +111,11 @@ public:
    */
   uint32_t Available () const;
   /**
+   * \brief Get the actual number of out of order bytes
+   * \returns size of available data (in bytes)
+   */
+  uint32_t OutOfOrder () const;
+  /**
    * \brief Check if the buffer did receive all the data (and the connection is closed)
    * \returns true if all data have been received
    */

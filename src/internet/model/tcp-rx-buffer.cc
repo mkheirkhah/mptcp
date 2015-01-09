@@ -99,6 +99,12 @@ TcpRxBuffer::Available () const
   return m_availBytes;
 }
 
+uint32_t
+TcpRxBuffer::OutOfOrder() const
+{
+  return m_size - m_availBytes;
+}
+
 void
 TcpRxBuffer::IncNextRxSequence ()
 {
