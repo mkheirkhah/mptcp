@@ -1561,6 +1561,9 @@ MpTcpSubFlow::RecvWithMapping( uint32_t maxSize, SequenceNumber32 &dsn)
 
 /**
 TODO here I should look for an associated mapping.
+
+ProcessEstablished
+
 If there is not, then I discard the stuff
 std::ostream& ns3::operator<<(std::ostream&,const ns3::TcpOptionMptcpMain&)
 
@@ -1584,7 +1587,7 @@ MpTcpSubFlow::ReceivedData(Ptr<Packet> p, const TcpHeader& tcpHeader)
   GenerateEmptyPacketHeader(answerHeader, TcpHeader::ACK);
 //  OutOfRange
   // If cannot find an adequate mapping, then it should [check RFC]
-  if(!m_RxMappings.GetMappingForSSN( tcpHeader.GetSequenceNumber(), mapping) )
+  if(!m_RxMappings.GetMappingForSSN(tcpHeader.GetSequenceNumber(), mapping) )
   {
 
     m_RxMappings.Dump();
