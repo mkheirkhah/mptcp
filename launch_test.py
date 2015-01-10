@@ -39,8 +39,8 @@ NS_LOG.append("*=error|warn|prefix_node|prefix_func")
 NS_LOG.append(":MpTcpSchedulerRoundRobin")
 NS_LOG.append(":Socket")
 NS_LOG.append(":MpTcpSubflow=*:MpTcpSocketBase=*")
-NS_LOG.append("$NS_LOG:TcpTestSuite=*")
-NS_LOG.append("NS_LOG:TcpRxBuffer:TcpTxBuffer")
+NS_LOG.append(":TcpTestSuite=*")
+NS_LOG.append(":TcpRxBuffer:TcpTxBuffer")
 NS_LOG.append(":MpTcpMapping=*")
 NS_LOG.append(":TcpHeader=*")
 #NS_LOG="$NS_LOG:TcpOptionMpTcp=*"
@@ -50,14 +50,13 @@ NS_LOG.append(":TcpHeader=*")
 #OUTPUT_FILENAME="xp.txt"
 #NS_LOG="$NS_LOG:MpTcpTestSuite=*|prefix_func:Socket=*"
 
-export NS_LOG
-printenv|grep NS_LOG
+os.environ['NS_LOG'] = NS_LOG
 
 
 print("Executed Command:\n%s" % cmd)
 
 
-eval $command
+os.system(cmd)
 
 print("Exported:\n%s" % NS_LOG)
 print("Executed Command:\n%s" % cmd)
