@@ -36,6 +36,12 @@ TcpRxBuffer::GetTypeId (void)
     .AddTraceSource ("NextRxSequence",
                      "Next sequence number expected (RCV.NXT)",
                      MakeTraceSourceAccessor (&TcpRxBuffer::m_nextRxSeq))
+    .AddTraceSource ("RxTotal",
+                     "Size of all packets in receive buffer ",
+                     MakeTraceSourceAccessor (&TcpRxBuffer::m_size))
+    .AddTraceSource ("RxAvailable",
+                     "Size of all packets in receive buffer ",
+                     MakeTraceSourceAccessor (&TcpRxBuffer::m_availBytes))
   ;
   return tid;
 }
@@ -111,7 +117,7 @@ TcpRxBuffer::IncNextRxSequence ()
   NS_LOG_FUNCTION (this);
   // Increment nextRxSeq is valid only if we don't have any data buffered,
   // this is supposed to be called only during the three-way handshake
-  NS_ASSERT (m_size == 0);
+  NS_ASSERT (m_size.Get() == 0);
   m_nextRxSeq++;
 }
 
@@ -243,7 +249,7 @@ TcpRxBuffer::Extract (uint32_t maxSize)
 {
   NS_LOG_FUNCTION (this << maxSize);
 
-  uint32_t extractSize = std::min (maxSize, m_availBytes);
+  uint32_t extractSize = std::min (maxSize, m_availBytes.Get());
   NS_LOG_LOGIC ("Requested to extract " << extractSize << " bytes from TcpRxBuffer of size=" << m_size);
   if (extractSize == 0) return 0;  // No contiguous block to return
   NS_ASSERT (m_data.size ()); // At least we have something to extract

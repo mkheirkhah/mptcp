@@ -155,9 +155,11 @@ public:
   TracedValue<SequenceNumber32> m_nextRxSeq; //!< Seqnum of the first missing byte in data (RCV.NXT)
   SequenceNumber32 m_finSeq;                 //!< Seqnum of the FIN packet
   bool m_gotFin;                             //!< Did I received FIN packet?
-  uint32_t m_size;                           //!< Number of total data bytes in the buffer, not necessarily contiguous
+
+  // TO get the out of order number of packets
+  TracedValue<uint32_t> m_size;                           //!< Number of total data bytes in the buffer, not necessarily contiguous
   uint32_t m_maxBuffer;                      //!< Upper bound of the number of data bytes in buffer (RCV.WND)
-  uint32_t m_availBytes;                     //!< Number of bytes available to read, i.e. contiguous block at head
+  TracedValue<uint32_t> m_availBytes;                     //!< Number of bytes available to read, i.e. contiguous block at head
   std::map<SequenceNumber32, Ptr<Packet> > m_data; //!< Corresponding data (may be null)
 };
 
