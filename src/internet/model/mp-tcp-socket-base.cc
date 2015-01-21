@@ -30,6 +30,7 @@
 #include "ns3/mp-tcp-id-manager-impl.h"
 #include "ns3/tcp-option-mptcp.h"
 #include "ns3/callback.h"
+#include "ns3/trace-helper.h"
 #include <openssl/sha.h>
 
 NS_LOG_COMPONENT_DEFINE("MpTcpSocketBase");
@@ -41,6 +42,37 @@ using namespace std;
 
 namespace ns3
 {
+
+void
+dumpNextTxSequence(Ptr<OutputStreamWrapper> stream, std::string context, SequenceNumber32 oldSeq, SequenceNumber32 newSeq)
+{
+  //<< context <<
+//  if (context == "NextTxSequence")
+
+  *stream->GetStream() << Simulator::Now() << "," << oldSeq << "," << newSeq << "\n";
+}
+
+
+void
+dumpUint32(Ptr<OutputStreamWrapper> stream, std::string context, uint32_t oldVal, uint32_t newVal) {
+
+//  NS_LOG_UNCOND("Context " << context << "oldVal=" << oldVal << "newVal=" << newVal);
+
+  *stream->GetStream() << Simulator::Now() << "," << oldVal << "," << newVal << "\n";
+}
+
+
+void
+dumpTcpState(Ptr<OutputStreamWrapper> stream, std::string context, TcpStates_t oldVal, TcpStates_t newVal) {
+  // TODO rely
+  *stream->GetStream() << Simulator::Now()
+                      << "," << TcpSocket::TcpStateName[oldVal]
+                      << "," << TcpSocket::TcpStateName[newVal]
+                      << "\n";
+}
+
+
+
 NS_OBJECT_ENSURE_REGISTERED(MpTcpSocketBase);
 
 TypeId
@@ -113,44 +145,17 @@ MpTcpSocketBase::MpTcpSocketBase() :
   m_doChecksum(false)
 {
   NS_LOG_FUNCTION(this);
+
   //not considered as an Object
   m_remotePathIdManager = Create<MpTcpPathIdManagerImpl>();
   m_scheduler = Create<MpTcpSchedulerRoundRobin>();
   m_scheduler->SetMeta(this);
 
-  // TODO remove
-  gnu.SetOutFile("allPlots.pdf");
 
   mod = 60; // ??
 
+  // TODO should be generated either on connect or fork, not here ?
   m_localKey = GenerateKey();
-//  uint64_t idsn = 0;
-//  GenerateTokenForKey( MPTCP_SHA1, m_localKey, m_localToken, idsn );
-//
-//  /**
-//   mortezah added initialSeq in Tcpsocketbase but that's not valid
-//   ns3 rely on m_highTxMark
-//
-//  /!\ seq nb must be 64 bits for mptcp but that would mean rewriting lots of code so
-//
-//  TODO add a SetInitialSeqNb member into TcpSocketBase
-//  **/
-//  m_nextTxSequence = (uint32_t)idsn;
-//  m_txBuffer.SetHeadSequence(m_nextTxSequence);
-////  m_highTxMark = (uint32_t)idsn;
-
-
-  // done by default ?
-//  Callback<void, Ptr<Socket> > vPS = MakeNullCallback<void, Ptr<Socket> >();
-//  Callback<void, Ptr<Socket>, const Address &> vPSA = MakeNullCallback<void, Ptr<Socket>, const Address &>();
-//  Callback<void, Ptr<Socket>, uint32_t> vPSUI = MakeNullCallback<void, Ptr<Socket>, uint32_t>();
-//  SetConnectCallback(vPS, vPS);
-//  SetDataSentCallback(vPSUI);
-//  SetSendCallback(vPSUI);
-//  SetRecvCallback(vPS);
-
-  /* Generate a random key */
-//  m_localKey = GenerateKey(); // TODO later ? on fork or on SYN_SENT
 
 }
 
@@ -393,13 +398,10 @@ MpTcpSocketBase::CompleteFork(Ptr<Packet> p, const TcpHeader& mptcpHeader, const
 //  GenerateTokenForKey( MPTCP_SHA1, m_localKey, m_localToken, idsn );
 //
 //  /**
-//   mortezah added initialSeq in Tcpsocketbase but that's not valid
-//   ns3 rely on m_highTxMark
-//
 //  /!\ seq nb must be 64 bits for mptcp but that would mean rewriting lots of code so
 //
 //  **/
-//  m_highTxMark = (uint32_t)idsn;
+
 
   // We only setup destroy callback for MPTCP connection's endPoints, not on subflows endpoints.
   SetupCallback();
@@ -1429,7 +1431,7 @@ MpTcpSocketBase::PersistTimeout()
 
 /**
  * Sending data via subflows with available window size.
- *
+ * Todo somehow rename to dispatch
  */
 bool
 MpTcpSocketBase::SendPendingData(bool withAck)
@@ -1466,8 +1468,7 @@ MpTcpSocketBase::SendPendingData(bool withAck)
     NS_LOG_DEBUG("Sending mapping "<< mapping << " on subflow #" << it->first);
 
     //sf->AddMapping();
-    int ret = sf->SendMapping( m_txBuffer.CopyFromSequence(mapping.GetLength(), mapping.HeadDSN()) , mapping  );
-
+    int ret = sf->SendMapping(m_txBuffer.CopyFromSequence(mapping.GetLength(), mapping.HeadDSN()), mapping);
 
 
     if( ret < 0)
@@ -1486,13 +1487,20 @@ MpTcpSocketBase::SendPendingData(bool withAck)
 //      uint32_t s = std::min(w, m_segmentSize);  // Send no more than window
 //      uint32_t sz = SendDataPacket(m_nextTxSequence, s, withAck);
 //      nPacketsSent++;                             // Count sent this loop
-      NS_LOG_DEBUG("m_nextTxSequence [" << m_nextTxSequence << "]");
+//      NS_LOG_DEBUG("m_nextTxSequence [" << m_nextTxSequence << "]");
 //      m_nextTxSequence += sz;                     // Advance next tx sequence
 
+  // TODO here update the m_nextTxSequence only if it is in order
       // Maybe the max is unneeded; I put it here
-      m_nextTxSequence = std::max(m_nextTxSequence.Get(), mapping.TailDSN() + 1);                // Advance next tx sequence
+    if( mapping.HeadDSN() <= m_nextTxSequence && mapping.TailDSN() >= m_nextTxSequence) {
+      m_nextTxSequence = mapping.TailDSN() + 1;
+      m_highTxMark = std::max( m_highTxMark.Get(), mapping.TailDSN());
+    }
+//      m_nextTxSequence = std::max(m_nextTxSequence.Get(), mapping.TailDSN() + 1);
 
-      NS_LOG_DEBUG("m_nextTxSequence [" << m_nextTxSequence << "]");
+
+
+//      NS_LOG_DEBUG("m_nextTxSequence [" << m_nextTxSequence << "]");
 //    }NS_LOG_LOGIC ("SendPendingData sent " << nPacketsSent << " packets");
   }
 
@@ -1713,10 +1721,12 @@ MpTcpSocketBase::GenerateTokenForKey( mptcp_crypto_t alg, uint64_t key, uint32_t
 
 
 
+
 uint64_t
 MpTcpSocketBase::GenerateKey()
 {
-  NS_ASSERT_MSG( m_localKey == 0,"Key already generated");
+  // TODO rather use NS3 random generator
+  NS_ASSERT_MSG( m_localKey == 0, "Key already generated");
 
   //! arbitrary function, TODO replace with ns3 random gneerator
   m_localKey = (rand() % 1000 + 1);
@@ -1725,8 +1735,6 @@ MpTcpSocketBase::GenerateKey()
   GenerateTokenForKey( MPTCP_SHA1, m_localKey, m_localToken, idsn );
 
   /**
-   mortezah added initialSeq in Tcpsocketbase but that's not valid
-   ns3 rely on m_highTxMark
 
   /!\ seq nb must be 64 bits for mptcp but that would mean rewriting lots of code so
 
@@ -1734,9 +1742,9 @@ MpTcpSocketBase::GenerateKey()
   **/
   m_nextTxSequence = (uint32_t)idsn;
   m_txBuffer.SetHeadSequence(m_nextTxSequence);
-//  m_highTxMark = (uint32_t)idsn;
+  m_highTxMark = m_nextTxSequence;
 
-  // TODO rather use NS3 random generator
+
   return m_localKey;
 }
 
@@ -1768,7 +1776,7 @@ MpTcpSocketBase::SetNewAddrCallback(Callback<bool, Ptr<Socket>, Address, uint8_t
 }
 
 void
-MpTcpSocketBase::MoveSubflow(Ptr<MpTcpSubFlow> subflow,mptcp_container_t from,mptcp_container_t to)
+MpTcpSocketBase::MoveSubflow(Ptr<MpTcpSubFlow> subflow, mptcp_container_t from, mptcp_container_t to)
 {
 
 
@@ -1815,9 +1823,15 @@ MpTcpSocketBase::OnSubflowEstablishment(Ptr<MpTcpSubFlow> subflow)
   }
 
 
-  //[subflow->m_positionInVector] = ;
-  MoveSubflow(subflow,Others,Established);
 
+  //[subflow->m_positionInVector] = ;
+  MoveSubflow(subflow, Others, Established);
+
+  // For now, there is no subflow deletion so this should be good enough, else it will crash
+  std::stringstream os;
+  os << m_tracePrefix << "subflow" <<  m_subflows[Established].size();
+  //
+  subflow->SetupMetaTracing(os.str());
 
   // TODO setup callbacks
 
@@ -1826,24 +1840,30 @@ MpTcpSocketBase::OnSubflowEstablishment(Ptr<MpTcpSubFlow> subflow)
   //Ptr<Socket> sock
 }
 
-#if 0
+
 void
-MpTcpSocketBase::SetupMetaTracing( const std::string prefix)
+MpTcpSocketBase::SetupMetaTracing(std::string prefix)
 {
 //  f.open(filename, std::ofstream::out | std::ofstream::trunc);
+  m_tracePrefix = prefix + "/";
 
+  prefix = m_tracePrefix + "/meta";
   AsciiTraceHelper asciiTraceHelper;
   Ptr<OutputStreamWrapper> streamNextTx = asciiTraceHelper.CreateFileStream (prefix+"_nextTx.csv");
   Ptr<OutputStreamWrapper> streamHighest = asciiTraceHelper.CreateFileStream (prefix+"_highest.csv");
   Ptr<OutputStreamWrapper> streamRxAvailable = asciiTraceHelper.CreateFileStream (prefix+"_RxAvailable.csv");
   Ptr<OutputStreamWrapper> streamRxTotal = asciiTraceHelper.CreateFileStream (prefix+"_RxTotal.csv");
   Ptr<OutputStreamWrapper> streamTx = asciiTraceHelper.CreateFileStream (prefix+"_Tx.csv");
+  Ptr<OutputStreamWrapper> streamStates = asciiTraceHelper.CreateFileStream (prefix+"_states.csv");
+  Ptr<OutputStreamWrapper> streamCwnd = asciiTraceHelper.CreateFileStream (prefix+"_cwin.csv");
 
   *streamNextTx->GetStream() << "Time,oldNextTxSequence,newNextTxSequence\n";
   *streamHighest->GetStream() << "Time,oldHighestSequence,newHighestSequence\n";
   *streamRxAvailable->GetStream() << "Time,oldRxAvailable,newRxAvailable\n";
   *streamRxTotal->GetStream() << "Time,oldRxTotal,newRxTotal\n";
   *streamTx->GetStream() << "Time,oldTx,newTx\n";
+  *streamCwnd->GetStream() << "Time,oldCwnd,newCwnd\n";
+  *streamStates->GetStream() << "Time,oldState,newState\n";
 
 //  , HighestSequence, RWND\n";
 
@@ -1851,22 +1871,19 @@ MpTcpSocketBase::SetupMetaTracing( const std::string prefix)
 
   // TODO je devrais etre capable de voir les CongestionWindow + tailles de buffer/ Out of order
 //  CongestionWindow
-
+  Ptr<MpTcpSocketBase> sock(this);
   sock->TraceConnect ("NextTxSequence", "NextTxSequence", MakeBoundCallback(&dumpNextTxSequence, streamNextTx) );
-//  sock->TraceConnect ("NextTxSequence", "NextTxSequence", MakeBoundCallback(&dumpNextTxSequence, streamNextTx) );
-//  sock->TraceConnectWithoutContext ("NextTxSequence", MakeBoundCallback(&dumpNextTxSequence, stream) );
-//  sock->TraceConnect ("NextTxSequence", "server", MakeBoundCallback(&dumpNextTxSequence) );
-
-
   sock->TraceConnect ("HighestSequence", "HighestSequence", MakeBoundCallback(&dumpNextTxSequence, streamHighest) );
+  sock->TraceConnect ("CongestionWindow", "CongestionWindow", MakeBoundCallback(&dumpUint32, streamCwnd) );
+  sock->TraceConnect ("State", "State", MakeBoundCallback(&dumpTcpState, streamStates) );
 
 //  Ptr<MpTcpSocketBase> sock2 = DynamicCast<MpTcpSocketBase>(sock);
-  sock2->m_rxBuffer.TraceConnect ("RxTotal", "RxTotal", MakeBoundCallback(&dumpNextTxSequence, streamRxTotal) );
-  sock2->m_rxBuffer.TraceConnect ("RxAvailable", "RxAvailable", MakeBoundCallback(&dumpNextTxSequence, streamRxAvailable) );
-  sock2->m_txBuffer.TraceConnect ("UnackSequence", "UnackSequence", MakeBoundCallback(&dumpNextTxSequence, streamTx) );
+  sock->m_rxBuffer.TraceConnect ("RxTotal", "RxTotal", MakeBoundCallback(&dumpNextTxSequence, streamRxTotal) );
+  sock->m_rxBuffer.TraceConnect ("RxAvailable", "RxAvailable", MakeBoundCallback(&dumpNextTxSequence, streamRxAvailable) );
+  sock->m_txBuffer.TraceConnect ("UnackSequence", "UnackSequence", MakeBoundCallback(&dumpNextTxSequence, streamTx) );
 //  sock->TraceConnect ("RWND", "RWND", MakeBoundCallback(&dumpUint32), stream);
 }
-#endif
+
 
 void
 MpTcpSocketBase::OnSubflowClosing(Ptr<MpTcpSubFlow> sf)
@@ -1906,19 +1923,22 @@ MpTcpSocketBase::OnSubflowRetransmit(Ptr<MpTcpSubFlow> sf)
 }
 
 
+// renvoie m_highTxMark.Get() - m_txBuffer.HeadSequence(); should be ok even
+// if bytes may not really be in flight but rather in subflows buffer
 uint32_t
 MpTcpSocketBase::BytesInFlight()
 {
-  NS_LOG_FUNCTION(this << "test");
+  NS_LOG_FUNCTION(this);
+  return TcpSocketBase::BytesInFlight();
+
+  #if 0
   uint32_t total = 0;
+
   for( SubflowList::const_iterator it = m_subflows[Established].begin(); it != m_subflows[Established].end(); it++ )
   {
     total += (*it)->BytesInFlight();
   }
-
-//  Ptr<MpTcpSubFlow> sFlow = m_subflows[sFlowIdx];
-//  return sFlow->maxSeqNb - sFlow->highestAck;        //m_highTxMark - m_highestRxAck;
-  return total;
+  #endif
 }
 
 //uint32_t
@@ -2251,6 +2271,8 @@ MpTcpSocketBase::ProcessDSSWait( Ptr<TcpOptionMpTcpDSS> dss, Ptr<MpTcpSubFlow> s
     }
   }
 
+  // TODO I should check
+  // m_txBuffer.SetHeadSequence(m_nextTxSequence)
   if(dss->GetFlags() & TcpOptionMpTcpDSS::DataAckPresent) {
 
     SequenceNumber32 dack(dss->GetDataAck() );
@@ -2311,9 +2333,6 @@ MpTcpSocketBase::ProcessWait(Ptr<Packet> packet, const TcpHeader& tcpHeader)
 //  NS_LOG_INFO (TcpStateName[m_state] << " -> CLOSED");
 //  CancelAllTimers();
 //  m_state = CLOSED;
-////  GenerateCWND();
-////  GenerateRTT();
-//  //GenerateSendvsACK();
 //
 //}
 

@@ -29,7 +29,7 @@
 #include "ns3/tcp-option-mptcp.h"
 #include "ns3/mp-tcp-id-manager.h"
 //#include "ns3/ipv4-address.h"
-
+#include "ns3/trace-helper.h"
 
 #include <openssl/sha.h>
 
@@ -1559,6 +1559,54 @@ MpTcpSubFlow::RecvWithMapping( uint32_t maxSize, SequenceNumber32 &dsn)
 //}
 
 
+
+void
+MpTcpSubFlow::SetupMetaTracing(const std::string prefix)
+{
+//  f.open(filename, std::ofstream::out | std::ofstream::trunc);
+
+  AsciiTraceHelper asciiTraceHelper;
+  Ptr<OutputStreamWrapper> streamNextTx = asciiTraceHelper.CreateFileStream (prefix+"_nextTx.csv");
+  Ptr<OutputStreamWrapper> streamHighest = asciiTraceHelper.CreateFileStream (prefix+"_highest.csv");
+  Ptr<OutputStreamWrapper> streamRxAvailable = asciiTraceHelper.CreateFileStream (prefix+"_RxAvailable.csv");
+  Ptr<OutputStreamWrapper> streamRxTotal = asciiTraceHelper.CreateFileStream (prefix+"_RxTotal.csv");
+  Ptr<OutputStreamWrapper> streamTx = asciiTraceHelper.CreateFileStream (prefix+"_Tx.csv");
+  Ptr<OutputStreamWrapper> streamStates = asciiTraceHelper.CreateFileStream (prefix+"_states.csv");
+  Ptr<OutputStreamWrapper> streamCwnd = asciiTraceHelper.CreateFileStream (prefix+"_cwin.csv");
+
+  *streamNextTx->GetStream() << "Time,oldNextTxSequence,newNextTxSequence\n";
+  *streamHighest->GetStream() << "Time,oldHighestSequence,newHighestSequence\n";
+  *streamRxAvailable->GetStream() << "Time,oldRxAvailable,newRxAvailable\n";
+  *streamRxTotal->GetStream() << "Time,oldRxTotal,newRxTotal\n";
+  *streamTx->GetStream() << "Time,oldTx,newTx\n";
+  *streamCwnd->GetStream() << "Time,oldCwnd,newCwnd\n";
+  *streamStates->GetStream() << "Time,oldState,newState\n";
+
+//  , HighestSequence, RWND\n";
+
+//  NS_ASSERT(f.is_open());
+
+  // TODO je devrais etre capable de voir les CongestionWindow + tailles de buffer/ Out of order
+//  CongestionWindow
+  Ptr<MpTcpSubFlow> sock(this);
+  sock->TraceConnect ("NextTxSequence", "NextTxSequence", MakeBoundCallback(&dumpNextTxSequence, streamNextTx) );
+//  sock->TraceConnect ("NextTxSequence", "NextTxSequence", MakeBoundCallback(&dumpNextTxSequence, streamNextTx) );
+//  sock->TraceConnectWithoutContext ("NextTxSequence", MakeBoundCallback(&dumpNextTxSequence, stream) );
+//  sock->TraceConnect ("NextTxSequence", "server", MakeBoundCallback(&dumpNextTxSequence) );
+  sock->TraceConnect ("CongestionWindow", "CongestionWindow", MakeBoundCallback(&dumpUint32, streamCwnd) );
+  sock->TraceConnect ("State", "State", MakeBoundCallback(&dumpTcpState, streamStates) );
+
+
+  sock->TraceConnect ("HighestSequence", "HighestSequence", MakeBoundCallback(&dumpNextTxSequence, streamHighest) );
+
+//  Ptr<MpTcpSocketBase> sock2 = DynamicCast<MpTcpSocketBase>(sock);
+  sock->m_rxBuffer.TraceConnect ("RxTotal", "RxTotal", MakeBoundCallback(&dumpNextTxSequence, streamRxTotal) );
+  sock->m_rxBuffer.TraceConnect ("RxAvailable", "RxAvailable", MakeBoundCallback(&dumpNextTxSequence, streamRxAvailable) );
+  sock->m_txBuffer.TraceConnect ("UnackSequence", "UnackSequence", MakeBoundCallback(&dumpNextTxSequence, streamTx) );
+//  sock->TraceConnect ("RWND", "RWND", MakeBoundCallback(&dumpUint32), stream);
+}
+
+
 /**
 TODO here I should look for an associated mapping.
 
@@ -1891,12 +1939,12 @@ MpTcpSubFlow::AddPeerMapping(const MpTcpMapping& mapping)
   return true;
 }
 
-void
-MpTcpSubFlow::CwndTracer(uint32_t oldval, uint32_t newval)
-{
-  //NS_LOG_UNCOND("Subflow "<< m_routeId <<": Moving cwnd from " << oldval << " to " << newval);
-  cwndTracer.push_back(make_pair(Simulator::Now().GetSeconds(), newval));
-}
+//void
+//MpTcpSubFlow::CwndTracer(uint32_t oldval, uint32_t newval)
+//{
+//  //NS_LOG_UNCOND("Subflow "<< m_routeId <<": Moving cwnd from " << oldval << " to " << newval);
+//  cwndTracer.push_back(make_pair(Simulator::Now().GetSeconds(), newval));
+//}
 
 //void
 //MpTcpSubFlow::SetFinSequence(const SequenceNumber32& s)

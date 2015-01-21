@@ -41,6 +41,7 @@ TcpTxBuffer::GetTypeId (void)
     .AddTraceSource ("UnackSequence",
                      "First unacknowledged sequence number (SND.UNA)",
                      MakeTraceSourceAccessor (&TcpTxBuffer::m_firstByteSeq))
+
   ;
   return tid;
 }

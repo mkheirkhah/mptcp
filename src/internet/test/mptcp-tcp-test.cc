@@ -38,7 +38,8 @@
 #include "ns3/uinteger.h"
 #include "ns3/log.h"
 #include "ns3/string.h"
-#include "ns3/mp-tcp-socket-factory.h"
+#include "ns3/tcp-socket-base.h"
+#include "ns3/mp-tcp-socket-base.h"
 
 #include "ns3/ipv4-end-point.h"
 #include "ns3/arp-l3-protocol.h"
@@ -51,14 +52,37 @@
 #include "ns3/trace-helper.h"
 #include "ns3/point-to-point-helper.h"
 #include "ns3/ipv4-address-helper.h"
+#include "ns3/sequence-number.h"
+#include "ns3/trace-helper.h"
 
 #include <string>
+#include <fstream>
 
 NS_LOG_COMPONENT_DEFINE ("TcpTestSuite");
 
 using namespace ns3;
 
+//std::ofstream source_f;
+//std::ofstream server_f;
 
+//void
+////dumpNextTxSequence(Ptr<OutputStreamWrapper> stream, SequenceNumber32 oldSeq, SequenceNumber32 newSeq)
+//dumpNextTxSequence(Ptr<OutputStreamWrapper> stream, std::string context, SequenceNumber32 oldSeq, SequenceNumber32 newSeq)
+//{
+//  //<< context <<
+////  if (context == "NextTxSequence")
+//
+//  *stream->GetStream() << Simulator::Now() << "," << oldSeq << "," << newSeq << "\n";
+//}
+//
+//
+//void
+//dumpUint32(Ptr<OutputStreamWrapper> stream, std::string context, uint32_t oldVal, uint32_t newVal) {
+//
+////  NS_LOG_UNCOND("Context " << context << "oldVal=" << oldVal << "newVal=" << newVal);
+//
+//  *stream->GetStream() << Simulator::Now() << "," << oldVal << "," << newVal << "\n";
+//}
 
 
 
@@ -376,6 +400,50 @@ Assign (const Ptr<NetDevice> &device)
 }
 #endif
 
+// Attach callbacks
+//void
+//SetupCallbacks(Ptr<Socket> sock,
+////std::ofstream f,
+//const std::string prefix)
+//{
+////  f.open(filename, std::ofstream::out | std::ofstream::trunc);
+//
+//  AsciiTraceHelper asciiTraceHelper;
+//  Ptr<OutputStreamWrapper> streamNextTx = asciiTraceHelper.CreateFileStream (prefix+"_nextTx.csv");
+//  Ptr<OutputStreamWrapper> streamHighest = asciiTraceHelper.CreateFileStream (prefix+"_highest.csv");
+//  Ptr<OutputStreamWrapper> streamRxAvailable = asciiTraceHelper.CreateFileStream (prefix+"_RxAvailable.csv");
+//  Ptr<OutputStreamWrapper> streamRxTotal = asciiTraceHelper.CreateFileStream (prefix+"_RxTotal.csv");
+//  Ptr<OutputStreamWrapper> streamTx = asciiTraceHelper.CreateFileStream (prefix+"_Tx.csv");
+//
+//  *streamNextTx->GetStream() << "Time,oldNextTxSequence,newNextTxSequence\n";
+//  *streamHighest->GetStream() << "Time,oldHighestSequence,newHighestSequence\n";
+//  *streamRxAvailable->GetStream() << "Time,oldRxAvailable,newRxAvailable\n";
+//  *streamRxTotal->GetStream() << "Time,oldRxTotal,newRxTotal\n";
+//  *streamTx->GetStream() << "Time,oldTx,newTx\n";
+//
+////  , HighestSequence, RWND\n";
+//
+////  NS_ASSERT(f.is_open());
+//
+//  // TODO je devrais etre capable de voir les CongestionWindow + tailles de buffer/ Out of order
+////  CongestionWindow
+//
+//  sock->TraceConnect ("NextTxSequence", "NextTxSequence", MakeBoundCallback(&dumpNextTxSequence, streamNextTx) );
+////  sock->TraceConnect ("NextTxSequence", "NextTxSequence", MakeBoundCallback(&dumpNextTxSequence, streamNextTx) );
+////  sock->TraceConnectWithoutContext ("NextTxSequence", MakeBoundCallback(&dumpNextTxSequence, stream) );
+////  sock->TraceConnect ("NextTxSequence", "server", MakeBoundCallback(&dumpNextTxSequence) );
+//
+//
+//  sock->TraceConnect ("HighestSequence", "HighestSequence", MakeBoundCallback(&dumpNextTxSequence, streamHighest) );
+//
+//  Ptr<MpTcpSocketBase> sock2 = DynamicCast<MpTcpSocketBase>(sock);
+//  sock2->m_rxBuffer.TraceConnect ("RxTotal", "RxTotal", MakeBoundCallback(&dumpNextTxSequence, streamRxTotal) );
+//  sock2->m_rxBuffer.TraceConnect ("RxAvailable", "RxAvailable", MakeBoundCallback(&dumpNextTxSequence, streamRxAvailable) );
+//  sock2->m_txBuffer.TraceConnect ("UnackSequence", "UnackSequence", MakeBoundCallback(&dumpNextTxSequence, streamTx) );
+////  sock->TraceConnect ("RWND", "RWND", MakeBoundCallback(&dumpUint32), stream);
+//}
+
+
 void
 TcpTestCase::SetupDefaultSim (void)
 {
@@ -390,7 +458,7 @@ TcpTestCase::SetupDefaultSim (void)
   p2p.SetDeviceAttribute ("DataRate", StringValue ("5Mbps"));
   p2p.SetChannelAttribute ("Delay", StringValue ("2ms"));
   NetDeviceContainer cont = p2p.Install(node0,node1);
-  p2p.EnablePcapAll("test",true);
+  p2p.EnablePcapAll("test", true);
 
   Ipv4AddressHelper ipv4;
   ipv4.SetBase(ipaddr0,netmask);
@@ -421,6 +489,13 @@ TcpTestCase::SetupDefaultSim (void)
   Ptr<Socket> server = sockFactory0->CreateSocket ();
   Ptr<Socket> source = sockFactory1->CreateSocket ();
 
+  Ptr<MpTcpSocketBase> server_meta = DynamicCast<MpTcpSocketBase>(server);
+  Ptr<MpTcpSocketBase> source_meta = DynamicCast<MpTcpSocketBase>(source);
+
+  server_meta->SetupMetaTracing("server");
+  source_meta->SetupMetaTracing("source");
+
+
   uint16_t port = 50000;
   InetSocketAddress serverlocaladdr (Ipv4Address::GetAny (), port);
   InetSocketAddress serverremoteaddr ( node0->GetObject<Ipv4>()->GetAddress(1,0).GetLocal(), port);
@@ -435,6 +510,24 @@ TcpTestCase::SetupDefaultSim (void)
   source->SetSendCallback (MakeCallback (&TcpTestCase::SourceHandleSend, this));
 
   source->Connect (serverremoteaddr);
+
+
+
+//SetupDefaultSim
+    //! TODO set callbacks
+//    ("ns3::TcpSocketBase::NextTxSequence", );
+//  ns3::TcpSocketBase::HighestSequence
+//  ns3::TcpSocketBase::RWND
+
+  // TODO use MakeBoundCallback() et y passer le fichier
+
+//  server_f.open(filename, std::ofstream::out | std::ofstream::trunc);
+
+
+//  source->TraceConnect ("NextTxSequence", "source", MakeCallback(&dumpNextTxSequence) );
+//  source->TraceConnect ("HighestSequence", "source", MakeCallback(&dumpNextTxSequence) );
+//  source->TraceConnect ("RWND", "source", MakeCallback(&dumpUint32) );
+
 }
 
 void
@@ -531,6 +624,8 @@ public:
 //    AddTestCase (new TcpTestCase (13, 200, 200, 200, 200, false), TestCase::QUICK);
 //    AddTestCase (new TcpTestCase (13, 1, 1, 1, 1, false), TestCase::QUICK);
 //    AddTestCase (new TcpTestCase (100000, 100, 50, 100, 20, false), TestCase::QUICK);
+
+// here it's a test where I lower streamsize to see where it starts failing.
     AddTestCase (new TcpTestCase (8000, 100, 50, 100, 20, false), TestCase::QUICK);
 
     // Disable IPv6 tests; not supported yet

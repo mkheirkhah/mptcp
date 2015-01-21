@@ -72,17 +72,26 @@ TcpSocketBase::GetTypeId(void)
 //                   MakeEnumChecker (CLOSED, "Closed"))
   .AddAttribute("MaxSegLifetime", "Maximum segment lifetime in seconds, use for TIME_WAIT state transition to CLOSED state",
       DoubleValue(120), /* RFC793 says MSL=2 minutes*/
-      MakeDoubleAccessor(&TcpSocketBase::m_msl), MakeDoubleChecker<double>(0)).AddAttribute("MaxWindowSize",
+      MakeDoubleAccessor(&TcpSocketBase::m_msl), MakeDoubleChecker<double>(0))
+  .AddAttribute("MaxWindowSize",
       "Max size of advertised window", UintegerValue(65535), MakeUintegerAccessor(&TcpSocketBase::m_maxWinSize),
       MakeUintegerChecker<uint16_t>())
-      .AddTraceSource("RTO", "Retransmission timeout",
-      MakeTraceSourceAccessor(&TcpSocketBase::m_rto)).AddTraceSource("RTT", "Last RTT sample",
-      MakeTraceSourceAccessor(&TcpSocketBase::m_lastRtt)).AddTraceSource("NextTxSequence",
-      "Next sequence number to send (SND.NXT)", MakeTraceSourceAccessor(&TcpSocketBase::m_nextTxSequence)).AddTraceSource(
+  .AddTraceSource("RTO", "Retransmission timeout",
+      MakeTraceSourceAccessor(&TcpSocketBase::m_rto))
+  .AddTraceSource("RTT", "Last RTT sample",
+      MakeTraceSourceAccessor(&TcpSocketBase::m_lastRtt))
+  .AddTraceSource("NextTxSequence",
+      "Next sequence number to send (SND.NXT)", MakeTraceSourceAccessor(&TcpSocketBase::m_nextTxSequence))
+  .AddTraceSource(
       "HighestSequence", "Highest sequence number ever sent in socket's life time",
-      MakeTraceSourceAccessor(&TcpSocketBase::m_highTxMark)).AddTraceSource("State", "TCP state",
-      MakeTraceSourceAccessor(&TcpSocketBase::m_state)).AddTraceSource("RWND", "Remote side's flow control window",
-      MakeTraceSourceAccessor(&TcpSocketBase::m_rWnd));
+      MakeTraceSourceAccessor(&TcpSocketBase::m_highTxMark))
+  .AddTraceSource("State", "TCP state",
+      MakeTraceSourceAccessor(&TcpSocketBase::m_state))
+  .AddTraceSource("RWND", "Remote side's flow control window",
+      MakeTraceSourceAccessor(&TcpSocketBase::m_rWnd))
+  ;
+
+
   return tid;
 }
 

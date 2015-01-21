@@ -281,7 +281,8 @@ public:
   Ptr<MpTcpPathIdManager>
   GetIdManager();
 
-
+  void
+  SetupMetaTracing(const std::string prefix);
 
 //  MpTcpMapping getSegmentOfACK( uint32_t ack);
 
@@ -407,7 +408,7 @@ protected:
 
 //  virtual void AddDSNMapping(uint8_t sFlowIdx, uint64_t dSeqNum, uint16_t dLvlLen, uint32_t sflowSeqNum, uint32_t ack, Ptr<Packet> pkt);
 //  virtual void StartTracing(string traced);
-  virtual void CwndTracer(uint32_t oldval, uint32_t newval);
+//  virtual void CwndTracer(uint32_t oldval, uint32_t newval);
 
 //  virtual void SetFinSequence(const SequenceNumber32& s);
 //  virtual bool Finished();
@@ -456,23 +457,23 @@ protected:
 //    uint32_t m_m_ssThresh;           // Slow start threshold
 
   //plotting check with parents ?
-  vector<pair<double, uint32_t> > cwndTracer;
-  vector<pair<double, double> > ssthreshtrack;
-  vector<pair<double, double> > CWNDtrack;
-  vector<pair<double, uint32_t> > DATA;
-  vector<pair<double, uint32_t> > ACK;
-  vector<pair<double, uint32_t> > DROP;
-  vector<pair<double, uint32_t> > RETRANSMIT;
-  vector<pair<double, uint32_t> > DUPACK;
-  vector<pair<double, double> > _ss;
-  vector<pair<double, double> > _ca;
-  vector<pair<double, double> > _FR_FA;
-  vector<pair<double, double> > _FR_PA;
-  vector<pair<double, double> > _FReTx;
-  vector<pair<double, double> > _TimeOut;
-  vector<pair<double, double> > _RTT;
-  vector<pair<double, double> > _AvgRTT;
-  vector<pair<double, double> > _RTO;
+//  vector<pair<double, uint32_t> > cwndTracer;
+//  vector<pair<double, double> > ssthreshtrack;
+//  vector<pair<double, double> > CWNDtrack;
+//  vector<pair<double, uint32_t> > DATA;
+//  vector<pair<double, uint32_t> > ACK;
+//  vector<pair<double, uint32_t> > DROP;
+//  vector<pair<double, uint32_t> > RETRANSMIT;
+//  vector<pair<double, uint32_t> > DUPACK;
+//  vector<pair<double, double> > _ss;
+//  vector<pair<double, double> > _ca;
+//  vector<pair<double, double> > _FR_FA;
+//  vector<pair<double, double> > _FR_PA;
+//  vector<pair<double, double> > _FReTx;
+//  vector<pair<double, double> > _TimeOut;
+//  vector<pair<double, double> > _RTT;
+//  vector<pair<double, double> > _AvgRTT;
+//  vector<pair<double, double> > _RTO;
 
 protected:
   Ptr<MpTcpSocketBase> m_metaSocket;

@@ -30,6 +30,16 @@ class MpTcpPathIdManager;
 class MpTcpSubFlow;
 //class MpTcpSchedulerRoundRobin;
 class MpTcpCongestionControl;
+class OutputStreamWrapper;
+
+void
+dumpNextTxSequence(Ptr<OutputStreamWrapper> stream, std::string context, SequenceNumber32 oldSeq, SequenceNumber32 newSeq);
+
+void
+dumpUint32(Ptr<OutputStreamWrapper> stream, std::string context, uint32_t oldVal, uint32_t newVal);
+
+void
+dumpTcpState(Ptr<OutputStreamWrapper> stream, std::string context, TcpStates_t oldVal, TcpStates_t newVal);
 
 /**
  * \class MpTcpSocketBase
@@ -84,6 +94,13 @@ public: // public methods
   // Window Management
   virtual uint32_t
   BytesInFlight();  // Return total bytes in flight of a subflow
+
+  /**
+  Used to export a whole range of statistics to csv files (filenames hardcoded).
+  This would likely need a rework before upstream, for instance to allow
+  enabling/disabling
+  **/
+  virtual void SetupMetaTracing(std::string prefix);
 
 
   void
@@ -222,6 +239,7 @@ public: // public methods
 //  void SetDataDistribAlgo(DataDistribAlgo_t ddalgo);    // Round Robin is only algorithms used.
 
   /**
+  TODO remove ?
   \brief Allow to set the congestion control algorithm in use. You can choose between OLIA,LIA,COUPLED,UNCOUPLED.
   \bug Should not be possible to change CC after connection has started
   */
@@ -291,18 +309,19 @@ public: // public variables
   // Apparently used for plotting. I guess this should go outside, into helpers maybe ?
   double TimeScale;
 
-  GnuplotCollection gnu;  //!< plotting
-  std::list<uint32_t> sampleList;
+//  GnuplotCollection gnu;  //!< plotting
+//
+//  std::list<uint32_t> sampleList;
 
   // TODO remove in favor of parents' ?
-  std::vector<pair<double, double> > totalCWNDtrack;
-  std::vector<pair<double, double> > reTxTrack;
-  std::vector<pair<double, double> > timeOutTrack;
-  std::vector<pair<double, double> > PartialAck;
-  std::vector<pair<double, double> > FullAck;
-  std::vector<pair<double, double> > DupAcks;
-  std::vector<pair<double, double> > PacketDrop;
-  std::vector<pair<double, double> > TxQueue;
+//  std::vector<pair<double, double> > totalCWNDtrack;
+//  std::vector<pair<double, double> > reTxTrack;
+//  std::vector<pair<double, double> > timeOutTrack;
+//  std::vector<pair<double, double> > PartialAck;
+//  std::vector<pair<double, double> > FullAck;
+//  std::vector<pair<double, double> > DupAcks;
+//  std::vector<pair<double, double> > PacketDrop;
+//  std::vector<pair<double, double> > TxQueue;
 
 protected: // protected methods
 
@@ -602,21 +621,13 @@ protected: // protected methods
 //  void getQueuePkt(Ipv4Address addr);
 
 
-  // Helper functions -> plotting
-//  std::string GeneratePlotDetail();
-//  void GenerateRTTPlot();
-//  void GenerateCWNDPlot();
-//  void GenerateSendvsACK();
-//  void GenerateRTT();
-//  void GenerateCwndTracer();
-//  void GeneratePktCount();
-//  void generatePlots();
+
 
 protected: // protected variables
 
   typedef std::vector<Ptr<MpTcpSubFlow> > SubflowList;
 
-
+  std::string m_tracePrefix;
 
   /**
   *
@@ -686,7 +697,7 @@ private:
 private:
 
   /* Utility function used when a subflow changes state */
-  void MoveSubflow(Ptr<MpTcpSubFlow> sf,mptcp_container_t from,mptcp_container_t to);
+  void MoveSubflow(Ptr<MpTcpSubFlow> sf, mptcp_container_t from, mptcp_container_t to);
 // CloseSubflow
 //  uint8_t AddLocalAddr(const Ipv4Address& address);
 //

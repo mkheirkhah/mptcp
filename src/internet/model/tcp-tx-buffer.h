@@ -133,7 +133,7 @@ private:
 
   TracedValue<SequenceNumber32> m_firstByteSeq; //!< Sequence number of the first byte in data (SND.UNA)
   uint32_t m_size;                              //!< Number of data bytes
-  uint32_t m_maxBuffer;                         //!< Max number of data bytes in buffer (SND.WND)
+  TracedValue<uint32_t> m_maxBuffer;                         //!< Max number of data bytes in buffer (SND.WND)
   std::list<Ptr<Packet> > m_data;               //!< Corresponding data (may be null)
 };
 
