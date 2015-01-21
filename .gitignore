@@ -16,3 +16,4 @@ mptcp.depend
 testpy-output/*
 Dl*
 Ul*
+*.csv
