@@ -61,6 +61,12 @@ MpTcpSocketBase::GetTypeId(void)
 //          ObjectVectorValue(),
 //          MakeObjectVectorAccessor(&MpTcpSocketBase::m_subflows),
 //          MakeObjectVectorChecker<MpTcpSocketBase>())
+        .AddTraceSource("CongestionWindow",
+          "Congestion window at mptcp level",
+          MakeTraceSourceAccessor(&MpTcpSocketBase::m_cWnd)
+        )
+
+
     ;
   return tid;
 }
@@ -1812,11 +1818,55 @@ MpTcpSocketBase::OnSubflowEstablishment(Ptr<MpTcpSubFlow> subflow)
   //[subflow->m_positionInVector] = ;
   MoveSubflow(subflow,Others,Established);
 
+
+  // TODO setup callbacks
+
+
   // In all cases we should move the subflow from
   //Ptr<Socket> sock
 }
 
+#if 0
+void
+MpTcpSocketBase::SetupMetaTracing( const std::string prefix)
+{
+//  f.open(filename, std::ofstream::out | std::ofstream::trunc);
 
+  AsciiTraceHelper asciiTraceHelper;
+  Ptr<OutputStreamWrapper> streamNextTx = asciiTraceHelper.CreateFileStream (prefix+"_nextTx.csv");
+  Ptr<OutputStreamWrapper> streamHighest = asciiTraceHelper.CreateFileStream (prefix+"_highest.csv");
+  Ptr<OutputStreamWrapper> streamRxAvailable = asciiTraceHelper.CreateFileStream (prefix+"_RxAvailable.csv");
+  Ptr<OutputStreamWrapper> streamRxTotal = asciiTraceHelper.CreateFileStream (prefix+"_RxTotal.csv");
+  Ptr<OutputStreamWrapper> streamTx = asciiTraceHelper.CreateFileStream (prefix+"_Tx.csv");
+
+  *streamNextTx->GetStream() << "Time,oldNextTxSequence,newNextTxSequence\n";
+  *streamHighest->GetStream() << "Time,oldHighestSequence,newHighestSequence\n";
+  *streamRxAvailable->GetStream() << "Time,oldRxAvailable,newRxAvailable\n";
+  *streamRxTotal->GetStream() << "Time,oldRxTotal,newRxTotal\n";
+  *streamTx->GetStream() << "Time,oldTx,newTx\n";
+
+//  , HighestSequence, RWND\n";
+
+//  NS_ASSERT(f.is_open());
+
+  // TODO je devrais etre capable de voir les CongestionWindow + tailles de buffer/ Out of order
+//  CongestionWindow
+
+  sock->TraceConnect ("NextTxSequence", "NextTxSequence", MakeBoundCallback(&dumpNextTxSequence, streamNextTx) );
+//  sock->TraceConnect ("NextTxSequence", "NextTxSequence", MakeBoundCallback(&dumpNextTxSequence, streamNextTx) );
+//  sock->TraceConnectWithoutContext ("NextTxSequence", MakeBoundCallback(&dumpNextTxSequence, stream) );
+//  sock->TraceConnect ("NextTxSequence", "server", MakeBoundCallback(&dumpNextTxSequence) );
+
+
+  sock->TraceConnect ("HighestSequence", "HighestSequence", MakeBoundCallback(&dumpNextTxSequence, streamHighest) );
+
+//  Ptr<MpTcpSocketBase> sock2 = DynamicCast<MpTcpSocketBase>(sock);
+  sock2->m_rxBuffer.TraceConnect ("RxTotal", "RxTotal", MakeBoundCallback(&dumpNextTxSequence, streamRxTotal) );
+  sock2->m_rxBuffer.TraceConnect ("RxAvailable", "RxAvailable", MakeBoundCallback(&dumpNextTxSequence, streamRxAvailable) );
+  sock2->m_txBuffer.TraceConnect ("UnackSequence", "UnackSequence", MakeBoundCallback(&dumpNextTxSequence, streamTx) );
+//  sock->TraceConnect ("RWND", "RWND", MakeBoundCallback(&dumpUint32), stream);
+}
+#endif
 
 void
 MpTcpSocketBase::OnSubflowClosing(Ptr<MpTcpSubFlow> sf)
@@ -1997,635 +2047,6 @@ MpTcpSocketBase::DupAck(uint8_t sFlowIdx, DSNMapping* ptrDSN)
 }
 #endif
 
-
-std::string
-MpTcpSocketBase::GeneratePlotDetail(void)
-{
-
-  std::stringstream detail;
-  detail
-        //<< "  sF:" << m_subflows.size()
-//        << " C:" << LinkCapacity / 1000
-//        << "Kbps  RTT:" << RTT << "Ms  D:"
-//      << totalBytes / 1000
-      << "Kb"
-      << "MSS:" << m_segmentSize << "B";
-  return detail.str();
-}
-
-//void
-//MpTcpSocketBase::GeneratePktCount()
-//{
-//  std::ofstream outfile("pktCount.plt");
-//  Gnuplot pktCountGraph = Gnuplot("pktCount.png", GeneratePlotDetail());
-//
-//  pktCountGraph.SetLegend("Subflows", "Packets");
-//  pktCountGraph.SetTerminal("png");
-//  pktCountGraph.SetExtra("set xrange [0:4]");
-//
-//  for (uint16_t idx = 0; idx < m_subflows.size(); idx++)
-//    {
-//      Ptr<MpTcpSubFlow> sFlow = m_subflows[idx];
-//
-//      Gnuplot2dDataset dataSet;
-//      dataSet.SetStyle(Gnuplot2dDataset::LINES_POINTS);
-//
-//      std::stringstream title;
-//      title << " Subflow " << idx;
-//
-//      dataSet.SetTitle(title.str());
-//      dataSet.Add(idx, sFlow->PktCount);
-//      pktCountGraph.AddDataset(dataSet);
-//      NS_LOG_UNCOND(" Subflow(" << idx << ") Number of Sent Packets : " << sFlow->PktCount);
-//    }
-//  pktCountGraph.GenerateOutput(outfile);
-//  outfile.close();
-//}
-
-void
-MpTcpSocketBase::GenerateSendvsACK()
-{
-  std::ofstream outfile("pkt.plt");
-
-  Gnuplot rttGraph = Gnuplot("pkt.png", GeneratePlotDetail());
-  std::stringstream tmp;
-  tmp << " Packet Number (Modulo " << mod << " )";
-  rttGraph.SetLegend("Time (s)", tmp.str());
-  rttGraph.SetTerminal("png");
-//  rttGraph.SetExtra("set xrange [0.0:5.0]");
-
-  std::stringstream t;
-  t << "set yrange [" << TimeScale - 2.0 << ":" << mod + 2 << "]";
-  rttGraph.SetExtra(t.str());
-
-  #if 0
-  //DATA
-  for (uint16_t idx = 0; idx < m_subflows.size(); idx++)
-    {
-      Ptr<MpTcpSubFlow> sFlow = m_subflows[idx];
-
-      Gnuplot2dDataset dataSet;
-      dataSet.SetStyle(Gnuplot2dDataset::POINTS);
-
-      std::stringstream title;
-      title << "Data";
-
-      dataSet.SetTitle(title.str());
-
-      vector<pair<double, uint32_t> >::iterator it = sFlow->DATA.begin();
-
-      while (it != sFlow->DATA.end())
-        {
-          dataSet.Add(it->first, it->second);
-          it++;
-        }
-      rttGraph.AddDataset(dataSet);
-    }
-  // ACK
-  for (uint16_t idx = 0; idx < m_subflows.size(); idx++)
-    {
-      Ptr<MpTcpSubFlow> sFlow = m_subflows[idx];
-
-      Gnuplot2dDataset dataSet;
-      dataSet.SetStyle(Gnuplot2dDataset::POINTS);
-
-      std::stringstream title;
-      title << "Ack";
-
-      dataSet.SetTitle(title.str());
-
-      vector<pair<double, uint32_t> >::iterator it = sFlow->ACK.begin();
-
-      while (it != sFlow->ACK.end())
-        {
-          dataSet.Add(it->first, it->second);
-          it++;
-        }
-      rttGraph.AddDataset(dataSet);
-    }
-
-  // DROP
-  for (uint16_t idx = 0; idx < m_subflows.size(); idx++)
-    {
-      Ptr<MpTcpSubFlow> sFlow = m_subflows[idx];
-
-      Gnuplot2dDataset dataSet;
-      dataSet.SetStyle(Gnuplot2dDataset::POINTS);
-
-      std::stringstream title;
-      title << "Drop";
-
-      dataSet.SetTitle(title.str());
-
-      vector<pair<double, uint32_t> >::iterator it = sFlow->DROP.begin();
-
-      while (it != sFlow->DROP.end())
-        {
-          dataSet.Add(it->first, it->second);
-          it++;
-        }
-      if (sFlow->DROP.size() > 0)
-        rttGraph.AddDataset(dataSet);
-    }
-
-//  // RETRANSMIT
-  for (uint16_t idx = 0; idx < m_subflows.size(); idx++)
-    {
-      Ptr<MpTcpSubFlow> sFlow = m_subflows[idx];
-
-      Gnuplot2dDataset dataSet;
-      dataSet.SetStyle(Gnuplot2dDataset::POINTS);
-
-      std::stringstream title;
-      title << "ReTx";
-
-      dataSet.SetTitle(title.str());
-
-      vector<pair<double, uint32_t> >::iterator it = sFlow->RETRANSMIT.begin();
-
-      while (it != sFlow->RETRANSMIT.end())
-        {
-          dataSet.Add(it->first, it->second);
-          it++;
-        }
-      if (sFlow->RETRANSMIT.size() > 0)
-        rttGraph.AddDataset(dataSet);
-    }
-
-  // SlowStart
-  for (uint16_t idx = 0; idx < m_subflows.size(); idx++)
-    {
-      Ptr<MpTcpSubFlow> sFlow = m_subflows[idx];
-
-      Gnuplot2dDataset dataSet;
-      dataSet.SetStyle(Gnuplot2dDataset::LINES);
-
-      std::stringstream title;
-      title << "SS";
-
-      dataSet.SetTitle(title.str());
-
-      vector<pair<double, double> >::iterator it = sFlow->_ss.begin();
-
-      while (it != sFlow->_ss.end())
-        {
-          dataSet.Add(it->first, it->second);
-          it++;
-        }
-      if (sFlow->_ss.size() > 0)
-        rttGraph.AddDataset(dataSet);
-    }
-
-  // Congestion Avoidance
-  for (uint16_t idx = 0; idx < m_subflows.size(); idx++)
-    {
-      Ptr<MpTcpSubFlow> sFlow = m_subflows[idx];
-
-      Gnuplot2dDataset dataSet;
-      dataSet.SetStyle(Gnuplot2dDataset::LINES);
-
-      std::stringstream title;
-      title << "CA";
-
-      dataSet.SetTitle(title.str());
-
-      vector<pair<double, double> >::iterator it = sFlow->_ca.begin();
-
-      while (it != sFlow->_ca.end())
-        {
-          dataSet.Add(it->first, it->second);
-          it++;
-        }
-      if (sFlow->_ca.size() > 0)
-        rttGraph.AddDataset(dataSet);
-    }
-
-  // Fast Recovery - FullACK
-  for (uint16_t idx = 0; idx < m_subflows.size(); idx++)
-    {
-      Ptr<MpTcpSubFlow> sFlow = m_subflows[idx];
-
-      Gnuplot2dDataset dataSet;
-      dataSet.SetStyle(Gnuplot2dDataset::LINES_POINTS);
-
-      std::stringstream title;
-      title << "FAck";
-
-      dataSet.SetTitle(title.str());
-
-      vector<pair<double, double> >::iterator it = sFlow->_FR_FA.begin();
-
-      while (it != sFlow->_FR_FA.end())
-        {
-          dataSet.Add(it->first, it->second);
-          it++;
-        }
-      if (sFlow->_FR_FA.size())
-        rttGraph.AddDataset(dataSet);
-    }
-
-  // Fast Recovery - PartialACK
-  for (uint16_t idx = 0; idx < m_subflows.size(); idx++)
-    {
-      Ptr<MpTcpSubFlow> sFlow = m_subflows[idx];
-
-      Gnuplot2dDataset dataSet;
-      dataSet.SetStyle(Gnuplot2dDataset::LINES_POINTS);
-
-      std::stringstream title;
-      title << "PAck";
-
-      dataSet.SetTitle(title.str());
-
-      vector<pair<double, double> >::iterator it = sFlow->_FR_PA.begin();
-
-      while (it != sFlow->_FR_PA.end())
-        {
-          dataSet.Add(it->first, it->second);
-          it++;
-        }
-      if (sFlow->_FR_PA.size() > 0)
-        rttGraph.AddDataset(dataSet);
-    }
-  // Fast Retransmission
-  for (uint16_t idx = 0; idx < m_subflows.size(); idx++)
-    {
-      Ptr<MpTcpSubFlow> sFlow = m_subflows[idx];
-
-      Gnuplot2dDataset dataSet;
-      dataSet.SetStyle(Gnuplot2dDataset::LINES_POINTS);
-
-      std::stringstream title;
-      title << "FReTx";
-
-      dataSet.SetTitle(title.str());
-
-      vector<pair<double, double> >::iterator it = sFlow->_FReTx.begin();
-
-      while (it != sFlow->_FReTx.end())
-        {
-          dataSet.Add(it->first, it->second);
-          it++;
-        }
-      if (sFlow->_FReTx.size() > 0)
-        rttGraph.AddDataset(dataSet);
-    }
-  // TimeOut
-  for (uint16_t idx = 0; idx < m_subflows.size(); idx++)
-    {
-      Ptr<MpTcpSubFlow> sFlow = m_subflows[idx];
-
-      Gnuplot2dDataset dataSet;
-      dataSet.SetStyle(Gnuplot2dDataset::LINES_POINTS);
-
-      std::stringstream title;
-      title << "TO";
-
-      dataSet.SetTitle(title.str());
-
-      vector<pair<double, double> >::iterator it = sFlow->_TimeOut.begin();
-
-      while (it != sFlow->_TimeOut.end())
-        {
-          dataSet.Add(it->first, it->second);
-          it++;
-        }
-      if (sFlow->_TimeOut.size() > 0)
-        rttGraph.AddDataset(dataSet);
-    }
-  rttGraph.GenerateOutput(outfile);
-  #endif
-  outfile.close();
-}
-
-// RTT VS Time
-void
-MpTcpSocketBase::GenerateRTT()
-{
-  #if 0
-  std::ofstream outfile("rtt.plt");
-
-  //Gnuplot rttGraph = Gnuplot("rtt.png", GeneratePlotDetail());
-  Gnuplot rttGraph;
-  rttGraph.SetTitle(GeneratePlotDetail());
-  rttGraph.SetLegend("Time (s)", " Time (ms) ");
-  //rttGraph.SetTerminal("png");      //postscript eps color enh \"Times-BoldItalic\"");
-  rttGraph.SetExtra("set yrange [0:400]");
-
-
-  // RTT
-  for (uint16_t idx = 0; idx < GetNActiveSubflows(); idx++)
-    {
-      Ptr<MpTcpSubFlow> sFlow = m_subflows[idx];
-
-      Gnuplot2dDataset dataSet;
-      dataSet.SetStyle(Gnuplot2dDataset::LINES_POINTS);
-
-      std::stringstream title;
-      title << "RTT " << idx;
-
-      dataSet.SetTitle(title.str());
-
-      vector<pair<double, double> >::iterator it = sFlow->_RTT.begin();
-
-      while (it != sFlow->_RTT.end())
-        {
-          dataSet.Add(it->first, it->second);
-          it++;
-        }
-      rttGraph.AddDataset(dataSet);
-    }
-  // RTO
-  for (uint16_t idx = 0; idx < m_subflows.size(); idx++)
-    {
-      Ptr<MpTcpSubFlow> sFlow = m_subflows[idx];
-
-      Gnuplot2dDataset dataSet;
-      dataSet.SetStyle(Gnuplot2dDataset::LINES_POINTS);
-
-      std::stringstream title;
-      title << "RTO " << idx;
-
-      dataSet.SetTitle(title.str());
-
-      vector<pair<double, double> >::iterator it = sFlow->_RTO.begin();
-
-      while (it != sFlow->_RTO.end())
-        {
-          dataSet.Add(it->first, it->second);
-          it++;
-        }
-      rttGraph.AddDataset(dataSet);
-    }
-
-  //TxQueue
-  for (uint16_t idx = 0; idx < m_subflows.size(); idx++)
-    {
-      Ptr<MpTcpSubFlow> sFlow = m_subflows[idx];
-
-      Gnuplot2dDataset dataSet;
-      dataSet.SetStyle(Gnuplot2dDataset::LINES_POINTS);
-
-      std::stringstream title;
-      title << "TxQueue " << idx;
-
-      dataSet.SetTitle(title.str());
-
-      vector<pair<double, double> >::iterator it = TxQueue.begin();
-
-      while (it != TxQueue.end())
-        {
-          dataSet.Add(it->first, it->second);
-          it++;
-        }
-      rttGraph.AddDataset(dataSet);
-    }
-
-  gnu.AddPlot(rttGraph);
-  rttGraph.GenerateOutput(outfile);
-  outfile.close();
-  #endif
-}
-void
-MpTcpSocketBase::GenerateCwndTracer()
-{
-  #if 0
-  //std::ofstream outfile("cwnd.plt");
-
-  //Gnuplot cwndGraph = Gnuplot("cwnd.png", GeneratePlotDetail());
-  Gnuplot cwndTracerGraph;
-  cwndTracerGraph.SetTitle("Cwnd vs Time"); //GeneratePlotDetail()
-  cwndTracerGraph.SetLegend("Time (s)", "CWND");
-  //cwndGraph.SetTerminal("png");      //postscript eps color enh \"Times-BoldItalic\"");
-  //cwndGraph.SetExtra("set xrange [1.0:5.0]");
-  //cwndGraph.SetExtra("set yrange [-10.0:200]");
-
-  // cwnd
-  for (uint16_t idx = 0; idx < m_subflows.size(); idx++)
-    {
-      Ptr<MpTcpSubFlow> sFlow = m_subflows[idx];
-      Gnuplot2dDataset dataSet;
-      dataSet.SetStyle(Gnuplot2dDataset::POINTS);
-      std::stringstream title;
-      title << "sFlow " << idx;
-      dataSet.SetTitle(title.str());
-      vector<pair<double, uint32_t> >::iterator it = sFlow->cwndTracer.begin();
-      while (it != sFlow->cwndTracer.end())
-        {
-          dataSet.Add(it->first, it->second / sFlow->GetSegSize() );
-          it++;
-        }
-      if (sFlow->cwndTracer.size() > 0)
-        cwndTracerGraph.AddDataset(dataSet);
-    }
-  // ssthreshold
-  for (uint16_t idx = 0; idx < m_subflows.size(); idx++)
-    {
-      Ptr<MpTcpSubFlow> sFlow = m_subflows[idx];
-      Gnuplot2dDataset dataSet;
-      dataSet.SetStyle(Gnuplot2dDataset::LINES);
-      std::stringstream title;
-      title << "ssth " << idx;
-      dataSet.SetTitle(title.str());
-      vector<pair<double, double> >::iterator it = sFlow->ssthreshtrack.begin();
-      while (it != sFlow->ssthreshtrack.end())
-        {
-          dataSet.Add(it->first, it->second / sFlow->GetSegSize( ) );
-          it++;
-        }
-      if (sFlow->ssthreshtrack.size() > 0)
-        cwndTracerGraph.AddDataset(dataSet);
-    }
-  gnu.AddPlot(cwndTracerGraph);
-  //cwndTracerGraph.GenerateOutput(outfile);
-  //outfile.close();
-  #endif
-}
-
-void
-MpTcpSocketBase::GenerateCWNDPlot()
-{
-  NS_LOG_FUNCTION_NOARGS();
-  #if 0
-  std::ofstream outfile("cwnd.plt");
-
-  Gnuplot cwndGraph = Gnuplot("cwnd.png", GeneratePlotDetail());
-  //Gnuplot cwndGraph;
-  //cwndGraph.SetTitle(GeneratePlotDetail());
-  cwndGraph.SetLegend("Time (s)", "CWND");
-  cwndGraph.SetTerminal("png");      //postscript eps color enh \"Times-BoldItalic\"");
-  //cwndGraph.SetExtra("set xrange [1.0:5.0]");
-  cwndGraph.SetExtra("set yrange [0:200]");
-  // cwnd
-  NS_LOG_UNCOND("GenerateCWNDPlot -> subflowsSize: " << m_subflows.size());
-  for (uint16_t idx = 0; idx < m_subflows.size(); idx++)
-    {
-      Ptr<MpTcpSubFlow> sFlow = m_subflows[idx];
-
-      Gnuplot2dDataset dataSet;
-      dataSet.SetStyle(Gnuplot2dDataset::POINTS);
-
-      std::stringstream title;
-      title << "sFlow " << idx;
-
-      dataSet.SetTitle(title.str());
-
-      vector<pair<double, double> >::iterator it = sFlow->CWNDtrack.begin();
-
-      while (it != sFlow->CWNDtrack.end())
-        {
-          dataSet.Add(it->first, it->second / sFlow->GetSegSize( ) );
-          it++;
-        }
-      if (sFlow->CWNDtrack.size() > 0)
-        cwndGraph.AddDataset(dataSet);
-    }
-
-// ssthreshold
-  for (uint16_t idx = 0; idx < m_subflows.size(); idx++)
-    {
-      Ptr<MpTcpSubFlow> sFlow = m_subflows[idx];
-
-      Gnuplot2dDataset dataSet;
-      dataSet.SetStyle(Gnuplot2dDataset::LINES);
-
-      std::stringstream title;
-      title << "ssth " << idx;
-
-      dataSet.SetTitle(title.str());
-
-      vector<pair<double, double> >::iterator it = sFlow->ssthreshtrack.begin();
-
-      while (it != sFlow->ssthreshtrack.end())
-        {
-          dataSet.Add(it->first, it->second / sFlow->GetSegSize( ) );
-          it++;
-        }
-      if (sFlow->ssthreshtrack.size() > 0)
-        cwndGraph.AddDataset(dataSet);
-    }
-
-  // Only if mptcp has one subflow, the following dataset would be added to the plot
-//  if (m_subflows.size() == 1)
-//    {
-// Fast retransmit Track
-    {
-      Gnuplot2dDataset dataSet;
-      dataSet.SetStyle(Gnuplot2dDataset::POINTS);
-      std::stringstream title;
-      title << "F-ReTx";
-      dataSet.SetTitle(title.str());
-
-      vector<pair<double, double> >::iterator it = reTxTrack.begin();
-
-      while (it != reTxTrack.end())
-        {
-          dataSet.Add(it->first, it->second / m_segmentSize);
-          it++;
-        }
-      if (reTxTrack.size() > 0)
-        if (reTxTrack.size() > 0)
-          cwndGraph.AddDataset(dataSet);
-    }
-
-  // TimeOut Track
-    {
-      Gnuplot2dDataset dataSet;
-      dataSet.SetStyle(Gnuplot2dDataset::POINTS);
-      std::stringstream title;
-      title << "TOut";
-      dataSet.SetTitle(title.str());
-
-      vector<pair<double, double> >::iterator it = timeOutTrack.begin();
-
-      while (it != timeOutTrack.end())
-        {
-          dataSet.Add(it->first, it->second / m_segmentSize);
-          it++;
-        }
-      if (timeOutTrack.size() > 0)
-        cwndGraph.AddDataset(dataSet);
-    }
-
-  // PartialAck
-    {
-      Gnuplot2dDataset dataSet;
-      dataSet.SetStyle(Gnuplot2dDataset::POINTS);
-      std::stringstream title;
-      title << "PAck";
-      dataSet.SetTitle(title.str());
-
-      vector<pair<double, double> >::iterator it = PartialAck.begin();
-
-      while (it != PartialAck.end())
-        {
-          dataSet.Add(it->first, it->second / m_segmentSize);
-          it++;
-        }
-      if (PartialAck.size() > 0)
-        cwndGraph.AddDataset(dataSet);
-    }
-
-  // Full Ack
-    {
-      Gnuplot2dDataset dataSet;
-      dataSet.SetStyle(Gnuplot2dDataset::POINTS);
-      std::stringstream title;
-      title << "FAck";
-      dataSet.SetTitle(title.str());
-
-      vector<pair<double, double> >::iterator it = FullAck.begin();
-
-      while (it != FullAck.end())
-        {
-          dataSet.Add(it->first, it->second / m_segmentSize);
-          it++;
-        }
-      if (FullAck.size() > 0)
-        cwndGraph.AddDataset(dataSet);
-    }
-
-  // DupAck
-    {
-      Gnuplot2dDataset dataSet;
-      dataSet.SetStyle(Gnuplot2dDataset::DOTS);
-      std::stringstream title;
-      title << "DupAck";
-      dataSet.SetTitle(title.str());
-
-      vector<pair<double, double> >::iterator it = DupAcks.begin();
-      while (it != DupAcks.end())
-        {
-          dataSet.Add(it->first, it->second / m_segmentSize);
-          it++;
-        }
-      if (DupAcks.size() > 0)
-        cwndGraph.AddDataset(dataSet);
-    }
-
-  // PacketDrop
-//   {
-//   Gnuplot2dDataset dataSet;
-//   dataSet.SetStyle(Gnuplot2dDataset::POINTS);
-//   std::stringstream title;
-//   title << "PacketDrop";
-//   dataSet.SetTitle(title.str());
-//
-//   vector<pair<double, double> >::iterator it = PacketDrop.begin();
-//
-//   while (it != PacketDrop.end())
-//   {
-//   dataSet.Add(it->first, it->second / m_segmentSize);
-//   it++;
-//   }
-//   cwndGraph.AddDataset(dataSet);
-//   }
-//    }
-//gnu.AddPlot(cwndGraph);
-  cwndGraph.GenerateOutput(outfile);
-  outfile.close();
-  #endif
-}
 
 
 void
@@ -3517,14 +2938,6 @@ MpTcpSocketBase::Destroy(void)
 //  Ptr<Queue> txQueue = ptr.Get<Queue>();
 //  TxQueue.push_back(make_pair(Simulator::Now().GetSeconds(), txQueue->GetNPackets()));
 //}
-
-void
-MpTcpSocketBase::generatePlots()
-{
-  std::ofstream outfile("allPlots.plt");
-  gnu.GenerateOutput(outfile);
-  outfile.close();
-}
 
 
 

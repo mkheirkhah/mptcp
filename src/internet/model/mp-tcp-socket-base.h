@@ -603,14 +603,14 @@ protected: // protected methods
 
 
   // Helper functions -> plotting
-  std::string GeneratePlotDetail();
-  void GenerateRTTPlot();
-  void GenerateCWNDPlot();
-  void GenerateSendvsACK();
-  void GenerateRTT();
-  void GenerateCwndTracer();
-  void GeneratePktCount();
-  void generatePlots();
+//  std::string GeneratePlotDetail();
+//  void GenerateRTTPlot();
+//  void GenerateCWNDPlot();
+//  void GenerateSendvsACK();
+//  void GenerateRTT();
+//  void GenerateCwndTracer();
+//  void GeneratePktCount();
+//  void generatePlots();
 
 protected: // protected variables
 
