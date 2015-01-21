@@ -8,41 +8,44 @@ available_suites = [
     "mptcp-mapping"
 ]
 
-parser = argparse.ArgumentParser(help="Helper to debug mptcp")
+# type=argparse.FileType('w'),
+parser = argparse.ArgumentParser(description="Helper to debug mptcp")
 
-parser.add_argument("suite", action="store_false", help="Launch gdb")
-parser.add_argument("--debug", '-d', action="store_false", help="Launch gdb")
-parser.add_argument("--out", "-o", nargs=1, help="redirect ns3 results output to a file")
+parser.add_argument("suite", choices=available_suites, help="Launch gdb")
+parser.add_argument("--debug", '-d', action="store_true", help="Launch gdb")
+parser.add_argument("--out", "-o", default="xp.txt", nargs='?', help="redirect ns3 results output to a file")
 parser.add_argument("--verbose", "-v", default="", help="to enable more output")
 parser.add_argument("--graph", "-g", action="store_true", help="Convert pcap to sqlite db and then plot")
 
 args = parser.parse_args()
 
 if args.debug:
-    cmd = "./waf --run test-runner --command-template=\"gdb -ex 'run --suite={suite} {verbose} {out} {tofile}' --args %s \" "
+    cmd = "./waf --run test-runner --command-template=\"gdb -ex 'run --suite={suite} {verbose} {tofile}' --args %s \" "
 else:
-    cmd = "./waf --run \"test-runner --suite={suite} {verbose} {out}\" {tofile}"
+    cmd = "./waf --run \"test-runner --suite={suite} {verbose} \" {tofile}"
 
 
-tofile = " > xp.txt 2>&1"
+tofile = " > %s 2>&1" % args.out if args.out else ""
+# tofile = " > xp.txt 2>&1"
 
 cmd = cmd.format(
     suite=args.suite,
     verbose=args.verbose,
-    out=args.out,
+    # out=
     tofile=tofile,
 )
 
 # WITH_GDB=0
-NS_LOG = "TcpSocketBase"
-NS_LOG.append("*=error|warn|prefix_node|prefix_func")
-NS_LOG.append(":MpTcpSchedulerRoundRobin")
-NS_LOG.append(":Socket")
-NS_LOG.append(":MpTcpSubflow=*:MpTcpSocketBase=*")
-NS_LOG.append(":TcpTestSuite=*")
-NS_LOG.append(":TcpRxBuffer:TcpTxBuffer")
-NS_LOG.append(":MpTcpMapping=*")
-NS_LOG.append(":TcpHeader=*")
+NS_LOG = ""
+# NS_LOG = "TcpSocketBase:"
+NS_LOG += "*=error|warn|prefix_node|prefix_func"
+NS_LOG += ":MpTcpSchedulerRoundRobin"
+# NS_LOG += ":Socket"
+# NS_LOG += ":MpTcpSubflow=*:MpTcpSocketBase=*"
+# NS_LOG += ":TcpTestSuite=*"
+# NS_LOG += ":TcpRxBuffer:TcpTxBuffer"
+# NS_LOG += ":MpTcpMapping=*"
+# NS_LOG += ":TcpHeader=*"
 #NS_LOG="$NS_LOG:TcpOptionMpTcp=*"
 #NS_LOG="$NS_LOG:MpTcpOptionsTestSuite=*"
 #NS_LOG="$NS_LOG:TcpL4Protocol"
