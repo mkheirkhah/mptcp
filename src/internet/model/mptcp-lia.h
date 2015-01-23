@@ -1,5 +1,5 @@
-#ifndef MPTCP_CC_OLIA_H
-#define MPTCP_CC_OLIA_H
+#ifndef MPTCP_CC_LIA_H
+#define MPTCP_CC_LIA_H
 
 //#include"ns3/mp-tcp-cc.h"
 //#include"ns3/mp-tcp-subflow.h"
@@ -23,15 +23,15 @@ static struct tcp_congestion_ops mptcp_olia = {
 
 * \ingroup mptcp
 */
-class MpTcpCCOlia : public MpTcpSocketBase
+class MpTcpLia : public MpTcpSocketBase
 {
 
 public:
   static TypeId GetTypeId (void);
 
-  MpTcpCCOlia();
-  MpTcpCCOlia(const MpTcpCCOlia& sock);
-  virtual ~MpTcpCCOlia();
+  MpTcpLia();
+  MpTcpLia(const MpTcpLia& sock);
+  virtual ~MpTcpLia();
 
   virtual uint32_t
   GetSSThresh(void) const;
@@ -39,10 +39,6 @@ public:
   virtual uint32_t
   GetInitialCwnd(void) const;
 
-  /**
-  **/
-  virtual uint32_t OpenCWND(uint32_t cwnd, uint32_t ackedBytes);
-  virtual uint32_t ReduceCWND(uint32_t cwnd);
 
   virtual Ptr<MpTcpSocketBase> ForkAsMeta(void);
 //  virtual Ptr<TcpSocketBase> Fork(void);
@@ -57,8 +53,7 @@ public:
 //  GetName(void) const {
 //    return "OLIA";
 //  };
-protected:
-    virtual TypeId GetMpTcpSubflowTypeId() = 0;
+
 //  SendPendingData()
 };
 
@@ -66,4 +61,4 @@ protected:
 }
 
 
-#endif /* MPTCP_CC_OLIA_H */
+#endif /* MPTCP_CC_LIA_H */

@@ -53,12 +53,14 @@
 #include "ns3/internet-stack-helper.h"
 #include "ns3/applications-module.h"
 #include "ns3/network-module.h"
-#include "ns3/mp-tcp-socket-factory-impl.h"
+//#include "ns3/mp-tcp-socket-factory-impl.h"
+#include "ns3/mptcp-uncoupled.h"
 #include "ns3/internet-module.h"
 #include "ns3/applications-module.h"
 #include "ns3/network-module.h"
 #include "ns3/tcp-newreno.h"
 #include "ns3/point-to-point-module.h"
+#include "ns3/mptcp-uncoupled.h"
 //#include "ns3/point-to-point-channel.h"
 #include <string>
 
@@ -335,7 +337,7 @@ void
 MpTcpTestCase::CreateNodes()
 {
   Config::SetDefault("ns3::TcpL4Protocol::SocketType",
-			             TypeIdValue (MpTcpCCOlia::GetTypeId()));
+			             TypeIdValue (MpTcpCCUncoupled::GetTypeId()));
 //  Config::SetDefault ("ns3::TcpSocket::SegmentSize", UintegerValue (1000));
 //  Config::SetDefault ("ns3::TcpSocket::DelAckCount", UintegerValue (1));
 //  Config::SetDefault ("ns3::DropTailQueue::MaxPackets", UintegerValue (20));

@@ -130,7 +130,9 @@ TcpReno::NewAck (const SequenceNumber32& seq)
       NS_LOG_INFO ("In SlowStart, updated to cwnd " << m_cWnd << " ssthresh " << m_ssThresh);
     }
   else
-    { // Congestion avoidance mode, increase by (segSize*segSize)/cwnd. (RFC2581, sec.3.1)
+    {
+      // TODO note that rfc2581 is updated by https://tools.ietf.org/html/rfc5681
+      // Congestion avoidance mode, increase by (segSize*segSize)/cwnd. (RFC2581, sec.3.1)
       // To increase cwnd for one segSize per RTT, it should be (ackBytes*segSize)/cwnd
       double adder = static_cast<double> (m_segmentSize * m_segmentSize) / m_cWnd.Get ();
       adder = std::max (1.0, adder);
@@ -219,7 +221,7 @@ TcpReno::GetInitialCwnd (void) const
   return m_initialCWnd;
 }
 
-void 
+void
 TcpReno::InitializeCwnd (void)
 {
   /*

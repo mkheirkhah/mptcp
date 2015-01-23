@@ -28,6 +28,7 @@
 #include "ns3/mp-tcp-scheduler-round-robin.h"
 #include "ns3/mp-tcp-id-manager.h"
 #include "ns3/mp-tcp-id-manager-impl.h"
+#include "ns3/mp-tcp-subflow.h"
 #include "ns3/tcp-option-mptcp.h"
 #include "ns3/callback.h"
 #include "ns3/trace-helper.h"
@@ -244,7 +245,9 @@ MpTcpSocketBase::DoChecksum() const
   return false;
 }
 
-std::vector<MpTcpSubFlow>::size_type
+
+
+MpTcpSocketBase::SubflowList::size_type
 MpTcpSocketBase::GetNActiveSubflows() const
 {
   return m_subflows[Established].size();
@@ -517,17 +520,31 @@ MpTcpSocketBase::AppendDataAck(TcpHeader& hdr) const
 
 
 // TODO rename into DSS
+
+
+
+/*
+Quote from rfc 6824:
+    Because of this, an implementation MUST NOT use the RCV.WND
+    field of a TCP segment at the connection level if it does not also
+    carry a DSS option with a Data ACK field
+
+    TODO
+*/
 void
-MpTcpSocketBase::ProcessDSS(Ptr<TcpOptionMpTcpDSS> dss
+MpTcpSocketBase::ProcessDSS(const TcpHeader& tcpHeader,Ptr<TcpOptionMpTcpDSS> dss
                              , Ptr<MpTcpSubFlow> sf
                              )
 {
   NS_LOG_FUNCTION ( this << "Received ack " << dss << " from subflow " << sf);
 
+  // might be suboptimal but should make sure it gets properly updated
+  m_cWnd = CalculateTotalCWND();
+
   switch(m_state) {
 
     case ESTABLISHED:
-      ProcessDSSEstablished(dss,sf);
+      ProcessDSSEstablished(tcpHeader, dss, sf);
       break;
 
 //    case LAST_ACK:
@@ -838,7 +855,8 @@ MpTcpSocketBase::CreateSubflow(bool masterSocket)
 
   }
 
-  Ptr<Socket> sock = m_tcp->CreateSocket( MpTcpSubFlow::GetTypeId() );
+  // TODO DoCreateSocket() MpTcpSubFlow::GetTypeId()
+  Ptr<Socket> sock = m_tcp->CreateSocket( GetMpTcpSubflowTypeId() );
 
   Ptr<MpTcpSubFlow> sFlow = DynamicCast<MpTcpSubFlow>(sock);
   // So that we know when the connection gets established
@@ -1293,8 +1311,12 @@ MpTcpSocketBase::OnInfiniteMapping(Ptr<TcpOptionMpTcpDSS> dss,Ptr<MpTcpSubFlow> 
   NS_FATAL_ERROR("Infinite mapping not implemented");
 }
 
-// TODO call 64bits  version ?
-// It should know from which subflow it comes from
+
+/**
+TODO call 64bits  version ?
+It should know from which subflow it comes from
+TODO update the r_Wnd here
+**/
 void
 MpTcpSocketBase::NewAck(SequenceNumber32 const& dsn)
 {
@@ -1357,6 +1379,7 @@ MpTcpSocketBase::NewAck(SequenceNumber32 const& dsn)
 
 
 
+
 // TODO i should remove data at some point
   m_txBuffer.DiscardUpTo(dsn);
 
@@ -1411,8 +1434,8 @@ MpTcpSocketBase::NewAck(SequenceNumber32 const& dsn)
 //      }
 
 
-      throughput = 10000000 * 8 / (Simulator::Now().GetSeconds() - fLowStartTime);
-      NS_LOG_UNCOND("goodput -> " << throughput / 1000000 << " Mbps {Tx Buffer is now empty}  P-AckHits:" << pAckHit);
+//      throughput = 10000000 * 8 / (Simulator::Now().GetSeconds() - fLowStartTime);
+//      NS_LOG_UNCOND("goodput -> " << throughput / 1000000 << " Mbps {Tx Buffer is now empty}  P-AckHits:" << pAckHit);
       return;
     }
   // in case it freed some space in cwnd, try to send more data
@@ -1565,6 +1588,12 @@ MpTcpSocketBase::Listen(void)
 //    }
 //  Retransmit(sFlowIdx); // Retransmit the packet
 //}
+
+void
+MpTcpSocketBase::OnSubflowDupAck(Ptr<MpTcpSubFlow> sf)
+{
+  NS_LOG_DEBUG("Dup ack signaled by subflow " << sf );
+}
 
 
 // TODO move that away a t'on besoin de passer le mapping ?
@@ -1855,7 +1884,8 @@ MpTcpSocketBase::SetupMetaTracing(std::string prefix)
   Ptr<OutputStreamWrapper> streamRxTotal = asciiTraceHelper.CreateFileStream (prefix+"_RxTotal.csv");
   Ptr<OutputStreamWrapper> streamTx = asciiTraceHelper.CreateFileStream (prefix+"_Tx.csv");
   Ptr<OutputStreamWrapper> streamStates = asciiTraceHelper.CreateFileStream (prefix+"_states.csv");
-  Ptr<OutputStreamWrapper> streamCwnd = asciiTraceHelper.CreateFileStream (prefix+"_cwin.csv");
+  Ptr<OutputStreamWrapper> streamCwnd = asciiTraceHelper.CreateFileStream (prefix+"_cwnd.csv");
+  Ptr<OutputStreamWrapper> streamRwnd = asciiTraceHelper.CreateFileStream (prefix+"_rwnd.csv");
 
   *streamNextTx->GetStream() << "Time,oldNextTxSequence,newNextTxSequence\n";
   *streamHighest->GetStream() << "Time,oldHighestSequence,newHighestSequence\n";
@@ -1863,6 +1893,7 @@ MpTcpSocketBase::SetupMetaTracing(std::string prefix)
   *streamRxTotal->GetStream() << "Time,oldRxTotal,newRxTotal\n";
   *streamTx->GetStream() << "Time,oldTx,newTx\n";
   *streamCwnd->GetStream() << "Time,oldCwnd,newCwnd\n";
+  *streamRwnd->GetStream() << "Time,oldRwnd,newRwnd\n";
   *streamStates->GetStream() << "Time,oldState,newState\n";
 
 //  , HighestSequence, RWND\n";
@@ -1874,14 +1905,14 @@ MpTcpSocketBase::SetupMetaTracing(std::string prefix)
   Ptr<MpTcpSocketBase> sock(this);
   sock->TraceConnect ("NextTxSequence", "NextTxSequence", MakeBoundCallback(&dumpNextTxSequence, streamNextTx) );
   sock->TraceConnect ("HighestSequence", "HighestSequence", MakeBoundCallback(&dumpNextTxSequence, streamHighest) );
-  sock->TraceConnect ("CongestionWindow", "CongestionWindow", MakeBoundCallback(&dumpUint32, streamCwnd) );
+  NS_ASSERT(sock->TraceConnect ("CongestionWindow", "CongestionWindow", MakeBoundCallback(&dumpUint32, streamCwnd)));
   sock->TraceConnect ("State", "State", MakeBoundCallback(&dumpTcpState, streamStates) );
 
 //  Ptr<MpTcpSocketBase> sock2 = DynamicCast<MpTcpSocketBase>(sock);
   sock->m_rxBuffer.TraceConnect ("RxTotal", "RxTotal", MakeBoundCallback(&dumpNextTxSequence, streamRxTotal) );
   sock->m_rxBuffer.TraceConnect ("RxAvailable", "RxAvailable", MakeBoundCallback(&dumpNextTxSequence, streamRxAvailable) );
   sock->m_txBuffer.TraceConnect ("UnackSequence", "UnackSequence", MakeBoundCallback(&dumpNextTxSequence, streamTx) );
-//  sock->TraceConnect ("RWND", "RWND", MakeBoundCallback(&dumpUint32), stream);
+  NS_ASSERT(sock->TraceConnect ("RWND", "Remote WND", MakeBoundCallback(&dumpUint32, streamRwnd)));
 }
 
 
@@ -1959,10 +1990,12 @@ MpTcpSocketBase::Window()
   NS_LOG_FUNCTION (this);
 
   //std::min, m_cWnd.Get() )
-  uint32_t totalcWnd = CalculateTotalCWND();
-    NS_LOG_LOGIC("remoteWin " << m_rWnd.Get() << ", totalCongWin:" << totalcWnd);
+  // suboptimal but works
+  m_cWnd = CalculateTotalCWND();
+  NS_LOG_LOGIC("remoteWin " << m_rWnd.Get() << ", total CongWin:" << m_cWnd.Get ());
 //  return std::min(m_rWnd.Get(), totalcWnd);
-  return m_rWnd.Get();
+  return std::min (m_rWnd.Get (), m_cWnd.Get ());
+//  return m_rWnd.Get();
 }
 
 
@@ -2163,7 +2196,7 @@ MpTcpSocketBase::CloseAllSubflows()
 
 
 void
-MpTcpSocketBase::ProcessDSSEstablished( Ptr<TcpOptionMpTcpDSS> dss, Ptr<MpTcpSubFlow> sf)
+MpTcpSocketBase::ProcessDSSEstablished( const TcpHeader& tcpHeader, Ptr<TcpOptionMpTcpDSS> dss, Ptr<MpTcpSubFlow> sf)
 {
   NS_LOG_FUNCTION (this << dss << " from " << sf);
 
@@ -2184,7 +2217,7 @@ MpTcpSocketBase::ProcessDSSEstablished( Ptr<TcpOptionMpTcpDSS> dss, Ptr<MpTcpSub
 
     if (dack < m_txBuffer.HeadSequence())
       { // Case 1: Old ACK, ignored.
-        NS_LOG_LOGIC ("Ignored ack " << dack  );
+        NS_LOG_LOGIC ("Old ack Ignored " << dack  );
       }
     else if (dack  == m_txBuffer.HeadSequence())
       { // Case 2: Potentially a duplicated ACK
@@ -2201,14 +2234,15 @@ MpTcpSocketBase::ProcessDSSEstablished( Ptr<TcpOptionMpTcpDSS> dss, Ptr<MpTcpSub
     else if (dack  > m_txBuffer.HeadSequence())
       { // Case 3: New ACK, reset m_dupAckCount and update m_txBuffer
         NS_LOG_LOGIC ("New DataAck [" << dack  << "]");
+        m_rWnd = tcpHeader.GetWindowSize();
         NewAck( dack );
         m_dupAckCount = 0;
       }
     }
 
-  //!
+  //! datafin case handled at the start of the function
   if( (dss->GetFlags() & TcpOptionMpTcpDSS::DSNMappingPresent) && !dss->DataFinMappingOnly() ) {
-    sf->AddPeerMapping(dss->GetMapping());
+      sf->AddPeerMapping(dss->GetMapping());
   }
 }
 

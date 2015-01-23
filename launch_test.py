@@ -13,7 +13,7 @@ parser = argparse.ArgumentParser(description="Helper to debug mptcp")
 
 parser.add_argument("suite", choices=available_suites, help="Launch gdb")
 parser.add_argument("--debug", '-d', action="store_true", help="Launch gdb")
-parser.add_argument("--out", "-o", default="xp.txt", nargs='?', help="redirect ns3 results output to a file")
+parser.add_argument("--out", "-o", default="", nargs='?', help="redirect ns3 results output to a file")
 parser.add_argument("--verbose", "-v", default="", help="to enable more output")
 parser.add_argument("--graph", "-g", action="store_true", help="Convert pcap to sqlite db and then plot")
 
@@ -40,9 +40,12 @@ NS_LOG = ""
 # NS_LOG = "TcpSocketBase:"
 NS_LOG += "*=error|warn|prefix_node|prefix_func"
 NS_LOG += ":MpTcpSchedulerRoundRobin"
+NS_LOG += ":ObjectBase=error|warn"
 # NS_LOG += ":Socket"
-# NS_LOG += ":MpTcpSubflow=*:MpTcpSocketBase=*"
-# NS_LOG += ":TcpTestSuite=*"
+NS_LOG += ":MpTcpSubflow=*:MpTcpSocketBase=logic:error:warn"
+NS_LOG += ":MpTcpSubflowUncoupled"
+NS_LOG += ":Config"
+NS_LOG += ":TcpTestSuite=*"
 # NS_LOG += ":TcpRxBuffer:TcpTxBuffer"
 # NS_LOG += ":MpTcpMapping=*"
 # NS_LOG += ":TcpHeader=*"

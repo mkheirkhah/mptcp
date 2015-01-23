@@ -44,9 +44,9 @@ MpTcpSubFlow::GetTypeId(void)
 {
   static TypeId tid = TypeId("ns3::MpTcpSubFlow")
       .SetParent<TcpSocketBase>()
-      .AddConstructor<MpTcpSubFlow>()
+//      .AddConstructor<MpTcpSubFlow>()
       // TODO should be inherited
-      .AddTraceSource("cWindow",
+      .AddTraceSource("CongestionWindow",
           "The congestion control window to trace.",
            MakeTraceSourceAccessor(&MpTcpSubFlow::m_cWnd))
     ;
@@ -57,11 +57,11 @@ MpTcpSubFlow::GetTypeId(void)
 
 
 
-TypeId
-MpTcpSubFlow::GetInstanceTypeId(void) const
-{
-  return GetTypeId();
-}
+//TypeId
+//MpTcpSubFlow::GetInstanceTypeId(void) const
+//{
+//  return GetTypeId();
+//}
 
 //bool
 void
@@ -103,19 +103,19 @@ MpTcpSubFlow::Fork(void)
   return ForkAsSubflow();
 }
 
-Ptr<MpTcpSubFlow>
-MpTcpSubFlow::ForkAsSubflow(void)
-{
-  return CopyObject<MpTcpSubFlow> (this);
-}
+//Ptr<MpTcpSubFlow>
+//MpTcpSubFlow::ForkAsSubflow(void)
+//{
+//  return CopyObject<MpTcpSubFlow> (this);
+//}
 
-
+/* */
 void
 MpTcpSubFlow::DupAck(const TcpHeader& t, uint32_t count)
 {
   NS_LOG_DEBUG("DupAck ignored as specified in RFC");
 //  if( count > 3)
-
+  GetMeta()->OnSubflowDupAck(this);
 }
 
 
@@ -338,8 +338,8 @@ MpTcpSubFlow::MpTcpSubFlow(
 ) :
     TcpSocketBase(),
     m_routeId(0),
-    m_ssThresh(65535),  // retrieve from meta CC set in parent's ?
-    m_initialCWnd(20),  // TODO reset to 1
+    m_ssThresh(65535),
+    m_initialCWnd(10),
 //    m_mapDSN(0),
     m_lastMeasuredRtt(Seconds(0.0)),
      // TODO move out to MpTcpCControl
@@ -531,17 +531,43 @@ MpTcpSubFlow::SendDataPacket(TcpHeader& header, const SequenceNumber32& ssn, uin
 }
 
 
-// TODO inspect
+/*
+behavior should be the same as in TcpSocketBase
+TODO check if m_cWnd is
+*/
 void
 MpTcpSubFlow::Retransmit(void)
 {
-  TcpSocketBase::Retransmit();
+  NS_LOG_FUNCTION (this);
+  NS_LOG_LOGIC (this << " ReTxTimeout Expired at time " << Simulator::Now ().GetSeconds ());
+  m_inFastRec = false;
+
+  // If erroneous timeout in closed/timed-wait state, just return
+  if (m_state == CLOSED || m_state == TIME_WAIT) {
+    return;
+  }
+  // If all data are received (non-closing socket and nothing to send), just return
+  if (m_state <= ESTABLISHED && m_txBuffer.HeadSequence () >= m_highTxMark) {
+    return;
+  }
+
+  // According to RFC2581 sec.3.1, upon RTO, ssthresh is set to half of flight
+  // size and cwnd is set to 1*MSS, then the lost packet is retransmitted and
+  // TCP back to slow start
+  m_ssThresh = std::max (2 * m_segmentSize, BytesInFlight () / 2);
+  m_cWnd = m_segmentSize;
+  m_nextTxSequence = m_txBuffer.HeadSequence (); // Restart from highest Ack
+  NS_LOG_INFO ("RTO. Reset cwnd to " << m_cWnd <<
+               ", ssthresh to " << m_ssThresh << ", restart from seqnum " << m_nextTxSequence);
+  m_rtt->IncreaseMultiplier ();             // Double the next RTO
+  DoRetransmit ();                          // Retransmit the packet
+
+//  TcpSocketBase::Retransmit();
 
 //  NS_FATAL_ERROR("TODO retransmit");
   // pass on mapping
-  GetMeta()->OnSubflowRetransmit( this );
+  GetMeta()->OnSubflowRetransmit(this);
 
-  // TODO change window ?
 }
 
 /**
@@ -573,7 +599,7 @@ MpTcpSubFlow::ProcessListen(Ptr<Packet> packet, const TcpHeader& tcpHeader, cons
 
   // Clone the socket, simulate fork
 //  Ptr<MpTcpSubFlow> newSock = Fork();
-  Ptr<MpTcpSubFlow> newSock = CopyObject<MpTcpSubFlow>(this);
+  Ptr<MpTcpSubFlow> newSock = ForkAsSubflow();
   NS_LOG_LOGIC ("Cloned a TcpSocketBase " << newSock);
   // TODO TcpSocketBase::
   Simulator::ScheduleNow(&MpTcpSubFlow::CompleteFork, newSock, packet, tcpHeader, fromAddress, toAddress);
@@ -1384,8 +1410,12 @@ MpTcpSubFlow::StopAdvertisingAddress(Ipv4Address address)
 
 
 
-// TODO check with its parent equivalent, may miss a few features
-// Receipt of new packet, put into Rx buffer
+/**
+TODO check with its parent equivalent, may miss a few features
+Receipt of new packet, put into Rx buffer
+
+SlowStart and fast recovery remains untouched in MPTCP.
+*/
 void
 MpTcpSubFlow::NewAck(SequenceNumber32 const& ack)
 {
@@ -1400,15 +1430,50 @@ MpTcpSubFlow::NewAck(SequenceNumber32 const& ack)
 //    return;
 //  }
 
+  NS_LOG_FUNCTION (this << ack);
+  NS_LOG_LOGIC ("Subflow receieved ACK for seq " << ack <<
+                " cwnd " << m_cWnd <<
+                " ssthresh " << m_ssThresh);
 
-  TcpSocketBase::NewAck( ack );
+  // Check for exit condition of fast recovery
+  if (m_inFastRec)
+    { // RFC2001, sec.4; RFC2581, sec.3.2
+      // First new ACK after fast recovery: reset cwnd
+      m_cWnd = m_ssThresh;
+      m_inFastRec = false;
+      NS_LOG_INFO ("Reset cwnd to " << m_cWnd);
+    };
 
+
+  // Increase of cwnd based on current phase (slow start or congestion avoidance)
+  if (m_cWnd < m_ssThresh)
+    { // Slow start mode, add one segSize to cWnd. Default m_ssThresh is 65535. (RFC2001, sec.1)
+      m_cWnd += m_segmentSize;
+      NS_LOG_INFO ("In SlowStart, updated to cwnd " << m_cWnd << " ssthresh " << m_ssThresh);
+    }
+  else
+    {
+      /** TODO in the future, there should be a way to easily override this in future releases
+      **/
+
+      // Congestion avoidance mode, increase by (segSize*segSize)/cwnd. (RFC2581, sec.3.1)
+//
+      OpenCwndInCA(0);
+
+      // To increase cwnd for one segSize per RTT, it should be (ackBytes*segSize)/cwnd
+//      double adder = static_cast<double> (m_segmentSize * m_segmentSize) / m_cWnd.Get ();
+//      adder = std::max (1.0, adder);
+//      m_cWnd += static_cast<uint32_t> (adder);
+      NS_LOG_INFO ("In CongAvoid, updated to cwnd " << m_cWnd << " ssthresh " << m_ssThresh);
+    }
+
+
+
+//  TcpSocketBase::NewAck( ack );
   // WRONG  they can be sparse. This should be done by meta
   // DiscardTxMappingsUpToDSN( ack );
   //  Je peux pas le discard tant que
   //  m_txBuffer.DiscardUpTo( ack );
-
-
   // TODO check the full mapping is reachable
 //  if( m_txBuffer.Available(mapping.HeadDSN(), mapping.MaxSequence()))
 //  {
@@ -1568,11 +1633,13 @@ MpTcpSubFlow::SetupMetaTracing(const std::string prefix)
   AsciiTraceHelper asciiTraceHelper;
   Ptr<OutputStreamWrapper> streamNextTx = asciiTraceHelper.CreateFileStream (prefix+"_nextTx.csv");
   Ptr<OutputStreamWrapper> streamHighest = asciiTraceHelper.CreateFileStream (prefix+"_highest.csv");
+  Ptr<OutputStreamWrapper> streamRxNext = asciiTraceHelper.CreateFileStream (prefix+"_RxNext.csv");
   Ptr<OutputStreamWrapper> streamRxAvailable = asciiTraceHelper.CreateFileStream (prefix+"_RxAvailable.csv");
   Ptr<OutputStreamWrapper> streamRxTotal = asciiTraceHelper.CreateFileStream (prefix+"_RxTotal.csv");
   Ptr<OutputStreamWrapper> streamTx = asciiTraceHelper.CreateFileStream (prefix+"_Tx.csv");
   Ptr<OutputStreamWrapper> streamStates = asciiTraceHelper.CreateFileStream (prefix+"_states.csv");
-  Ptr<OutputStreamWrapper> streamCwnd = asciiTraceHelper.CreateFileStream (prefix+"_cwin.csv");
+  Ptr<OutputStreamWrapper> streamCwnd = asciiTraceHelper.CreateFileStream (prefix+"_cwnd.csv");
+  Ptr<OutputStreamWrapper> streamRwnd = asciiTraceHelper.CreateFileStream (prefix+"_rwnd.csv");
 
   *streamNextTx->GetStream() << "Time,oldNextTxSequence,newNextTxSequence\n";
   *streamHighest->GetStream() << "Time,oldHighestSequence,newHighestSequence\n";
@@ -1581,7 +1648,7 @@ MpTcpSubFlow::SetupMetaTracing(const std::string prefix)
   *streamTx->GetStream() << "Time,oldTx,newTx\n";
   *streamCwnd->GetStream() << "Time,oldCwnd,newCwnd\n";
   *streamStates->GetStream() << "Time,oldState,newState\n";
-
+  *streamRwnd->GetStream() << "Time,oldRwnd,newRwnd\n";
 //  , HighestSequence, RWND\n";
 
 //  NS_ASSERT(f.is_open());
@@ -1589,21 +1656,24 @@ MpTcpSubFlow::SetupMetaTracing(const std::string prefix)
   // TODO je devrais etre capable de voir les CongestionWindow + tailles de buffer/ Out of order
 //  CongestionWindow
   Ptr<MpTcpSubFlow> sock(this);
-  sock->TraceConnect ("NextTxSequence", "NextTxSequence", MakeBoundCallback(&dumpNextTxSequence, streamNextTx) );
+  NS_ASSERT(sock->TraceConnect ("NextTxSequence", "NextTxSequence", MakeBoundCallback(&dumpNextTxSequence, streamNextTx)));
 //  sock->TraceConnect ("NextTxSequence", "NextTxSequence", MakeBoundCallback(&dumpNextTxSequence, streamNextTx) );
 //  sock->TraceConnectWithoutContext ("NextTxSequence", MakeBoundCallback(&dumpNextTxSequence, stream) );
 //  sock->TraceConnect ("NextTxSequence", "server", MakeBoundCallback(&dumpNextTxSequence) );
-  sock->TraceConnect ("CongestionWindow", "CongestionWindow", MakeBoundCallback(&dumpUint32, streamCwnd) );
-  sock->TraceConnect ("State", "State", MakeBoundCallback(&dumpTcpState, streamStates) );
+  NS_ASSERT(sock->TraceConnect ("CongestionWindow", "CongestionWindow", MakeBoundCallback(&dumpUint32, streamCwnd)));
+  NS_ASSERT(sock->TraceConnect ("State", "State", MakeBoundCallback(&dumpTcpState, streamStates)));
 
 
-  sock->TraceConnect ("HighestSequence", "HighestSequence", MakeBoundCallback(&dumpNextTxSequence, streamHighest) );
+  NS_ASSERT(sock->TraceConnect ("HighestSequence", "HighestSequence", MakeBoundCallback(&dumpNextTxSequence, streamHighest)));
 
 //  Ptr<MpTcpSocketBase> sock2 = DynamicCast<MpTcpSocketBase>(sock);
-  sock->m_rxBuffer.TraceConnect ("RxTotal", "RxTotal", MakeBoundCallback(&dumpNextTxSequence, streamRxTotal) );
-  sock->m_rxBuffer.TraceConnect ("RxAvailable", "RxAvailable", MakeBoundCallback(&dumpNextTxSequence, streamRxAvailable) );
-  sock->m_txBuffer.TraceConnect ("UnackSequence", "UnackSequence", MakeBoundCallback(&dumpNextTxSequence, streamTx) );
-//  sock->TraceConnect ("RWND", "RWND", MakeBoundCallback(&dumpUint32), stream);
+//  NS_ASSERT(sock->m_rxBuffer.TraceConnect ("RxTotal", "RxTotal", MakeBoundCallback(&dumpNextTxSequence, streamRxTotal)));
+//  NS_ASSERT(sock->m_rxBuffer.TraceConnect ("NextRxSequence", "NextRxSequence", MakeBoundCallback(&dumpNextTxSequence, streamRxAvailable)));
+//  NS_ASSERT(sock->m_rxBuffer.TraceConnect ("RxAvailable", "RxAvailable", MakeBoundCallback(&dumpNextTxSequence, streamRxAvailable)));
+
+//  NS_ASSERT(sock->m_txBuffer.TraceConnect ("UnackSequence", "UnackSequence", MakeBoundCallback(&dumpNextTxSequence, streamTx)));
+  //sock->TraceConnect ("RWND", "RWND", MakeBoundCallback(&dumpUint32), stream);
+  NS_ASSERT(sock->TraceConnect ("RWND", "Remote WND", MakeBoundCallback(&dumpUint32, streamRwnd)));
 }
 
 
@@ -1850,7 +1920,7 @@ MpTcpSubFlow::ParseDSS(Ptr<Packet> p, const TcpHeader& header,Ptr<TcpOptionMpTcp
 {
   //!
   NS_ASSERT(dss);
-  GetMeta()->ProcessDSS( dss, Ptr<MpTcpSubFlow>(this));
+  GetMeta()->ProcessDSS(header, dss, Ptr<MpTcpSubFlow>(this));
 
 //  uint8_t flags = dss->GetFlags();
 //

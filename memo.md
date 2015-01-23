@@ -4,6 +4,7 @@ README
 This code is yet another attempt at upstreaming MPTCP (Multipath TCP). It is based on ns3.19.
 
 
+
 How to launch the MPTCP testsuites ?
 ======
 There are 3 test I now use for testing (less in the future hopefull if we can use MPTCP sockets with TCPapps). Their names are:
@@ -33,8 +34,8 @@ Few interesting flags
 Features
 ======
 
+
+
 Limitations
 ======
-* TCP options implementation is temporary and will be replaced by the Socis student implementation. So for now there is no limit to the number of options you can add. You cannot specify any port number in an ADD_ADDR
 * does not work with IPv6 addresses
-* CancelAllTimers() of TcpSocketBase is not virtual

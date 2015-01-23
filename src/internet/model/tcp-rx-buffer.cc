@@ -36,6 +36,8 @@ TcpRxBuffer::GetTypeId (void)
     .AddTraceSource ("NextRxSequence",
                      "Next sequence number expected (RCV.NXT)",
                      MakeTraceSourceAccessor (&TcpRxBuffer::m_nextRxSeq))
+
+    // These 2 were added by me (matt)
     .AddTraceSource ("RxTotal",
                      "Size of all packets in receive buffer ",
                      MakeTraceSourceAccessor (&TcpRxBuffer::m_size))

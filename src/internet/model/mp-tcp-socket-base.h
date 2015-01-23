@@ -11,10 +11,10 @@
 #include "ns3/mp-tcp-typedefs.h"
 #include "ns3/tcp-socket-base.h"
 //#include "ns3/mp-tcp-path-manager.h"
-#include "ns3/gnuplot.h"
+//#include "ns3/gnuplot.h"
 //#include "mp-tcp-subflow.h"
 
-#include "ns3/mp-tcp-cc.h"
+//#include "ns3/mp-tcp-cc.h"
 #include "ns3/inet-socket-address.h"
 #include "ns3/mp-tcp-scheduler-round-robin.h"
 
@@ -30,6 +30,7 @@ class MpTcpPathIdManager;
 class MpTcpSubFlow;
 //class MpTcpSchedulerRoundRobin;
 class MpTcpCongestionControl;
+class TcpOptionMpTcpDSS;
 class OutputStreamWrapper;
 
 void
@@ -80,6 +81,7 @@ class MpTcpSocketBase : public TcpSocketBase
 
 {
 public: // public methods
+  typedef std::vector< Ptr<MpTcpSubFlow> > SubflowList;
 
   static TypeId GetTypeId(void);
 
@@ -139,7 +141,7 @@ public: // public methods
   PeerClose( SequenceNumber32 fin_seq, Ptr<MpTcpSubFlow> sf);
 
   virtual void
-  OnInfiniteMapping(Ptr<TcpOptionMpTcpDSS> dss,Ptr<MpTcpSubFlow> sf);
+  OnInfiniteMapping(Ptr<TcpOptionMpTcpDSS> dss, Ptr<MpTcpSubFlow> sf);
 
   /* equivalent to TCP Rst */
   virtual void
@@ -220,7 +222,7 @@ public: // public methods
   /**
   \return Number of connected subflows (that is that ran the 3whs)
   */
-  std::vector< Ptr<MpTcpSubFlow> >::size_type GetNActiveSubflows() const;
+  SubflowList::size_type GetNActiveSubflows() const;
   // uint8
   /**
   * \return an established subflow
@@ -289,6 +291,7 @@ public: // public methods
   **/
 //  virtual void GetAllAdvertisedSources(std::vector<InetSocketAddress> addresses);
 
+
   void GetAllAdvertisedDestinations(std::vector<InetSocketAddress>& );
 
 public: // public variables
@@ -338,8 +341,13 @@ protected: // protected methods
 //  virtual void SetRcvBufSize (uint32_t size);
 //  virtual uint32_t GetRcvBufSize (void) const;
 
+  /**
+  TODO rename to GetMinSSThreshold;
+  **/
   virtual void SetSSThresh(uint32_t threshold);
   virtual uint32_t GetSSThresh(void) const;
+
+
   virtual void SetInitialCwnd(uint32_t cwnd);
   virtual uint32_t GetInitialCwnd(void) const;
   virtual void SetSegSize(uint32_t size);
@@ -360,7 +368,10 @@ protected: // protected methods
   /*
   */
   void
-  OnSubflowClosed( Ptr<MpTcpSubFlow> sf);
+  OnSubflowClosed(Ptr<MpTcpSubFlow> sf);
+
+  void
+  OnSubflowDupAck(Ptr<MpTcpSubFlow> sf);
 
   /**
   \param dataSeq Used to reconstruct the mapping
@@ -371,6 +382,7 @@ protected: // protected methods
                 Ptr<MpTcpSubFlow> sf
 //                SequenceNumber32 dataSeq, Ptr<Socket> sock
                 );
+
 
 
   /* close all subflows
@@ -510,10 +522,10 @@ protected: // protected methods
   //! Disabled
   virtual void ReceivedData ( Ptr<Packet>, const TcpHeader&); // Recv of a data, put into buffer, call L7 to get it if necessary
 
-  virtual void ProcessDSS( Ptr<TcpOptionMpTcpDSS> dss, Ptr<MpTcpSubFlow> sf);
+  virtual void ProcessDSS( const TcpHeader& tcpHeader, Ptr<TcpOptionMpTcpDSS> dss, Ptr<MpTcpSubFlow> sf);
   virtual void ProcessDSSClosing( Ptr<TcpOptionMpTcpDSS> dss, Ptr<MpTcpSubFlow> sf);
   virtual void ProcessDSSWait( Ptr<TcpOptionMpTcpDSS> dss, Ptr<MpTcpSubFlow> sf);
-  virtual void ProcessDSSEstablished( Ptr<TcpOptionMpTcpDSS> dss, Ptr<MpTcpSubFlow> sf);
+  virtual void ProcessDSSEstablished( const TcpHeader& tcpHeader, Ptr<TcpOptionMpTcpDSS> dss, Ptr<MpTcpSubFlow> sf);
 
 
   /** Does nothing */
@@ -587,9 +599,13 @@ protected: // protected methods
   */
 //  bool FindPacketFromUnOrdered(uint8_t sFlowIdx);
 
-  // Congestion control
-//  void OpenCWND(uint8_t sFlowIdx, uint32_t ackedBytes);
-//  void ReduceCWND(uint8_t sFlowIdx, DSNMapping* ptrDSN);
+  /** this implementation may not be the best, maybe it would be best to subclass MpTcpSubflows
+   depending on the Congestion control used. But for now it is goodenough
+   Both functions the new value
+   **/
+//  virtual uint32_t OpenCWND(uint32_t cwnd, uint32_t ackedBytes) = 0;
+//  virtual uint32_t ReduceCWND(uint32_t cwnd) = 0;
+
 
 
   // Helper functions -> main operations
@@ -625,9 +641,12 @@ protected: // protected methods
 
 protected: // protected variables
 
-  typedef std::vector<Ptr<MpTcpSubFlow> > SubflowList;
+
 
   std::string m_tracePrefix;
+
+
+  virtual TypeId GetMpTcpSubflowTypeId() = 0;
 
   /**
   *
@@ -695,6 +714,7 @@ private:
 
   bool     m_doChecksum;  //!< Compute the checksum. Negociated during 3WHS
 private:
+
 
   /* Utility function used when a subflow changes state */
   void MoveSubflow(Ptr<MpTcpSubFlow> sf, mptcp_container_t from, mptcp_container_t to);

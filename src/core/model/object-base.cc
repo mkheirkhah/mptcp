@@ -267,6 +267,7 @@ ObjectBase::GetAttributeFailSafe (std::string name, AttributeValue &value) const
   return true;
 }
 
+//! TODO the 2 following functions could ba factorized
 bool
 ObjectBase::TraceConnectWithoutContext (std::string name, const CallbackBase &cb)
 {
@@ -275,6 +276,7 @@ ObjectBase::TraceConnectWithoutContext (std::string name, const CallbackBase &cb
   Ptr<const TraceSourceAccessor> accessor = tid.LookupTraceSourceByName (name);
   if (accessor == 0)
     {
+      NS_LOG_WARN("Could not find accessor for " << name);
       return false;
     }
   bool ok = accessor->ConnectWithoutContext (this, cb);
@@ -288,6 +290,7 @@ ObjectBase::TraceConnect (std::string name, std::string context, const CallbackB
   Ptr<const TraceSourceAccessor> accessor = tid.LookupTraceSourceByName (name);
   if (accessor == 0)
     {
+      NS_LOG_WARN("Could not find accessor for " << name);
       return false;
     }
   bool ok = accessor->Connect (this, context, cb);
@@ -301,6 +304,7 @@ ObjectBase::TraceDisconnectWithoutContext (std::string name, const CallbackBase 
   Ptr<const TraceSourceAccessor> accessor = tid.LookupTraceSourceByName (name);
   if (accessor == 0)
     {
+      NS_LOG_WARN("Could not find accessor for " << name);
       return false;
     }
   bool ok = accessor->DisconnectWithoutContext (this, cb);

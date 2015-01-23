@@ -224,6 +224,11 @@ TcpTestCase::ServerHandleConnectionCreated (Ptr<Socket> s, const Address & addr)
   NS_LOG_DEBUG("ServerHandleConnectionCreated");
   s->SetRecvCallback (MakeCallback (&TcpTestCase::ServerHandleRecv, this));
   s->SetSendCallback (MakeCallback (&TcpTestCase::ServerHandleSend, this));
+
+  // TODO setup tracing there !
+
+  Ptr<MpTcpSocketBase> server_meta = DynamicCast<MpTcpSocketBase>(s);
+  server_meta->SetupMetaTracing();
 }
 
 void
@@ -492,7 +497,7 @@ TcpTestCase::SetupDefaultSim (void)
   Ptr<MpTcpSocketBase> server_meta = DynamicCast<MpTcpSocketBase>(server);
   Ptr<MpTcpSocketBase> source_meta = DynamicCast<MpTcpSocketBase>(source);
 
-  server_meta->SetupMetaTracing("server");
+//  server_meta->SetupMetaTracing("server");
   source_meta->SetupMetaTracing("source");
 
 
@@ -505,28 +510,11 @@ TcpTestCase::SetupDefaultSim (void)
   server->SetAcceptCallback (MakeNullCallback<bool, Ptr< Socket >, const Address &> (),
                              MakeCallback (&TcpTestCase::ServerHandleConnectionCreated,this));
 
-  NS_LOG_INFO( "test" << server);
+//  NS_LOG_INFO( "test" << server);
   source->SetRecvCallback (MakeCallback (&TcpTestCase::SourceHandleRecv, this));
   source->SetSendCallback (MakeCallback (&TcpTestCase::SourceHandleSend, this));
 
   source->Connect (serverremoteaddr);
-
-
-
-//SetupDefaultSim
-    //! TODO set callbacks
-//    ("ns3::TcpSocketBase::NextTxSequence", );
-//  ns3::TcpSocketBase::HighestSequence
-//  ns3::TcpSocketBase::RWND
-
-  // TODO use MakeBoundCallback() et y passer le fichier
-
-//  server_f.open(filename, std::ofstream::out | std::ofstream::trunc);
-
-
-//  source->TraceConnect ("NextTxSequence", "source", MakeCallback(&dumpNextTxSequence) );
-//  source->TraceConnect ("HighestSequence", "source", MakeCallback(&dumpNextTxSequence) );
-//  source->TraceConnect ("RWND", "source", MakeCallback(&dumpUint32) );
 
 }
 
@@ -615,7 +603,8 @@ public:
   {
 
     // TODO addition by matt
-    Config::SetDefault ("ns3::TcpL4Protocol::SocketType", StringValue("ns3::MpTcpCCOlia") );
+//    Config::SetDefault ("ns3::TcpL4Protocol::SocketType", StringValue("ns3::MpTcpCCOlia") );
+    Config::SetDefault ("ns3::TcpL4Protocol::SocketType", StringValue("ns3::MpTcpCCUncoupled") );
 
     // Arguments to these test cases are 1) totalStreamSize,
     // 2) source write size, 3) source read size

@@ -5,21 +5,21 @@
 #include "ns3/mp-tcp-id-manager.h"
 //#include "ns3/mp-tcp-id-manager.h"
 
-NS_LOG_COMPONENT_DEFINE("MpTcpCCOlia");
+NS_LOG_COMPONENT_DEFINE("MpTcpLia");
 
 
 namespace ns3 {
 
 
 
-NS_OBJECT_ENSURE_REGISTERED (MpTcpCCOlia);
+NS_OBJECT_ENSURE_REGISTERED (MpTcpLia);
 
 TypeId
-MpTcpCCOlia::GetTypeId (void)
+MpTcpLia::GetTypeId (void)
 {
-  static TypeId tid = TypeId ("ns3::MpTcpCCOlia")
+  static TypeId tid = TypeId ("ns3::MpTcpLia")
     .SetParent<MpTcpSocketBase> ()
-    .AddConstructor<MpTcpCCOlia> ()
+    .AddConstructor<MpTcpLia> ()
 //    .AddAttribute ("ReTxThreshold", "Threshold for fast retransmit",
 //                    UintegerValue (3),
 //                    MakeUintegerAccessor (&TcpNewReno::m_retxThresh),
@@ -28,90 +28,85 @@ MpTcpCCOlia::GetTypeId (void)
 //		    BooleanValue (false),
 //		    MakeBooleanAccessor (&TcpNewReno::m_limitedTx),
 //		    MakeBooleanChecker ())
-//    .AddTraceSource ("CongestionWindow",
+    .AddTraceSource ("Alpha",
 //                     "The TCP connection's congestion window",
-//                     MakeTraceSourceAccessor (&MpTcpCCOlia::m_cWnd))
+//                     MakeTraceSourceAccessor (&MpTcpLia::m_cWnd))
   ;
   return tid;
 }
 
 
 //TypeId
-//MpTcpCCOlia::GetInstanceTypeId(void) const
+//MpTcpLia::GetInstanceTypeId(void) const
 //{
 //  return GetTypeId();
 //}
 
 
-MpTcpCCOlia::MpTcpCCOlia(void) :
+MpTcpLia::MpTcpLia(void) :
   MpTcpSocketBase()
 {
   NS_LOG_FUNCTION (this);
 }
 
-MpTcpCCOlia::MpTcpCCOlia(const MpTcpCCOlia& sock) :
+MpTcpLia::MpTcpLia(const MpTcpLia& sock) :
   MpTcpSocketBase(sock)
 {
   NS_LOG_FUNCTION (this);
   NS_LOG_LOGIC ("Invoked the copy constructor");
 }
 
-MpTcpCCOlia::~MpTcpCCOlia()
+MpTcpLia::~MpTcpLia()
 {
   NS_LOG_FUNCTION (this);
 }
 
-
-//uint32_t
-//MpTcpCCOlia::OpenCWND(uint32_t cwnd, uint32_t ackedBytes) {
-//
-//  return 1;
-//}
-//
-//uint32_t
-//MpTcpCCOlia::ReduceCWND(uint32_t cwnd)
-//{
-//  return cwnd/2;
-//}
-//
-//  // inherited function, no need to doc.
+  // inherited function, no need to doc.
 //TypeId
-//MpTcpCCOlia::GetInstanceTypeId (void) const
+//MpTcpLia::GetInstanceTypeId (void) const
 //{
 //  return GetTypeId();
 //}
 
 Ptr<MpTcpSocketBase>
-MpTcpCCOlia::ForkAsMeta(void)
+MpTcpLia::ForkAsMeta(void)
 {
   NS_LOG_UNCOND ("Fork as meta" << this->GetInstanceTypeId() << " to " << GetTypeId());
-//  Ptr<MpTcpCCOlia> p =
+//  Ptr<MpTcpLia> p =
 
-  return CopyObject<MpTcpCCOlia>(this);
+  return CopyObject<MpTcpLia>(this);
 }
 
 uint32_t
-MpTcpCCOlia::GetSSThresh(void) const
+MpTcpLia::GetSSThresh(void) const
 {
   return 2;
 }
 
-TypeId
-MpTcpCCOlia::GetMpTcpSubflowTypeId()
-{
-  return MpTcpSubFlow::GetTypeId();
-}
+
+        calculateAlpha();
+        adder = alpha * MSS * MSS / m_totalCwnd;
+        adder = std::max(1.0, adder);
+        sFlow->cwnd += static_cast<double>(adder);
+
+        NS_LOG_ERROR ("Subflow "
+                <<(int)sFlowIdx
+                <<" Congestion Control (Linked_Increases): alpha "<<alpha
+                <<" increment is "<<adder
+                <<" GetSSThresh() "<< GetSSThresh()
+                << " cwnd "<<cwnd );
+        break;
 
 
 uint32_t
-MpTcpCCOlia::GetInitialCwnd(void) const
+MpTcpLia::GetInitialCwnd(void) const
 {
   return 10;
 }
 
 //
 //Ptr<SubFlow>
-//MpTcpCCOlia::GetSubflowToUse(Ptr<MpTcpSocketBase> metaSock)
+//MpTcpLia::GetSubflowToUse(Ptr<MpTcpSocketBase> metaSock)
 //{
 //  uint8_t nextSubFlow = 0;
 //  switch (m_distribAlgo)
@@ -131,3 +126,5 @@ MpTcpCCOlia::GetInitialCwnd(void) const
 
 
 } //end of ns3
+
+

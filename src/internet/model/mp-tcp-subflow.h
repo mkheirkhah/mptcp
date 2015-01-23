@@ -1,7 +1,6 @@
 /*
  * MultiPath-TCP (MPTCP) implementation.
- * Email: m.kheirkhah@sussex.ac.uk
- *        matthieu.coudron@lip6.fr
+ * Email: matthieu.coudron@lip6.fr
  */
 #ifndef MP_TCP_SUBFLOW_H
 #define MP_TCP_SUBFLOW_H
@@ -43,10 +42,21 @@ class TcpOptionMpTcpDSS;
 class MpTcpSubFlow : public TcpSocketBase
 {
 public:
+
+  /**
+  these 2 functions are temporary, because it's faster to implement like this
+  but in the long term we should do as with single TCP and  replicate code in
+  subclasses
+  **/
+  virtual void OpenCwndInCA(uint32_t acked) = 0;
+  virtual void ReduceCwnd() = 0;
+
+
   static TypeId
   GetTypeId(void);
 
-  virtual TypeId GetInstanceTypeId(void) const;
+  // TODO pass it as virtual ?
+//  virtual TypeId GetInstanceTypeId(void) const;
 
   /**
   the metasocket is the socket the application is talking to.
@@ -227,10 +237,10 @@ public:
 
   /**
   * \
-  *
+  * Why do I need this already :/ ?
   */
   virtual Ptr<MpTcpSubFlow>
-  ForkAsSubflow(void);
+  ForkAsSubflow(void) = 0;
 
   /**
   * This should
@@ -238,11 +248,7 @@ public:
   virtual void
   NewAck(SequenceNumber32 const& ack);
 
-  /**
-  \see GetLocalToken
-  */
-//  virtual uint32_t
-//  GetRemoteToken() const;
+
 
   /**
   TODO some options should be forwarded to the meta socket

@@ -1,5 +1,11 @@
 TODO list:
 
+
+Bugs:
+* I don't register the rWnd during connection establishement apparently
+* 
+
+
 List of tests:
 * Subflow management
 	* ADDADDR/REMADDR tests. Should not be able to add same ADDRID with different IPs for instance (matt)
@@ -29,6 +35,7 @@ Generic:
 
 
 Requests for ns3;
+* when tracing a source that does not exist, ns3 should crash or log 
 * the CloseAndNotify member name is badly chosen since it does not close the socket but signal a closed state
 * add an IsConnected member to TcpSocketBase ?
 * TcpSocketBase should have all members virtual. MpTcpSubflow::CancelAllTimers should call its parent's but it is not virtual
@@ -53,3 +60,12 @@ use "/NodeList/[i]/DeviceList/[i]" ?
 * Add a TcpRxBuffer::HeadSeqNb() const function
 * remove useless dependancy between TcpHeader and TcpRxBuffer::Add .  
 * Buffer::CheckNoZero can be simplified
+
+
+
+Thoughts on upstreaming
+========
+Some aspects of the implementation would need to be reworked:
+- MpTcpSocketBase should not inherit from TcpSocketBase, there is little in common from the API point of view
+- ns3 TcpRxBuffer/TcpTxBuffer should be redone to be able to share buffer space
+- MpTcpSubflow should be derived for each MPTCP flavor (uncoupled/olia/lia). Current design was chosen because it shortened dev time.
