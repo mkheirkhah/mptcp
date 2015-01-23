@@ -59,6 +59,10 @@ NS_LOG += ":TcpTestSuite=*"
 os.environ['NS_LOG'] = NS_LOG
 
 
+
+os.system("rm source/*")
+os.system("rm server/*")
+
 print("Executed Command:\n%s" % cmd)
 
 
@@ -71,3 +75,10 @@ if args.graph:
     # 
     os.system("mptcpexporter pcap2sql test-0-1.pcap")
     os.system("mptcpgraph ")
+
+
+for i in ['server', 'source']:
+    print("Content of folder '%s':" % (i,))
+    os.system("ls -l %s" % (i,))
+# print("Content of folder 'server':")
+# os.system("ls -l server")

@@ -47,6 +47,7 @@ MpTcpSubflowUncoupled::OpenCwndInCA(uint32_t acked)
 void
 MpTcpSubflowUncoupled::ReduceCwnd()
 {
+  NS_LOG_DEBUG("Reduce CWND");
     SetSSThresh( std::max(2 * m_segmentSize, BytesInFlight() / 2) );
     m_cWnd = GetSSThresh() + 3 * m_segmentSize;
 }

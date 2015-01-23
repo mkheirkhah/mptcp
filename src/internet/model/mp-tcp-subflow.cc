@@ -1629,26 +1629,26 @@ void
 MpTcpSubFlow::SetupMetaTracing(const std::string prefix)
 {
 //  f.open(filename, std::ofstream::out | std::ofstream::trunc);
-
+  std::ios::openmode mode = std::ofstream::out | std::ofstream::trunc;
   AsciiTraceHelper asciiTraceHelper;
-  Ptr<OutputStreamWrapper> streamNextTx = asciiTraceHelper.CreateFileStream (prefix+"_nextTx.csv");
-  Ptr<OutputStreamWrapper> streamHighest = asciiTraceHelper.CreateFileStream (prefix+"_highest.csv");
-  Ptr<OutputStreamWrapper> streamRxNext = asciiTraceHelper.CreateFileStream (prefix+"_RxNext.csv");
-  Ptr<OutputStreamWrapper> streamRxAvailable = asciiTraceHelper.CreateFileStream (prefix+"_RxAvailable.csv");
-  Ptr<OutputStreamWrapper> streamRxTotal = asciiTraceHelper.CreateFileStream (prefix+"_RxTotal.csv");
-  Ptr<OutputStreamWrapper> streamTx = asciiTraceHelper.CreateFileStream (prefix+"_Tx.csv");
-  Ptr<OutputStreamWrapper> streamStates = asciiTraceHelper.CreateFileStream (prefix+"_states.csv");
-  Ptr<OutputStreamWrapper> streamCwnd = asciiTraceHelper.CreateFileStream (prefix+"_cwnd.csv");
-  Ptr<OutputStreamWrapper> streamRwnd = asciiTraceHelper.CreateFileStream (prefix+"_rwnd.csv");
+  Ptr<OutputStreamWrapper> streamNextTx = asciiTraceHelper.CreateFileStream (prefix+"_nextTx.csv", mode);
+  Ptr<OutputStreamWrapper> streamHighest = asciiTraceHelper.CreateFileStream (prefix+"_highest.csv", mode);
+  Ptr<OutputStreamWrapper> streamRxNext = asciiTraceHelper.CreateFileStream (prefix+"_RxNext.csv", mode);
+  Ptr<OutputStreamWrapper> streamRxAvailable = asciiTraceHelper.CreateFileStream (prefix+"_RxAvailable.csv", mode);
+  Ptr<OutputStreamWrapper> streamRxTotal = asciiTraceHelper.CreateFileStream (prefix+"_RxTotal.csv", mode);
+  Ptr<OutputStreamWrapper> streamTx = asciiTraceHelper.CreateFileStream (prefix+"_Tx.csv", mode);
+  Ptr<OutputStreamWrapper> streamStates = asciiTraceHelper.CreateFileStream (prefix+"_states.csv", mode);
+  Ptr<OutputStreamWrapper> streamCwnd = asciiTraceHelper.CreateFileStream (prefix+"_cwnd.csv",mode);
+  Ptr<OutputStreamWrapper> streamRwnd = asciiTraceHelper.CreateFileStream (prefix+"_rwnd.csv", mode);
 
-  *streamNextTx->GetStream() << "Time,oldNextTxSequence,newNextTxSequence\n";
-  *streamHighest->GetStream() << "Time,oldHighestSequence,newHighestSequence\n";
-  *streamRxAvailable->GetStream() << "Time,oldRxAvailable,newRxAvailable\n";
-  *streamRxTotal->GetStream() << "Time,oldRxTotal,newRxTotal\n";
-  *streamTx->GetStream() << "Time,oldTx,newTx\n";
-  *streamCwnd->GetStream() << "Time,oldCwnd,newCwnd\n";
-  *streamStates->GetStream() << "Time,oldState,newState\n";
-  *streamRwnd->GetStream() << "Time,oldRwnd,newRwnd\n";
+  *streamNextTx->GetStream() << "Time,oldNextTxSequence,newNextTxSequence" << std::endl;
+  *streamHighest->GetStream() << "Time,oldHighestSequence,newHighestSequence" << std::endl;
+  *streamRxAvailable->GetStream() << "Time,oldRxAvailable,newRxAvailable" << std::endl;
+  *streamRxTotal->GetStream() << "Time,oldRxTotal,newRxTotal" << std::endl;
+  *streamTx->GetStream() << "Time,oldTx,newTx" << std::endl;
+  *streamCwnd->GetStream() << "Time,oldCwnd,newCwnd" << std::endl;
+  *streamStates->GetStream() << "Time,oldState,newState\n"<< std::endl;
+  *streamRwnd->GetStream() << "Time,oldRwnd,newRwnd" << std::endl;
 //  , HighestSequence, RWND\n";
 
 //  NS_ASSERT(f.is_open());

@@ -228,7 +228,7 @@ TcpTestCase::ServerHandleConnectionCreated (Ptr<Socket> s, const Address & addr)
   // TODO setup tracing there !
 
   Ptr<MpTcpSocketBase> server_meta = DynamicCast<MpTcpSocketBase>(s);
-  server_meta->SetupMetaTracing();
+  server_meta->SetupMetaTracing("server");
 }
 
 void
