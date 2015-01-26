@@ -32,6 +32,8 @@ NS_LOG_COMPONENT_DEFINE ("TcpTxBuffer");
 
 namespace ns3 {
 
+NS_OBJECT_ENSURE_REGISTERED (TcpTxBuffer);
+
 TypeId
 TcpTxBuffer::GetTypeId (void)
 {
@@ -44,6 +46,12 @@ TcpTxBuffer::GetTypeId (void)
 
   ;
   return tid;
+}
+
+TypeId
+TcpTxBuffer::GetInstanceTypeId (void) const
+{
+  return GetTypeId();
 }
 
 /* A user is supposed to create a TcpSocket through a factory. In TcpSocket,

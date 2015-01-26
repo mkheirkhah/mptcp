@@ -50,7 +50,10 @@ dumpNextTxSequence(Ptr<OutputStreamWrapper> stream, std::string context, Sequenc
   //<< context <<
 //  if (context == "NextTxSequence")
 
-  *stream->GetStream() << Simulator::Now() << "," << oldSeq << "," << newSeq << std::endl;
+  *stream->GetStream() << Simulator::Now()
+                       << "," << oldSeq
+                       << "," << newSeq
+                       << std::endl;
 }
 
 
@@ -59,7 +62,10 @@ dumpUint32(Ptr<OutputStreamWrapper> stream, std::string context, uint32_t oldVal
 
 //  NS_LOG_UNCOND("Context " << context << "oldVal=" << oldVal << "newVal=" << newVal);
 
-  *stream->GetStream() << Simulator::Now() << "," << oldVal << "," << newVal << std::endl;
+  *stream->GetStream() << Simulator::Now()
+                       << "," << oldVal
+                       << "," << newVal
+                       << std::endl;
 }
 
 
@@ -69,7 +75,7 @@ dumpTcpState(Ptr<OutputStreamWrapper> stream, std::string context, TcpStates_t o
   *stream->GetStream() << Simulator::Now()
                       << "," << TcpSocket::TcpStateName[oldVal]
                       << "," << TcpSocket::TcpStateName[newVal]
-                      << "\n";
+                      << std::endl;
 }
 
 
@@ -1911,9 +1917,16 @@ MpTcpSocketBase::SetupMetaTracing(std::string prefix)
   NS_ASSERT(sock->TraceConnect ("State", "State", MakeBoundCallback(&dumpTcpState, streamStates) ));
 
 //  Ptr<MpTcpSocketBase> sock2 = DynamicCast<MpTcpSocketBase>(sock);
-  sock->m_rxBuffer.TraceConnect ("RxTotal", "RxTotal", MakeBoundCallback(&dumpNextTxSequence, streamRxTotal) );
-  sock->m_rxBuffer.TraceConnect ("RxAvailable", "RxAvailable", MakeBoundCallback(&dumpNextTxSequence, streamRxAvailable) );
-  sock->m_txBuffer.TraceConnect ("UnackSequence", "UnackSequence", MakeBoundCallback(&dumpNextTxSequence, streamTx) );
+
+//  Ptr<TcpTxBuffer> txBuffer( &sock->m_txBuffer);
+//  NS_ASSERT(txBuffer->TraceConnect ("UnackSequence", "UnackSequence", MakeBoundCallback(&dumpNextTxSequence, streamTx)));
+
+  NS_LOG_UNCOND("Starting research !!");
+  NS_ASSERT(sock->m_txBuffer.TraceConnect ("UnackSequence", "UnackSequence", MakeBoundCallback(&dumpNextTxSequence, streamTx)));
+
+  NS_ASSERT(sock->m_rxBuffer.TraceConnect ("RxTotal", "RxTotal", MakeBoundCallback(&dumpUint32, streamRxTotal) ));
+  NS_ASSERT(sock->m_rxBuffer.TraceConnect ("RxAvailable", "RxAvailable", MakeBoundCallback(&dumpUint32, streamRxAvailable) ));
+
   NS_ASSERT(sock->TraceConnect ("RWND", "Remote WND", MakeBoundCallback(&dumpUint32, streamRwnd)));
 }
 

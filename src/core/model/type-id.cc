@@ -87,9 +87,9 @@ public:
   bool HasConstructor (uint16_t uid) const;
   uint32_t GetRegisteredN (void) const;
   uint16_t GetRegistered (uint32_t i) const;
-  void AddAttribute (uint16_t uid, 
+  void AddAttribute (uint16_t uid,
                      std::string name,
-                     std::string help, 
+                     std::string help,
                      uint32_t flags,
                      Ptr<const AttributeValue> initialValue,
                      Ptr<const AttributeAccessor> spec,
@@ -100,7 +100,7 @@ public:
   uint32_t GetAttributeN (uint16_t uid) const;
   struct TypeId::AttributeInformation GetAttribute(uint16_t uid, uint32_t i) const;
   void AddTraceSource (uint16_t uid,
-                       std::string name, 
+                       std::string name,
                        std::string help,
                        Ptr<const TraceSourceAccessor> accessor);
   uint32_t GetTraceSourceN (uint16_t uid) const;
@@ -135,7 +135,7 @@ private:
   typedef std::map<TypeId::hash_t, uint16_t> hashmap_t;
   hashmap_t m_hashmap;
 
-  
+
   // To handle the first collision, we reserve the high bit as a
   // chain flag:
   enum { HashChainFlag = 0x80000000};
@@ -153,7 +153,7 @@ IidManager::Hasher (const std::string name)
   static ns3::Hasher hasher ( Create<Hash::Function::Murmur3> () );
   return hasher.clear ().GetHash32 (name);
 }
-  
+
 uint16_t
 IidManager::AllocateUid (std::string name)
 {
@@ -161,7 +161,7 @@ IidManager::AllocateUid (std::string name)
   // Type names are definitive: equal names are equal types
   NS_ASSERT_MSG (m_namemap.count (name) == 0,
                  "Trying to allocate twice the same uid: " << name);
-  
+
   TypeId::hash_t hash = Hasher (name) & (~HashChainFlag);
   if (m_hashmap.count (hash) == 1) {
     NS_LOG_ERROR ("Hash chaining TypeId for '" << name << "'.  "
@@ -188,7 +188,7 @@ IidManager::AllocateUid (std::string name)
     //
     // Oh, by the way, I have no idea how this crazy hashing idea got
     // into ns3.  -- Peter Barnes, LLNL
-    
+
     // Alphabetize the two types, so it's deterministic
     struct IidInformation * hinfo = LookupInformation (GetUid (hash));
     if (name > hinfo->name)
@@ -232,7 +232,7 @@ IidManager::LookupInformation (uint16_t uid) const
   return const_cast<struct IidInformation *> (&m_information[uid-1]);
 }
 
-void 
+void
 IidManager::SetParent (uint16_t uid, uint16_t parent)
 {
   NS_LOG_FUNCTION (this << uid << parent);
@@ -240,7 +240,7 @@ IidManager::SetParent (uint16_t uid, uint16_t parent)
   struct IidInformation *information = LookupInformation (uid);
   information->parent = parent;
 }
-void 
+void
 IidManager::SetGroupName (uint16_t uid, std::string groupName)
 {
   NS_LOG_FUNCTION (this << uid << groupName);
@@ -255,7 +255,7 @@ IidManager::HideFromDocumentation (uint16_t uid)
   information->mustHideFromDocumentation = true;
 }
 
-void 
+void
 IidManager::AddConstructor (uint16_t uid, Callback<ObjectBase *> callback)
 {
   NS_LOG_FUNCTION (this << uid << &callback);
@@ -268,7 +268,7 @@ IidManager::AddConstructor (uint16_t uid, Callback<ObjectBase *> callback)
   information->constructor = callback;
 }
 
-uint16_t 
+uint16_t
 IidManager::GetUid (std::string name) const
 {
   NS_LOG_FUNCTION (this << name);
@@ -282,7 +282,7 @@ IidManager::GetUid (std::string name) const
       return 0;
     }
 }
-uint16_t 
+uint16_t
 IidManager::GetUid (TypeId::hash_t hash) const
 {
   hashmap_t::const_iterator it = m_hashmap.find (hash);
@@ -291,11 +291,11 @@ IidManager::GetUid (TypeId::hash_t hash) const
     return it->second;
     }
   else
-    { // hash not found 
+    { // hash not found
       return 0;
     }
 }
-std::string 
+std::string
 IidManager::GetName (uint16_t uid) const
 {
   NS_LOG_FUNCTION (this << uid);
@@ -309,14 +309,14 @@ IidManager::GetHash (uint16_t uid) const
   struct IidInformation *information = LookupInformation (uid);
   return information->hash;
 }
-uint16_t 
+uint16_t
 IidManager::GetParent (uint16_t uid) const
 {
   NS_LOG_FUNCTION (this << uid);
   struct IidInformation *information = LookupInformation (uid);
   return information->parent;
 }
-std::string 
+std::string
 IidManager::GetGroupName (uint16_t uid) const
 {
   NS_LOG_FUNCTION (this << uid);
@@ -324,7 +324,7 @@ IidManager::GetGroupName (uint16_t uid) const
   return information->groupName;
 }
 
-Callback<ObjectBase *> 
+Callback<ObjectBase *>
 IidManager::GetConstructor (uint16_t uid) const
 {
   NS_LOG_FUNCTION (this << uid);
@@ -336,7 +336,7 @@ IidManager::GetConstructor (uint16_t uid) const
   return information->constructor;
 }
 
-bool 
+bool
 IidManager::HasConstructor (uint16_t uid) const
 {
   NS_LOG_FUNCTION (this << uid);
@@ -344,13 +344,13 @@ IidManager::HasConstructor (uint16_t uid) const
   return information->hasConstructor;
 }
 
-uint32_t 
+uint32_t
 IidManager::GetRegisteredN (void) const
 {
   NS_LOG_FUNCTION (this);
   return m_information.size ();
 }
-uint16_t 
+uint16_t
 IidManager::GetRegistered (uint32_t i) const
 {
   NS_LOG_FUNCTION (this << i);
@@ -385,10 +385,10 @@ IidManager::HasAttribute (uint16_t uid,
   return false;
 }
 
-void 
-IidManager::AddAttribute (uint16_t uid, 
+void
+IidManager::AddAttribute (uint16_t uid,
                           std::string name,
-                          std::string help, 
+                          std::string help,
                           uint32_t flags,
                           Ptr<const AttributeValue> initialValue,
                           Ptr<const AttributeAccessor> accessor,
@@ -398,7 +398,7 @@ IidManager::AddAttribute (uint16_t uid,
   struct IidInformation *information = LookupInformation (uid);
   if (HasAttribute (uid, name))
     {
-      NS_FATAL_ERROR ("Attribute \"" << name << "\" already registered on tid=\"" << 
+      NS_FATAL_ERROR ("Attribute \"" << name << "\" already registered on tid=\"" <<
                       information->name << "\"");
     }
   struct TypeId::AttributeInformation info;
@@ -411,7 +411,7 @@ IidManager::AddAttribute (uint16_t uid,
   info.checker = checker;
   information->attributes.push_back (info);
 }
-void 
+void
 IidManager::SetAttributeInitialValue(uint16_t uid,
                                      uint32_t i,
                                      Ptr<const AttributeValue> initialValue)
@@ -424,14 +424,14 @@ IidManager::SetAttributeInitialValue(uint16_t uid,
 
 
 
-uint32_t 
+uint32_t
 IidManager::GetAttributeN (uint16_t uid) const
 {
   NS_LOG_FUNCTION (this << uid);
   struct IidInformation *information = LookupInformation (uid);
   return information->attributes.size ();
 }
-struct TypeId::AttributeInformation 
+struct TypeId::AttributeInformation
 IidManager::GetAttribute(uint16_t uid, uint32_t i) const
 {
   NS_LOG_FUNCTION (this << uid << i);
@@ -468,9 +468,9 @@ IidManager::HasTraceSource (uint16_t uid,
   return false;
 }
 
-void 
+void
 IidManager::AddTraceSource (uint16_t uid,
-                            std::string name, 
+                            std::string name,
                             std::string help,
                             Ptr<const TraceSourceAccessor> accessor)
 {
@@ -478,23 +478,25 @@ IidManager::AddTraceSource (uint16_t uid,
   struct IidInformation *information  = LookupInformation (uid);
   if (HasTraceSource (uid, name))
     {
-      NS_FATAL_ERROR ("Trace source \"" << name << "\" already registered on tid=\"" << 
+      NS_FATAL_ERROR ("Trace source \"" << name << "\" already registered on tid=\"" <<
                       information->name << "\"");
     }
   struct TypeId::TraceSourceInformation source;
   source.name = name;
   source.help = help;
   source.accessor = accessor;
+  NS_LOG_UNCOND("Registering " << name << "\" with uid=\"" <<
+                      uid << "\"");
   information->traceSources.push_back (source);
 }
-uint32_t 
+uint32_t
 IidManager::GetTraceSourceN (uint16_t uid) const
 {
   NS_LOG_FUNCTION (this << uid);
   struct IidInformation *information = LookupInformation (uid);
   return information->traceSources.size ();
 }
-struct TypeId::TraceSourceInformation 
+struct TypeId::TraceSourceInformation
 IidManager::GetTraceSource(uint16_t uid, uint32_t i) const
 {
   NS_LOG_FUNCTION (this << uid << i);
@@ -502,7 +504,7 @@ IidManager::GetTraceSource(uint16_t uid, uint32_t i) const
   NS_ASSERT (i < information->traceSources.size ());
   return information->traceSources[i];
 }
-bool 
+bool
 IidManager::MustHideFromDocumentation (uint16_t uid) const
 {
   NS_LOG_FUNCTION (this << uid);
@@ -572,13 +574,13 @@ TypeId::LookupByHashFailSafe (hash_t hash, TypeId *tid)
   return true;
 }
 
-uint32_t 
+uint32_t
 TypeId::GetRegisteredN (void)
 {
   NS_LOG_FUNCTION_NOARGS ();
   return Singleton<IidManager>::Get ()->GetRegisteredN ();
 }
-TypeId 
+TypeId
 TypeId::GetRegistered (uint32_t i)
 {
   NS_LOG_FUNCTION (i);
@@ -607,35 +609,35 @@ TypeId::LookupAttributeByName (std::string name, struct TypeId::AttributeInforma
   return false;
 }
 
-TypeId 
+TypeId
 TypeId::SetParent (TypeId tid)
 {
   NS_LOG_FUNCTION (this << tid);
   Singleton<IidManager>::Get ()->SetParent (m_tid, tid.m_tid);
   return *this;
 }
-TypeId 
+TypeId
 TypeId::SetGroupName (std::string groupName)
 {
   NS_LOG_FUNCTION (this << groupName);
   Singleton<IidManager>::Get ()->SetGroupName (m_tid, groupName);
   return *this;
 }
-TypeId 
+TypeId
 TypeId::GetParent (void) const
 {
   NS_LOG_FUNCTION (this);
   uint16_t parent = Singleton<IidManager>::Get ()->GetParent (m_tid);
   return TypeId (parent);
 }
-bool 
+bool
 TypeId::HasParent (void) const
 {
   NS_LOG_FUNCTION (this);
   uint16_t parent = Singleton<IidManager>::Get ()->GetParent (m_tid);
   return parent != m_tid;
 }
-bool 
+bool
 TypeId::IsChildOf (TypeId other) const
 {
   NS_LOG_FUNCTION (this << other);
@@ -646,7 +648,7 @@ TypeId::IsChildOf (TypeId other) const
     }
   return tmp == other && *this != other;
 }
-std::string 
+std::string
 TypeId::GetGroupName (void) const
 {
   NS_LOG_FUNCTION (this);
@@ -654,7 +656,7 @@ TypeId::GetGroupName (void) const
   return groupName;
 }
 
-std::string 
+std::string
 TypeId::GetName (void) const
 {
   NS_LOG_FUNCTION (this);
@@ -669,7 +671,7 @@ TypeId::GetHash (void) const
   return hash;
 }
 
-bool 
+bool
 TypeId::HasConstructor (void) const
 {
   NS_LOG_FUNCTION (this);
@@ -684,9 +686,9 @@ TypeId::DoAddConstructor (Callback<ObjectBase *> cb)
   Singleton<IidManager>::Get ()->AddConstructor (m_tid, cb);
 }
 
-TypeId 
+TypeId
 TypeId::AddAttribute (std::string name,
-                      std::string help, 
+                      std::string help,
                       const AttributeValue &initialValue,
                       Ptr<const AttributeAccessor> accessor,
                       Ptr<const AttributeChecker> checker)
@@ -696,9 +698,9 @@ TypeId::AddAttribute (std::string name,
   return *this;
 }
 
-TypeId 
+TypeId
 TypeId::AddAttribute (std::string name,
-                      std::string help, 
+                      std::string help,
                       uint32_t flags,
                       const AttributeValue &initialValue,
                       Ptr<const AttributeAccessor> accessor,
@@ -709,8 +711,8 @@ TypeId::AddAttribute (std::string name,
   return *this;
 }
 
-bool 
-TypeId::SetAttributeInitialValue(uint32_t i, 
+bool
+TypeId::SetAttributeInitialValue(uint32_t i,
                                  Ptr<const AttributeValue> initialValue)
 {
   NS_LOG_FUNCTION (this << i << initialValue);
@@ -719,7 +721,7 @@ TypeId::SetAttributeInitialValue(uint32_t i,
 }
 
 
-Callback<ObjectBase *> 
+Callback<ObjectBase *>
 TypeId::GetConstructor (void) const
 {
   NS_LOG_FUNCTION (this);
@@ -727,7 +729,7 @@ TypeId::GetConstructor (void) const
   return cb;
 }
 
-bool 
+bool
 TypeId::MustHideFromDocumentation (void) const
 {
   NS_LOG_FUNCTION (this);
@@ -735,20 +737,20 @@ TypeId::MustHideFromDocumentation (void) const
   return mustHide;
 }
 
-uint32_t 
+uint32_t
 TypeId::GetAttributeN (void) const
 {
   NS_LOG_FUNCTION (this);
   uint32_t n = Singleton<IidManager>::Get ()->GetAttributeN (m_tid);
   return n;
 }
-struct TypeId::AttributeInformation 
+struct TypeId::AttributeInformation
 TypeId::GetAttribute(uint32_t i) const
 {
   NS_LOG_FUNCTION (this << i);
   return Singleton<IidManager>::Get ()->GetAttribute(m_tid, i);
 }
-std::string 
+std::string
 TypeId::GetAttributeFullName (uint32_t i) const
 {
   NS_LOG_FUNCTION (this << i);
@@ -756,20 +758,20 @@ TypeId::GetAttributeFullName (uint32_t i) const
   return GetName () + "::" + info.name;
 }
 
-uint32_t 
+uint32_t
 TypeId::GetTraceSourceN (void) const
 {
   NS_LOG_FUNCTION (this);
   return Singleton<IidManager>::Get ()->GetTraceSourceN (m_tid);
 }
-struct TypeId::TraceSourceInformation 
+struct TypeId::TraceSourceInformation
 TypeId::GetTraceSource(uint32_t i) const
 {
   NS_LOG_FUNCTION (this << i);
   return Singleton<IidManager>::Get ()->GetTraceSource(m_tid, i);
 }
 
-TypeId 
+TypeId
 TypeId::AddTraceSource (std::string name,
                         std::string help,
                         Ptr<const TraceSourceAccessor> accessor)
@@ -779,7 +781,7 @@ TypeId::AddTraceSource (std::string name,
   return *this;
 }
 
-TypeId 
+TypeId
 TypeId::HideFromDocumentation (void)
 {
   NS_LOG_FUNCTION (this);
@@ -788,7 +790,7 @@ TypeId::HideFromDocumentation (void)
 }
 
 
-Ptr<const TraceSourceAccessor> 
+Ptr<const TraceSourceAccessor>
 TypeId::LookupTraceSourceByName (std::string name) const
 {
   NS_LOG_FUNCTION (this << name);
@@ -796,9 +798,11 @@ TypeId::LookupTraceSourceByName (std::string name) const
   TypeId nextTid = *this;
   do {
       tid = nextTid;
+      NS_LOG_UNCOND("GetTraceSourceN ()" << GetTraceSourceN ());
       for (uint32_t i = 0; i < tid.GetTraceSourceN (); i++)
         {
           struct TypeId::TraceSourceInformation info = tid.GetTraceSource (i);
+          NS_LOG_UNCOND("info.name " << name);
           if (info.name == name)
             {
               return info.accessor;
@@ -809,13 +813,13 @@ TypeId::LookupTraceSourceByName (std::string name) const
   return 0;
 }
 
-uint16_t 
+uint16_t
 TypeId::GetUid (void) const
 {
   NS_LOG_FUNCTION (this);
   return m_tid;
 }
-void 
+void
 TypeId::SetUid (uint16_t tid)
 {
   NS_LOG_FUNCTION (this << tid);

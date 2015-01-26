@@ -45,6 +45,9 @@ public:
    * \return the object TypeId
    */
   static TypeId GetTypeId (void);
+
+  virtual TypeId GetInstanceTypeId (void) const;
+
   /**
    * \brief Constructor
    * \param n initial Sequence number to be transmitted

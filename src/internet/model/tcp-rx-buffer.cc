@@ -27,6 +27,8 @@ NS_LOG_COMPONENT_DEFINE ("TcpRxBuffer");
 
 namespace ns3 {
 
+NS_OBJECT_ENSURE_REGISTERED (TcpRxBuffer);
+
 TypeId
 TcpRxBuffer::GetTypeId (void)
 {
@@ -47,6 +49,14 @@ TcpRxBuffer::GetTypeId (void)
   ;
   return tid;
 }
+
+TypeId
+TcpRxBuffer::GetInstanceTypeId (void) const
+{
+  return GetTypeId();
+}
+
+
 
 /* A user is supposed to create a TcpSocket through a factory. In TcpSocket,
  * there are attributes SndBufSize and RcvBufSize to control the default Tx and
