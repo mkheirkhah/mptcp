@@ -309,6 +309,9 @@ MpTcpSocketBase::SetPeerKey(uint64_t remoteKey)
 
   //! TODO generate remote token/IDSN
   MpTcpSocketBase::GenerateTokenForKey(MPTCP_SHA1,m_peerKey,m_peerToken,idsn);
+
+  //! TODO Set in TcpSocketBase an attribute to enable idsn random
+  // motivation is that it's clearer to plot from 0
   m_rxBuffer.SetNextRxSequence( SequenceNumber32( (uint32_t)idsn )); // + 1 ?
 }
 

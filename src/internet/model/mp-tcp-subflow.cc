@@ -1630,53 +1630,6 @@ MpTcpSubFlow::SetupMetaTracing(const std::string prefix)
 {
 //  f.open(filename, std::ofstream::out | std::ofstream::trunc);
   SetupSocketTracing(this, prefix);
-#if 0
-  std::ios::openmode mode = std::ofstream::out | std::ofstream::trunc;
-  AsciiTraceHelper asciiTraceHelper;
-  Ptr<OutputStreamWrapper> streamNextTx = asciiTraceHelper.CreateFileStream (prefix+"_nextTx.csv", mode);
-  Ptr<OutputStreamWrapper> streamHighest = asciiTraceHelper.CreateFileStream (prefix+"_highest.csv", mode);
-  Ptr<OutputStreamWrapper> streamRxNext = asciiTraceHelper.CreateFileStream (prefix+"_RxNext.csv", mode);
-  Ptr<OutputStreamWrapper> streamRxAvailable = asciiTraceHelper.CreateFileStream (prefix+"_RxAvailable.csv", mode);
-  Ptr<OutputStreamWrapper> streamRxTotal = asciiTraceHelper.CreateFileStream (prefix+"_RxTotal.csv", mode);
-  Ptr<OutputStreamWrapper> streamTx = asciiTraceHelper.CreateFileStream (prefix+"_Tx.csv", mode);
-  Ptr<OutputStreamWrapper> streamStates = asciiTraceHelper.CreateFileStream (prefix+"_states.csv", mode);
-  Ptr<OutputStreamWrapper> streamCwnd = asciiTraceHelper.CreateFileStream (prefix+"_cwnd.csv",mode);
-  Ptr<OutputStreamWrapper> streamRwnd = asciiTraceHelper.CreateFileStream (prefix+"_rwnd.csv", mode);
-
-  *streamNextTx->GetStream() << "Time,oldNextTxSequence,newNextTxSequence" << std::endl;
-  *streamHighest->GetStream() << "Time,oldHighestSequence,newHighestSequence" << std::endl;
-  *streamRxAvailable->GetStream() << "Time,oldRxAvailable,newRxAvailable" << std::endl;
-  *streamRxTotal->GetStream() << "Time,oldRxTotal,newRxTotal" << std::endl;
-  *streamTx->GetStream() << "Time,oldTx,newTx" << std::endl;
-  *streamCwnd->GetStream() << "Time,oldCwnd,newCwnd" << std::endl;
-  *streamStates->GetStream() << "Time,oldState,newState\n"<< std::endl;
-  *streamRwnd->GetStream() << "Time,oldRwnd,newRwnd" << std::endl;
-//  , HighestSequence, RWND\n";
-
-//  NS_ASSERT(f.is_open());
-
-  // TODO je devrais etre capable de voir les CongestionWindow + tailles de buffer/ Out of order
-//  CongestionWindow
-  Ptr<MpTcpSubFlow> sock(this);
-  NS_ASSERT(sock->TraceConnect ("NextTxSequence", "NextTxSequence", MakeBoundCallback(&dumpNextTxSequence, streamNextTx)));
-//  sock->TraceConnect ("NextTxSequence", "NextTxSequence", MakeBoundCallback(&dumpNextTxSequence, streamNextTx) );
-//  sock->TraceConnectWithoutContext ("NextTxSequence", MakeBoundCallback(&dumpNextTxSequence, stream) );
-//  sock->TraceConnect ("NextTxSequence", "server", MakeBoundCallback(&dumpNextTxSequence) );
-  NS_ASSERT(sock->TraceConnect ("CongestionWindow", "CongestionWindow", MakeBoundCallback(&dumpUint32, streamCwnd)));
-  NS_ASSERT(sock->TraceConnect ("State", "State", MakeBoundCallback(&dumpTcpState, streamStates)));
-
-
-  NS_ASSERT(sock->TraceConnect ("HighestSequence", "HighestSequence", MakeBoundCallback(&dumpNextTxSequence, streamHighest)));
-
-//  Ptr<MpTcpSocketBase> sock2 = DynamicCast<MpTcpSocketBase>(sock);
-//  NS_ASSERT(sock->m_rxBuffer.TraceConnect ("RxTotal", "RxTotal", MakeBoundCallback(&dumpNextTxSequence, streamRxTotal)));
-//  NS_ASSERT(sock->m_rxBuffer.TraceConnect ("NextRxSequence", "NextRxSequence", MakeBoundCallback(&dumpNextTxSequence, streamRxAvailable)));
-//  NS_ASSERT(sock->m_rxBuffer.TraceConnect ("RxAvailable", "RxAvailable", MakeBoundCallback(&dumpNextTxSequence, streamRxAvailable)));
-
-//  NS_ASSERT(sock->m_txBuffer.TraceConnect ("UnackSequence", "UnackSequence", MakeBoundCallback(&dumpNextTxSequence, streamTx)));
-  //sock->TraceConnect ("RWND", "RWND", MakeBoundCallback(&dumpUint32), stream);
-  NS_ASSERT(sock->TraceConnect ("RWND", "Remote WND", MakeBoundCallback(&dumpUint32, streamRwnd)));
-  #endif
 }
 
 
