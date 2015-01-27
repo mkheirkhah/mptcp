@@ -19,16 +19,20 @@ if (!exists("term")) {
 	ext="png"
 }
 
-if (!exists("output_filename")) {
-
-	output_filename='output.png'
+if (!exists("output")) {
+	print("Missing parameter 'output'")
+	# output='output.png'
+	exit gnuplot
 }
 
-# if (!exists("datafile")) {
-# 	print("Missing parameter 'datafile'")
-# 	exit gnuplot
-# }
-
+if (!exists("node")) {
+	print("Missing parameter 'node'")
+	exit gnuplot
+}
+if (!exists("prefix")) {
+	print("Missing parameter 'prefix'")
+	exit gnuplot
+}
 
 # set terminal term
 
@@ -39,7 +43,11 @@ set terminal png size 800,600
 # set terminal pdf monochrome solid font 'Helvetica,14' size 16cm,12cm
 
 # set terminal interactive
-set output output_filename
+# output = sprintf("%s.%s",output, ext)
+set output output
+
+print "Node=", node, "  Prefix=", prefix
+print "output:", output
 
 # Places of the legend
 set key right top
@@ -72,7 +80,7 @@ set key font ",14"
 
 # we can put comments !!!!
 set datafile commentschars "#"
-set datafile separator "|" 
+set datafile separator "," 
 
 set style line 1 lt 1 lw 2
 set style line 2 lt 3 lw 2

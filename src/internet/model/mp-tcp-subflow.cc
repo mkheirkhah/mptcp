@@ -1629,6 +1629,8 @@ void
 MpTcpSubFlow::SetupMetaTracing(const std::string prefix)
 {
 //  f.open(filename, std::ofstream::out | std::ofstream::trunc);
+  SetupSocketTracing(this, prefix);
+#if 0
   std::ios::openmode mode = std::ofstream::out | std::ofstream::trunc;
   AsciiTraceHelper asciiTraceHelper;
   Ptr<OutputStreamWrapper> streamNextTx = asciiTraceHelper.CreateFileStream (prefix+"_nextTx.csv", mode);
@@ -1674,6 +1676,7 @@ MpTcpSubFlow::SetupMetaTracing(const std::string prefix)
 //  NS_ASSERT(sock->m_txBuffer.TraceConnect ("UnackSequence", "UnackSequence", MakeBoundCallback(&dumpNextTxSequence, streamTx)));
   //sock->TraceConnect ("RWND", "RWND", MakeBoundCallback(&dumpUint32), stream);
   NS_ASSERT(sock->TraceConnect ("RWND", "Remote WND", MakeBoundCallback(&dumpUint32, streamRwnd)));
+  #endif
 }
 
 

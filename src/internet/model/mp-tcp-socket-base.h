@@ -33,6 +33,10 @@ class MpTcpCongestionControl;
 class TcpOptionMpTcpDSS;
 class OutputStreamWrapper;
 
+
+void
+SetupSocketTracing(Ptr<TcpSocketBase> sock, const std::string prefix);
+
 void
 dumpNextTxSequence(Ptr<OutputStreamWrapper> stream, std::string context, SequenceNumber32 oldSeq, SequenceNumber32 newSeq);
 

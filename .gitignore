@@ -1,5 +1,5 @@
 /build
-/.waf-1.7.13-5a064c2686fe54de4e11018d22148cfc
+/.waf*
 /.lock-waf_darwin_build
 *.pyc
 *.png
@@ -17,3 +17,7 @@ testpy-output/*
 Dl*
 Ul*
 *.csv
+server_*
+source_*
+mptcptrace_info
+

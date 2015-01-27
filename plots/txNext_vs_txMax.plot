@@ -3,25 +3,14 @@
 ######################################
 load 'common.plot'
 
-set output "tx.png"
+# set output sprintf("%s_%s_tx.png", node, prefix)
 
-#sprintf("Real Forward OWD0 %d",$4)
-# "::2" to start at the 2nd line (http://babilonline.blogspot.fr/2010/06/gnuplot-skipping-header-line-from-input.html)
-
-x_axis="time"
-# TODO: corriger le calcul ici
-# removed the "every ::2" because of columns
-# $ <=> column()
-# http://stackoverflow.com/questions/19003717/gnuplot-using-a-string-variable-to-define-columns
+x_axis="Time"
 
 # Left/Right/Top/Bottom
-set offset graph 0.0, graph 0.0, graph 0.35, graph 0.1
+# set offset graph 0.0, graph 0.0, graph 0.35, graph 0.1
+set title sprintf("%s %s: Highest Tx vs NextTx", node, prefix)
 
-# TODO la je ne peux pas faire ca c faux :/
 plot  \
-	prefix+"Tx.csv"  using x_axis:"newTx" with linespoints pointtype 3 title "TxNext", \
-	prefix+"highest.csv" using x_axis:"newHighestSequence" with linespoints pointtype 1 title "TxMax"
-	# "" using x_axis:"estimatedForwardDelta" with linespoints pointtype 6 title "Estimated forward difference in OWD", \
-	# "" using x_axis:"EstimatedReverseDelta" with linespoints pointtype 2 title "Estimated reverse difference in OWD"
-
-#with lines
+	sprintf("%s/%sTx.csv", node, prefix)  using x_axis:"newTx" with linespoints pointtype 3 title "TxNext", \
+	sprintf("%s/%shighest.csv", node, prefix) using x_axis:"newHighestSequence" with linespoints pointtype 1 title "TxMax"

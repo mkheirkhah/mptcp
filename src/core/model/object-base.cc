@@ -287,7 +287,7 @@ ObjectBase::TraceConnect (std::string name, std::string context, const CallbackB
 {
   NS_LOG_FUNCTION (this << name << context << &cb);
   TypeId tid = GetInstanceTypeId ();
-  NS_LOG_UNCOND( "GetInstanceTypeId=" << tid);
+//  NS_LOG_UNCOND( "GetInstanceTypeId=" << tid);
   Ptr<const TraceSourceAccessor> accessor = tid.LookupTraceSourceByName (name);
   if (accessor == 0)
     {
