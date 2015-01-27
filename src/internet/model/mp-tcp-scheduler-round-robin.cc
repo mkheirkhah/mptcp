@@ -97,7 +97,17 @@ MpTcpSchedulerRoundRobin::GenerateMappings(MappingVector& mappings)
     //m_metaSock->
     Ptr<MpTcpSubFlow> sf = m_metaSock->GetSubflow(m_lastUsedFlowId);
     uint32_t window = sf->AvailableWindow(); // Get available window size
-    sf->DumpInfo();
+//    sf->DumpInfo();
+
+      NS_LOG_LOGIC ("MpTcpSubFlow " << sf << " SendPendingData" <<
+//          " w " << w <<
+//          " rxwin " << sf->m_rWnd <<
+//          " segsize " << sf->m_segmentSize <<
+          " nextTxSeq " << sf->m_nextTxSequence <<
+          " highestRxAck " << sf->m_txBuffer.HeadSequence () <<
+          " pd->Size " << sf->m_txBuffer.Size () <<
+          " pd->SFS " << sf->m_txBuffer.SizeFromSequence (sf->m_nextTxSequence)
+          );
 
       // Quit if send disallowed
 //    if (sf->m_shutdownSend)

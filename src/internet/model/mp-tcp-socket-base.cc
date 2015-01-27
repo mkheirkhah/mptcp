@@ -312,9 +312,9 @@ MpTcpSocketBase::SetPeerKey(uint64_t remoteKey)
 
   //! TODO Set in TcpSocketBase an attribute to enable idsn random
   // motivation is that it's clearer to plot from 0
-  m_rxBuffer.SetNextRxSequence( SequenceNumber32( (uint32_t)idsn )); // + 1 ?
+  m_rxBuffer.SetNextRxSequence(SequenceNumber32( (uint32_t)idsn )); // + 1 ?
 }
-
+//SetNextRxSequence
 
 
 
@@ -732,7 +732,7 @@ MpTcpSocketBase::OnSubflowRecv( Ptr<MpTcpSubFlow> sf )
   {
     NS_LOG_INFO("sf->GetRxAvailable [" << sf->GetRxAvailable() << "]");
 
-    p = sf->RecvWithMapping ( canRead, dsn);
+    p = sf->RecvWithMapping(canRead, dsn);
 
     // Pb here, htis will be extracted but will not be saved into the main buffer
     // TODO check for dsn ?
@@ -743,13 +743,13 @@ MpTcpSocketBase::OnSubflowRecv( Ptr<MpTcpSubFlow> sf )
       if (!m_rxBuffer.Add(p, dsn))
         { // Insert failed: No data or RX buffer full
     //      SendEmptyPacket(TcpHeader::ACK);
-          NS_LOG_ERROR("This should not happen !! DSN might be wrong ?! ");
+          NS_FATAL_ERROR("This should not happen !! DSN might be wrong ?! ");
           return;
         }
       if (m_rxBuffer.Size() > m_rxBuffer.Available() || m_rxBuffer.NextRxSequence() > expectedDSN + p->GetSize())
         { // A gap exists in the buffer, or we filled a gap: Always ACK
     //      SendEmptyPacket(TcpHeader::ACK);
-          NS_LOG_DEBUG ("Look into !");
+          NS_FATAL_ERROR("Look into !");
         }
       else
         {
@@ -1500,7 +1500,10 @@ MpTcpSocketBase::SendPendingData(bool withAck)
     NS_LOG_DEBUG("Sending mapping "<< mapping << " on subflow #" << it->first);
 
     //sf->AddMapping();
-    int ret = sf->SendMapping(m_txBuffer.CopyFromSequence(mapping.GetLength(), mapping.HeadDSN()), mapping);
+    Ptr<Packet> p = m_txBuffer.CopyFromSequence(mapping.GetLength(), mapping.HeadDSN());
+    NS_ASSERT(p->GetSize() == mapping.GetLength());
+
+    int ret = sf->SendMapping(p, mapping);
 
 
     if( ret < 0)
@@ -1526,8 +1529,9 @@ MpTcpSocketBase::SendPendingData(bool withAck)
       // Maybe the max is unneeded; I put it here
     if( mapping.HeadDSN() <= m_nextTxSequence && mapping.TailDSN() >= m_nextTxSequence) {
       m_nextTxSequence = mapping.TailDSN() + 1;
-      m_highTxMark = std::max( m_highTxMark.Get(), mapping.TailDSN());
     }
+
+    m_highTxMark = std::max( m_highTxMark.Get(), mapping.TailDSN());
 //      m_nextTxSequence = std::max(m_nextTxSequence.Get(), mapping.TailDSN() + 1);
 
 
@@ -1884,12 +1888,12 @@ SetupSocketTracing(Ptr<TcpSocketBase> sock, const std::string prefix)
   std::ios::openmode mode = std::ofstream::out | std::ofstream::trunc;
 
   AsciiTraceHelper asciiTraceHelper;
-  Ptr<OutputStreamWrapper> streamNextTx = asciiTraceHelper.CreateFileStream (prefix+"_nextTx.csv", mode);
-  Ptr<OutputStreamWrapper> streamHighest = asciiTraceHelper.CreateFileStream (prefix+"_highest.csv", mode);
+  Ptr<OutputStreamWrapper> streamNextTx = asciiTraceHelper.CreateFileStream (prefix+"_TxNext.csv", mode);
+  Ptr<OutputStreamWrapper> streamHighest = asciiTraceHelper.CreateFileStream (prefix+"_TxHighest.csv", mode);
   Ptr<OutputStreamWrapper> streamRxAvailable = asciiTraceHelper.CreateFileStream (prefix+"_RxAvailable.csv", mode);
   Ptr<OutputStreamWrapper> streamRxTotal = asciiTraceHelper.CreateFileStream (prefix+"_RxTotal.csv", mode);
   Ptr<OutputStreamWrapper> streamRxNext = asciiTraceHelper.CreateFileStream (prefix+"_RxNext.csv", mode);
-  Ptr<OutputStreamWrapper> streamTx = asciiTraceHelper.CreateFileStream (prefix+"_Tx.csv", mode);
+  Ptr<OutputStreamWrapper> streamTxUnack = asciiTraceHelper.CreateFileStream (prefix+"_TxUnack.csv", mode);
   Ptr<OutputStreamWrapper> streamStates = asciiTraceHelper.CreateFileStream (prefix+"_states.csv", mode);
   Ptr<OutputStreamWrapper> streamCwnd = asciiTraceHelper.CreateFileStream (prefix+"_cwnd.csv", mode);
   Ptr<OutputStreamWrapper> streamRwnd = asciiTraceHelper.CreateFileStream (prefix+"_rwnd.csv", mode);
@@ -1900,7 +1904,7 @@ SetupSocketTracing(Ptr<TcpSocketBase> sock, const std::string prefix)
   //NextRxSequence
   *streamRxAvailable->GetStream() << "Time,oldRxAvailable,newRxAvailable" << std::endl;
   *streamRxTotal->GetStream() << "Time,oldRxTotal,newRxTotal" << std::endl;
-  *streamTx->GetStream() << "Time,oldTx,newTx" << std::endl;
+  *streamTxUnack->GetStream() << "Time,oldUnackSequence,newUnackSequence" << std::endl;
   *streamCwnd->GetStream() << "Time,oldCwnd,newCwnd" << std::endl;
   *streamRwnd->GetStream() << "Time,oldRwnd,newRwnd" << std::endl;
   *streamStates->GetStream() << "Time,oldState,newState" << std::endl;
@@ -1923,7 +1927,7 @@ SetupSocketTracing(Ptr<TcpSocketBase> sock, const std::string prefix)
 //  NS_ASSERT(txBuffer->TraceConnect ("UnackSequence", "UnackSequence", MakeBoundCallback(&dumpNextTxSequence, streamTx)));
 
 //  NS_LOG_UNCOND("Starting research !!");
-  NS_ASSERT(sock->m_txBuffer.TraceConnect ("UnackSequence", "UnackSequence", MakeBoundCallback(&dumpNextTxSequence, streamTx)));
+  NS_ASSERT(sock->m_txBuffer.TraceConnect ("UnackSequence", "UnackSequence", MakeBoundCallback(&dumpNextTxSequence, streamTxUnack)));
 
   NS_ASSERT(sock->m_rxBuffer.TraceConnect ("NextRxSequence", "NextRxSequence", MakeBoundCallback(&dumpNextTxSequence, streamRxNext) ));
   NS_ASSERT(sock->m_rxBuffer.TraceConnect ("RxTotal", "RxTotal", MakeBoundCallback(&dumpUint32, streamRxTotal) ));

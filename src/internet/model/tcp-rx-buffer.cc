@@ -80,6 +80,12 @@ TcpRxBuffer::~TcpRxBuffer ()
 //TcpRxBuffer::
 //  m_data.first().GetKey()
 
+SequenceNumber32
+TcpRxBuffer::GetHeadRxSequence(void) const
+{
+
+  return NextRxSequence()-Available();
+}
 
 SequenceNumber32
 TcpRxBuffer::NextRxSequence (void) const

@@ -3,7 +3,7 @@ TODO list:
 
 Bugs:
 * I don't register the rWnd during connection establishement apparently
-* 
+* Msubflow::NewAck does not do enough 
 
 
 List of tests:

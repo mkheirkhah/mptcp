@@ -534,6 +534,7 @@ MpTcpSubFlow::SendDataPacket(TcpHeader& header, const SequenceNumber32& ssn, uin
 /*
 behavior should be the same as in TcpSocketBase
 TODO check if m_cWnd is
+
 */
 void
 MpTcpSubFlow::Retransmit(void)
@@ -544,10 +545,12 @@ MpTcpSubFlow::Retransmit(void)
 
   // If erroneous timeout in closed/timed-wait state, just return
   if (m_state == CLOSED || m_state == TIME_WAIT) {
+    NS_LOG_WARN("erroneous timeout");
     return;
   }
   // If all data are received (non-closing socket and nothing to send), just return
   if (m_state <= ESTABLISHED && m_txBuffer.HeadSequence () >= m_highTxMark) {
+    NS_FATAL_ERROR("May be removed");
     return;
   }
 
@@ -557,8 +560,12 @@ MpTcpSubFlow::Retransmit(void)
   m_ssThresh = std::max (2 * m_segmentSize, BytesInFlight () / 2);
   m_cWnd = m_segmentSize;
   m_nextTxSequence = m_txBuffer.HeadSequence (); // Restart from highest Ack
-  NS_LOG_INFO ("RTO. Reset cwnd to " << m_cWnd <<
+  NS_LOG_INFO ("RTO. " << m_rtt->RetransmitTimeout << " Reset cwnd to " << m_cWnd <<
                ", ssthresh to " << m_ssThresh << ", restart from seqnum " << m_nextTxSequence);
+
+
+  GetMeta()->OnSubflowRetransmit(this);
+
   m_rtt->IncreaseMultiplier ();             // Double the next RTO
   DoRetransmit ();                          // Retransmit the packet
 
@@ -566,7 +573,7 @@ MpTcpSubFlow::Retransmit(void)
 
 //  NS_FATAL_ERROR("TODO retransmit");
   // pass on mapping
-  GetMeta()->OnSubflowRetransmit(this);
+
 
 }
 
@@ -1421,6 +1428,7 @@ MpTcpSubFlow::NewAck(SequenceNumber32 const& ack)
 {
   NS_LOG_FUNCTION (this << ack);
 
+
   MpTcpMapping mapping;
 
   // TODO move elsewhere on rece
@@ -1433,7 +1441,10 @@ MpTcpSubFlow::NewAck(SequenceNumber32 const& ack)
   NS_LOG_FUNCTION (this << ack);
   NS_LOG_LOGIC ("Subflow receieved ACK for seq " << ack <<
                 " cwnd " << m_cWnd <<
-                " ssthresh " << m_ssThresh);
+                " ssthresh " << m_ssThresh
+              );
+
+
 
   // Check for exit condition of fast recovery
   if (m_inFastRec)
@@ -1468,6 +1479,80 @@ MpTcpSubFlow::NewAck(SequenceNumber32 const& ack)
     }
 
 
+
+
+  if (m_state != SYN_RCVD)
+    { // Set RTO unless the ACK is received in SYN_RCVD state
+      NS_LOG_LOGIC (this << " Cancelled ReTxTimeout event which was set to expire at " <<
+          (Simulator::Now () + Simulator::GetDelayLeft (m_retxEvent)).GetSeconds ());
+      m_retxEvent.Cancel();
+      // On recieving a "New" ack we restart retransmission timer .. RFC 2988
+      m_rto = m_rtt->RetransmitTimeout();
+      NS_LOG_LOGIC (this << " Schedule ReTxTimeout at time " <<
+          Simulator::Now ().GetSeconds () << " to expire at time " <<
+          (Simulator::Now () + m_rto.Get ()).GetSeconds ());
+      m_retxEvent = Simulator::Schedule(m_rto, &MpTcpSubFlow::ReTxTimeout, this);
+    }
+
+  if (m_rWnd.Get() == 0 && m_persistEvent.IsExpired())
+    { // Zero window: Enter persist state to send 1 byte to probe
+      NS_LOG_LOGIC (this << "Enter zerowindow persist state");NS_LOG_LOGIC (this << "Cancelled ReTxTimeout event which was set to expire at " <<
+          (Simulator::Now () + Simulator::GetDelayLeft (m_retxEvent)).GetSeconds ());
+      m_retxEvent.Cancel();
+      NS_LOG_LOGIC ("Schedule persist timeout at time " <<
+          Simulator::Now ().GetSeconds () << " to expire at time " <<
+          (Simulator::Now () + m_persistTimeout).GetSeconds ());
+      m_persistEvent = Simulator::Schedule(m_persistTimeout, &MpTcpSubFlow::PersistTimeout, this);
+      NS_ASSERT(m_persistTimeout == Simulator::GetDelayLeft (m_persistEvent));
+    }
+
+  // Note the highest ACK and tell app to send more
+  NS_LOG_LOGIC ("TCP " << this << " NewAck " << ack <<
+      " numberAck " << (ack - m_txBuffer.HeadSequence ())); // Number bytes ack'ed
+
+  // TODO: get mapping associated with that Ack and
+  MpTcpMapping mapping;
+  if(!m_TxMappings.GetMappingForSSN(ack, mapping) ) {
+//    m_txBuffer.DiscardUpTo(ack);
+    // TODO check if all mappings below that are acked before removing them
+    NS_LOG_WARN("Late ack ! Dumping Tx Mappings");
+    m_TxMappings.Dump();
+  }
+  else {
+//      std::distance(s.begin(), s.lower_bound(x))
+  #error
+  }
+
+// TODO
+
+
+  if (GetTxAvailable() > 0)
+    {
+      // Ok, va appeler la meta
+      NotifySend(GetTxAvailable());
+    }
+
+  if (ack > m_nextTxSequence)
+    {
+      m_nextTxSequence = ack; // If advanced
+    }
+
+  if (m_txBuffer.Size() == 0 && m_state != FIN_WAIT_1 && m_state != CLOSING)
+    { // No retransmit timer if no data to retransmit
+      NS_LOG_WARN (this << " Cancelled ReTxTimeout event which was set to expire at " <<
+          (Simulator::Now () + Simulator::GetDelayLeft (m_retxEvent)).GetSeconds ());
+      m_retxEvent.Cancel();
+      return;
+    }
+
+  if (m_txBuffer.Size() == 0)
+    {
+//      throughput = 10000000 * 8 / (Simulator::Now().GetSeconds() - fLowStartTime);
+//      NS_LOG_UNCOND("goodput -> " << throughput / 1000000 << " Mbps {Tx Buffer is now empty}  P-AckHits:" << pAckHit);
+      return;
+    }
+  // Try to send more data
+  SendPendingData(m_connected);
 
 //  TcpSocketBase::NewAck( ack );
   // WRONG  they can be sparse. This should be done by meta
@@ -1576,7 +1661,8 @@ MpTcpSubFlow::RecvWithMapping( uint32_t maxSize, SequenceNumber32 &dsn)
   /// will be extracted from the TcpRxBuffer
   /// TODO That would do a nice addition to the TcpRxBuffer
   // sthg liek GetHead/MinSeq
-  SequenceNumber32 headSSN = m_rxBuffer.NextRxSequence()-m_rxBuffer.Available();
+//  SequenceNumber32 headSSN = m_rxBuffer.NextRxSequence()-m_rxBuffer.Available();
+  SequenceNumber32 headSSN = m_rxBuffer.GetHeadRxSequence();
 
   NS_LOG_LOGIC("Extracting from SSN [" << headSSN << "]");
   //SequenceNumber32 headDSN;
@@ -1596,6 +1682,7 @@ MpTcpSubFlow::RecvWithMapping( uint32_t maxSize, SequenceNumber32 &dsn)
   //std::min(maxSize, (uint32_t)mapping.GetLength() )
   Ptr<Packet> outPacket = m_rxBuffer.Extract( maxSize );
 
+//  NS_ASSERT(outPacket->GetSize());
   return outPacket;
 }
 

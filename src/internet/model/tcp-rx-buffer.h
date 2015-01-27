@@ -74,6 +74,13 @@ public:
    * \returns Next Rx Sequence number
    */
   SequenceNumber32 NextRxSequence (void) const;
+
+  /**
+  * \return First in order sequence sumber
+  *
+  **/
+  SequenceNumber32 GetHeadRxSequence(void) const;
+
   /**
    * \brief Get the lowest sequence number that this TcpRxBuffer cannot accept
    * \returns the lowest sequence number that this TcpRxBuffer cannot accept
