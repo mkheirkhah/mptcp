@@ -203,15 +203,17 @@ public:
 
   /**
   * \param dsn will set the dsn of the beginning of the data
+  * \param only_full_mappings Set to true if you want to extract only packets that match a whole mapping
+  * \param dsn returns the head DSN of the returned packet
+  *
   * \return this can return an EmptyPacket if on close
   * Use a maxsize param ? if buffers linked then useless ?
   *
-  * There may be packets belonging to different mappings. This function should be called until it returns an empty packet
-  * uint32_t maxSize,
   */
   virtual Ptr<Packet>
-  RecvWithMapping(uint32_t maxSize, SequenceNumber32 &dsn);
-
+//  RecvWithMapping(uint32_t maxSize, bool only_full_mappings, SequenceNumber32 &dsn);
+//  Ptr<Packet>
+  ExtractAtMostOneMapping(uint32_t maxSize, bool only_full_mappings, SequenceNumber32& dsn);
 
   //! TODO should notify upper layer
 //  virtual void
@@ -488,6 +490,8 @@ protected:
 //private:
 
 private:
+
+
   bool m_backupSubflow; //!< Priority
   bool m_masterSocket;  //!< True if this is the first subflow established (with MP_CAPABLE)
 

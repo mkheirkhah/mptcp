@@ -485,8 +485,7 @@ IidManager::AddTraceSource (uint16_t uid,
   source.name = name;
   source.help = help;
   source.accessor = accessor;
-  NS_LOG_UNCOND("Registering " << name << "\" with uid=\"" <<
-                      uid << "\"");
+//  NS_LOG_UNCOND("Registering " << name << "\" with uid=\"" << uid << "\"");
   information->traceSources.push_back (source);
 }
 uint32_t
@@ -798,11 +797,11 @@ TypeId::LookupTraceSourceByName (std::string name) const
   TypeId nextTid = *this;
   do {
       tid = nextTid;
-      NS_LOG_UNCOND("GetTraceSourceN ()" << GetTraceSourceN ());
+//      NS_LOG_UNCOND("GetTraceSourceN ()" << GetTraceSourceN ());
       for (uint32_t i = 0; i < tid.GetTraceSourceN (); i++)
         {
           struct TypeId::TraceSourceInformation info = tid.GetTraceSource (i);
-          NS_LOG_UNCOND("info.name " << name);
+//          NS_LOG_UNCOND("info.name " << name);
           if (info.name == name)
             {
               return info.accessor;

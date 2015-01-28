@@ -220,8 +220,10 @@ class MpTcpMappingContainer
     void
     Dump();
 
-  // TODO
+
   /**
+  TODO this one generates disturbing logs, we should do it otherwise
+
   Will map the mapping to the first unmapped SSN
   \return Same value as for AddMappingEnforceSSN
   */
@@ -242,22 +244,6 @@ class MpTcpMappingContainer
   bool
   GetMappingForSSN( const SequenceNumber32& ssn, MpTcpMapping& m);
 
-    #if 0
-  //const MappingList& l,
-  /**
-   * Returns the first byte's sequence number
-   * \returns the first byte's sequence number
-   */
-   // TODO rename into head DSN, /SSN ?
-  SequenceNumber32 HeadSequence (void) const;
-
-  /**
-   * Returns the last byte's sequence number + 1
-   * \returns the last byte's sequence number + 1
-   */
-  SequenceNumber32 TailSequence (void) const;
-
-  #endif
 
 //  TracedValue<SequenceNumber32> m_highestMappedSSN; //!<
 

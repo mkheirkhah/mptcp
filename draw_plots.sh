@@ -44,4 +44,12 @@ done
 
 montage server_recap.png source_recap.png -tile 2x1 -geometry +1+1 all.png 
 
-xdg-open all.png
+
+cmd="xdg-open all.png"
+
+echo $cmd
+
+shift
+if [ $# -gt 0 ]; then
+	eval $cmd
+fi

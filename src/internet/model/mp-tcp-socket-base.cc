@@ -314,7 +314,6 @@ MpTcpSocketBase::SetPeerKey(uint64_t remoteKey)
   // motivation is that it's clearer to plot from 0
   m_rxBuffer.SetNextRxSequence(SequenceNumber32( (uint32_t)idsn )); // + 1 ?
 }
-//SetNextRxSequence
 
 
 
@@ -440,6 +439,8 @@ MpTcpSocketBase::CompleteFork(Ptr<Packet> p, const TcpHeader& mptcpHeader, const
 //  NS_ASSERT( GetNActiveSubflows() == 0);
 //  m_subflows.clear();
   m_subflows[Others].push_back( sFlow );
+
+
 
   Simulator::ScheduleNow(&MpTcpSubFlow::CompleteFork, sFlow, p, mptcpHeader, fromAddress, toAddress);
 
@@ -705,96 +706,51 @@ TODO the decision to ack is unclear with this structure.
 May return a bool to let subflow know if it should return a ack ?
 it would leave the possibility for meta to send ack on another subflow
 
-NotifySend(
+We have to extract data from subflows on a per mapping basis because mappings
+may not necessarily be contiguous
 **/
 void
-MpTcpSocketBase::OnSubflowRecv( Ptr<MpTcpSubFlow> sf )
+MpTcpSocketBase::OnSubflowRecv(Ptr<MpTcpSubFlow> sf)
 {
-  //!
   NS_LOG_FUNCTION(this << "Received data from " << sf);
 
-  NS_ASSERT(IsConnected());
-//  Ptr<MpTcpSubFlow> sf = DynamicCast<MpTcpSubFlow>(sock);
+//  NS_ASSERT(IsConnected());
 
-  //while (sock->GetRxAvailable () > 0 && m_currentSourceRxBytes < m_totalBytes)
-  //{
-//  uint32_t toRead = std::min (m_sourceReadSize, sock->GetRxAvailable () );
-  //Ptr<Packet> p = sock->Recv (toRead, 0);
-  SequenceNumber32 dsn;
   SequenceNumber32 expectedDSN = m_rxBuffer.NextRxSequence();
 
-  Ptr<Packet> p;
+  /* Extract one by one mappings from subflow */
+  while(true) {
 
-  uint32_t canRead = m_rxBuffer.MaxBufferSize() - m_rxBuffer.Size();
-  NS_LOG_INFO("Rcv buf max size [" << GetRcvBufSize() << "]");
-  NS_LOG_INFO("Can read [" << canRead << "]");
-  while( (canRead > 0) && (sf->GetRxAvailable() > 0) )
-  {
-    NS_LOG_INFO("sf->GetRxAvailable [" << sf->GetRxAvailable() << "]");
+    Ptr<Packet> p;
+    SequenceNumber32 dsn;
+    uint32_t canRead = m_rxBuffer.MaxBufferSize() - m_rxBuffer.Size();
 
-    p = sf->RecvWithMapping(canRead, dsn);
+    if(canRead <= 0) {
+      NS_LOG_LOGIC("No free space in meta Rx Buffer");
+      break;
+    }
 
+    /* Todo tell if we stop to extract only between mapping boundaries or if
+    Extract
+    */
+    p = sf->ExtractAtMostOneMapping(canRead, false, dsn);
+
+    if (p->GetSize() == 0)
+    {
+      NS_LOG_DEBUG("packet extracted empty.");
+      break;
+    }
+
+    // THIS MUST WORK. else we removed the data from subflow buffer so it would be lost
     // Pb here, htis will be extracted but will not be saved into the main buffer
-    // TODO check for dsn ?
-    if( p->GetSize() )
-    {
-      NS_LOG_DEBUG("Amount read from data not empty => " << p->GetSize()  );
-
-      if (!m_rxBuffer.Add(p, dsn))
-        { // Insert failed: No data or RX buffer full
-    //      SendEmptyPacket(TcpHeader::ACK);
-          NS_FATAL_ERROR("This should not happen !! DSN might be wrong ?! ");
-          return;
-        }
-      if (m_rxBuffer.Size() > m_rxBuffer.Available() || m_rxBuffer.NextRxSequence() > expectedDSN + p->GetSize())
-        { // A gap exists in the buffer, or we filled a gap: Always ACK
-    //      SendEmptyPacket(TcpHeader::ACK);
-          NS_FATAL_ERROR("Look into !");
-        }
-      else
-        {
-          // TODO should restablish delayed acks ?
-            NS_LOG_DEBUG ("Delayed acks disabled");
-            // This sh
-            sf->SendEmptyPacket(TcpHeader::ACK);
-          // We've disabled Delayed ack  on this socket ?
-          // In-sequence packet: ACK if delayed ack count allows
-    //      if (++m_delAckCount >= m_delAckMaxCount)
-    //        {
-    //          m_delAckEvent.Cancel();
-    //          m_delAckCount = 0;
-    //          SendEmptyPacket(TcpHeader::ACK);
-    //        }
-    //      else if (m_delAckEvent.IsExpired())
-    //        {
-    //          m_delAckEvent = Simulator::Schedule(m_delAckTimeout, &TcpSocketBase::DelAckTimeout, this);
-    //          NS_LOG_LOGIC (this << " scheduled delayed ACK at " << (Simulator::Now () + Simulator::GetDelayLeft (m_delAckEvent)).GetSeconds ());
-    //        }
-        }
-    }
+    // TODO use an assert instead
+    NS_ASSERT_MSG(m_rxBuffer.Add(p, dsn), "Data got LOST");
   }
 
-  if (p == 0 )
-  {
-    if(sf->GetErrno () != Socket::ERROR_NOTERROR)
-    {
-      NS_FATAL_ERROR ("error");
-    }
-    else
-    {
-      NS_LOG_DEBUG ("Empty packet extracted");
-      return;
-    }
-  }
-
-  // TODO
-  // Now we should add this data to the local buffer and notify
-//  m_rxBuffer.Add(p,dsn);
-
-  // Put into Rx buffer
+  // TODO should restablish delayed acks ?
 
   // Notify app to receive if necessary
-  NS_LOG_DEBUG("expectedSeq " << expectedDSN << " vs NextRxSequence " << m_rxBuffer.NextRxSequence() );
+  NS_LOG_DEBUG("expectedDSN " << expectedDSN << " vs NextRxSequence " << m_rxBuffer.NextRxSequence() );
 
   if (expectedDSN < m_rxBuffer.NextRxSequence())
     {
@@ -807,8 +763,6 @@ MpTcpSocketBase::OnSubflowRecv( Ptr<MpTcpSubFlow> sf )
           NS_LOG_LOGIC("Notify data Rcvd" );
           NotifyDataRecv();
 
-          // discards  old mappings
-          sf->m_RxMappings.DiscardMappingsUpToDSN( m_rxBuffer.NextRxSequence() - 1 );
         }
       // Handle exceptions
       if (m_closeNotified)
@@ -1390,6 +1344,7 @@ MpTcpSocketBase::NewAck(SequenceNumber32 const& dsn)
 
 
 // TODO i should remove data at some point
+  // Je peux pas le faire
   m_txBuffer.DiscardUpTo(dsn);
 
 
@@ -1443,8 +1398,6 @@ MpTcpSocketBase::NewAck(SequenceNumber32 const& dsn)
 //      }
 
 
-//      throughput = 10000000 * 8 / (Simulator::Now().GetSeconds() - fLowStartTime);
-//      NS_LOG_UNCOND("goodput -> " << throughput / 1000000 << " Mbps {Tx Buffer is now empty}  P-AckHits:" << pAckHit);
       return;
     }
   // in case it freed some space in cwnd, try to send more data

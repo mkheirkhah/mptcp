@@ -78,6 +78,11 @@ public:
   MpTcpCCUncoupled(const MpTcpCCUncoupled& sock);
   virtual ~MpTcpCCUncoupled();
 
+  /**
+  TODO rename in Initial SSThreshold
+  TODO remove
+  Remove
+  **/
   virtual uint32_t
   GetSSThresh(void) const;
 

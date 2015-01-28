@@ -1607,7 +1607,7 @@ MpTcpSubFlow::NewAck(SequenceNumber32 const& ack)
 Ptr<Packet>
 MpTcpSubFlow::RecvFrom(uint32_t maxSize, uint32_t flags, Address &fromAddress)
 {
-  NS_FATAL_ERROR("Disabled in MPTCP. Use RecvWithMapping");
+  NS_FATAL_ERROR("Disabled in MPTCP. Use ");
   return 0;
 }
 
@@ -1615,7 +1615,7 @@ Ptr<Packet>
 MpTcpSubFlow::Recv(uint32_t maxSize, uint32_t flags)
 {
   //!
-  NS_FATAL_ERROR("Disabled in MPTCP. Use RecvWithMapping");
+  NS_FATAL_ERROR("Disabled in MPTCP. Use ");
   return 0;
 }
 
@@ -1623,7 +1623,7 @@ Ptr<Packet>
 MpTcpSubFlow::Recv(void)
 {
   //!
-  NS_FATAL_ERROR("Disabled in MPTCP. Use RecvWithMapping");
+  NS_FATAL_ERROR("Disabled in MPTCP. Use ");
   return 0;
 }
 
@@ -1642,84 +1642,86 @@ MpTcpSubFlow::Recv(void)
 //  return mapping.TranslateSSNToDSN(ssn,dsn);
 //}
 
-// use with a maxsize ? rename to ReceivedMappedData
-// We should be able to precise what range of data we can support
+
+/**
+this is private
+**/
 Ptr<Packet>
-MpTcpSubFlow::RecvWithMapping( uint32_t maxSize, SequenceNumber32 &dsn)
+MpTcpSubFlow::ExtractAtMostOneMapping(uint32_t maxSize, bool only_full_mapping, SequenceNumber32& headDSN)
 {
-  //!
-  NS_LOG_FUNCTION(this << "maxSize ["<< maxSize << "]" );
-//  Ptr<Packet> p = TcpSocketBase::Recv();
+  NS_LOG_FUNCTION(this << "maxSize="<< maxSize);
+  MpTcpMapping mapping;
+  Ptr<Packet> p = Create<Packet>();
 
-  // I can reuse
-//   = 3303000;
+  if(!GetRxAvailable()) {
+    NS_LOG_LOGIC("Nothing to extract");
+    return p;
+  }
 
-
-  //NS_ABORT_MSG_IF(flags, "use of flags is not supported in TcpSocketBase::Recv()");
-//  if (m_rxBuffer.Size() == 0 && m_state == CLOSE_WAIT)
-  if (m_state == CLOSE_WAIT)
-    {
-      NS_LOG_ERROR("CLOSE_WAIT");
-      return Create<Packet>(); // Send EOF on connection close
-    }
-
-
-
-  // TODO sthg more rigorous later on
-  // should be able to set the DSN
-  //////////////////////////////////////////Y//
-  /// we want to retrieve the SSN of the first byte that
-  /// will be extracted from the TcpRxBuffer
-  /// TODO That would do a nice addition to the TcpRxBuffer
-  // sthg liek GetHead/MinSeq
-//  SequenceNumber32 headSSN = m_rxBuffer.NextRxSequence()-m_rxBuffer.Available();
   SequenceNumber32 headSSN = m_rxBuffer.GetHeadRxSequence();
 
-  NS_LOG_LOGIC("Extracting from SSN [" << headSSN << "]");
+//  NS_LOG_LOGIC("Extracting from SSN [" << headSSN << "]");
   //SequenceNumber32 headDSN;
 
-//  m_RxMappings.
-  MpTcpMapping mapping;
-//  if(!m_RxMappings.GetMappingForSSN(headSSN,mapping))
-  if(!m_RxMappings.TranslateSSNtoDSN(headSSN, dsn))
+
+   if(!m_RxMappings.GetMappingForSSN(headSSN, mapping))
+//  if(!m_RxMappings.TranslateSSNtoDSN(headSSN, dsn))
   {
     m_RxMappings.Dump();
-    NS_FATAL_ERROR("Could not associate a mapping to ssn [" << headSSN << "]");
+    NS_FATAL_ERROR("Could not associate a mapping to ssn [" << headSSN << "]. Should be impossible");
   }
-//  dsn = mapping.
-  // extract at most the size of the mapping
-  // If there is more data, it should be extracted through another call to RecvWithMapping
+  NS_LOG_DEBUG("Extracting mapping " << mapping);
 
-  //std::min(maxSize, (uint32_t)mapping.GetLength() )
-  Ptr<Packet> outPacket = m_rxBuffer.Extract( maxSize );
+  headDSN = mapping.HeadDSN();
 
-//  NS_ASSERT(outPacket->GetSize());
-  return outPacket;
+  if(only_full_mapping) {
+
+    if(mapping.GetLength() > maxSize) {
+      NS_LOG_DEBUG("Not enough space available to extract the full mapping");
+      return p;
+    }
+
+    if(m_rxBuffer.Available() < mapping.GetLength()) {
+      NS_LOG_DEBUG("Mapping not fully received yet");
+      return p;
+    }
+
+    //
+    maxSize = std::min(maxSize, (uint32_t)mapping.GetLength());
+  }
+
+  p = m_rxBuffer.Extract( maxSize );
+
+  m_RxMappings.DiscardMappingsUpToDSN( headDSN);
+  return p;
 }
 
-//MpTcpSubFlow::TranslateSubflowSeqToDataSeq();
+/*
+This loops over the RxBuffer, extracting mapping one after mapping.
 
-// TODO move to Meta
-//void
-//MpTcpSubFlow::AppendDataAck(TcpHeader& hdr) const
-//{
-//  NS_LOG_FUNCTION(this);
+sf->
+*/
+#if 0
+Ptr<Packet>
+MpTcpSubFlow::RecvWithMapping(uint32_t maxSize, bool only_full_mapping, SequenceNumber32 &dsn)
+{
+  NS_LOG_FUNCTION(this << "maxSize="<< maxSize);
+  NS_FATAL_ERROR("Use ExtractAtMostOneMapping instead");
+//  Ptr<Packet> p;
+
 //
-////  Ptr<TcpOptionMpTcpDSS> dss;
-////  GetOrCreateMpTcpOption()
-//  Ptr<TcpOptionMpTcpDSS> dss;
-//  GetOrCreateMpTcpOption(hdr,dss);
+////  if (m_rxBuffer.Size() == 0 && m_state == CLOSE_WAIT)
+//  if (m_state == CLOSE_WAIT)
+//    {
+//      NS_LOG_ERROR("CLOSE_WAIT");
+      return Create<Packet>(); // Send EOF on connection close
+//    }
 //
-//  NS_ASSERT(dss->GetDataAck() == 0);
 //
-////   = CreateObject<TcpOptionMpTcpDSS>();
-//  dss->SetDataAck( GetMeta()->m_rxBuffer.NextRxSequence().GetValue() );
-//
-//  // TODO check the option is not in the header already
-////  NS_ASSERT_MSG( hdr.GetOption()GetOp)
-//
-////  hdr.AppendOption(dss);
-//}
+//  return ExtractAtMostOneMapping();
+}
+#endif
+
 
 
 
@@ -1764,72 +1766,46 @@ MpTcpSubFlow::ReceivedData(Ptr<Packet> p, const TcpHeader& tcpHeader)
 
     m_RxMappings.Dump();
     NS_FATAL_ERROR("Could not find mapping associated ");
-
-//    NS_LOG_DEBUG("Could not find an adequate mapping for");
-    // TODO remove that later
-//    NS_ASSERT_MSG(false,"No mapping received for that ack nb");
-
-    // TODO we should create here a DSS option else it will not be freed at the sender
-
-    //SendEmptyPacket(ackHeader);
     return;
   }
-
-  //TcpHeader ackHeader;
-//  GenerateEmptyPacketHeader(ackHeader,TcpHeader::ACK);
-//  Ptr<TcpOptionMpTcpDSS> dss = CreateObject<TcpOptionMpTcpDSS>();
-
-  // TODO this function sends ACK without the mptcp DSS option .
-  //TcpSocketBase::ReceivedData( p, mptcpHeader );
-
-  // This part was copy/pasted from TcpSocketBase
-  //NS_LOG_FUNCTION (this << tcpHeader);
-  //NS_LOG_LOGIC ("seq " << tcpHeader.GetSequenceNumber () <<
-    //  " ack " << tcpHeader.GetAckNumber () <<
-      //" pkt size " << p->GetSize () );
 
   // Put into Rx buffer
   SequenceNumber32 expectedSSN = m_rxBuffer.NextRxSequence();
   if (!m_rxBuffer.Add(p, tcpHeader))
     { // Insert failed: No data or RX buffer full
-      NS_LOG_DEBUG("Insert failed, No data or RX buffer full");
+      NS_LOG_WARN("Insert failed, No data or RX buffer full");
 
 //      dss->SetDataAck( GetMeta()->m_rxBuffer.NextRxSequence().GetValue() );
       GetMeta()->AppendDataAck( answerHeader );
       SendEmptyPacket(answerHeader);
       return;
     }
+
+  // Size() = Get the actual buffer occupancy
+  if (m_rxBuffer.Size() > m_rxBuffer.Available() /* Out of order packets exist in buffer */
+    || m_rxBuffer.NextRxSequence() > expectedSSN + p->GetSize() /* or we filled a gap */
+    )
+    { // A gap exists in the buffer, or we filled a gap: Always ACK
+      sendAck = true;
+    }
   else
-  {
-    // we received new data
-    // We should pass it to the meta
-
-
-    if (m_rxBuffer.Size() > m_rxBuffer.Available() || m_rxBuffer.NextRxSequence() > expectedSSN + p->GetSize())
-      { // A gap exists in the buffer, or we filled a gap: Always ACK
-        // TODO
-        sendAck = true;
-//        dss->SetDataAck(GetMeta()->m_rxBuffer.NextRxSequence().GetValue());
-//        SendEmptyPacket(answerHeader);
-      }
-    else
-      { // In-sequĶence packet: ACK if delayed ack count allows
-        // TODO i removed delayed ack. may reestablish later
-  //      if (++m_delAckCount >= m_delAckMaxCount)
-  //        {
-  //          m_delAckEvent.Cancel();
-  //          m_delAckCount = 0;
-            sendAck = true;
+    { // In-sequĶence packet: ACK if delayed ack count allows
+      // TODO i removed delayed ack. may reestablish later
+//      if (++m_delAckCount >= m_delAckMaxCount)
+//        {
+//          m_delAckEvent.Cancel();
+//          m_delAckCount = 0;
+          sendAck = true;
 //            dss->SetDataAck(GetMeta()->m_rxBuffer.NextRxSequence().GetValue());
 //            SendEmptyPacket(answerHeader);
-  //        }
-  //      else if (m_delAckEvent.IsExpired())
-  //        {
-  //          m_delAckEvent = Simulator::Schedule(m_delAckTimeout, &TcpSocketBase::DelAckTimeout, this);
-  //          NS_LOG_LOGIC (this << " scheduled delayed ACK at " << (Simulator::Now () + Simulator::GetDelayLeft (m_delAckEvent)).GetSeconds ());
-  //        }
-      }
-  }
+//        }
+//      else if (m_delAckEvent.IsExpired())
+//        {
+//          m_delAckEvent = Simulator::Schedule(m_delAckTimeout, &TcpSocketBase::DelAckTimeout, this);
+//          NS_LOG_LOGIC (this << " scheduled delayed ACK at " << (Simulator::Now () + Simulator::GetDelayLeft (m_delAckEvent)).GetSeconds ());
+//        }
+    }
+
 
 
 
@@ -1838,13 +1814,7 @@ MpTcpSubFlow::ReceivedData(Ptr<Packet> p, const TcpHeader& tcpHeader)
     { // NextRxSeq advanced, we have something to send to the app
       if (!m_shutdownRecv)
         {
-          // rename into RecvFromSubflow RecvData ?
-          // NotifyMetaOfRcvdData
-//          GetMeta()->Ŕcv( this);
-
-          // TODO should not be called for now
-          // TODO should say if it needs to DATAACK ?
-//          NotifyDataRecv();
+          // todo maybe retrieve return valu: should we send an ack ?
            GetMeta()->OnSubflowRecv( this );
            sendAck = true;
         }
@@ -1862,29 +1832,17 @@ MpTcpSubFlow::ReceivedData(Ptr<Packet> p, const TcpHeader& tcpHeader)
     }
 
     // For now we always sent an ack
-    // TODO should increase
-//    dss->SetDataAck( GetMeta()->m_rxBuffer.NextRxSequence().GetValue() );
+
     // should be always true hack to allow compilation
     if(sendAck) {
-//      answerHeader.AppendOption(dss);
+
       GetMeta()->AppendDataAck(answerHeader);
       SendEmptyPacket(answerHeader);
     }
 
   // TODO handle out of order case look at parent's member.
-
-
   // TODO pass subflow id to the function
   // TODO if that acknowledges a full mapping then transfer it to  the metasock
-//  if( m_rxBuffer.Extract() )
-//  {
-//    m_rxBuffer.Extract()
-//
-//
-////  GetMeta()->ReceivedData(p, const TcpHeader& mptcpHeader);
-//  }
-  // TODO see what we can free in our TxBuffer
-
 }
 
 // TODO unsure ?

@@ -42,7 +42,8 @@ NS_LOG += "*=error|warn|prefix_node|prefix_func"
 NS_LOG += ":MpTcpSchedulerRoundRobin"
 # NS_LOG += ":ObjectBase=error|warn"
 # NS_LOG += ":Socket"
-NS_LOG += ":MpTcpSubflow=*:MpTcpSocketBase=logic:error:warn"
+# logic:error:warn
+NS_LOG += ":MpTcpSubflow=*:MpTcpSocketBase=*"
 NS_LOG += ":MpTcpSubflowUncoupled"
 NS_LOG += ":Config"
 #NS_LOG += ":TypeId" # to look for AddTraceSource
@@ -77,8 +78,8 @@ ret = subprocess.call(cmd, shell=True, timeout=100)
 print("Exported:\n%s" % NS_LOG)
 print("Executed Command:\n%s" % cmd)
 
-if not ret:
-    print("ERROR: Could not launch command")
+if ret:
+    print("ERROR: command returned error code %d" % (ret))
     exit(1)
 
 if args.graph:
