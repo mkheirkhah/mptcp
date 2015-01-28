@@ -73,6 +73,15 @@ TcpSocketBase::GetTypeId(void)
   .AddAttribute("MaxSegLifetime", "Maximum segment lifetime in seconds, use for TIME_WAIT state transition to CLOSED state",
       DoubleValue(120), /* RFC793 says MSL=2 minutes*/
       MakeDoubleAccessor(&TcpSocketBase::m_msl), MakeDoubleChecker<double>(0))
+  .AddAttribute("MaxSegLifetime", "Maximum segment lifetime in seconds, use for TIME_WAIT state transition to CLOSED state",
+      DoubleValue(120), /* RFC793 says MSL=2 minutes*/
+      MakeDoubleAccessor(&TcpSocketBase::m_msl), MakeDoubleChecker<double>(0))
+  .AddAttribute ("NullISN",
+      "Set to false if you want to enable random isn",
+      BooleanValue (true),
+//      MakeBooleanAccessor (&TcpSocketBase::SetQosSupported,&RegularWifiMac::GetQosSupported)
+      MakeBooleanAccessor (&TcpSocketBase::m_nullIsn),
+      MakeBooleanChecker ())
   .AddAttribute("MaxWindowSize",
       "Max size of advertised window", UintegerValue(65535), MakeUintegerAccessor(&TcpSocketBase::m_maxWinSize),
       MakeUintegerChecker<uint16_t>())
@@ -99,7 +108,9 @@ TcpSocketBase::TcpSocketBase(void) :
     m_dupAckCount(0), m_delAckCount(0), m_endPoint(0), m_endPoint6(0), m_node(0), m_tcp(0), m_rtt(0), m_nextTxSequence(0),
     // Change this for non-zero initial sequence number
     m_highTxMark(0), m_rxBuffer(0), m_txBuffer(0), m_state(CLOSED), m_errno(ERROR_NOTERROR), m_closeNotified(false), m_closeOnEmpty(
-        false), m_shutdownSend(false), m_shutdownRecv(false), m_connected(false), m_segmentSize(0),
+        false), m_shutdownSend(false), m_shutdownRecv(false), m_connected(false),
+    m_nullIsn(false),
+    m_segmentSize(0),
     // For attribute initialization consistency (quiet valgrind)
     m_rWnd(0)
 {
@@ -122,8 +133,9 @@ TcpSocketBase::TcpSocketBase(const TcpSocketBase& sock) :
         sock.m_cnTimeout), m_endPoint(0), m_endPoint6(0), m_node(sock.m_node), m_tcp(sock.m_tcp), m_rtt(0), m_nextTxSequence(
         sock.m_nextTxSequence), m_highTxMark(sock.m_highTxMark), m_rxBuffer(sock.m_rxBuffer), m_txBuffer(sock.m_txBuffer), m_state(
         sock.m_state), m_errno(sock.m_errno), m_closeNotified(sock.m_closeNotified), m_closeOnEmpty(sock.m_closeOnEmpty), m_shutdownSend(
-        sock.m_shutdownSend), m_shutdownRecv(sock.m_shutdownRecv), m_connected(sock.m_connected), m_msl(sock.m_msl), m_segmentSize(
-        sock.m_segmentSize), m_maxWinSize(sock.m_maxWinSize), m_rWnd(sock.m_rWnd)
+        sock.m_shutdownSend), m_shutdownRecv(sock.m_shutdownRecv), m_connected(sock.m_connected),
+        m_nullIsn(sock.m_nullIsn),
+        m_msl(sock.m_msl),m_segmentSize(sock.m_segmentSize), m_maxWinSize(sock.m_maxWinSize), m_rWnd(sock.m_rWnd)
 {
   NS_LOG_FUNCTION (this);NS_LOG_LOGIC ("Invoked the copy constructor");
   // Copy the rtt estimator if it is set

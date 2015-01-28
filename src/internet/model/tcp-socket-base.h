@@ -436,12 +436,15 @@ protected:
   bool m_shutdownSend;  //< Send no longer allowed
   bool m_shutdownRecv;  //< Receive no longer allowed
   bool m_connected;     //< Connection established
+  bool m_nullIsn;       //< Should the ISN be null ?
   double m_msl;           //< Max segment lifetime
 
   // Window management
   uint32_t m_segmentSize; //< Segment size
   uint16_t m_maxWinSize;  //< Maximum window size to advertise
   TracedValue<uint32_t> m_rWnd;        //< Flow control window at remote side
+
+
 };
 
 } // namespace ns3
