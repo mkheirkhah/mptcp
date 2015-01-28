@@ -1,6 +1,6 @@
 import os
 import argparse
-
+import subprocess
 
 available_suites = [
     "mptcp-tcp",
@@ -60,17 +60,26 @@ NS_LOG += ":TcpTestSuite=*"
 os.environ['NS_LOG'] = NS_LOG
 
 
-
-os.system("rm source/*")
-os.system("rm server/*")
+# provoked prompts in sublimetext, annoying
+# os.system("rm source/*")
+# os.system("rm server/*")
 
 print("Executed Command:\n%s" % cmd)
 
 
-os.system(cmd)
+
+# os.system(cmd)
+
+ret = subprocess.call(cmd, shell=True, timeout=100)
+
+
 
 print("Exported:\n%s" % NS_LOG)
 print("Executed Command:\n%s" % cmd)
+
+if not ret:
+    print("ERROR: Could not launch command")
+    exit(1)
 
 if args.graph:
     # 
@@ -81,5 +90,6 @@ if args.graph:
 for i in ['server', 'source']:
     print("Content of folder '%s':" % (i,))
     os.system("ls -l %s" % (i,))
+
 # print("Content of folder 'server':")
-# os.system("ls -l server")
+os.system("./draw_plots.sh")

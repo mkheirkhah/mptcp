@@ -159,6 +159,7 @@ public:
    * \returns a packet
    */
   Ptr<Packet> Extract (uint32_t maxSize);
+
 public:
   /// container for data stored in the buffer
   typedef std::map<SequenceNumber32, Ptr<Packet> >::iterator BufIterator;

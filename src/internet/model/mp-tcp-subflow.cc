@@ -560,7 +560,7 @@ MpTcpSubFlow::Retransmit(void)
   m_ssThresh = std::max (2 * m_segmentSize, BytesInFlight () / 2);
   m_cWnd = m_segmentSize;
   m_nextTxSequence = m_txBuffer.HeadSequence (); // Restart from highest Ack
-  NS_LOG_INFO ("RTO. " << m_rtt->RetransmitTimeout << " Reset cwnd to " << m_cWnd <<
+  NS_LOG_INFO ("RTO. " << m_rtt->RetransmitTimeout() << " Reset cwnd to " << m_cWnd <<
                ", ssthresh to " << m_ssThresh << ", restart from seqnum " << m_nextTxSequence);
 
 
@@ -1422,6 +1422,7 @@ TODO check with its parent equivalent, may miss a few features
 Receipt of new packet, put into Rx buffer
 
 SlowStart and fast recovery remains untouched in MPTCP.
+The reaction should be different depending on if we handle NR-SACK or not
 */
 void
 MpTcpSubFlow::NewAck(SequenceNumber32 const& ack)
@@ -1511,19 +1512,29 @@ MpTcpSubFlow::NewAck(SequenceNumber32 const& ack)
       " numberAck " << (ack - m_txBuffer.HeadSequence ())); // Number bytes ack'ed
 
   // TODO: get mapping associated with that Ack and
-  MpTcpMapping mapping;
+//  MpTcpMapping mapping;
   if(!m_TxMappings.GetMappingForSSN(ack, mapping) ) {
-//    m_txBuffer.DiscardUpTo(ack);
-    // TODO check if all mappings below that are acked before removing them
+
     NS_LOG_WARN("Late ack ! Dumping Tx Mappings");
     m_TxMappings.Dump();
   }
   else {
+    // TODO check if all mappings below that are acked before removing them
+    //    m_txBuffer.DiscardUpTo(ack);
+
+    /** TODO here we have to update the nextTxBuffer
+    but we can discard only if the full mapping was acknowledged
+    */
+
+    if(m_nextTxSequence > mapping.TailSSN()) {
+
+      m_txBuffer.DiscardUpTo(m_nextTxSequence);
+    }
 //      std::distance(s.begin(), s.lower_bound(x))
-  #error
+    // #error
   }
 
-// TODO
+// TODO I should call
 
 
   if (GetTxAvailable() > 0)
