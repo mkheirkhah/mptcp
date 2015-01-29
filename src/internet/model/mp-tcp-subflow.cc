@@ -343,8 +343,6 @@ MpTcpSubFlow::MpTcpSubFlow(
 //    m_mapDSN(0),
     m_lastMeasuredRtt(Seconds(0.0)),
      // TODO move out to MpTcpCControl
-
-
 //    m_metaSocket(metaSocket),
     m_backupSubflow(false),
     m_localNonce(0),
@@ -378,6 +376,7 @@ MpTcpSubFlow::MpTcpSubFlow(
 MpTcpSubFlow::~MpTcpSubFlow()
 {
   NS_LOG_FUNCTION(this);
+  // TODO cancel times
   //std::list<DSNMapping *>
 //  for (MappingList::iterator it = m_mapDSN.begin(); it != m_mapDSN.end(); ++it)
 //    {
@@ -392,6 +391,7 @@ void
 MpTcpSubFlow::CloseAndNotify(void)
 {
   //TODO
+  NS_LOG_FUNCTION_NOARGS();
   TcpSocketBase::CloseAndNotify();
   GetMeta()->OnSubflowClosed( this );
 }
@@ -809,15 +809,15 @@ MpTcpSubFlow::CompleteFork(Ptr<Packet> p, const TcpHeader& h, const Address& fro
   m_TxMappings.m_txBuffer = &m_txBuffer;
   m_RxMappings.m_rxBuffer = &m_rxBuffer;
 
-  // Set the sequence number and send SYN+ACK
+  // Set the sequence number and send SYN+ACK (ok)
   m_rxBuffer.SetNextRxSequence(h.GetSequenceNumber() + SequenceNumber32(1));
 
 
 
   TcpHeader answerHeader;
-  GenerateEmptyPacketHeader( answerHeader, TcpHeader::SYN | TcpHeader::ACK );
+  GenerateEmptyPacketHeader(answerHeader, TcpHeader::SYN | TcpHeader::ACK );
 
-  m_masterSocket = true;  //!< Only for the master socket is completeFork called
+  m_masterSocket = true;  //!< Only for the master socket completeFork is called
 
   AppendMpTcp3WHSOption(answerHeader);
 
@@ -1512,8 +1512,8 @@ MpTcpSubFlow::NewAck(SequenceNumber32 const& ack)
       " numberAck " << (ack - m_txBuffer.HeadSequence ())); // Number bytes ack'ed
 
   // TODO: get mapping associated with that Ack and
-//  MpTcpMapping mapping;
-  if(!m_TxMappings.GetMappingForSSN(ack, mapping) ) {
+  //
+  if(!m_TxMappings.GetMappingForSSN(ack, mapping)) {
 
     NS_LOG_WARN("Late ack ! Dumping Tx Mappings");
     m_TxMappings.Dump();
@@ -1658,7 +1658,7 @@ MpTcpSubFlow::ExtractAtMostOneMapping(uint32_t maxSize, bool only_full_mapping, 
     return p;
   }
 
-  SequenceNumber32 headSSN = m_rxBuffer.GetHeadRxSequence();
+  SequenceNumber32 headSSN = m_rxBuffer.HeadSequence();
 
 //  NS_LOG_LOGIC("Extracting from SSN [" << headSSN << "]");
   //SequenceNumber32 headDSN;
@@ -1757,8 +1757,7 @@ MpTcpSubFlow::ReceivedData(Ptr<Packet> p, const TcpHeader& tcpHeader)
   MpTcpMapping mapping;
   bool sendAck = false;
 
-  TcpHeader answerHeader;
-  GenerateEmptyPacketHeader(answerHeader, TcpHeader::ACK);
+
 //  OutOfRange
   // If cannot find an adequate mapping, then it should [check RFC]
   if(!m_RxMappings.GetMappingForSSN(tcpHeader.GetSequenceNumber(), mapping) )
@@ -1776,6 +1775,9 @@ MpTcpSubFlow::ReceivedData(Ptr<Packet> p, const TcpHeader& tcpHeader)
       NS_LOG_WARN("Insert failed, No data or RX buffer full");
 
 //      dss->SetDataAck( GetMeta()->m_rxBuffer.NextRxSequence().GetValue() );
+      // TODO rather use a goto
+      TcpHeader answerHeader;
+      GenerateEmptyPacketHeader(answerHeader, TcpHeader::ACK);
       GetMeta()->AppendDataAck( answerHeader );
       SendEmptyPacket(answerHeader);
       return;
@@ -1835,7 +1837,8 @@ MpTcpSubFlow::ReceivedData(Ptr<Packet> p, const TcpHeader& tcpHeader)
 
     // should be always true hack to allow compilation
     if(sendAck) {
-
+      TcpHeader answerHeader;
+      GenerateEmptyPacketHeader(answerHeader, TcpHeader::ACK);
       GetMeta()->AppendDataAck(answerHeader);
       SendEmptyPacket(answerHeader);
     }

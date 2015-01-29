@@ -294,15 +294,17 @@ public:
 
 //  MpTcpMapping getSegmentOfACK( uint32_t ack);
 
-  /**
-  * This is a public function in TcpSocketBase
-  **/
-  virtual int
-  Close(void);   // Close by app: Kill socket upon tx buffer emptied
-
 
 protected:
   friend class MpTcpSocketBase;
+
+  //
+
+  /**
+  * This is a public function in TcpSocketBase but it shouldn't be public here !
+  **/
+  virtual int
+  Close(void);   // Close by app: Kill socket upon tx buffer emptied
 
 
   /**

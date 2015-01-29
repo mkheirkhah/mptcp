@@ -141,6 +141,8 @@ private:
 
 };
 
+std::ostream & operator << (std::ostream &os, const TcpOption &option);
+
 } // namespace ns3
 
 #endif /* TCP_OPTION */

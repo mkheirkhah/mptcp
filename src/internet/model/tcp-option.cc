@@ -189,4 +189,11 @@ TcpOptionUnknown::GetKind (void) const
   return m_kind;
 }
 
+
+std::ostream & operator << (std::ostream &os, const TcpOption &option)
+{
+  option.Print(os);
+  return os;
+}
+
 } // namespace ns3

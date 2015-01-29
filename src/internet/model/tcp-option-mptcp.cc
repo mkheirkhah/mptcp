@@ -259,8 +259,8 @@ TcpOptionMpTcpCapable::SetRemoteKey(const uint64_t& remoteKey)
 void
 TcpOptionMpTcpCapable::Print (std::ostream &os) const
 {
-  os << "MP_CAPABLE. version" << m_version
-    << "MPTCP Flags: [" << m_flags << "]"
+  os << "MP_CAPABLE. version" << (int)m_version
+    << "MPTCP Flags: [" << (int)m_flags << "]"
     << "Sender's Key :[" << GetSenderKey() << "]"
     << "Peer's Key [";
   if( HasReceiverKey() )

@@ -165,7 +165,7 @@ public:
   double RTT_TCP;
   uint32_t totalBytes_TCP;
   uint32_t dtq_TCP;
-  std::string GenerateDetail(void);
+//  std::string GenerateDetail(void);
 
   bool
   IsCorrupt (Ptr<Packet> p);

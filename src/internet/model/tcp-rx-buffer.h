@@ -79,7 +79,7 @@ public:
   * \return First in order sequence sumber
   *
   **/
-  SequenceNumber32 GetHeadRxSequence(void) const;
+  SequenceNumber32 HeadSequence(void) const;
 
   /**
    * \brief Get the lowest sequence number that this TcpRxBuffer cannot accept

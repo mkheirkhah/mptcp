@@ -37,15 +37,15 @@ cmd = cmd.format(
 
 # WITH_GDB=0
 NS_LOG = ""
-# NS_LOG = "TcpSocketBase:"
 NS_LOG += "*=error|warn|prefix_node|prefix_func"
+NS_LOG += ":TcpSocketBase"
 NS_LOG += ":MpTcpSchedulerRoundRobin"
 # NS_LOG += ":ObjectBase=error|warn"
 # NS_LOG += ":Socket"
 # logic:error:warn
-NS_LOG += ":MpTcpSubflow=*:MpTcpSocketBase=*"
+NS_LOG += ":MpTcpSubflow:MpTcpSocketBase"
 NS_LOG += ":MpTcpSubflowUncoupled"
-NS_LOG += ":Config"
+# NS_LOG += ":Config"
 #NS_LOG += ":TypeId" # to look for AddTraceSource
 NS_LOG += ":TcpTestSuite=*"
 # NS_LOG += ":TcpRxBuffer:TcpTxBuffer"

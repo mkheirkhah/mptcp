@@ -140,7 +140,9 @@ public: // public methods
   PersistTimeout();
 
   /* equivalent to PeerClose
-  OnDataFin */
+  \param finalDsn
+  OnDataFin
+  */
   virtual void
   PeerClose( SequenceNumber32 fin_seq, Ptr<MpTcpSubFlow> sf);
 
@@ -598,11 +600,6 @@ protected: // protected methods
 //  bool StoreUnOrderedData(DSNMapping *ptr);
 //  void ReadUnOrderedData();
 
-  /**
-  Looks for unordered packets
-  */
-//  bool FindPacketFromUnOrdered(uint8_t sFlowIdx);
-
   /** this implementation may not be the best, maybe it would be best to subclass MpTcpSubflows
    depending on the Congestion control used. But for now it is goodenough
    Both functions the new value
@@ -612,40 +609,12 @@ protected: // protected methods
 
 
 
-  // Helper functions -> main operations
-  // Should be able to do without ?
-//  uint8_t LookupByAddrs(Ipv4Address src, Ipv4Address dst); // Called by Forwardup() to find the right subflow for incoing packet
 
-//  uint8_t getSubflowToUse();  // Called by SendPendingData() to get a subflow based on round robin algorithm
-
-
-  bool IsThereRoute(Ipv4Address src, Ipv4Address dst);     // Called by InitiateSubflow & LookupByAddrs and Connect to check whether there is route between a pair of addresses.
-
-  /**
-  When advertising an IP, we need to check if the IP belongs to the node.
-  Never used so far & not implemented
-  **/
-  bool IsLocalAddress(Ipv4Address addr);
-
-  /**
-  \brief Find Netdevice owner of specific IP address.
-  */
-  Ptr<NetDevice> FindOutputNetDevice(Ipv4Address);
-
-
-//  DSNMapping* getAckedSegment(uint8_t sFlowIdx, uint32_t ack);
-//  DSNMapping* getSegmentOfACK(uint8_t sFlowIdx, uint32_t ack);
-
-  // Helper functions -> evaluation and debugging
-//  void PrintIpv4AddressFromIpv4Interface(Ptr<Ipv4Interface>, int32_t);
-//  void getQueuePkt(Ipv4Address addr);
-
-
-
+  void OnTimeWaitTimeOut();
 
 protected: // protected variables
 
-
+  int CloseSubflow(Ptr<MpTcpSubFlow> sf);
 
   std::string m_tracePrefix;
 
@@ -717,10 +686,14 @@ private:
   uint32_t m_peerToken;
 
   bool     m_doChecksum;  //!< Compute the checksum. Negociated during 3WHS
+
 private:
 
 
-  /* Utility function used when a subflow changes state */
+  /* Utility function used when a subflow changes state
+    Research of the subflow is done
+  */
+  void MoveSubflow(Ptr<MpTcpSubFlow> sf, mptcp_container_t to);
   void MoveSubflow(Ptr<MpTcpSubFlow> sf, mptcp_container_t from, mptcp_container_t to);
 // CloseSubflow
 //  uint8_t AddLocalAddr(const Ipv4Address& address);

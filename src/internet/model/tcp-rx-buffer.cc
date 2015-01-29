@@ -80,8 +80,9 @@ TcpRxBuffer::~TcpRxBuffer ()
 //TcpRxBuffer::
 //  m_data.first().GetKey()
 
+// TODO rename to HeadSequence
 SequenceNumber32
-TcpRxBuffer::GetHeadRxSequence(void) const
+TcpRxBuffer::HeadSequence(void) const
 {
 
   return NextRxSequence()-Available();
