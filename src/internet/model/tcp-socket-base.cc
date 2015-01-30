@@ -1913,17 +1913,19 @@ TcpSocketBase::SendPendingData(bool withAck)
     }
   uint32_t nPacketsSent = 0;
   NS_LOG_DEBUG("m_nextTxSequence [" << m_nextTxSequence << "]");
+  // TODO this part may be buggy, returns -1
   while (m_txBuffer.SizeFromSequence(m_nextTxSequence))
     {
       uint32_t w = AvailableWindow(); // Get available window size
       NS_LOG_LOGIC ("TcpSocketBase " << this << " SendPendingData" <<
-          " w " << w <<
-          " rxwin " << m_rWnd <<
-          " segsize " << m_segmentSize <<
-          " nextTxSeq " << m_nextTxSequence <<
-          " highestRxAck " << m_txBuffer.HeadSequence () <<
+          " availableWindow=" << w <<
+          " rwnd=" << m_rWnd <<
+          " segsize=" << m_segmentSize <<
+          " m_nextTxSequence=" << m_nextTxSequence <<
+          " highestRxAck (TxBuffer headSeq)=" << m_txBuffer.HeadSequence () <<
           " pd->Size " << m_txBuffer.Size () <<
-          " pd->SFS " << m_txBuffer.SizeFromSequence (m_nextTxSequence));
+          " pd->SizeFromSequence=" << m_txBuffer.SizeFromSequence (m_nextTxSequence));
+
       // Quit if send disallowed
       if (m_shutdownSend)
         {

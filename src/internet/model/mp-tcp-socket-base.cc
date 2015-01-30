@@ -694,13 +694,28 @@ MpTcpSocketBase::GetRxAvailable(void) const
 }
 
 
+//void
+//MpTcpSocketBase::OnSubflowReset( Ptr<MpTcpSubFlow> sf)
+//{
+//
+//}
 
 void
-MpTcpSocketBase::OnSubflowClosed( Ptr<MpTcpSubFlow> sf)
+MpTcpSocketBase::OnSubflowClosed(Ptr<MpTcpSubFlow> subflow, bool reset)
 {
-  NS_LOG_INFO("Subflow closed");
+  NS_LOG_LOGIC("Subflow " << subflow  << "definitely closed");
   //! TODO it should remove itself from the list of subflows and when 0 are active
   // it should call CloseAndNotify ?
+  if(reset) {
+    NS_FATAL_ERROR("Case not handled yet.");
+  }
+
+//  SubflowList::iterator it = std::find(m_subflows[Closing].begin(), m_subflows[Closing].end(), subflow);
+// m_containers[Closing].erase(it);
+//NS_ASSERT(it != m_subflows[Closing].end());
+  SubflowList::iterator it = std::remove(m_subflows[Closing].begin(), m_subflows[Closing].end(), subflow);
+
+
 }
 
 
@@ -2268,8 +2283,6 @@ MpTcpSocketBase::CloseSubflow(Ptr<MpTcpSubFlow> sf)
     NS_FATAL_ERROR("Could not close subflow");
   }
 
-  MoveSubflow(sf, Closing);
-
   return ret;
 }
 
@@ -2282,6 +2295,7 @@ MpTcpSocketBase::CloseAllSubflows()
   for(int i = 0; i < Closing; ++i) {
 //    Established
     NS_LOG_INFO("Closing all subflows in state [" << containerNames [i] << "]");
+//    std::for_each( );
     for( SubflowList::const_iterator it = m_subflows[i].begin(); it != m_subflows[i].end(); it++ )
     {
         Ptr<MpTcpSubFlow> sf = *it;
@@ -2290,6 +2304,12 @@ MpTcpSocketBase::CloseAllSubflows()
 //        }
 //        NS_ASSERT_MSG(sf->Close() == 0, "Can't close subflow");
     }
+
+    m_subflows[Closing].insert( m_subflows[Closing].end(), m_subflows[i].begin(), m_subflows[i].end());
+    m_subflows[i].clear();
+    //! Once subflow of current container were closed, we move everything to
+    //!
+//    MoveSubflow(sf, Closing);
   }
 }
 
@@ -2514,6 +2534,7 @@ MpTcpSocketBase::OnTimeWaitTimeOut(void)
 {
   // Would normally call CloseAndNotify
   NS_LOG_LOGIC("Timewait timeout expired");
+  NS_LOG_UNCOND("after timewait timeout, there are still " << m_subflows[Closing].size() << " subflows pending");
   CloseAndNotify();
 }
 

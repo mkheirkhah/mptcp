@@ -387,13 +387,16 @@ MpTcpSubFlow::~MpTcpSubFlow()
 }
 
 
+/**
+TODO maybe override that not to have the callbacks
+**/
 void
 MpTcpSubFlow::CloseAndNotify(void)
 {
   //TODO
   NS_LOG_FUNCTION_NOARGS();
   TcpSocketBase::CloseAndNotify();
-  GetMeta()->OnSubflowClosed( this );
+  GetMeta()->OnSubflowClosed( this, false );
 }
 
 
@@ -1513,7 +1516,7 @@ MpTcpSubFlow::NewAck(SequenceNumber32 const& ack)
 
   // TODO: get mapping associated with that Ack and
   //
-  if(!m_TxMappings.GetMappingForSSN(ack, mapping)) {
+  if(!m_TxMappings.GetMappingForSSN( SequenceNumber32(ack-1), mapping)) {
 
     NS_LOG_WARN("Late ack ! Dumping Tx Mappings");
     m_TxMappings.Dump();

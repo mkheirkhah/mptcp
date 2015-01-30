@@ -372,9 +372,13 @@ protected: // protected methods
 //  bool InitiateSubflows();            // Initiate new subflows
 
   /*
+  Remove subflow from containers
+  TODO should also erase its id from the path id manager
+  \sf
+  \param reset True if closing due to reset
   */
   void
-  OnSubflowClosed(Ptr<MpTcpSubFlow> sf);
+  OnSubflowClosed(Ptr<MpTcpSubFlow> sf, bool reset);
 
   void
   OnSubflowDupAck(Ptr<MpTcpSubFlow> sf);

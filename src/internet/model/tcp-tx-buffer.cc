@@ -130,6 +130,7 @@ uint32_t
 TcpTxBuffer::SizeFromSequence (const SequenceNumber32& seq) const
 {
   NS_LOG_FUNCTION (this << seq);
+
   // Sequence of last byte in buffer
   SequenceNumber32 lastSeq = m_firstByteSeq + SequenceNumber32 (m_size);
   // Non-negative size
