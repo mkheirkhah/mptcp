@@ -325,6 +325,11 @@ public:
   DoPeerClose(void); // FIN is in sequence, notify app and respond with a FIN
   virtual void
   CancelAllTimers(void); // Cancel all timer when endpoint is deleted
+
+  /** TODO: should call a DoTimeWait that can be overriden
+  in subclasses.
+  also add
+  **/
   virtual void
   TimeWait(void);  // Move from CLOSING or FIN_WAIT_2 to TIME_WAIT state
 

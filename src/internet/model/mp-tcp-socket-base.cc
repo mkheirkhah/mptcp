@@ -583,7 +583,7 @@ MpTcpSocketBase::ProcessDSS(const TcpHeader& tcpHeader,Ptr<TcpOptionMpTcpDSS> ds
     case SYN_RCVD:
     case SYN_SENT:
     default:
-      NS_LOG_INFO("Unhandled case");
+      NS_LOG_ERROR("Unhandled case" << TcpStateName[m_state]);
       break;
   };
 
@@ -1211,7 +1211,7 @@ MpTcpSocketBase::Bind(const Address &address)
 void
 MpTcpSocketBase::PeerClose( SequenceNumber32 dsn, Ptr<MpTcpSubFlow> sf)
 {
-  NS_LOG_LOGIC(this << "Datafin with seq " << dsn);
+  NS_LOG_LOGIC("Datafin with seq=" << dsn);
 
 
 //  SequenceNumber32 dsn = SequenceNumber32 (dss->GetDataFinDSN() );
@@ -1227,6 +1227,7 @@ MpTcpSocketBase::PeerClose( SequenceNumber32 dsn, Ptr<MpTcpSubFlow> sf)
   // TODO rename mapping into GetDataMapping
 //  NS_LOG_LOGIC("Setting FIN sequence to " << dss->GetMapping().TailDSN());
   m_rxBuffer.SetFinSequence(dsn);
+  NS_LOG_LOGIC ("Accepted MPTCP FIN at seq " << dsn);
 
   // Return if FIN is out of sequence, otherwise move to CLOSE_WAIT state by DoPeerClose
   if (!m_rxBuffer.Finished())
@@ -1246,6 +1247,7 @@ MpTcpSocketBase::PeerClose( SequenceNumber32 dsn, Ptr<MpTcpSubFlow> sf)
 
     case FIN_WAIT_2:
       // will go into timewait later
+      TimeWait();
       break;
 
     case ESTABLISHED:
@@ -1274,15 +1276,7 @@ MpTcpSocketBase::PeerClose( SequenceNumber32 dsn, Ptr<MpTcpSubFlow> sf)
 //      return;
 //    }
 
-    if(old_state == FIN_WAIT_2) {
-      TimeWait();
-    }
-//  switch(m_state) {
-//
-//
-//    default:
-//      break;
-//  };
+
 //   DoPeerClose();
 }
 
@@ -2083,7 +2077,7 @@ MpTcpSocketBase::Window()
   //std::min, m_cWnd.Get() )
   // suboptimal but works
   m_cWnd = CalculateTotalCWND();
-  NS_LOG_LOGIC("remoteWin " << m_rWnd.Get() << ", total CongWin:" << m_cWnd.Get ());
+  NS_LOG_LOGIC("remoteWin=" << m_rWnd.Get() << ", totalCwnd=" << m_cWnd.Get ());
 //  return std::min(m_rWnd.Get(), totalcWnd);
   return std::min (m_rWnd.Get (), m_cWnd.Get ());
 //  return m_rWnd.Get();
@@ -2421,7 +2415,11 @@ MpTcpSocketBase::ProcessDSSClosing( Ptr<TcpOptionMpTcpDSS> dss, Ptr<MpTcpSubFlow
 //  CloseAndNotify();
 }
 
-/** when in m_closed fin_wait etc */
+/** when in m_closed fin_wait etc
+According to 6824
+A connection is considered closed once both hosts' DATA_FINs have
+been acknowledged by DATA_ACKs.
+*/
 void
 MpTcpSocketBase::ProcessDSSWait( Ptr<TcpOptionMpTcpDSS> dss, Ptr<MpTcpSubFlow> sf)
 {
@@ -2519,14 +2517,17 @@ MpTcpSocketBase::ProcessWait(Ptr<Packet> packet, const TcpHeader& tcpHeader)
 void
 MpTcpSocketBase::TimeWait()
 {
-  NS_LOG_INFO (TcpStateName[m_state] << " -> TIME_WAIT");
+  Time timewait_duration = Seconds(2 * m_msl);
+  NS_LOG_INFO (TcpStateName[m_state] << " -> TIME_WAIT "
+              << "with duration of " << timewait_duration
+              << "; m_msl=" << m_msl);
 //  TcpSocketBase::TimeWait();
   CloseAllSubflows();
   m_state = TIME_WAIT;
   CancelAllTimers();
 //  // Move from TIME_WAIT to CLOSED after 2*MSL. Max segment lifetime is 2 min
 //  // according to RFC793, p.28
-  m_timewaitEvent = Simulator::Schedule(Seconds(2 * m_msl), &MpTcpSocketBase::OnTimeWaitTimeOut, this);
+  m_timewaitEvent = Simulator::Schedule(timewait_duration, &MpTcpSocketBase::OnTimeWaitTimeOut, this);
 }
 
 void
@@ -2776,17 +2777,19 @@ MpTcpSocketBase::DoClose()
       break;
 
   case SYN_SENT:
+//      SendRST();
+//      CloseAndNotify();
+
   case CLOSING:
 // Send RST if application closes in SYN_SENT and CLOSING
 // TODO deallocate all childrne
-      NS_LOG_INFO("trying to close while closing..");
+      NS_LOG_WARN("trying to close while closing..");
 //      NS_LOG_INFO ("CLOSING -> LAST_ACK");
 //      m_state = TIME_WAIT;
-        NotifyErrorClose();
-      DeallocateEndPoint();
-//      SendRST();
-//      CloseAndNotify();
-//      break;
+//        NotifyErrorClose();
+//      DeallocateEndPoint();
+
+      break;
   case LISTEN:
   case LAST_ACK:
 //      CloseAllSubflows();

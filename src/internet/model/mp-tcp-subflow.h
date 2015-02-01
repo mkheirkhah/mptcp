@@ -250,7 +250,8 @@ public:
   virtual void
   NewAck(SequenceNumber32 const& ack);
 
-
+  void
+  TimeWait();
 
   /**
   TODO some options should be forwarded to the meta socket

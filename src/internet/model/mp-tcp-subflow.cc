@@ -109,13 +109,37 @@ MpTcpSubFlow::Fork(void)
 //  return CopyObject<MpTcpSubFlow> (this);
 //}
 
-/* */
+/*
+DupAck
+RFC 6824
+"As discussed earlier, however, an MPTCP
+   implementation MUST NOT treat duplicate ACKs with any MPTCP option,
+   with the exception of the DSS option, as indications of congestion
+   [12], and an MPTCP implementation SHOULD NOT send more than two
+   duplicate ACKs in a row for signaling purposes."
+*/
 void
 MpTcpSubFlow::DupAck(const TcpHeader& t, uint32_t count)
 {
-  NS_LOG_DEBUG("DupAck ignored as specified in RFC");
+  NS_LOG_LOGIC("DupAck " << count);
 //  if( count > 3)
   GetMeta()->OnSubflowDupAck(this);
+
+  NS_LOG_FUNCTION (this << "t " << count);
+  if (count == m_retxThresh && !m_inFastRec)
+    { // triple duplicate ack triggers fast retransmit (RFC2581, sec.3.2)
+      m_ssThresh = std::max (2 * m_segmentSize, BytesInFlight () / 2);
+      m_cWnd = m_ssThresh + 3 * m_segmentSize;
+      m_inFastRec = true;
+      NS_LOG_INFO ("Triple dupack. Reset cwnd to " << m_cWnd << ", ssthresh to " << m_ssThresh);
+      DoRetransmit ();
+    }
+  else if (m_inFastRec)
+    { // In fast recovery, inc cwnd for every additional dupack (RFC2581, sec.3.2)
+      m_cWnd += m_segmentSize;
+      NS_LOG_INFO ("Increased cwnd to " << m_cWnd);
+      SendPendingData (m_connected);
+    };
 }
 
 
@@ -416,7 +440,7 @@ MpTcpSubFlow::Send(Ptr<Packet> p, uint32_t flags)
 void
 MpTcpSubFlow::SendEmptyPacket(uint8_t flags)
 {
-  NS_LOG_FUNCTION(this << " flags" << flags);
+  NS_LOG_FUNCTION_NOARGS();
   TcpSocketBase::SendEmptyPacket(flags);
 }
 
@@ -623,7 +647,21 @@ MpTcpSubFlow::GetMeta() const
   return m_metaSocket;
 }
 
-
+/*
+It is also encouraged to
+   reduce the timeouts (Maximum Segment Life) on subflows at end hosts.
+Move TCP to Time_Wait state and schedule a transition to Closed state
+*/
+void
+MpTcpSubFlow::TimeWait()
+{
+  NS_LOG_INFO (TcpStateName[m_state] << " -> TIME_WAIT");
+  m_state = TIME_WAIT;
+  CancelAllTimers();
+  // Move from TIME_WAIT to CLOSED after 2*MSL. Max segment lifetime is 2 min
+  // according to RFC793, p.28
+  m_timewaitEvent = Simulator::Schedule(Seconds( m_msl), &MpTcpSubFlow::CloseAndNotify, this);
+}
 
 void
 MpTcpSubFlow::ProcessEstablished(Ptr<Packet> packet, const TcpHeader& header)

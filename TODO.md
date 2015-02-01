@@ -4,7 +4,7 @@ TODO list:
 Bugs:
 * I don't register the rWnd during connection establishement apparently
 * Msubflow::NewAck does not do enough 
-
+* subflow DupAck should count only if there a DSS inside and not for any other MPTCP option
 
 List of tests:
 * Subflow management

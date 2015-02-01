@@ -46,18 +46,18 @@ NS_LOG += ":MpTcpSchedulerRoundRobin"
 NS_LOG += ":MpTcpSubflow:MpTcpSocketBase"
 NS_LOG += ":MpTcpSubflowUncoupled"
 # NS_LOG += ":Config"
-#NS_LOG += ":TypeId" # to look for AddTraceSource
+# NS_LOG += ":TypeId" # to look for AddTraceSource
 NS_LOG += ":TcpTestSuite=*"
 # NS_LOG += ":TcpRxBuffer"
 NS_LOG += ":TcpTxBuffer"
 # NS_LOG += ":MpTcpMapping=*"
 # NS_LOG += ":TcpHeader=*"
-#NS_LOG="$NS_LOG:TcpOptionMpTcp=*"
-#NS_LOG="$NS_LOG:MpTcpOptionsTestSuite=*"
-#NS_LOG="$NS_LOG:TcpL4Protocol"
-#NS_LOG="$NS_LOG:TraceHelper:PointToPointHelper"
-#OUTPUT_FILENAME="xp.txt"
-#NS_LOG="$NS_LOG:MpTcpTestSuite=*|prefix_func:Socket=*"
+# NS_LOG="$NS_LOG:TcpOptionMpTcp=*"
+# NS_LOG="$NS_LOG:MpTcpOptionsTestSuite=*"
+# NS_LOG="$NS_LOG:TcpL4Protocol"
+# NS_LOG="$NS_LOG:TraceHelper:PointToPointHelper"
+# OUTPUT_FILENAME="xp.txt"
+# NS_LOG="$NS_LOG:MpTcpTestSuite=*|prefix_func:Socket=*"
 
 os.environ['NS_LOG'] = NS_LOG
 
@@ -68,13 +68,9 @@ os.environ['NS_LOG'] = NS_LOG
 
 print("Executed Command:\n%s" % cmd)
 
-
-
 # os.system(cmd)
 
 ret = subprocess.call(cmd, shell=True, timeout=100)
-
-
 
 print("Exported:\n%s" % NS_LOG)
 print("Executed Command:\n%s" % cmd)
