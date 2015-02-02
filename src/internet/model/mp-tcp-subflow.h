@@ -253,6 +253,18 @@ public:
   void
   TimeWait();
 
+  virtual void
+  DoRetransmit();
+
+  virtual void
+  SetRemoteWindow(uint32_t );
+
+  /**
+  TODO move this up to TcpSocketBase
+  **/
+  virtual uint32_t
+  RemoteWindow();
+
   /**
   TODO some options should be forwarded to the meta socket
   */

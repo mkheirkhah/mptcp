@@ -350,6 +350,7 @@ public:
   ProcessLastAck(Ptr<Packet>, const TcpHeader&); // Received a packet upon LAST_ACK
 
   // Window management
+  // TODO add constant qualifiers ?
   virtual uint32_t
   UnAckDataCount(void);       // Return count of number of unacked bytes
   virtual uint32_t
@@ -360,6 +361,16 @@ public:
   AvailableWindow(void);      // Return unfilled portion of window
   virtual uint16_t
   AdvertisedWindowSize(void); // The amount of Rx window announced to the peer
+  /**
+  Maybe remove window whose use is unclear and replace with this one.
+
+  **/
+  virtual uint32_t
+  RemoteWindow();             // Returns m_rWnd
+
+  /* not really needed anymore */
+  virtual void
+  SetRemoteWindow(uint32_t );
 
   // Manage data tx/rx
   virtual Ptr<TcpSocketBase>

@@ -486,6 +486,7 @@ TcpTestCase::SetupDefaultSim (void)
   //Ptr<SimpleChannel> channel = CreateObject<SimpleChannel> ();
   //dev0->SetChannel (channel);
   //dev1->SetChannel (channel);
+  Time::SetResolution (Time::MS);
 
 //  Ptr<SocketFactory> sockFactory0 = node0->GetObject<MpTcpSocketFactory> ();
   Ptr<SocketFactory> sockFactory0 = node0->GetObject<TcpSocketFactory> ();

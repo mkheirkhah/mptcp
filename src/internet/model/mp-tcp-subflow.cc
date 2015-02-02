@@ -591,7 +591,7 @@ MpTcpSubFlow::Retransmit(void)
                ", ssthresh to " << m_ssThresh << ", restart from seqnum " << m_nextTxSequence);
 
 
-  GetMeta()->OnSubflowRetransmit(this);
+
 
   m_rtt->IncreaseMultiplier ();             // Double the next RTO
   DoRetransmit ();                          // Retransmit the packet
@@ -602,6 +602,16 @@ MpTcpSubFlow::Retransmit(void)
   // pass on mapping
 
 
+}
+
+
+void
+MpTcpSubFlow::DoRetransmit()
+{
+  // TODO maybe this call should go to DoRetransmit
+  GetMeta()->OnSubflowRetransmit(this);
+
+  TcpSocketBase::DoRetransmit();
 }
 
 /**
@@ -707,16 +717,19 @@ MpTcpSubFlow::DoForwardUp(Ptr<Packet> packet, Ipv4Header header, uint16_t port, 
       EstimateRtt(tcpHeader);
     }
   ReadOptions(tcpHeader);
+
   //NS_LOG_INFO("After cuttingHeader: " << packet->GetSize());
   // Update Rx window size, i.e. the flow control window
-  if (m_rWnd.Get() == 0 && tcpHeader.GetWindowSize() != 0)
-    { // persist probes end
-      NS_LOG_LOGIC (this << " Leaving zerowindow persist state");
-      m_persistEvent.Cancel();
-    }
+//  TODO this will be done in meta
+//  if (m_rWnd.Get() == 0 && tcpHeader.GetWindowSize() != 0)
+//    { // persist probes end
+//      NS_LOG_LOGIC (this << " Leaving zerowindow persist state");
+//      m_persistEvent.Cancel();
+//    }
 
-  m_rWnd = tcpHeader.GetWindowSize();
-  GetMeta()->m_rWnd = tcpHeader.GetWindowSize();
+//  m_rWnd = tcpHeader.GetWindowSize();
+//  GetMeta()->m_rWnd = tcpHeader.GetWindowSize();
+
   // Discard fully out of range data packets
   if (packet->GetSize() && OutOfRange(tcpHeader.GetSequenceNumber(), tcpHeader.GetSequenceNumber() + packet->GetSize()))
     {
@@ -1813,7 +1826,13 @@ MpTcpSubFlow::ReceivedData(Ptr<Packet> p, const TcpHeader& tcpHeader)
   SequenceNumber32 expectedSSN = m_rxBuffer.NextRxSequence();
   if (!m_rxBuffer.Add(p, tcpHeader))
     { // Insert failed: No data or RX buffer full
-      NS_LOG_WARN("Insert failed, No data or RX buffer full");
+      NS_LOG_WARN("Insert failed, No data (" << p->GetSize() << ") "
+          // Size() returns the actual buffer occupancy
+          << "or RX buffer full (Available:" << m_rxBuffer.Available()
+          << "Occupancy=" << m_rxBuffer.Size()
+          << "Max buff size" << m_rxBuffer.MaxBufferSize() << ")"
+          );
+
 
 //      dss->SetDataAck( GetMeta()->m_rxBuffer.NextRxSequence().GetValue() );
       // TODO rather use a goto
@@ -1889,7 +1908,9 @@ MpTcpSubFlow::ReceivedData(Ptr<Packet> p, const TcpHeader& tcpHeader)
   // TODO if that acknowledges a full mapping then transfer it to  the metasock
 }
 
-// TODO unsure ?
+/* TODO unsure ?
+
+*/
 uint32_t
 MpTcpSubFlow::UnAckDataCount()
 {
@@ -1925,12 +1946,49 @@ MpTcpSubFlow::Window (void)
 //  return GetMeta()->Window();
 }
 
+uint32_t
+MpTcpSubFlow::RemoteWindow()
+{
+  NS_LOG_FUNCTION (this);
+  return GetMeta()->RemoteWindow();
+}
+
 uint16_t
 MpTcpSubFlow::AdvertisedWindowSize(void)
 {
   NS_LOG_DEBUG(this);
   return GetMeta()->AdvertisedWindowSize();
 }
+
+/*
+   Receive Window:  The receive window in the TCP header indicates the
+      amount of free buffer space for the whole data-level connection
+      (as opposed to for this subflow) that is available at the
+      receiver.  This is the same semantics as regular TCP, but to
+      maintain these semantics the receive window must be interpreted at
+      the sender as relative to the sequence number given in the
+      DATA_ACK rather than the subflow ACK in the TCP header.  In this
+      way, the original flow control role is preserved.  Note that some
+      middleboxes may change the receive window, and so a host SHOULD
+      use the maximum value of those recently seen on the constituent
+      subflows for the connection-level receive window, and also needs
+      to maintain a subflow-level window for subflow-level processing.
+
+
+
+Because of this, an implementation MUST NOT use the RCV.WND
+   field of a TCP segment at the connection level if it does not also
+   carry a DSS option with a Data ACK field.
+*/
+void
+MpTcpSubFlow::SetRemoteWindow(uint32_t win_size)
+{
+  NS_FATAL_ERROR("This function should never be called. Only meta can update remote window");
+//  NS_LOG_FUNCTION(win_size);
+//  MpTcpSubFlow::GetMeta()->SetRemoteWindow()
+//  TcpSocketBase::SetRemoteWindow(win_size);
+}
+
 
 void
 MpTcpSubFlow::ClosingOnEmpty(TcpHeader& header)
@@ -1975,62 +2033,9 @@ void
 MpTcpSubFlow::ParseDSS(Ptr<Packet> p, const TcpHeader& header,Ptr<TcpOptionMpTcpDSS> dss)
 {
   //!
+//  NS_FATAL_ERROR("TO REMOVE. Use meta->ProcessDSS")
   NS_ASSERT(dss);
   GetMeta()->ProcessDSS(header, dss, Ptr<MpTcpSubFlow>(this));
-
-//  uint8_t flags = dss->GetFlags();
-//
-//  // Look for mapping
-//  if( flags & TcpOptionMpTcpDSS::DSNMappingPresent )
-//  {
-//    if(dss->IsInfiniteMapping()) {
-//      NS_FATAL_ERROR("Infinite mapping detected. Unsupported !");
-//    }
-//    else if(dss->DataFinMappingOnly()){
-//      //!
-//      NS_LOG_LOGIC("Received DATAFIN mapping only");
-//
-//    }
-//    // Maps actual data
-//    else
-//    {
-//      //!
-////   TODO here we should generate the actual mapping, converts to 64 if it were 32 bits etc....
-////      //!
-////      if(flags & TcpOptionMpTcpDSS::DSNOfEightBytes)
-////      {
-////        NS_FATAL_ERROR("Not supported");
-////      }
-//      //! the mapping generated here is 32bits only
-//      AddPeerMapping(dss->GetMapping());
-//    }
-//  }
-//
-//  // looks for Data ACK
-//  if(flags & TcpOptionMpTcpDSS::DataAckPresent)
-//  {
-//    if(flags & TcpOptionMpTcpDSS::DataAckOf8Bytes)
-//    {
-//      NS_FATAL_ERROR("Not supported");
-//    }
-//    else
-//    {
-//      // TODO pass the info to the meta
-//      //
-//
-//    }
-//
-//
-//  }
-
-  //!
-//  if( flags & TcpOptionMpTcpDSS::DataFin)
-//  {
-//    //! depending on the state
-//    NS_LOG_DEBUG("Peer wants to close the connection");
-//    GetMeta()->OnDataFin( SequenceNumber32 (dss->GetDataFinDSN() ),this);
-////    GetMeta()->PeerClose();
-//  }
 
 }
 

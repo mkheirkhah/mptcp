@@ -4,7 +4,8 @@ TODO list:
 Bugs:
 * I don't register the rWnd during connection establishement apparently
 * Msubflow::NewAck does not do enough 
-* subflow DupAck should count only if there a DSS inside and not for any other MPTCP option
+* subflow DupAck should count only if there a DSS inside and not for any other MPTCP option* remote wnd of the meta and subflows should be the same
+
 
 List of tests:
 * Subflow management
@@ -16,6 +17,7 @@ List of tests:
 
 
 Generic:
+* rename isn into ISS as in TCP RFC
 * provide in meta a list of pending options that can be consumed by subflow
 * Note that new subflows MUST NOT be established (using the process documented in Section 3.2) until a Digital Signature Standard (DSS) option has been successfully received across th
 * Unmultiplex attribute MPTCP connection according to token
@@ -35,6 +37,7 @@ Generic:
 
 
 Requests for ns3;
+* Add member RemoteWindow in TcpSocketBase
 * when tracing a source that does not exist, ns3 should crash or log 
 * the CloseAndNotify member name is badly chosen since it does not close the socket but signal a closed state
 * add an IsConnected member to TcpSocketBase ?
@@ -56,10 +59,11 @@ use "/NodeList/[i]/DeviceList/[i]" ?
 * TcpSocketBase::NewAck remove the last SendPendingData
 * should be easier to use the helpers (for instance to assign an IP, or trace pcap files)
 * TcpRxBuffer::IncNextRxSequence sounds like a bad idea; may break some things
-* Inherit from TracedValue to propose a safer TcpState machine 
+* propose a safer TcpState machine 
 * Add a TcpRxBuffer::HeadSeqNb() const function
 * remove useless dependancy between TcpHeader and TcpRxBuffer::Add .  
 * Buffer::CheckNoZero can be simplified
+* should be able to bind to a specific worth via an attribute 
 
 
 

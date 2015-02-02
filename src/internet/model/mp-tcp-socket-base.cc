@@ -535,9 +535,42 @@ MpTcpSocketBase::AppendDataAck(TcpHeader& hdr) const
 }
 
 
+/*
+A receiver MUST NOT shrink the right edge of the receive window (i.e.,
+DATA_ACK + receive window)
+   */
+void
+MpTcpSocketBase::SetRemoteWindow(uint32_t win_size)
+{
+  NS_LOG_FUNCTION(" No checks are done here. New m_rWnd=" << win_size );
+  m_rWnd = win_size;
+
+  // Go through all containers
+  for(int i = 0; i < Maximum; ++i) {
+
+//    Established
+//    NS_LOG_INFO("Closing all subflows in state [" << containerNames [i] << "]");
+    for( SubflowList::const_iterator it = m_subflows[i].begin(); it != m_subflows[i].end(); it++ )
+    {
+
+      (*it)->m_rWnd = m_rWnd;
+
+    }
+
+  }
+
+}
+
+
 // TODO rename into DSS
 
 
+//void
+//MpTcpSocketBase::ProcessMpTcpOption(const TcpHeader& tcpHeader, Ptr<TcpOptionMpTcpDSS> dss
+//                             , Ptr<MpTcpSubFlow> sf
+//                             )
+//{
+//}
 
 /*
 Quote from rfc 6824:
@@ -548,7 +581,7 @@ Quote from rfc 6824:
     TODO
 */
 void
-MpTcpSocketBase::ProcessDSS(const TcpHeader& tcpHeader,Ptr<TcpOptionMpTcpDSS> dss
+MpTcpSocketBase::ProcessDSS(const TcpHeader& tcpHeader, Ptr<TcpOptionMpTcpDSS> dss
                              , Ptr<MpTcpSubFlow> sf
                              )
 {
@@ -556,6 +589,30 @@ MpTcpSocketBase::ProcessDSS(const TcpHeader& tcpHeader,Ptr<TcpOptionMpTcpDSS> ds
 
   // might be suboptimal but should make sure it gets properly updated
   m_cWnd = CalculateTotalCWND();
+
+  // TODO maybe this should be done within an processMPTCPoption, more global. For instance during 3WHS
+  /*Because of this, an implementation MUST NOT use the RCV.WND
+  field of a TCP segment at the connection level if it does not also
+  carry a DSS option with a Data ACK field*/
+  if(dss->GetFlags() & TcpOptionMpTcpDSS::DataAckPresent) {
+
+    /*
+    The receive window is relative to the DATA_ACK.  As in TCP, a
+    receiver MUST NOT shrink the right edge of the receive window (i.e.,
+    DATA_ACK + receive window).  The receiver will use the data sequence
+    number to tell if a packet should be accepted at the connection
+    level.
+    */
+    if( dss->GetDataAck() + tcpHeader.GetWindowSize() >= m_rxBuffer.NextRxSequence().GetValue() + RemoteWindow())
+    {
+      // TODO update all r_wnd of subflows
+      NS_LOG_LOGIC("Updating receive window");
+      SetRemoteWindow(tcpHeader.GetWindowSize());
+    }
+    else {
+//      NS_LOG_DEBUG("Not advancing window");
+    }
+  }
 
   switch(m_state) {
 
@@ -1945,59 +2002,9 @@ MpTcpSocketBase::SetupMetaTracing(std::string prefix)
 //  f.open(filename, std::ofstream::out | std::ofstream::trunc);
   m_tracePrefix = prefix + "/";
 
-  prefix = m_tracePrefix + "/meta";
+//  prefix = m_tracePrefix + "/meta";
 
-  SetupSocketTracing(this, prefix);
-  #if 0
-  std::ios::openmode mode = std::ofstream::out | std::ofstream::trunc;
-
-  AsciiTraceHelper asciiTraceHelper;
-  Ptr<OutputStreamWrapper> streamNextTx = asciiTraceHelper.CreateFileStream (prefix+"_nextTx.csv", mode);
-  Ptr<OutputStreamWrapper> streamHighest = asciiTraceHelper.CreateFileStream (prefix+"_highest.csv", mode);
-  Ptr<OutputStreamWrapper> streamRxAvailable = asciiTraceHelper.CreateFileStream (prefix+"_RxAvailable.csv", mode);
-  Ptr<OutputStreamWrapper> streamRxTotal = asciiTraceHelper.CreateFileStream (prefix+"_RxTotal.csv", mode);
-  Ptr<OutputStreamWrapper> streamRxNext = asciiTraceHelper.CreateFileStream (prefix+"_RxNext.csv", mode);
-  Ptr<OutputStreamWrapper> streamTx = asciiTraceHelper.CreateFileStream (prefix+"_Tx.csv", mode);
-  Ptr<OutputStreamWrapper> streamStates = asciiTraceHelper.CreateFileStream (prefix+"_states.csv", mode);
-  Ptr<OutputStreamWrapper> streamCwnd = asciiTraceHelper.CreateFileStream (prefix+"_cwnd.csv", mode);
-  Ptr<OutputStreamWrapper> streamRwnd = asciiTraceHelper.CreateFileStream (prefix+"_rwnd.csv", mode);
-
-  *streamNextTx->GetStream() << "Time,oldNextTxSequence,newNextTxSequence" << std::endl;
-  *streamHighest->GetStream() << "Time,oldHighestSequence,newHighestSequence" << std::endl;
-  *streamRxNext->GetStream() << "Time,oldRxNext,newRxNext" << std::endl;
-  //NextRxSequence
-  *streamRxAvailable->GetStream() << "Time,oldRxAvailable,newRxAvailable" << std::endl;
-  *streamRxTotal->GetStream() << "Time,oldRxTotal,newRxTotal" << std::endl;
-  *streamTx->GetStream() << "Time,oldTx,newTx" << std::endl;
-  *streamCwnd->GetStream() << "Time,oldCwnd,newCwnd" << std::endl;
-  *streamRwnd->GetStream() << "Time,oldRwnd,newRwnd" << std::endl;
-  *streamStates->GetStream() << "Time,oldState,newState" << std::endl;
-
-//  , HighestSequence, RWND\n";
-
-//  NS_ASSERT(f.is_open());
-
-  // TODO je devrais etre capable de voir les CongestionWindow + tailles de buffer/ Out of order
-//  CongestionWindow
-  Ptr<MpTcpSocketBase> sock(this);
-  NS_ASSERT(sock->TraceConnect ("NextTxSequence", "NextTxSequence", MakeBoundCallback(&dumpNextTxSequence, streamNextTx)));
-  NS_ASSERT(sock->TraceConnect ("HighestSequence", "HighestSequence", MakeBoundCallback(&dumpNextTxSequence, streamHighest)));
-  NS_ASSERT(sock->TraceConnect ("CongestionWindow", "CongestionWindow", MakeBoundCallback(&dumpUint32, streamCwnd)));
-  NS_ASSERT(sock->TraceConnect ("State", "State", MakeBoundCallback(&dumpTcpState, streamStates) ));
-
-//  Ptr<MpTcpSocketBase> sock2 = DynamicCast<MpTcpSocketBase>(sock);
-
-//  Ptr<TcpTxBuffer> txBuffer( &sock->m_txBuffer);
-//  NS_ASSERT(txBuffer->TraceConnect ("UnackSequence", "UnackSequence", MakeBoundCallback(&dumpNextTxSequence, streamTx)));
-
-  NS_LOG_UNCOND("Starting research !!");
-  NS_ASSERT(sock->m_txBuffer.TraceConnect ("UnackSequence", "UnackSequence", MakeBoundCallback(&dumpNextTxSequence, streamTx)));
-
-  NS_ASSERT(sock->m_rxBuffer.TraceConnect ("RxTotal", "RxTotal", MakeBoundCallback(&dumpUint32, streamRxTotal) ));
-  NS_ASSERT(sock->m_rxBuffer.TraceConnect ("RxAvailable", "RxAvailable", MakeBoundCallback(&dumpUint32, streamRxAvailable) ));
-
-  NS_ASSERT(sock->TraceConnect ("RWND", "Remote WND", MakeBoundCallback(&dumpUint32, streamRwnd)));
-  #endif
+  SetupSocketTracing(this, m_tracePrefix + "/meta");
 }
 
 
@@ -2029,13 +2036,13 @@ MpTcpSocketBase::OnSubflowClosing(Ptr<MpTcpSubFlow> sf)
 void
 MpTcpSocketBase::OnSubflowDupack(Ptr<MpTcpSubFlow> sf, MpTcpMapping mapping)
 {
-  NS_LOG_LOGIC("Subflow Dupack TODO");
+  NS_LOG_LOGIC("Subflow Dupack TODO.Nothing done by meta");
 }
 
 void
 MpTcpSocketBase::OnSubflowRetransmit(Ptr<MpTcpSubFlow> sf)
 {
-  NS_LOG_LOGIC("Subflow retransmit");
+  NS_LOG_WARN("Subflow retransmit. Nothing done by meta");
 }
 
 
@@ -2336,7 +2343,7 @@ MpTcpSocketBase::ProcessDSSEstablished( const TcpHeader& tcpHeader, Ptr<TcpOptio
       { // Case 2: Potentially a duplicated ACK
         if (dack  < m_nextTxSequence)
           {
-            NS_LOG_LOGIC ("TODO Dupack of " << dack );
+            NS_LOG_WARN ("TODO Dupack of " << dack << " not handled." );
             // TODO add new prototpye ?
   //          DupAck(tcpHeader,
   //          ++m_dupAckCount);
@@ -2347,6 +2354,8 @@ MpTcpSocketBase::ProcessDSSEstablished( const TcpHeader& tcpHeader, Ptr<TcpOptio
     else if (dack  > m_txBuffer.HeadSequence())
       { // Case 3: New ACK, reset m_dupAckCount and update m_txBuffer
         NS_LOG_LOGIC ("New DataAck [" << dack  << "]");
+
+        // TODO that is buggy behavior. Change that
         m_rWnd = tcpHeader.GetWindowSize();
         NewAck( dack );
         m_dupAckCount = 0;
@@ -2354,7 +2363,8 @@ MpTcpSocketBase::ProcessDSSEstablished( const TcpHeader& tcpHeader, Ptr<TcpOptio
     }
 
   //! datafin case handled at the start of the function
-  if( (dss->GetFlags() & TcpOptionMpTcpDSS::DSNMappingPresent) && !dss->DataFinMappingOnly() ) {
+  if( (dss->GetFlags() & TcpOptionMpTcpDSS::DSNMappingPresent) && !dss->DataFinMappingOnly() )
+  {
       sf->AddPeerMapping(dss->GetMapping());
   }
 }

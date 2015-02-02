@@ -94,7 +94,8 @@ TcpSocketBase::GetTypeId(void)
   .AddTraceSource("State", "TCP state",
       MakeTraceSourceAccessor(&TcpSocketBase::m_state))
   .AddTraceSource("RWND", "Remote side's flow control window",
-      MakeTraceSourceAccessor(&TcpSocketBase::m_rWnd))
+      MakeTraceSourceAccessor(&TcpSocketBase::m_rWnd)
+      )
   ;
 
 
@@ -745,6 +746,19 @@ TcpSocketBase::OutOfRange(SequenceNumber32 head, SequenceNumber32 tail) const
   return (tail < m_rxBuffer.NextRxSequence() || m_rxBuffer.MaxRxSequence() <= head);
 }
 
+
+/*
+A receiver MUST NOT shrink the right edge of the receive window (i.e.,
+DATA_ACK + receive window)
+   */
+void
+TcpSocketBase::SetRemoteWindow(uint32_t win_size)
+{
+  NS_LOG_FUNCTION(win_size);
+  m_rWnd = win_size;
+}
+
+
 /** Function called by the L3 protocol when it received a packet to pass on to
  the TCP. This function is registered as the "RxCallback" function in
  SetupCallback(), which invoked by Bind(), and CompleteFork() */
@@ -785,12 +799,31 @@ TcpSocketBase::DoForwardUp(Ptr<Packet> packet, Ipv4Header header, uint16_t port,
   ReadOptions(tcpHeader);
   //NS_LOG_INFO("After cuttingHeader: " << packet->GetSize());
   // Update Rx window size, i.e. the flow control window
-  if (m_rWnd.Get() == 0 && tcpHeader.GetWindowSize() != 0)
+//  if (m_rWnd.Get() == 0 && tcpHeader.GetWindowSize() != 0)
+  if (RemoteWindow() == 0 && tcpHeader.GetWindowSize() != 0)
     { // persist probes end
       NS_LOG_LOGIC (this << " Leaving zerowindow persist state");
       m_persistEvent.Cancel();
     }
-  m_rWnd = tcpHeader.GetWindowSize();
+
+  /*
+    a
+   receiver MUST NOT shrink the right edge of the receive window (i.e.,
+   DATA_ACK + receive window
+   */
+   if(tcpHeader.GetAckNumber() + tcpHeader.GetWindowSize() >= m_rxBuffer.NextRxSequence() + RemoteWindow() )
+   {
+//      SetRemoteWindow(tcpHeader.GetWindowSize());
+      m_rWnd = tcpHeader.GetWindowSize();
+   }
+   else {
+    NS_LOG_WARN("old ns3 would have set the receive window");
+   }
+
+  // TODO
+
+  // OTDO
+//  m_rWnd = tcpHeader.GetWindowSize();
 
   // Discard fully out of range data packets
   if (packet->GetSize() && OutOfRange(tcpHeader.GetSequenceNumber(), tcpHeader.GetSequenceNumber() + packet->GetSize()))
@@ -879,7 +912,8 @@ TcpSocketBase::DoForwardUp(Ptr<Packet> packet, Ipv6Address saddr, Ipv6Address da
   ReadOptions(tcpHeader);
 
   // Update Rx window size, i.e. the flow control window
-  if (m_rWnd.Get() == 0 && tcpHeader.GetWindowSize() != 0)
+//  if (m_rWnd.Get() == 0 && tcpHeader.GetWindowSize() != 0)
+  if (RemoteWindow() == 0 && tcpHeader.GetWindowSize() != 0)
     { // persist probes end
       NS_LOG_LOGIC (this << " Leaving zerowindow persist state");
       m_persistEvent.Cancel();
@@ -1919,7 +1953,7 @@ TcpSocketBase::SendPendingData(bool withAck)
       uint32_t w = AvailableWindow(); // Get available window size
       NS_LOG_LOGIC ("TcpSocketBase " << this << " SendPendingData" <<
           " availableWindow=" << w <<
-          " rwnd=" << m_rWnd <<
+          " rwnd=" << RemoteWindow() <<
           " segsize=" << m_segmentSize <<
           " m_nextTxSequence=" << m_nextTxSequence <<
           " highestRxAck (TxBuffer headSeq)=" << m_txBuffer.HeadSequence () <<
@@ -1966,6 +2000,13 @@ TcpSocketBase::BytesInFlight()
 {
   NS_LOG_FUNCTION (this);
   return m_highTxMark.Get() - m_txBuffer.HeadSequence();
+}
+
+uint32_t
+TcpSocketBase::RemoteWindow()
+{
+  NS_LOG_FUNCTION (this);
+  return m_rWnd;
 }
 
 uint32_t
@@ -2080,9 +2121,11 @@ TcpSocketBase::NewAck(SequenceNumber32 const& ack)
           (Simulator::Now () + m_rto.Get ()).GetSeconds ());
       m_retxEvent = Simulator::Schedule(m_rto, &TcpSocketBase::ReTxTimeout, this);
     }
-  if (m_rWnd.Get() == 0 && m_persistEvent.IsExpired())
+//  if (m_rWnd.Get() == 0 && m_persistEvent.IsExpired())
+  if (RemoteWindow() == 0 && m_persistEvent.IsExpired())
     { // Zero window: Enter persist state to send 1 byte to probe
-      NS_LOG_LOGIC (this << "Enter zerowindow persist state");NS_LOG_LOGIC (this << "Cancelled ReTxTimeout event which was set to expire at " <<
+      NS_LOG_LOGIC (this << "Enter zerowindow persist state");
+      NS_LOG_LOGIC (this << "Cancelled ReTxTimeout event which was set to expire at " <<
           (Simulator::Now () + Simulator::GetDelayLeft (m_retxEvent)).GetSeconds ());
       m_retxEvent.Cancel();
       NS_LOG_LOGIC ("Schedule persist timeout at time " <<

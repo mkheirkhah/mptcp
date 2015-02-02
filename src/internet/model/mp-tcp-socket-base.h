@@ -223,6 +223,7 @@ public: // public methods
   virtual uint32_t GetTxAvailable() const;                  // Return available space in sending buffer to application
   virtual uint32_t GetRxAvailable(void) const;
 
+  // TODO maybe this could be removed ?
   void
   DoForwardUp(Ptr<Packet> packet, Ipv4Header header, uint16_t port, Ptr<Ipv4Interface> incomingInterface);
   /**
@@ -247,7 +248,7 @@ public: // public methods
 //  void SetDataDistribAlgo(DataDistribAlgo_t ddalgo);    // Round Robin is only algorithms used.
 
   /**
-  TODO remove ?
+  TODO remove ? transfom into attribute ?
   \brief Allow to set the congestion control algorithm in use. You can choose between OLIA,LIA,COUPLED,UNCOUPLED.
   \bug Should not be possible to change CC after connection has started
   */
@@ -353,6 +354,8 @@ protected: // protected methods
   virtual void SetSSThresh(uint32_t threshold);
   virtual uint32_t GetSSThresh(void) const;
 
+  void
+  SetRemoteWindow(uint32_t win_size);
 
   virtual void SetInitialCwnd(uint32_t cwnd);
   virtual uint32_t GetInitialCwnd(void) const;
