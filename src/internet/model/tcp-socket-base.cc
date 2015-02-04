@@ -1510,14 +1510,33 @@ TcpSocketBase::GenerateEmptyPacketHeader(TcpHeader& header, uint8_t flags)
 
 
   if (m_endPoint == 0 && m_endPoint6 == 0)
-    {
-      NS_LOG_WARN ("Failed to send empty packet due to null endpoint");
-      return;
-    }
+  {
+//      NS_LOG_WARN ("Failed to send empty packet due to null endpoint");
+    NS_FATAL_ERROR ("Failed to send empty packet due to null endpoint");
+    return;
+  }
+
+
+  SequenceNumber32 s = m_nextTxSequence;
+
+  if (flags & TcpHeader::FIN)
+  {
+    flags |= TcpHeader::ACK;
+  }
+  else if (m_state == FIN_WAIT_1 || m_state == LAST_ACK || m_state == CLOSING)
+  {
+    ++s;
+  }
+
+  header.SetSequenceNumber(s);
 
   header.SetFlags(flags);
-  header.SetSequenceNumber(m_nextTxSequence);
-  header.SetAckNumber(m_rxBuffer.NextRxSequence());
+
+//  header.SetSequenceNumber(m_nextTxSequence);
+  if( flags & TcpHeader::ACK) {
+    header.SetAckNumber(m_rxBuffer.NextRxSequence());
+  }
+
   if (m_endPoint != 0)
     {
       header.SetSourcePort(m_endPoint->GetLocalPort());
@@ -1556,18 +1575,7 @@ TcpSocketBase::SendEmptyPacket(uint8_t flags)
 //  SendPacket(header,p);
 //  uint8_t flags = header.GetFlags();
 
-  SequenceNumber32 s = m_nextTxSequence;
 
-  if (flags & TcpHeader::FIN)
-    {
-      flags |= TcpHeader::ACK;
-    }
-  else if (m_state == FIN_WAIT_1 || m_state == LAST_ACK || m_state == CLOSING)
-    {
-      ++s;
-    }
-
-  header.SetSequenceNumber(s);
   SendEmptyPacket(header);
 }
 
@@ -1597,10 +1605,10 @@ TcpSocketBase::SendPacket(TcpHeader header, Ptr<Packet> p)
 
   //header.SetSequenceNumber()
   // TODO should be done outside, previously
-  header.SetAckNumber(m_rxBuffer.NextRxSequence());
+//  header.SetAckNumber(m_rxBuffer.NextRxSequence());
 
   // Check dest/src/seq nb are ok
-  NS_ASSERT_MSG( header.GetAckNumber() == m_rxBuffer.NextRxSequence(),"Forgot to update nextRxSequence when generating the header");
+//  NS_ASSERT_MSG( header.GetAckNumber() == m_rxBuffer.NextRxSequence(),"Forgot to update nextRxSequence when generating the header");
   //NS_ASSERT_MSG( header.GetSequenceNumber() == m_txBuffer
 //  NS_ASSERT( header.GetAckNumber() == m_rxBuffer.NextRxSequence());
   int flags = header.GetFlags();

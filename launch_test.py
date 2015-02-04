@@ -3,6 +3,7 @@ import argparse
 import subprocess
 
 available_suites = [
+    "tcp",
     "mptcp-tcp",
     "mptcp-option",
     "mptcp-mapping"
@@ -22,7 +23,7 @@ args = parser.parse_args()
 if args.debug:
     cmd = "./waf --run test-runner --command-template=\"gdb -ex 'run --suite={suite} {verbose} {tofile}' --args %s \" "
 else:
-    cmd = "./waf --run \"test-runner --suite={suite} --fullness=EXTENSIVE {verbose} \" {tofile}"
+    cmd = "./waf --run \"test-runner --suite={suite} --fullness={fullness} {verbose} \" {tofile}"
 
 
 tofile = " > %s 2>&1" % args.out if args.out else ""
@@ -33,6 +34,7 @@ cmd = cmd.format(
     verbose=args.verbose,
     # out=
     tofile=tofile,
+    fullness="QUICK",
 )
 
 # WITH_GDB=0
@@ -44,6 +46,7 @@ NS_LOG += "*=error|warn|prefix_node|prefix_func"
 # NS_LOG += ":PointToPointChannel"
 # NS_LOG += ":DropTailQueue"
 
+NS_LOG += ":TcpTestSuite"
 NS_LOG += ":TcpSocketBase"
 NS_LOG += ":MpTcpSchedulerRoundRobin"
 # NS_LOG += ":SimpleNetDevice"

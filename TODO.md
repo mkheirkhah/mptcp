@@ -8,6 +8,8 @@ Bugs:
 * When computing global cwin, differentiate  fast recovery cases
 * when retransmitting a packet, the mapping may be wrong !!
 * the buffering is done wrongly. For instance packets can't be replicated across subflows
+* if you disable Nagle algorithm, then every packet embeds an ACK packet (m_connected).
+* reenable commented code in Meta::NewAck
 
 
 buffering system:

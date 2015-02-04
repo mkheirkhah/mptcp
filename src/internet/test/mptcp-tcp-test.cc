@@ -58,7 +58,7 @@
 #include <string>
 #include <fstream>
 
-NS_LOG_COMPONENT_DEFINE ("TcpTestSuite");
+NS_LOG_COMPONENT_DEFINE ("MpTcpTestSuite");
 
 using namespace ns3;
 
@@ -86,10 +86,10 @@ using namespace ns3;
 
 
 
-class TcpTestCase : public TestCase
+class MpTcpTestCase : public TestCase
 {
 public:
-  TcpTestCase (uint32_t totalStreamSize,
+  MpTcpTestCase (uint32_t totalStreamSize,
                uint32_t sourceWriteSize,
                uint32_t sourceReadSize,
                uint32_t serverWriteSize,
@@ -150,7 +150,7 @@ static std::string GetString (Ptr<Packet> p)
 }
 #endif /* NS3_LOG_ENABLE */
 
-TcpTestCase::TcpTestCase (uint32_t totalStreamSize,
+MpTcpTestCase::MpTcpTestCase (uint32_t totalStreamSize,
                           uint32_t sourceWriteSize,
                           uint32_t sourceReadSize,
                           uint32_t serverWriteSize,
@@ -173,7 +173,7 @@ TcpTestCase::TcpTestCase (uint32_t totalStreamSize,
 }
 
 void
-TcpTestCase::DoRun (void)
+MpTcpTestCase::DoRun (void)
 {
   m_currentSourceTxBytes = 0;
   m_currentSourceRxBytes = 0;
@@ -210,7 +210,7 @@ TcpTestCase::DoRun (void)
                          "Source received back expected data buffers");
 }
 void
-TcpTestCase::DoTeardown (void)
+MpTcpTestCase::DoTeardown (void)
 {
   delete [] m_sourceTxPayload;
   delete [] m_sourceRxPayload;
@@ -219,11 +219,11 @@ TcpTestCase::DoTeardown (void)
 }
 
 void
-TcpTestCase::ServerHandleConnectionCreated (Ptr<Socket> s, const Address & addr)
+MpTcpTestCase::ServerHandleConnectionCreated (Ptr<Socket> s, const Address & addr)
 {
   NS_LOG_DEBUG("ServerHandleConnectionCreated");
-  s->SetRecvCallback (MakeCallback (&TcpTestCase::ServerHandleRecv, this));
-  s->SetSendCallback (MakeCallback (&TcpTestCase::ServerHandleSend, this));
+  s->SetRecvCallback (MakeCallback (&MpTcpTestCase::ServerHandleRecv, this));
+  s->SetSendCallback (MakeCallback (&MpTcpTestCase::ServerHandleSend, this));
 
   // TODO setup tracing there !
 
@@ -232,7 +232,7 @@ TcpTestCase::ServerHandleConnectionCreated (Ptr<Socket> s, const Address & addr)
 }
 
 void
-TcpTestCase::ServerHandleRecv (Ptr<Socket> sock)
+MpTcpTestCase::ServerHandleRecv (Ptr<Socket> sock)
 {
   NS_LOG_DEBUG("ServerHandleRecv, Rx available [" << sock->GetRxAvailable () << "]");
   while (sock->GetRxAvailable () > 0)
@@ -255,7 +255,7 @@ TcpTestCase::ServerHandleRecv (Ptr<Socket> sock)
 }
 
 void
-TcpTestCase::ServerHandleSend (Ptr<Socket> sock, uint32_t available)
+MpTcpTestCase::ServerHandleSend (Ptr<Socket> sock, uint32_t available)
 {
   NS_LOG_DEBUG("ServerHandleSend: TxAvailable=" << available
         << " m_currentServerTxBytes=" << m_currentServerTxBytes
@@ -284,7 +284,7 @@ TcpTestCase::ServerHandleSend (Ptr<Socket> sock, uint32_t available)
 }
 
 void
-TcpTestCase::SourceHandleSend (Ptr<Socket> sock, uint32_t available)
+MpTcpTestCase::SourceHandleSend (Ptr<Socket> sock, uint32_t available)
 {
   NS_LOG_DEBUG("SourceHandleSend with available = " << available
                   << " m_currentSourceTxBytes=" << m_currentSourceTxBytes
@@ -305,7 +305,7 @@ TcpTestCase::SourceHandleSend (Ptr<Socket> sock, uint32_t available)
 }
 
 void
-TcpTestCase::SourceHandleRecv (Ptr<Socket> sock)
+MpTcpTestCase::SourceHandleRecv (Ptr<Socket> sock)
 {
   NS_LOG_DEBUG("SourceHandleRecv : m_currentSourceRxBytes=" << m_currentSourceRxBytes);
   while (sock->GetRxAvailable () > 0 && m_currentSourceRxBytes < m_totalBytes)
@@ -332,7 +332,7 @@ TcpTestCase::SourceHandleRecv (Ptr<Socket> sock)
 }
 
 Ptr<Node>
-TcpTestCase::CreateInternetNode ()
+MpTcpTestCase::CreateInternetNode ()
 {
   Ptr<Node> node = CreateObject<Node> ();
   //ARP
@@ -361,7 +361,7 @@ TcpTestCase::CreateInternetNode ()
 }
 
 Ptr<SimpleNetDevice>
-TcpTestCase::AddSimpleNetDevice (Ptr<Node> node, const char* ipaddr, const char* netmask)
+MpTcpTestCase::AddSimpleNetDevice (Ptr<Node> node, const char* ipaddr, const char* netmask)
 {
   Ptr<SimpleNetDevice> dev = CreateObject<SimpleNetDevice> ();
   dev->SetAddress (Mac48Address::ConvertFrom (Mac48Address::Allocate ()));
@@ -450,7 +450,7 @@ Assign (const Ptr<NetDevice> &device)
 
 
 void
-TcpTestCase::SetupDefaultSim (void)
+MpTcpTestCase::SetupDefaultSim (void)
 {
   const char* netmask = "255.255.255.0";
   const char* ipaddr0 = "192.168.1.0";
@@ -509,18 +509,18 @@ TcpTestCase::SetupDefaultSim (void)
   server->Bind (serverlocaladdr);
   server->Listen ();
   server->SetAcceptCallback (MakeNullCallback<bool, Ptr< Socket >, const Address &> (),
-                             MakeCallback (&TcpTestCase::ServerHandleConnectionCreated,this));
+                             MakeCallback (&MpTcpTestCase::ServerHandleConnectionCreated,this));
 
 //  NS_LOG_INFO( "test" << server);
-  source->SetRecvCallback (MakeCallback (&TcpTestCase::SourceHandleRecv, this));
-  source->SetSendCallback (MakeCallback (&TcpTestCase::SourceHandleSend, this));
+  source->SetRecvCallback (MakeCallback (&MpTcpTestCase::SourceHandleRecv, this));
+  source->SetSendCallback (MakeCallback (&MpTcpTestCase::SourceHandleSend, this));
 
   source->Connect (serverremoteaddr);
 
 }
 
 void
-TcpTestCase::SetupDefaultSim6 (void)
+MpTcpTestCase::SetupDefaultSim6 (void)
 {
   Ipv6Prefix prefix = Ipv6Prefix(64);
   Ipv6Address ipaddr0 = Ipv6Address("2001:0100:f00d:cafe::1");
@@ -547,16 +547,16 @@ TcpTestCase::SetupDefaultSim6 (void)
   server->Bind (serverlocaladdr);
   server->Listen ();
   server->SetAcceptCallback (MakeNullCallback<bool, Ptr< Socket >, const Address &> (),
-                             MakeCallback (&TcpTestCase::ServerHandleConnectionCreated,this));
+                             MakeCallback (&MpTcpTestCase::ServerHandleConnectionCreated,this));
 
-  source->SetRecvCallback (MakeCallback (&TcpTestCase::SourceHandleRecv, this));
-  source->SetSendCallback (MakeCallback (&TcpTestCase::SourceHandleSend, this));
+  source->SetRecvCallback (MakeCallback (&MpTcpTestCase::SourceHandleRecv, this));
+  source->SetSendCallback (MakeCallback (&MpTcpTestCase::SourceHandleSend, this));
 
   source->Connect (serverremoteaddr);
 }
 
 Ptr<Node>
-TcpTestCase::CreateInternetNode6 ()
+MpTcpTestCase::CreateInternetNode6 ()
 {
   Ptr<Node> node = CreateObject<Node> ();
   //IPV6
@@ -583,7 +583,7 @@ TcpTestCase::CreateInternetNode6 ()
 }
 
 Ptr<SimpleNetDevice>
-TcpTestCase::AddSimpleNetDevice6 (Ptr<Node> node, Ipv6Address ipaddr, Ipv6Prefix prefix)
+MpTcpTestCase::AddSimpleNetDevice6 (Ptr<Node> node, Ipv6Address ipaddr, Ipv6Prefix prefix)
 {
   Ptr<SimpleNetDevice> dev = CreateObject<SimpleNetDevice> ();
   dev->SetAddress (Mac48Address::ConvertFrom (Mac48Address::Allocate ()));
@@ -611,19 +611,19 @@ public:
     // 2) source write size, 3) source read size
     // 4) server write size, and 5) server read size
     // with units of bytes
-//    AddTestCase (new TcpTestCase (13, 200, 200, 200, 200, false), TestCase::QUICK);
-//    AddTestCase (new TcpTestCase (13, 1, 1, 1, 1, false), TestCase::QUICK);
-//    AddTestCase (new TcpTestCase (100000, 100, 50, 100, 20, false), TestCase::QUICK);
+//    AddTestCase (new MpTcpTestCase (13, 200, 200, 200, 200, false), TestCase::QUICK);
+//    AddTestCase (new MpTcpTestCase (13, 1, 1, 1, 1, false), TestCase::QUICK);
+//    AddTestCase (new MpTcpTestCase (100000, 100, 50, 100, 20, false), TestCase::QUICK);
 
 // here it's a test where I lower streamsize to see where it starts failing.
 // 2100 is ok, 2200 fails
-    AddTestCase (new TcpTestCase (5000, 100, 50, 100, 20, false), TestCase::EXTENSIVE);
-//    AddTestCase (new TcpTestCase (5000, 100, 50, 100, 20, false), TestCase::QUICK);
+//    AddTestCase (new MpTcpTestCase (5000, 100, 50, 100, 20, false), TestCase::EXTENSIVE);
+    AddTestCase (new MpTcpTestCase (5000, 100, 50, 100, 20, false), TestCase::QUICK);
 
     // Disable IPv6 tests; not supported yet
-//    AddTestCase (new TcpTestCase (13, 200, 200, 200, 200, true), TestCase::QUICK);
-//    AddTestCase (new TcpTestCase (13, 1, 1, 1, 1, true), TestCase::QUICK);
-//    AddTestCase (new TcpTestCase (100000, 100, 50, 100, 20, true), TestCase::QUICK);
+//    AddTestCase (new MpTcpTestCase (13, 200, 200, 200, 200, true), TestCase::QUICK);
+//    AddTestCase (new MpTcpTestCase (13, 1, 1, 1, 1, true), TestCase::QUICK);
+//    AddTestCase (new MpTcpTestCase (100000, 100, 50, 100, 20, true), TestCase::QUICK);
   }
 
 } g_tcpTestSuite;

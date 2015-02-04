@@ -1447,7 +1447,7 @@ bool
 MpTcpSubFlow::DiscardAtMostOneMapping(SequenceNumber32 const& dack, SequenceNumber32 const& ack, MpTcpMapping& mapping)
 //MpTcpSubFlow::DiscardTxMappingsUpTo(SequenceNumber32 const& dack, SequenceNumber32 const& ack)
 {
-  NS_LOG_DEBUG(this << "maxDSN="<< dack << " maxSSN=" << ack);
+  NS_LOG_DEBUG(" maxDSN="<< dack << " maxSSN=" << ack);
 
 //  while(true) {
 
@@ -1593,10 +1593,10 @@ MpTcpSubFlow::NewAck(SequenceNumber32 const& ack)
     min(ack,dataack
     **/
 //    m_TxMappings.DiscardMappingsUpToDSN()
-
+      GetMeta()->OnSubflowNewAck(ack,this);
   }
 
-//  GetMeta()->OnSubflowNewAck(ack,this);
+
 // TODO I should call
 
 

@@ -1390,8 +1390,8 @@ MpTcpSocketBase::OnSubflowNewAck(SequenceNumber32 const& ack, Ptr<MpTcpSubFlow> 
 //    SequenceNumber32 dack = 0;
     MpTcpMapping mapping;
 
-    if(!subflow->DiscardAtMostOneMapping(m_txBuffer.HeadSequence(), ack, mapping )) {
-      NS_LOG_DEBUG("subflow could not discard further");
+    if(!subflow->DiscardAtMostOneMapping(m_txBuffer.TailSequence(), ack, mapping )) {
+      NS_LOG_DEBUG("Nothing discarded");
       break;
     }
 
@@ -1399,6 +1399,7 @@ MpTcpSocketBase::OnSubflowNewAck(SequenceNumber32 const& ack, Ptr<MpTcpSubFlow> 
     returned mapping discarded because we don't support NR sack right now
     **/
     NS_LOG_DEBUG("subflow Tx mapping " << mapping << " discarded");
+//    m_txBuffer.DiscardUpTo( mapping.TailDSN());
   }
 
 }
@@ -1477,7 +1478,7 @@ MpTcpSocketBase::NewAck(SequenceNumber32 const& dsn)
 //    #endif
   // Note the highest ACK and tell app to send more
   NS_LOG_LOGIC ("TCP " << this << " NewAck " << dsn <<
-      " numberAck " << (dsn - m_txBuffer.HeadSequence ())); // Number bytes ack'ed
+      " nbAckedBytes " << (dsn - m_txBuffer.HeadSequence ())); // Number bytes ack'ed
 
 
 
