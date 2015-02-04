@@ -410,6 +410,9 @@ public:
   virtual void
   AddOptions(TcpHeader&); // Add option to outgoing packets
 
+  virtual SequenceNumber32
+  FirstUnackedSeq() const;  // get SND.UNA
+
 protected:
   // Counters and events
   EventId m_retxEvent;       //< Retransmission event
@@ -442,6 +445,9 @@ protected:
 public: //temporary
   TracedValue<SequenceNumber32> m_nextTxSequence; //< Next seqnum to be sent (SND.NXT), ReTx pushes it back
   TracedValue<SequenceNumber32> m_highTxMark;     //< Highest seqno ever sent, regardless of ReTx
+  TracedValue<SequenceNumber32> m_firstTxUnack;   //< First unacknowledged seq nb  (SND.UNA)
+
+  SequenceNumber32 m_lastAckSent;   //< No of last ack sent
 
 
   TcpRxBuffer m_rxBuffer;       //< Rx buffer (reordering buffer)
