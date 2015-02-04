@@ -134,13 +134,13 @@ MpTcpSubFlow::DupAck(const TcpHeader& t, uint32_t count)
       m_ssThresh = std::max (2 * m_segmentSize, BytesInFlight () / 2);
       m_cWnd = m_ssThresh + 3 * m_segmentSize;
       m_inFastRec = true;
-      NS_LOG_INFO ("Triple dupack. Reset cwnd to " << m_cWnd << ", ssthresh to " << m_ssThresh);
+      NS_LOG_INFO ("Triple dupack. Entering fast recovery. Reset cwnd to " << m_cWnd << ", ssthresh to " << m_ssThresh);
       DoRetransmit ();
     }
   else if (m_inFastRec)
     { // In fast recovery, inc cwnd for every additional dupack (RFC2581, sec.3.2)
       m_cWnd += m_segmentSize;
-      NS_LOG_INFO ("Increased cwnd to " << m_cWnd);
+      NS_LOG_INFO ("In fast recovery. Increased cwnd to " << m_cWnd);
       SendPendingData (m_connected);
     };
 }
@@ -457,7 +457,7 @@ MpTcpSubFlow::SendDataPacket(TcpHeader& header, const SequenceNumber32& ssn, uin
   NS_LOG_FUNCTION(this << "Sending SSN [" << ssn.GetValue() << "]");
 
   MpTcpMapping mapping;
-  bool result = m_TxMappings.GetMappingForSSN( ssn, mapping);
+  bool result = m_TxMappings.GetMappingForSSN(ssn, mapping);
   if(!result)
   {
     m_TxMappings.Dump();
@@ -496,7 +496,8 @@ void
 MpTcpSubFlow::Retransmit(void)
 {
   NS_LOG_FUNCTION (this);
-  NS_LOG_LOGIC (this << " ReTxTimeout Expired at time " << Simulator::Now ().GetSeconds ());
+  NS_LOG_LOGIC (this << " ReTxTimeout Expired at time " << Simulator::Now ().GetSeconds ()
+  << "Exiting Fast recovery  (previously set to " << m_inFastRec << ")");
   m_inFastRec = false;
 
   // If erroneous timeout in closed/timed-wait state, just return
@@ -540,6 +541,7 @@ MpTcpSubFlow::DoRetransmit()
   // TODO maybe this call should go to DoRetransmit
   GetMeta()->OnSubflowRetransmit(this);
 
+  // TODO this can't work, we need to regenerate the DSS and embed it
   TcpSocketBase::DoRetransmit();
 }
 
@@ -1424,8 +1426,49 @@ MpTcpSubFlow::StopAdvertisingAddress(Ipv4Address address)
 //}
 
 
+void
+MpTcpSubFlow::ReTxTimeout()
+{
+  NS_LOG_LOGIC("MpTcpSubFlow ReTxTimeout expired !");
+  TcpSocketBase::ReTxTimeout();
+}
 
 
+
+/*
+   The sender MUST keep data in its send buffer as long as the data has
+   not been acknowledged at both connection level and on all subflows on
+   which it has been sent.
+
+For now assume
+Called from NewAck, this
+*/
+bool
+MpTcpSubFlow::DiscardAtMostOneMapping(SequenceNumber32 const& dack, SequenceNumber32 const& ack, MpTcpMapping& mapping)
+//MpTcpSubFlow::DiscardTxMappingsUpTo(SequenceNumber32 const& dack, SequenceNumber32 const& ack)
+{
+  NS_LOG_DEBUG(this << "maxDSN="<< dack << " maxSSN=" << ack);
+
+//  while(true) {
+
+  SequenceNumber32 headSSN = m_txBuffer.HeadSequence();
+//  MpTcpMapping mapping;
+
+  if(!m_TxMappings.GetMappingForSSN(headSSN, mapping))
+  {
+    m_TxMappings.Dump();
+    NS_FATAL_ERROR("Could not associate a tx mapping to ssn [" << headSSN << "]. Should be impossible");
+  }
+
+  if(mapping.TailDSN() < dack && mapping.TailSSN() < ack) {
+    NS_LOG_DEBUG("mapping ");
+    NS_ASSERT(m_TxMappings.DiscardMapping(mapping));
+    return true;
+  }
+
+//  }
+  return false;
+}
 
 /**
 TODO check with its parent equivalent, may miss a few features
@@ -1463,7 +1506,7 @@ MpTcpSubFlow::NewAck(SequenceNumber32 const& ack)
       // First new ACK after fast recovery: reset cwnd
       m_cWnd = m_ssThresh;
       m_inFastRec = false;
-      NS_LOG_INFO ("Reset cwnd to " << m_cWnd);
+      NS_LOG_INFO ("Exiting fast recovery. Reset cwnd to " << m_cWnd);
     };
 
 
@@ -1525,7 +1568,7 @@ MpTcpSubFlow::NewAck(SequenceNumber32 const& ack)
   //
   if(!m_TxMappings.GetMappingForSSN( SequenceNumber32(ack-1), mapping)) {
 
-    NS_LOG_WARN("Late ack ! Dumping Tx Mappings");
+    NS_LOG_WARN("Late ack ! Mapping likely to have been discared already. Dumping Tx Mappings:");
     m_TxMappings.Dump();
   }
   else {
@@ -1534,16 +1577,26 @@ MpTcpSubFlow::NewAck(SequenceNumber32 const& ack)
 
     /** TODO here we have to update the nextTxBuffer
     but we can discard only if the full mapping was acknowledged
+    la c completement con. A corriger
     */
-
-    if(m_nextTxSequence > mapping.TailSSN()) {
-
-      m_txBuffer.DiscardUpTo(m_nextTxSequence);
-    }
+//    if(m_nextTxSequence > mapping.TailSSN()) {
+//
+//      m_txBuffer.DiscardUpTo(m_nextTxSequence);
+//    }
 //      std::distance(s.begin(), s.lower_bound(x))
     // #error
+
+    /**
+    Before removing data from txbuffer, it must have been acked at both subflow
+    and connection level.
+    Here we go through the list of TxMappings
+    min(ack,dataack
+    **/
+//    m_TxMappings.DiscardMappingsUpToDSN()
+
   }
 
+//  GetMeta()->OnSubflowNewAck(ack,this);
 // TODO I should call
 
 
@@ -1559,8 +1612,9 @@ MpTcpSubFlow::NewAck(SequenceNumber32 const& ack)
     }
 
   if (m_txBuffer.Size() == 0 && m_state != FIN_WAIT_1 && m_state != CLOSING)
-    { // No retransmit timer if no data to retransmit
-      NS_LOG_WARN (this << " Cancelled ReTxTimeout event which was set to expire at " <<
+    {
+      // No retransmit timer if no data to retransmit
+      NS_LOG_WARN (this << "TxBuffer empty. Cancelled ReTxTimeout event which was set to expire at " <<
           (Simulator::Now () + Simulator::GetDelayLeft (m_retxEvent)).GetSeconds ());
       m_retxEvent.Cancel();
       return;
@@ -1652,7 +1706,6 @@ MpTcpSubFlow::Recv(void)
 //  return mapping.TranslateSSNToDSN(ssn,dsn);
 //}
 
-
 /**
 this is private
 **/
@@ -1702,7 +1755,8 @@ MpTcpSubFlow::ExtractAtMostOneMapping(uint32_t maxSize, bool only_full_mapping, 
 
   p = m_rxBuffer.Extract( maxSize );
 
-  m_RxMappings.DiscardMappingsUpToDSN( headDSN);
+//  m_RxMappings.DiscardMappingsUpToDSN( headDSN);
+  m_RxMappings.DiscardMappingsUpToSN(headDSN, m_rxBuffer.NextRxSequence());
   return p;
 }
 

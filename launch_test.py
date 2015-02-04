@@ -37,9 +37,16 @@ cmd = cmd.format(
 
 # WITH_GDB=0
 NS_LOG = ""
+# NS_LOG += "***"
+# """
 NS_LOG += "*=error|warn|prefix_node|prefix_func"
+# NS_LOG += ":PointToPointNetDevice"
+# NS_LOG += ":PointToPointChannel"
+# NS_LOG += ":DropTailQueue"
+
 NS_LOG += ":TcpSocketBase"
 NS_LOG += ":MpTcpSchedulerRoundRobin"
+# NS_LOG += ":SimpleNetDevice"
 # NS_LOG += ":ObjectBase=error|warn"
 # NS_LOG += ":Socket"
 # logic:error:warn
@@ -48,17 +55,18 @@ NS_LOG += ":MpTcpSubflowUncoupled"
 # NS_LOG += ":Config"
 # NS_LOG += ":TypeId" # to look for AddTraceSource
 NS_LOG += ":TcpTestSuite=*"
-NS_LOG += ":TcpRxBuffer"
-NS_LOG += ":PcapFile"
+# NS_LOG += ":TcpRxBuffer"
+# NS_LOG += ":PcapFile"
 # NS_LOG += ":TcpTxBuffer"
 # NS_LOG += ":MpTcpMapping=*"
 # NS_LOG += ":TcpHeader=*"
 # NS_LOG=":TcpOptionMpTcp=*"
 # NS_LOG=":MpTcpOptionsTestSuite=*"
-NS_LOG += ":TcpL4Protocol"
-# NS_LOG=":TraceHelper:PointToPointHelper"
+# NS_LOG += ":TcpL4Protocol"
+# NS_LOG += ":TraceHelper:PointToPointHelper"
 # OUTPUT_FILENAME="xp.txt"
 # NS_LOG=":MpTcpTestSuite=*|prefix_func:Socket=*"
+# """
 
 os.environ['NS_LOG'] = NS_LOG
 
@@ -72,9 +80,9 @@ print("Executed Command:\n%s" % cmd)
 # os.system(cmd)
 
 timeout=200
-
+# , timeout=timeout
 try:
-    ret = subprocess.call(cmd, shell=True, timeout=timeout)
+    ret = subprocess.call(cmd, shell=True)
 except subprocess.TimeoutExpired:
     print("Timeout expired. try setting a longer timeout")
 

@@ -5,7 +5,14 @@ Bugs:
 * I don't register the rWnd during connection establishement apparently
 * Msubflow::NewAck does not do enough 
 * subflow DupAck should count only if there a DSS inside and not for any other MPTCP option* remote wnd of the meta and subflows should be the same
+* When computing global cwin, differentiate  fast recovery cases
+* when retransmitting a packet, the mapping may be wrong !!
+* the buffering is done wrongly. For instance packets can't be replicated across subflows
 
+
+buffering system:
+* m_txBuffer.HeadSequence should not serve as head of buffer since data may stay in buffer depending on mappings
+* right now it does not allow for NR-sack !!
 
 List of tests:
 * Subflow management
@@ -17,6 +24,7 @@ List of tests:
 
 
 Generic:
+* rename GetMeta() into Meta() ?
 * rename isn into ISS as in TCP RFC
 * dans core/model/test.cc, log warn message when fullness not accepted
 * provide in meta a list of pending options that can be consumed by subflow

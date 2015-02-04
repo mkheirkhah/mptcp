@@ -598,6 +598,8 @@ protected: // protected methods
 
 //  void LastAckTimeout(uint8_t sFlowIdx);
 
+  virtual void
+  OnSubflowNewAck(SequenceNumber32 const& ack, Ptr<MpTcpSubFlow> sf);
 
   /**
    *  inherited from parent: update buffers

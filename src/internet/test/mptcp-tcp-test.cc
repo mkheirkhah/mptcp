@@ -460,8 +460,8 @@ TcpTestCase::SetupDefaultSim (void)
 
   PointToPointHelper p2p;
 
-  p2p.SetDeviceAttribute ("DataRate", StringValue ("5Mbps"));
-  p2p.SetChannelAttribute ("Delay", StringValue ("2ms"));
+  p2p.SetDeviceAttribute ("DataRate", StringValue ("100Mbps"));
+  p2p.SetChannelAttribute ("Delay", StringValue ("10ms"));
   NetDeviceContainer cont = p2p.Install(node0,node1);
   p2p.EnablePcapAll("test", true);
 

@@ -1368,9 +1368,39 @@ MpTcpSocketBase::PeerClose( SequenceNumber32 dsn, Ptr<MpTcpSubFlow> sf)
 }
 
 void
-MpTcpSocketBase::OnInfiniteMapping(Ptr<TcpOptionMpTcpDSS> dss,Ptr<MpTcpSubFlow> sf)
+MpTcpSocketBase::OnInfiniteMapping(Ptr<TcpOptionMpTcpDSS> dss, Ptr<MpTcpSubFlow> sf)
 {
   NS_FATAL_ERROR("Infinite mapping not implemented");
+}
+
+
+
+/**
+this function supposes that
+
+**/
+void
+MpTcpSocketBase::OnSubflowNewAck(SequenceNumber32 const& ack, Ptr<MpTcpSubFlow> subflow)
+{
+  NS_LOG_LOGIC("new subflow ack " << ack);
+
+
+  while(true) {
+    // DiscardAtMostOneMapping
+//    SequenceNumber32 dack = 0;
+    MpTcpMapping mapping;
+
+    if(!subflow->DiscardAtMostOneMapping(m_txBuffer.HeadSequence(), ack, mapping )) {
+      NS_LOG_DEBUG("subflow could not discard further");
+      break;
+    }
+
+    /**
+    returned mapping discarded because we don't support NR sack right now
+    **/
+    NS_LOG_DEBUG("subflow Tx mapping " << mapping << " discarded");
+  }
+
 }
 
 
@@ -1378,7 +1408,17 @@ MpTcpSocketBase::OnInfiniteMapping(Ptr<TcpOptionMpTcpDSS> dss,Ptr<MpTcpSubFlow> 
 TODO call 64bits  version ?
 It should know from which subflow it comes from
 TODO update the r_Wnd here
+
+
+This is not really possible until we change the buffer system:
+"The sender MUST keep data in its send buffer as long as the data has
+not been acknowledged at both connection level and on all subflows on
+which it has been sent."
+
+
 **/
+
+
 void
 MpTcpSocketBase::NewAck(SequenceNumber32 const& dsn)
 {
@@ -1443,7 +1483,10 @@ MpTcpSocketBase::NewAck(SequenceNumber32 const& dsn)
 
 
 // TODO i should remove data at some point
-  // Je peux pas le faire
+  /**
+  This is possible because packets were copied int osubflows buffers, and that there is no intent to
+  reinject them on other paths
+  **/
   m_txBuffer.DiscardUpTo(dsn);
 
 
@@ -2968,7 +3011,7 @@ MpTcpSocketBase::ComputeTotalCWND()
   //      }
   //      else
         {
-          NS_LOG_WARN("Don't consider Fast recovery yet");
+//          NS_LOG_WARN("Don't consider Fast recovery yet");
           totalCwnd += sf->m_cWnd.Get();          // Should be this all the time ?!
         }
     }

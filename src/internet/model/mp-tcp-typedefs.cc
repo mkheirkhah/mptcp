@@ -1,4 +1,5 @@
 #include <iostream>
+#include <set>
 #include "ns3/mp-tcp-typedefs.h"
 #include "ns3/simulator.h"
 #include "ns3/log.h"
@@ -184,7 +185,7 @@ MpTcpMappingContainer::~MpTcpMappingContainer(void)
 void
 MpTcpMappingContainer::Dump()
 {
-  NS_LOG_UNCOND("\n\n==== Dumping list of mappings ====");
+  NS_LOG_UNCOND("\n==== Dumping list of mappings ====");
   for( MappingList::iterator it = m_mappings.begin(); it != m_mappings.end(); it++ )
   {
 
@@ -280,17 +281,29 @@ MpTcpMappingContainer::TranslateSSNtoDSN(const SequenceNumber32& ssn,SequenceNum
   return mapping.TranslateSSNToDSN(ssn,dsn);
 }
 
-int
-MpTcpMappingContainer::DiscardMappingsUpToDSN(const SequenceNumber32& dsn)
+bool
+MpTcpMappingContainer::DiscardMapping(const MpTcpMapping& mapping)
 {
-  NS_LOG_LOGIC("Discarding mappings up with TailDSN < " << dsn);
+  NS_LOG_LOGIC("discard mapping "<< mapping);
+//  MappingList::iterator it = l.begin(); it != l.end(); it++)
+//  std::size_type count = m_mappings.erase(mapping);
+//  return count != 0;
+  return m_mappings.erase(mapping);
+}
+
+int
+MpTcpMappingContainer::DiscardMappingsUpToSN(const SequenceNumber32& dsn,const SequenceNumber32& ssn)
+{
+  NS_LOG_LOGIC("Discarding mappings up with TailDSN < " << dsn << " AND TailSSN < " << ssn);
+
   MappingList& l = m_mappings;
   int erasedMappingCount = 0;
   // TODO use reverse iterator and then clear from first found to the begin
-  for( MappingList::iterator it = l.begin(); it != l.end(); it++ )
+  for(MappingList::iterator it = l.begin(); it != l.end(); it++)
   {
     // check that meta socket
-    if( it->TailDSN() < dsn && it->TailSSN() < m_rxBuffer->NextRxSequence() )
+//    if( it->TailDSN() < dsn && it->TailSSN() < m_rxBuffer->NextRxSequence() )
+    if( it->TailDSN() < dsn && it->TailSSN() < ssn)
     {
       //it =
 //      NS_ASSERT( );

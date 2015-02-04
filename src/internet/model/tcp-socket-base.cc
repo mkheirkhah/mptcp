@@ -2155,7 +2155,9 @@ TcpSocketBase::NewAck(SequenceNumber32 const& ack)
 void
 TcpSocketBase::ReTxTimeout()
 {
-  NS_LOG_FUNCTION (this);NS_LOG_LOGIC (this << " ReTxTimeout Expired at time " << Simulator::Now ().GetSeconds ());
+  NS_LOG_FUNCTION (this);
+  NS_LOG_LOGIC (this << " ReTxTimeout Expired at time " << Simulator::Now ().GetSeconds ());
+
   // If erroneous timeout in closed/timed-wait state, just return
   if (m_state == CLOSED || m_state == TIME_WAIT)
     {

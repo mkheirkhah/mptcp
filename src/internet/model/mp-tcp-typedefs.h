@@ -196,7 +196,15 @@ class MpTcpMappingContainer
   \return Number of mappings discarded. >= 0
   **/
   int
-  DiscardMappingsUpToDSN(const SequenceNumber32& dsn);
+  DiscardMappingsUpToSN(const SequenceNumber32& dsn, const SequenceNumber32& ssn);
+
+
+  /**
+  When Buffers work in non renegotiable mode,
+  it should be possible to remove them one by one
+  **/
+  bool
+  DiscardMapping(const MpTcpMapping& mapping);
 
   /**
   return lowest SSN number

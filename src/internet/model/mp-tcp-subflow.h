@@ -108,6 +108,15 @@ public:
   virtual void
   AdvertiseAddress(Ipv4Address , uint16_t port);
 
+
+  /**
+  \param dack left edge window at connection level
+  \param ack
+  \param mapping
+  **/
+  bool
+  DiscardAtMostOneMapping(SequenceNumber32 const& dack, SequenceNumber32 const& ack, MpTcpMapping& mapping);
+
   /**
   \brief Send a REM_ADDR for the specific address.
   \see AdvertiseAddress
@@ -406,6 +415,9 @@ protected:
               MpTcpMapping& mapping
               );
 
+
+  virtual void
+  ReTxTimeout();
   /**
   This one overridesprevious one, adding MPTCP options when needed
   */
