@@ -51,12 +51,14 @@ public:
   virtual void OpenCwndInCA(uint32_t acked) = 0;
   virtual void ReduceCwnd() = 0;
 
+  virtual uint32_t
+  GetSSThresh(void) const;
 
   static TypeId
   GetTypeId(void);
 
   // TODO pass it as virtual ?
-//  virtual TypeId GetInstanceTypeId(void) const;
+  virtual TypeId GetInstanceTypeId(void) const;
 
   /**
   the metasocket is the socket the application is talking to.
@@ -347,8 +349,7 @@ protected:
 
   virtual void
   SetSSThresh(uint32_t threshold);
-  virtual uint32_t
-  GetSSThresh(void) const;
+
 
   virtual void
   SetInitialCwnd(uint32_t cwnd);
@@ -451,12 +452,12 @@ protected:
   TracedValue<uint32_t> m_cWnd; // Congestion window (in bytes)
 
 
-  uint32_t m_ssThresh;          //!< Slow start threshold
+  TracedValue<uint32_t> m_ssThresh;          //!< Slow start threshold
 //  uint32_t maxSeqNb;          // Highest sequence number of a sent byte. Equal to (TxSeqNumber - 1) until a retransmission occurs
 //  uint32_t highestAck;        // Highest received ACK for the subflow level sequence number
   uint32_t m_initialCWnd;     //!< Initial cWnd value
-  SequenceNumber32 m_recover; // Previous highest Tx seqNb for fast recovery
-  uint32_t m_retxThresh;      // Fast Retransmit threshold
+  SequenceNumber32 m_recover; //!< Previous highest Tx seqNb for fast recovery
+  uint32_t m_retxThresh;      //!< Fast Retransmit threshold
   bool m_inFastRec;           // Currently in fast recovery
   bool m_limitedTx;           // perform limited transmit
 //  uint32_t m_dupAckCount;     // DupACK counter TO REMOVE exist in parent

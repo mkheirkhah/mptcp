@@ -617,7 +617,8 @@ public:
 
 // here it's a test where I lower streamsize to see where it starts failing.
 // 2100 is ok, 2200 fails
-    AddTestCase (new TcpTestCase (5000, 100, 50, 100, 20, false), TestCase::QUICK);
+    AddTestCase (new TcpTestCase (5000, 100, 50, 100, 20, false), TestCase::EXTENSIVE);
+//    AddTestCase (new TcpTestCase (5000, 100, 50, 100, 20, false), TestCase::QUICK);
 
     // Disable IPv6 tests; not supported yet
 //    AddTestCase (new TcpTestCase (13, 200, 200, 200, 200, true), TestCase::QUICK);

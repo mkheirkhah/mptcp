@@ -22,7 +22,7 @@ args = parser.parse_args()
 if args.debug:
     cmd = "./waf --run test-runner --command-template=\"gdb -ex 'run --suite={suite} {verbose} {tofile}' --args %s \" "
 else:
-    cmd = "./waf --run \"test-runner --suite={suite} {verbose} \" {tofile}"
+    cmd = "./waf --run \"test-runner --suite={suite} --fullness=EXTENSIVE {verbose} \" {tofile}"
 
 
 tofile = " > %s 2>&1" % args.out if args.out else ""
@@ -49,15 +49,16 @@ NS_LOG += ":MpTcpSubflowUncoupled"
 # NS_LOG += ":TypeId" # to look for AddTraceSource
 NS_LOG += ":TcpTestSuite=*"
 NS_LOG += ":TcpRxBuffer"
+NS_LOG += ":PcapFile"
 # NS_LOG += ":TcpTxBuffer"
 # NS_LOG += ":MpTcpMapping=*"
 # NS_LOG += ":TcpHeader=*"
-# NS_LOG="$NS_LOG:TcpOptionMpTcp=*"
-# NS_LOG="$NS_LOG:MpTcpOptionsTestSuite=*"
-# NS_LOG="$NS_LOG:TcpL4Protocol"
-# NS_LOG="$NS_LOG:TraceHelper:PointToPointHelper"
+# NS_LOG=":TcpOptionMpTcp=*"
+# NS_LOG=":MpTcpOptionsTestSuite=*"
+NS_LOG += ":TcpL4Protocol"
+# NS_LOG=":TraceHelper:PointToPointHelper"
 # OUTPUT_FILENAME="xp.txt"
-# NS_LOG="$NS_LOG:MpTcpTestSuite=*|prefix_func:Socket=*"
+# NS_LOG=":MpTcpTestSuite=*|prefix_func:Socket=*"
 
 os.environ['NS_LOG'] = NS_LOG
 
@@ -70,7 +71,12 @@ print("Executed Command:\n%s" % cmd)
 
 # os.system(cmd)
 
-ret = subprocess.call(cmd, shell=True, timeout=100)
+timeout=200
+
+try:
+    ret = subprocess.call(cmd, shell=True, timeout=timeout)
+except subprocess.TimeoutExpired:
+    print("Timeout expired. try setting a longer timeout")
 
 print("Exported:\n%s" % NS_LOG)
 print("Executed Command:\n%s" % cmd)

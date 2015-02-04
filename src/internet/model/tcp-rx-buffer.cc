@@ -192,12 +192,22 @@ TcpRxBuffer::Add (Ptr<Packet> p, SequenceNumber32 const& _headSeq)
                            << ", when NextRxSeq=" << m_nextRxSeq << ", buffsize=" << m_size);
 
   // Trim packet to fit Rx window specification
-  if (headSeq < m_nextRxSeq) headSeq = m_nextRxSeq;
+  if (headSeq < m_nextRxSeq) {
+    NS_LOG_DEBUG("Trimming headSeq from " << headSeq << " to " << m_nextRxSeq << "(m_nextRxSeq)");
+    headSeq = m_nextRxSeq;
+  }
   if (m_data.size ())
     {
       SequenceNumber32 maxSeq = m_data.begin ()->first + SequenceNumber32 (m_maxBuffer);
-      if (maxSeq < tailSeq) tailSeq = maxSeq;
-      if (tailSeq < headSeq) headSeq = tailSeq;
+      if (maxSeq < tailSeq) {
+        NS_LOG_DEBUG("Packet too big to fit into buffer. Trimming tailSeq=" << tailSeq << " to " << maxSeq);
+        tailSeq = maxSeq;
+      }
+
+      if (tailSeq < headSeq) {
+        NS_LOG_DEBUG("TODO comment");
+        headSeq = tailSeq;
+      }
     }
   // Remove overlapped bytes from packet
   BufIterator i = m_data.begin ();

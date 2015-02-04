@@ -118,6 +118,10 @@ public:
   ShutdownSend(void);    // Assert the m_shutdownSend flag to prevent send to network
   virtual int
   ShutdownRecv(void);    // Assert the m_shutdownRecv flag to prevent forward to app
+
+  /**
+  \return size of packet sent if successful, < 0 in case of error
+  **/
   virtual int
   Send(Ptr<Packet> p, uint32_t flags);  // Call by app to send data to network
   virtual int

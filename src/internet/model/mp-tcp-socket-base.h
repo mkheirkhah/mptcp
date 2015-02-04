@@ -87,15 +87,22 @@ class MpTcpSocketBase : public TcpSocketBase
 public: // public methods
   typedef std::vector< Ptr<MpTcpSubFlow> > SubflowList;
 
+
+  // TODO move it to protected. I've put it here for the sake of debugging/tracing
+  TracedValue<uint32_t>  m_cWnd;         //< Congestion window
+
+
   static TypeId GetTypeId(void);
 
-  // inherited function, no need to doc.
-//  virtual TypeId GetInstanceTypeId (void) const;
+  virtual TypeId GetInstanceTypeId (void) const;
 
   MpTcpSocketBase();
   MpTcpSocketBase(const MpTcpSocketBase&);
 //  MpTcpSocketBase(Ptr<Node> node);
   virtual ~MpTcpSocketBase();
+
+  void
+  OnSubflowNewCwnd(std::string context, uint32_t oldCwnd, uint32_t newCwnd);
 
   // Window Management
   virtual uint32_t
@@ -115,8 +122,12 @@ public: // public methods
   static
   void GenerateTokenForKey( mptcp_crypto_t alg, uint64_t key, uint32_t& token, uint64_t& idsn);
 
-  //const
-  virtual uint32_t CalculateTotalCWND();
+  /* Sum congestio nwindows across subflows to compute global cwin
+  WARNING: it does not take flows that are closing yet so that may be a weakness depending on the scenario
+  to update
+  */
+  virtual uint32_t
+  ComputeTotalCWND();
 
   virtual uint16_t
   AdvertisedWindowSize();
@@ -672,7 +683,6 @@ protected: // protected variables
 // Already defined in
 //  uint32_t m_segmentSize;          // Segment size
 
-  TracedValue<uint32_t>  m_cWnd;         //< Congestion window
 
 
   // TODO replace with parent's traced values

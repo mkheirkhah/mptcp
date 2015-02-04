@@ -18,6 +18,7 @@ List of tests:
 
 Generic:
 * rename isn into ISS as in TCP RFC
+* dans core/model/test.cc, log warn message when fullness not accepted
 * provide in meta a list of pending options that can be consumed by subflow
 * Note that new subflows MUST NOT be established (using the process documented in Section 3.2) until a Digital Signature Standard (DSS) option has been successfully received across th
 * Unmultiplex attribute MPTCP connection according to token
@@ -37,6 +38,8 @@ Generic:
 
 
 Requests for ns3;
+* add ssthreshold tracing (maybe fast recovery too)
+* SetInitialCWnd as an attribute ?
 * Add member RemoteWindow in TcpSocketBase
 * when tracing a source that does not exist, ns3 should crash or log 
 * the CloseAndNotify member name is badly chosen since it does not close the socket but signal a closed state

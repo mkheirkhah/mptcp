@@ -49,6 +49,9 @@ MpTcpSubFlow::GetTypeId(void)
       .AddTraceSource("CongestionWindow",
           "The congestion control window to trace.",
            MakeTraceSourceAccessor(&MpTcpSubFlow::m_cWnd))
+      .AddTraceSource("SSThreshold",
+          "The Slow Start Threshold.",
+           MakeTraceSourceAccessor(&MpTcpSubFlow::m_ssThresh))
     ;
   return tid;
 }
@@ -57,11 +60,11 @@ MpTcpSubFlow::GetTypeId(void)
 
 
 
-//TypeId
-//MpTcpSubFlow::GetInstanceTypeId(void) const
-//{
-//  return GetTypeId();
-//}
+TypeId
+MpTcpSubFlow::GetInstanceTypeId(void) const
+{
+  return GetTypeId();
+}
 
 //bool
 void
@@ -160,6 +163,7 @@ MpTcpSubFlow::CancelAllTimers()
 void
 MpTcpSubFlow::SetSSThresh(uint32_t threshold)
 {
+  // TOODO there is a minimum value decided by meta
   m_ssThresh = threshold;
 }
 
@@ -167,10 +171,10 @@ MpTcpSubFlow::SetSSThresh(uint32_t threshold)
 uint32_t
 MpTcpSubFlow::GetSSThresh(void) const
 {
-  return m_ssThresh;
+  return m_ssThresh.Get();
 }
 
-
+/** TODO remve those 2, use the meta's **/
 void
 MpTcpSubFlow::SetInitialCwnd(uint32_t cwnd)
 {
@@ -185,83 +189,8 @@ MpTcpSubFlow::GetInitialCwnd(void) const
 }
 
 
-// Ideally this should be a sha1 but hey ns3 is for prototyping !
-//uint32_t
-//MpTcpSubFlow::GetLocalToken() const
-//{
-////  NS_LOG_ERROR("Not implemented yet");
-//  // TODO
-//  return GetMeta()->GetLocalKey() >> 32 ;
-//}
-//
-//uint32_t
-//MpTcpSubFlow::GetRemoteToken() const
-//{
-////  NS_LOG_ERROR("Not implemented yet");
-//  return GetMeta()->GetLocalKey() >> 32 ;
-//
-//}
 
 
-
-
-//int
-//MpTcpSubFlow::Connect(const Address & address)
-//{
-//  NS_LOG_FUNCTION (this << address);
-//  return TcpSocketBase::Connect
-//}
-#if 0
-void
-MpTcpSubFlow::SendEmptyPacket(TcpHeader& header)
-{
-  if (flags & TcpHeader::SYN && flags & TcpHeader::ACK)
-  {
-    //
-    NS_ASSERT(m_state == SYN_RCVD);
-  }
-  else if (flags == TcpHeader::SYN )
-  {
-    // Add an MP_CAPABLE or MP_JOIN option
-    // is possible in SYN_RCVD if peer did not receive ack of 3WHS
-    NS_ASSERT(m_state == LISTEN || m_state == SYN_RCVD);
-      if( IsMaster() )
-      {
-        Ptr<TcpOptionMpTcpCapable> mpc =  CreateObject<TcpOptionMpTcpCapable>();
-        mpc->SetSenderKey( m_metaSocket->GetLocalKey() );
-        header.AppendOption( mpc );
-      }
-      else
-      {
-        // Join option InitialSyn
-        Ptr<TcpOptionMpTcpJoin> join =  CreateObject<TcpOptionMpTcpJoin>();
-        //TODO retrieve from meta
-//        join->SetLocalToken(0);
-        join->SetState(TcpOptionMpTcpJoin::Syn);
-        join->SetPeerToken(0);
-        join->SetNonce(0);
-//        join->SetAddressId(0);
-//        join->set
-        header.AppendOption( join );
-      }
-  }
-  // Quand on ferme la connexion qu'arrive-t'il ?
-//  else if(m_state == SYN_SENT )
-//  {
-//
-//  }
-//  else if(m_state == SYN_SENT )
-//  {
-//
-//  }
-
-  Ptr<Packet> p = Create<Packet>();
-  SendPacket(header, p );
-
-
-//  header.SetWindowSize(AdvertisedWindowSize());
-}
-#endif
 
 
 TcpStates_t
@@ -640,6 +569,8 @@ MpTcpSubFlow::ProcessListen(Ptr<Packet> packet, const TcpHeader& tcpHeader, cons
       return;
     }
 
+  NS_LOG_LOGIC("Updating receive window" << tcpHeader.GetWindowSize());
+  GetMeta()->SetRemoteWindow(tcpHeader.GetWindowSize());
 
   // Clone the socket, simulate fork
 //  Ptr<MpTcpSubFlow> newSock = Fork();
@@ -729,6 +660,27 @@ MpTcpSubFlow::DoForwardUp(Ptr<Packet> packet, Ipv4Header header, uint16_t port, 
 
 //  m_rWnd = tcpHeader.GetWindowSize();
 //  GetMeta()->m_rWnd = tcpHeader.GetWindowSize();
+
+  /*  Update of receive window:
+
+  If we are in master socket, in SYN_SENT or SYN_RCVD state then the connection should not be qualified
+  as an mptcp connection yet, so we are allowed to save the receive window.
+  When the connection qualifies as MPTCP, we copy the receive window value into the meta.
+
+  As soon as the connection qualifies as an MPTCP connection, then there is only one possible way to update
+  the receiver window, as explained in http://www.rfc-editor.org/rfc/rfc6824.txt :
+      "The sender remembers receiver window advertisements from the
+     receiver.  It should only update its local receive window values when
+     the largest sequence number allowed (i.e., DATA_ACK + receive window)
+     increases, on the receipt of a DATA_ACK. "
+  */
+  if(IsMaster() && (m_state == SYN_SENT || m_state == SYN_RCVD) ) {
+      NS_LOG_LOGIC("Connection does not qualify as MPTCP yet so we can update receive window");
+//      GetMeta()->SetRemoteWindow(tcpHeader.GetWindowSize());
+        m_rWnd = tcpHeader.GetWindowSize();
+  }
+
+
 
   // Discard fully out of range data packets
   if (packet->GetSize() && OutOfRange(tcpHeader.GetSequenceNumber(), tcpHeader.GetSequenceNumber() + packet->GetSize()))
@@ -899,6 +851,9 @@ MpTcpSubFlow::InitializeCwnd (void)
 }
 
 
+/**
+Apparently this function is never called for now
+**/
 void
 MpTcpSubFlow::ConnectionSucceeded(void)
 {
@@ -908,6 +863,7 @@ MpTcpSubFlow::ConnectionSucceeded(void)
   //!
   //if(IsMaster()Ķ
      //GetMeta()->NotifyConnectionSucceeded();
+  NS_LOG_LOGIC("Connection succeeded");
   m_connected = true;
   GetMeta()->OnSubflowEstablishment(this);
   TcpSocketBase::ConnectionSucceeded();
@@ -1032,6 +988,8 @@ MpTcpSubFlow::ProcessSynSent(Ptr<Packet> packet, const TcpHeader& tcpHeader)
 //      m_connected = true;
 
 
+//      NS_LOG_LOGIC("Updating receive window");
+//      GetMeta()->SetRemoteWindow(tcpHeader.GetWindowSize());
 
 
 
@@ -1039,23 +997,18 @@ MpTcpSubFlow::ProcessSynSent(Ptr<Packet> packet, const TcpHeader& tcpHeader)
       // and another ack will be emitted just after
       SendEmptyPacket(answerHeader);
 
-      NS_LOG_UNCOND("m_nextTxSequence [" << m_nextTxSequence << "]");
-
-      // TODO check if that's ok
-      fLowStartTime = Simulator::Now().GetSeconds();
+//      NS_LOG_UNCOND("m_nextTxSequence [" << m_nextTxSequence << "]");
 
       // TODO check we can send rightaway data ?
       SendPendingData(m_connected);
 
-      NS_LOG_UNCOND("m_nextTxSequence [" << m_nextTxSequence << "]");
+//      NS_LOG_UNCOND("m_nextTxSequence [" << m_nextTxSequence << "]");
 
       // Always respond to first data packet to speed up the connection.
       // Remove to get the behaviour of old NS-3 code.
       m_delAckCount = m_delAckMaxCount;
-      initialSeqNb = tcpHeader.GetAckNumber().GetValue();
-      //sampleList.push_back(8);
-      //sampleList.push_back(15);
-      NS_LOG_INFO("initialSeqNb: " << initialSeqNb);
+//      initialSeqNb = tcpHeader.GetAckNumber().GetValue();
+//      NS_LOG_INFO("initialSeqNb: " << initialSeqNb);
     }
   else
     { // Other in-sequence input
@@ -1199,6 +1152,9 @@ MpTcpSubFlow::ProcessSynRcvd(Ptr<Packet> packet, const TcpHeader& tcpHeader, con
       m_retxEvent.Cancel();
       m_highTxMark = ++m_nextTxSequence;
       m_txBuffer.SetHeadSequence(m_nextTxSequence);
+
+//      NS_LOG_LOGIC("Updating receive window");
+//      GetMeta()->SetRemoteWindow(tcpHeader.GetWindowSize());
 
 
       // Expecting ack
@@ -1703,7 +1659,7 @@ this is private
 Ptr<Packet>
 MpTcpSubFlow::ExtractAtMostOneMapping(uint32_t maxSize, bool only_full_mapping, SequenceNumber32& headDSN)
 {
-  NS_LOG_FUNCTION(this << "maxSize="<< maxSize);
+  NS_LOG_DEBUG(this << "maxSize="<< maxSize);
   MpTcpMapping mapping;
   Ptr<Packet> p = Create<Packet>();
 
@@ -1826,11 +1782,12 @@ MpTcpSubFlow::ReceivedData(Ptr<Packet> p, const TcpHeader& tcpHeader)
   SequenceNumber32 expectedSSN = m_rxBuffer.NextRxSequence();
   if (!m_rxBuffer.Add(p, tcpHeader))
     { // Insert failed: No data or RX buffer full
-      NS_LOG_WARN("Insert failed, No data (" << p->GetSize() << ") "
+      NS_LOG_WARN("Insert failed, No data (" << p->GetSize() << ") ?"
           // Size() returns the actual buffer occupancy
           << "or RX buffer full (Available:" << m_rxBuffer.Available()
-          << "Occupancy=" << m_rxBuffer.Size()
-          << "Max buff size" << m_rxBuffer.MaxBufferSize() << ")"
+          << " Occupancy=" << m_rxBuffer.Size()
+          << " Maxbuffsize=" << m_rxBuffer.MaxBufferSize() << ")"
+          << " or already buffered"
           );
 
 
@@ -1927,7 +1884,8 @@ MpTcpSubFlow::BytesInFlight()
   return TcpSocketBase::BytesInFlight();
 }
 
-// TODO unsure ?
+/* TODO unsure ?
+*/
 uint32_t
 MpTcpSubFlow::AvailableWindow()
 {
@@ -1937,12 +1895,13 @@ MpTcpSubFlow::AvailableWindow()
 //  GetMeta()->AvailableWindow();
 }
 
-// TODO unsure ?
+/* this should be ok
+*/
 uint32_t
 MpTcpSubFlow::Window (void)
 {
   NS_LOG_FUNCTION (this);
-  return std::min (m_rWnd.Get (), m_cWnd.Get ());
+  return std::min ( RemoteWindow(), m_cWnd.Get ());
 //  return GetMeta()->Window();
 }
 
@@ -1953,6 +1912,7 @@ MpTcpSubFlow::RemoteWindow()
   return GetMeta()->RemoteWindow();
 }
 
+// Ok
 uint16_t
 MpTcpSubFlow::AdvertisedWindowSize(void)
 {

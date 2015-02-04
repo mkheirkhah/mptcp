@@ -28,6 +28,9 @@ do
 	gnuplot -e "node='$node';prefix='subflow1_';output='${node}_cwnd'"  plots/cwnd.plot
 	gnuplot -e "node='$node';prefix='subflow1_';output='${node}_rwnd'"  plots/rwnd.plot
 
+	# 
+	gnuplot -e "node='$node';prefix='subflow1_';output='${node}_rwnd'"  plots/rwnd.plot
+	
 	montage ${node}_meta_tx ${node}_subflow1_tx ${node}_meta_rx ${node}_subflow1_rx ${node}_cwnd ${node}_rwnd  -tile 2x3 -geometry +1+1 ${node}_recap.png
 done
 

@@ -1593,7 +1593,7 @@ void
 TcpSocketBase::SendPacket(TcpHeader header, Ptr<Packet> p)
 {
   // TODO log header at least ?
-  NS_LOG_FUNCTION(header << " Final");
+  NS_LOG_FUNCTION(header);
 
   //header.SetSequenceNumber()
   // TODO should be done outside, previously
@@ -1718,15 +1718,6 @@ TcpSocketBase::SendDataPacket(TcpHeader& header, SequenceNumber32 seq,uint32_t m
   NS_LOG_FUNCTION("SEQ [" << seq << "]");
    header.SetSequenceNumber(seq);
 
-  // Packet should be drop
-  if (IsCorrupt(p))
-    {
-//      uint32_t tmp = (((seq.GetValue() + sz) - initialSeqNb) / m_segmentSize) % mod;
-//      DROP.push_back(std::make_pair(Simulator::Now().GetSeconds(), tmp));
-    }
-  // Packet should be sent
-  else
-    {
       SendPacket(header,p);
       // TODO could be removed (matt) since replaced by SendPacket
 //      if (m_endPoint)
@@ -1739,7 +1730,7 @@ TcpSocketBase::SendDataPacket(TcpHeader& header, SequenceNumber32 seq,uint32_t m
 //        {
 //          m_tcp->SendPacket(p, header, m_endPoint6->GetLocalAddress(), m_endPoint6->GetPeerAddress(), m_boundnetdevice);
 //        }
-    }
+
   m_rtt->SentSeq(seq, sz);       // notify the RTT
   // Notify the application of the data being sent unless this is a retransmit
   if (seq == m_nextTxSequence)
@@ -1915,27 +1906,14 @@ TcpSocketBase::ConnectionSucceeded()
 
 
 
-bool
-TcpSocketBase::IsCorrupt(Ptr<Packet> p)
-{
-  uint32_t uid = p->GetUid();
-  for (std::list<uint32_t>::iterator i = sampleList.begin(); i != sampleList.end(); i++)
-    {
-      if (uid == *i)
-        {
-          i = sampleList.erase(i);
-          return true;
-        }
-    }
-  return false;
-}
+
 /** Send as much pending data as possible according to the Tx window. Note that
  *  this function did not implement the PSH flag
  */
 bool
 TcpSocketBase::SendPendingData(bool withAck)
 {
-  NS_LOG_FUNCTION (this << withAck);
+  NS_LOG_FUNCTION (this << " with Ack:" << withAck);
   if (m_txBuffer.Size() == 0)
     {
       return false;                           // Nothing to send
@@ -1945,11 +1923,17 @@ TcpSocketBase::SendPendingData(bool withAck)
       NS_LOG_INFO ("TcpSocketBase::SendPendingData: No endpoint; m_shutdownSend=" << m_shutdownSend);
       return false; // Is this the right way to handle this condition?
     }
+
   uint32_t nPacketsSent = 0;
   NS_LOG_DEBUG("m_nextTxSequence [" << m_nextTxSequence << "]");
   // TODO this part may be buggy, returns -1
-  while (m_txBuffer.SizeFromSequence(m_nextTxSequence))
+  while (true)
     {
+      if(m_txBuffer.SizeFromSequence(m_nextTxSequence) == 0) {
+        NS_LOG_DEBUG("Nothing to send");
+        break;
+      }
+
       uint32_t w = AvailableWindow(); // Get available window size
       NS_LOG_LOGIC ("TcpSocketBase " << this << " SendPendingData" <<
           " availableWindow=" << w <<
@@ -1957,18 +1941,20 @@ TcpSocketBase::SendPendingData(bool withAck)
           " segsize=" << m_segmentSize <<
           " m_nextTxSequence=" << m_nextTxSequence <<
           " highestRxAck (TxBuffer headSeq)=" << m_txBuffer.HeadSequence () <<
-          " pd->Size " << m_txBuffer.Size () <<
+          " txBufferSize " << m_txBuffer.Size () <<
           " pd->SizeFromSequence=" << m_txBuffer.SizeFromSequence (m_nextTxSequence));
 
       // Quit if send disallowed
       if (m_shutdownSend)
         {
+          NS_LOG_DEBUG("m_shutdownSend enabled => not sending message");
           m_errno = ERROR_SHUTDOWN;
           return false;
         }
       // Stop sending if we need to wait for a larger Tx window (prevent silly window syndrome)
       if (w < m_segmentSize && m_txBuffer.SizeFromSequence(m_nextTxSequence) > w)
         {
+          NS_LOG_DEBUG("Waiting for larger window. Not sending message");
           break; // No more
         }
       // Nagle's algorithm (RFC896): Hold off sending if there is unacked data
@@ -1984,7 +1970,8 @@ TcpSocketBase::SendPendingData(bool withAck)
       NS_LOG_DEBUG("m_nextTxSequence [" << m_nextTxSequence << "]");
       m_nextTxSequence += sz;                     // Advance next tx sequence
       NS_LOG_DEBUG("m_nextTxSequence [" << m_nextTxSequence << "]");
-    }NS_LOG_LOGIC ("SendPendingData sent " << nPacketsSent << " packets");
+    }
+    NS_LOG_LOGIC ("SendPendingData sent " << (int)nPacketsSent << " packets");
   return (nPacketsSent > 0);
 }
 
@@ -2029,7 +2016,7 @@ TcpSocketBase::AvailableWindow()
 uint16_t
 TcpSocketBase::AdvertisedWindowSize()
 {
-  //NS_LOG_INFO("AdvertiseWindow: " << std::min(m_rxBuffer.MaxBufferSize() - m_rxBuffer.Size(), (uint32_t) m_maxWinSize));
+//  NS_LOG_INFO("AdvertiseWindow: " << std::min(m_rxBuffer.MaxBufferSize() - m_rxBuffer.Size(), (uint32_t) m_maxWinSize));
   //uint16_t
   return std::min(m_rxBuffer.MaxBufferSize() - m_rxBuffer.Size(), (uint32_t) m_maxWinSize);
 }

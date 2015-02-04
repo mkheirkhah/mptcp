@@ -38,10 +38,12 @@ MpTcpSubflowUncoupled::ForkAsSubflow(void)
 void
 MpTcpSubflowUncoupled::OpenCwndInCA(uint32_t acked)
 {
+  NS_LOG_DEBUG("Opening cwnd");
   double adder = static_cast<double> (m_segmentSize * m_segmentSize) / m_cWnd.Get ();
   adder = std::max (1.0, adder);
   m_cWnd += static_cast<uint32_t> (adder);
 // m_cWnd +=
+//  GetMeta()->
 }
 
 void
