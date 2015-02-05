@@ -410,6 +410,9 @@ public:
   virtual void
   AddOptions(TcpHeader&); // Add option to outgoing packets
 
+  virtual void
+  SetTxHead(const SequenceNumber32& seq);
+
   virtual SequenceNumber32
   FirstUnackedSeq() const;  // get SND.UNA
 

@@ -1157,7 +1157,8 @@ TcpSocketBase::ProcessSynSent(Ptr<Packet> packet, const TcpHeader& tcpHeader)
       m_retxEvent.Cancel();
       m_rxBuffer.SetNextRxSequence(tcpHeader.GetSequenceNumber() + SequenceNumber32(1));
       m_highTxMark = ++m_nextTxSequence;
-      m_txBuffer.SetHeadSequence(m_nextTxSequence);
+//      m_txBuffer.SetHeadSequence(m_nextTxSequence);
+      SetTxHead(m_nextTxSequence);
       SendEmptyPacket(TcpHeader::ACK);
       fLowStartTime = Simulator::Now().GetSeconds();
       SendPendingData(m_connected);
@@ -1181,6 +1182,17 @@ TcpSocketBase::ProcessSynSent(Ptr<Packet> packet, const TcpHeader& tcpHeader)
     }
 }
 
+
+
+void
+TcpSocketBase::SetTxHead(const SequenceNumber32& seq)
+{
+//  #error TODO
+  m_txBuffer.SetHeadSequence(seq);
+  m_firstTxUnack = seq;
+}
+
+
 /** Received a packet upon SYN_RCVD */
 void
 TcpSocketBase::ProcessSynRcvd(Ptr<Packet> packet, const TcpHeader& tcpHeader, const Address& fromAddress,
@@ -1200,7 +1212,8 @@ TcpSocketBase::ProcessSynRcvd(Ptr<Packet> packet, const TcpHeader& tcpHeader, co
       m_connected = true;
       m_retxEvent.Cancel();
       m_highTxMark = ++m_nextTxSequence;
-      m_txBuffer.SetHeadSequence(m_nextTxSequence);
+//      m_txBuffer.SetHeadSequence(m_nextTxSequence);
+      SetTxHead(m_nextTxSequence);
       if (m_endPoint)
         {
           m_endPoint->SetPeer(InetSocketAddress::ConvertFrom(fromAddress).GetIpv4(),
@@ -1234,7 +1247,8 @@ TcpSocketBase::ProcessSynRcvd(Ptr<Packet> packet, const TcpHeader& tcpHeader, co
           m_connected = true;
           m_retxEvent.Cancel();
           m_highTxMark = ++m_nextTxSequence;
-          m_txBuffer.SetHeadSequence(m_nextTxSequence);
+//          m_txBuffer.SetHeadSequence(m_nextTxSequence);
+          SetTxHead(m_nextTxSequence);
           if (m_endPoint)
             {
               m_endPoint->SetPeer(InetSocketAddress::ConvertFrom(fromAddress).GetIpv4(),
@@ -2150,7 +2164,11 @@ TcpSocketBase::NewAck(SequenceNumber32 const& ack)
   NS_LOG_LOGIC ("TCP " << this << " NewAck " << ack <<
       " numberAck " << (ack - FirstUnackedSeq() )); // Number bytes ack'ed
 
+  m_firstTxUnack = ack;
+
+  // This could be cancelled
   m_txBuffer.DiscardUpTo(ack);
+
   if (GetTxAvailable() > 0)
     {
       NotifySend(GetTxAvailable());
