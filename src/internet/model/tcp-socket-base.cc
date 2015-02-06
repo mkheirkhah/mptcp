@@ -88,7 +88,7 @@ TcpSocketBase::GetTypeId(void)
       MakeTraceSourceAccessor(&TcpSocketBase::m_lastRtt))
   .AddTraceSource("NextTxSequence",
       "Next sequence number to send (SND.NXT)", MakeTraceSourceAccessor(&TcpSocketBase::m_nextTxSequence))
-  .AddTraceSource("FirstTxUnack",
+  .AddTraceSource("UnackSequence",
       "First unacknowledged sequence number (SND.UNA)", MakeTraceSourceAccessor(&TcpSocketBase::m_firstTxUnack))
   .AddTraceSource(
       "HighestSequence", "Highest sequence number ever sent in socket's life time",
@@ -1044,8 +1044,8 @@ SequenceNumber32
 TcpSocketBase::FirstUnackedSeq() const
 {
   //!
-//  return m_firstTxUnack.Get();
-  return m_txBuffer.HeadSequence();
+  return m_firstTxUnack.Get();
+//  return m_txBuffer.HeadSequence();
 }
 
 
@@ -1060,6 +1060,7 @@ TcpSocketBase::ReceivedAck(Ptr<Packet> packet, const TcpHeader& tcpHeader)
 //  uint32_t tmp = ((ack - initialSeqNb) / m_segmentSize) % mod;
 //  ACK.push_back(std::make_pair(Simulator::Now().GetSeconds(), tmp));
 
+  // TODO reokace the tcpHeader.GetAckNumber() by an ack variable
   // Received ACK. Compare the ACK number against highest unacked seqno
   if (0 == (tcpHeader.GetFlags() & TcpHeader::ACK))
     { // Ignore if no ACK flag
@@ -1188,6 +1189,7 @@ void
 TcpSocketBase::SetTxHead(const SequenceNumber32& seq)
 {
 //  #error TODO
+  NS_LOG_LOGIC("Setting Tx Head to " << seq);
   m_txBuffer.SetHeadSequence(seq);
   m_firstTxUnack = seq;
 }
@@ -2175,6 +2177,7 @@ TcpSocketBase::NewAck(SequenceNumber32 const& ack)
     }
   if (ack > m_nextTxSequence)
     {
+      // if case of a transactional conversation, in which packets are sent 1 by 1
       m_nextTxSequence = ack; // If advanced
     }
   if (m_txBuffer.Size() == 0 && m_state != FIN_WAIT_1 && m_state != CLOSING)

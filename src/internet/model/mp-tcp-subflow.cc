@@ -90,7 +90,7 @@ MpTcpSubFlow::DumpInfo() const
           " rxwin " << m_rWnd <<
           " segsize " << m_segmentSize <<
           " nextTxSeq " << m_nextTxSequence <<
-          " highestRxAck " << m_txBuffer.HeadSequence () <<
+          " highestRxAck " << FirstUnackedSeq() <<
           " pd->Size " << m_txBuffer.Size () <<
           " pd->SFS " << m_txBuffer.SizeFromSequence (m_nextTxSequence)
           );
@@ -378,6 +378,11 @@ void
 MpTcpSubFlow::SendEmptyPacket(TcpHeader& header)
 {
   NS_LOG_FUNCTION(this << header);
+
+  /*
+  TODO here we should parse the flags and append the correct option according to it
+  */
+
   TcpSocketBase::SendEmptyPacket(header);
 }
 
@@ -447,6 +452,12 @@ MpTcpSubFlow::SendDataPacket(SequenceNumber32 seq, uint32_t maxSize, bool withAc
 
   return SendDataPacket( header, seq, maxSize);
 }
+
+//uint32_t
+//MpTcpSubFlow::SendDataPacket(TcpHeader& header, const SequenceNumber32& ssn, uint32_t maxSize)
+//{
+//
+//}
 
 
 // split into 2 functions 1 to GenerateHeaders, other one to add options
@@ -542,7 +553,55 @@ MpTcpSubFlow::DoRetransmit()
   GetMeta()->OnSubflowRetransmit(this);
 
   // TODO this can't work, we need to regenerate the DSS and embed it
-  TcpSocketBase::DoRetransmit();
+//  TcpSocketBase::DoRetransmit();
+
+  NS_LOG_FUNCTION (this);
+  // Retransmit SYN packet
+  if (m_state == SYN_SENT)
+    {
+      if (m_cnCount > 0)
+        {
+          NS_FATAL_ERROR("Not implemented yet");
+          SendEmptyPacket(TcpHeader::SYN);
+        }
+      else
+        {
+          NotifyConnectionFailed();
+        }
+      return;
+    }
+  // Retransmit non-data packet: Only if in FIN_WAIT_1 or CLOSING state
+  if (m_txBuffer.Size() == 0)
+    {
+      if (m_state == FIN_WAIT_1 || m_state == CLOSING)
+        {
+          NS_FATAL_ERROR("Not implemented yet");
+          // Must have lost FIN, re-send
+          SendEmptyPacket(TcpHeader::FIN);
+        }
+      return;
+    }
+  // Retransmit a data packet: Call SendDataPacket
+  NS_LOG_LOGIC ("TcpSocketBase " << this << " retxing seq " << FirstUnackedSeq());
+
+
+  /**
+  We want to send mappings only
+  **/
+  MpTcpMapping mapping;
+  if(!m_TxMappings.GetMappingForSSN(FirstUnackedSeq(), mapping))
+//  if(!m_RxMappings.TranslateSSNtoDSN(headSSN, dsn))
+  {
+    m_TxMappings.Dump();
+    NS_FATAL_ERROR("Could not associate a mapping to ssn [" << FirstUnackedSeq() << "]. Should be impossible");
+  }
+
+  // TODO maybe we could set an option to tell SendDataPacket to trim the packet
+  // normally here m_nextTxSequence has been set to firstUna
+  uint32_t sz = SendDataPacket(FirstUnackedSeq(), mapping.GetLength(), true);
+  // In case of RTO, advance m_nextTxSequence
+  m_nextTxSequence = std::max(m_nextTxSequence.Get(), FirstUnackedSeq() + sz);
+  //reTxTrack.push_back(std::make_pair(Simulator::Now().GetSeconds(), ns3::TcpNewReno::cWnd));
 }
 
 /**
@@ -973,7 +1032,7 @@ MpTcpSubFlow::ProcessSynSent(Ptr<Packet> packet, const TcpHeader& tcpHeader)
       m_retxEvent.Cancel();
       m_rxBuffer.SetNextRxSequence(tcpHeader.GetSequenceNumber() + SequenceNumber32(1));
       m_highTxMark = ++m_nextTxSequence;
-      m_txBuffer.SetHeadSequence(m_nextTxSequence);
+      SetTxHead(m_nextTxSequence);
 
       // TODO support IPv6
       GetIdManager()->AddRemoteAddr(0, m_endPoint->GetPeerAddress(), m_endPoint->GetPeerPort() );
@@ -1153,7 +1212,7 @@ MpTcpSubFlow::ProcessSynRcvd(Ptr<Packet> packet, const TcpHeader& tcpHeader, con
       m_connected = true;
       m_retxEvent.Cancel();
       m_highTxMark = ++m_nextTxSequence;
-      m_txBuffer.SetHeadSequence(m_nextTxSequence);
+      SetTxHead(m_nextTxSequence);
 
 //      NS_LOG_LOGIC("Updating receive window");
 //      GetMeta()->SetRemoteWindow(tcpHeader.GetWindowSize());
@@ -1201,7 +1260,7 @@ MpTcpSubFlow::ProcessSynRcvd(Ptr<Packet> packet, const TcpHeader& tcpHeader, con
           m_connected = true;
           m_retxEvent.Cancel();
           m_highTxMark = ++m_nextTxSequence;
-          m_txBuffer.SetHeadSequence(m_nextTxSequence);
+          SetTxHead(m_nextTxSequence);
           if (m_endPoint)
             {
               m_endPoint->SetPeer(InetSocketAddress::ConvertFrom(fromAddress).GetIpv4(),
@@ -1442,12 +1501,15 @@ MpTcpSubFlow::ReTxTimeout()
 
 For now assume
 Called from NewAck, this
+SequenceNumber32 const& ack,
 */
 bool
-MpTcpSubFlow::DiscardAtMostOneMapping(SequenceNumber32 const& dack, SequenceNumber32 const& ack, MpTcpMapping& mapping)
+MpTcpSubFlow::DiscardAtMostOneMapping(SequenceNumber32 const& dack, MpTcpMapping& mapping)
 //MpTcpSubFlow::DiscardTxMappingsUpTo(SequenceNumber32 const& dack, SequenceNumber32 const& ack)
 {
-  NS_LOG_DEBUG(" maxDSN="<< dack << " maxSSN=" << ack);
+  NS_LOG_DEBUG(" maxDSN="<< dack
+          << " maxSSN=" << FirstUnackedSeq()
+          );
 
 //  while(true) {
 
@@ -1460,9 +1522,10 @@ MpTcpSubFlow::DiscardAtMostOneMapping(SequenceNumber32 const& dack, SequenceNumb
     NS_FATAL_ERROR("Could not associate a tx mapping to ssn [" << headSSN << "]. Should be impossible");
   }
 
-  if(mapping.TailDSN() < dack && mapping.TailSSN() < ack) {
-    NS_LOG_DEBUG("mapping ");
+  if(mapping.TailDSN() < dack && mapping.TailSSN() < FirstUnackedSeq()) {
+    NS_LOG_DEBUG("mapping can be discarded");
     NS_ASSERT(m_TxMappings.DiscardMapping(mapping));
+    m_txBuffer.DiscardUpTo(mapping.TailSSN() + SequenceNumber32(1));
     return true;
   }
 
@@ -1562,10 +1625,12 @@ MpTcpSubFlow::NewAck(SequenceNumber32 const& ack)
 
   // Note the highest ACK and tell app to send more
   NS_LOG_LOGIC ("TCP " << this << " NewAck " << ack <<
-      " numberAck " << (ack - m_txBuffer.HeadSequence ())); // Number bytes ack'ed
+      " numberAck " << (ack - FirstUnackedSeq())); // Number bytes ack'ed
+
+
+  m_firstTxUnack = ack;
 
   // TODO: get mapping associated with that Ack and
-  //
   if(!m_TxMappings.GetMappingForSSN( SequenceNumber32(ack-1), mapping)) {
 
     NS_LOG_WARN("Late ack ! Mapping likely to have been discared already. Dumping Tx Mappings:");
@@ -1593,7 +1658,8 @@ MpTcpSubFlow::NewAck(SequenceNumber32 const& ack)
     min(ack,dataack
     **/
 //    m_TxMappings.DiscardMappingsUpToDSN()
-      GetMeta()->OnSubflowNewAck(ack,this);
+
+      GetMeta()->OnSubflowNewAck(this);
   }
 
 

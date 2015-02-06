@@ -115,7 +115,9 @@ public:
   \param mapping
   **/
   bool
-  DiscardAtMostOneMapping(SequenceNumber32 const& dack, SequenceNumber32 const& ack, MpTcpMapping& mapping);
+  DiscardAtMostOneMapping(SequenceNumber32 const& dack,
+//  SequenceNumber32 const& ack,
+    MpTcpMapping& mapping);
 
   /**
   \brief Send a REM_ADDR for the specific address.

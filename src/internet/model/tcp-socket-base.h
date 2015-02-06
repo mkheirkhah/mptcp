@@ -410,6 +410,9 @@ public:
   virtual void
   AddOptions(TcpHeader&); // Add option to outgoing packets
 
+  /**
+  Should be called only to set the very first byte Tx seq
+  **/
   virtual void
   SetTxHead(const SequenceNumber32& seq);
 

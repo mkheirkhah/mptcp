@@ -10,6 +10,7 @@ Bugs:
 * the buffering is done wrongly. For instance packets can't be replicated across subflows
 * if you disable Nagle algorithm, then every packet embeds an ACK packet (m_connected).
 * reenable commented code in Meta::NewAck
+* MpTcpSubflow::SendEmptyPacket should parse the flags and append correct option just in case (for SYN for instance)
 
 
 buffering system:

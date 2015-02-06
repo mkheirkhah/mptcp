@@ -45,7 +45,7 @@ namespace ns3
 {
 
 void
-dumpNextTxSequence(Ptr<OutputStreamWrapper> stream, std::string context, SequenceNumber32 oldSeq, SequenceNumber32 newSeq)
+dumpSequence32(Ptr<OutputStreamWrapper> stream, std::string context, SequenceNumber32 oldSeq, SequenceNumber32 newSeq)
 {
   //<< context <<
 //  if (context == "NextTxSequence")
@@ -660,7 +660,15 @@ void
 MpTcpSocketBase::DupAck( SequenceNumber32 ack,Ptr<MpTcpSubFlow> sf)
 {
   //!
-  NS_LOG_INFO("Duplicate ACK, TODO");
+  NS_LOG_ERROR("Duplicate ACK, TODO");
+  /*
+  As discussed earlier, however, an MPTCP
+   implementation MUST NOT treat duplicate ACKs with any MPTCP option,
+   with the exception of the DSS option, as indications of congestion
+
+  and an MPTCP implementation SHOULD NOT send more than two
+   duplicate ACKs
+   */
 }
 
 
@@ -1380,17 +1388,106 @@ this function supposes that
 
 **/
 void
-MpTcpSocketBase::OnSubflowNewAck(SequenceNumber32 const& ack, Ptr<MpTcpSubFlow> subflow)
+MpTcpSocketBase::OnSubflowNewAck(Ptr<MpTcpSubFlow> subflow)
 {
-  NS_LOG_LOGIC("new subflow ack " << ack);
+  NS_LOG_LOGIC("new subflow ack " );
+//  SyncTxBuffers(subflow);
+  SyncTxBuffers();
+}
 
+
+void
+MpTcpSocketBase::SyncTxBuffers()
+{
+  NS_LOG_LOGIC("Syncing Tx buffer with all subflows");
+  for(int i = 0; i < Maximum; ++i) {
+
+//    Established
+//    NS_LOG_INFO("Closing all subflows in state [" << containerNames [i] << "]");
+    for( SubflowList::const_iterator it = m_subflows[i].begin(); it != m_subflows[i].end(); it++ )
+    {
+
+//      SubflowList::iterator it = std::find(m_subflows[i].begin(), m_subflows[i].end(), subflow);
+//      NS_ASSERT(it != m_subflows[from].end() ); //! the subflow must exist
+//      if(it != m_subflows[i].end()) {
+      SyncTxBuffers(*it);
+    }
+  }
+
+
+
+
+  // TODO I should go through all
+  // TODO that should be triggered !!! it should ask the meta for data rather !
+  if (GetTxAvailable() > 0)
+    {
+      NS_LOG_INFO("Tx available" << GetTxAvailable());
+      NotifySend(GetTxAvailable());
+    }
+
+
+
+  // if no more data and socket closing
+  if (m_txBuffer.Size() == 0 && m_state != FIN_WAIT_1 && m_state != CLOSING)
+    { // No retransmit timer if no data to retransmit
+      NS_LOG_WARN (this << " Cancelled ReTxTimeout event which was set to expire at " <<
+          (Simulator::Now () + Simulator::GetDelayLeft (m_retxEvent)).GetSeconds ());
+      m_retxEvent.Cancel();
+      return;
+    }
+
+  // Partie que j'ai ajoutée to help closing the connection
+  // maybe remove some of it
+  if (m_txBuffer.Size() == 0)
+    {
+      // In case we m_RxBuffer m_rxBuffer.Finished()
+      // m_highTxMark + SequenceNumber32(1)
+      // TODO maybe
+//      if(m_state == FIN_WAIT_1 && m_txBuffer.Size() == 0 &&  (dsn == m_txBuffer.HeadSequence() + SequenceNumber32(1) ) ) {
+      if(m_state == FIN_WAIT_1 && m_txBuffer.Size() == 0
+      &&  (FirstUnackedSeq() ==  m_txBuffer.HeadSequence() + SequenceNumber32(1) ) ) {
+
+        NS_LOG_LOGIC("FIN_WAIT_1 -> FIN_WAIT_2 ");
+        m_state=FIN_WAIT_2;
+        TcpHeader header;
+
+        GetSubflow(0)->GenerateEmptyPacketHeader(header, TcpHeader::ACK);
+        AppendDataAck(header);
+        GetSubflow(0)->SendEmptyPacket(header);
+        //!
+
+      }
+//      else if (m_state == FIN_WAIT_2) {
+////        Send DACK for DFIN
+//        NS_LOG_INFO("FIN_WAIT_2 test");
+//        CloseAllSubflows();
+//      }
+//      else if (m_state == FIN_WAIT_1) {
+//        //!
+//      }
+
+
+      return;
+    }
+  // in case it freed some space in cwnd, try to send more data
+  SendPendingData(m_connected);
+}
+
+
+// TODO maybe add a bool to ask for
+//SequenceNumber32 const& ack,
+void
+MpTcpSocketBase::SyncTxBuffers(Ptr<MpTcpSubFlow> subflow)
+{
+
+  NS_LOG_LOGIC("Syncing TxBuffer between meta and subflow " << subflow);
 
   while(true) {
     // DiscardAtMostOneMapping
 //    SequenceNumber32 dack = 0;
     MpTcpMapping mapping;
 
-    if(!subflow->DiscardAtMostOneMapping(m_txBuffer.TailSequence(), ack, mapping )) {
+    if(!subflow->DiscardAtMostOneMapping(FirstUnackedSeq(), mapping )) {
       NS_LOG_DEBUG("Nothing discarded");
       break;
     }
@@ -1399,9 +1496,8 @@ MpTcpSocketBase::OnSubflowNewAck(SequenceNumber32 const& ack, Ptr<MpTcpSubFlow> 
     returned mapping discarded because we don't support NR sack right now
     **/
     NS_LOG_DEBUG("subflow Tx mapping " << mapping << " discarded");
-//    m_txBuffer.DiscardUpTo( mapping.TailDSN());
+    m_txBuffer.DiscardUpTo( mapping.TailDSN());
   }
-
 }
 
 
@@ -1416,7 +1512,7 @@ This is not really possible until we change the buffer system:
 not been acknowledged at both connection level and on all subflows on
 which it has been sent."
 
-
+TODO:
 **/
 
 
@@ -1449,18 +1545,18 @@ MpTcpSocketBase::NewAck(SequenceNumber32 const& dsn)
 //  NS_LOG_FUNCTION (this << dsn);
 
 // TODO reestablish
-//  if (m_state != SYN_RCVD)
-//    { // Set RTO unless the ACK is received in SYN_RCVD state
-//      NS_LOG_LOGIC (this << " Cancelled ReTxTimeout event which was set to expire at " <<
-//          (Simulator::Now () + Simulator::GetDelayLeft (m_retxEvent)).GetSeconds ());
-//      m_retxEvent.Cancel();
-//      // On recieving a "New" ack we restart retransmission timer .. RFC 2988
-//      m_rto = m_rtt->RetransmitTimeout();
-//      NS_LOG_LOGIC (this << " Schedule ReTxTimeout at time " <<
-//          Simulator::Now ().GetSeconds () << " to expire at time " <<
-//          (Simulator::Now () + m_rto.Get ()).GetSeconds ());
-//      m_retxEvent = Simulator::Schedule(m_rto, &MpTcpSocketBase::ReTxTimeout, this);
-//    }
+  if (m_state != SYN_RCVD)
+    { // Set RTO unless the ACK is received in SYN_RCVD state
+      NS_LOG_LOGIC (this << " Cancelled ReTxTimeout event which was set to expire at " <<
+          (Simulator::Now () + Simulator::GetDelayLeft (m_retxEvent)).GetSeconds ());
+      m_retxEvent.Cancel();
+      // On recieving a "New" ack we restart retransmission timer .. RFC 2988
+      m_rto = m_rtt->RetransmitTimeout();
+      NS_LOG_LOGIC (this << " Schedule ReTxTimeout at time " <<
+          Simulator::Now ().GetSeconds () << " to expire at time " <<
+          (Simulator::Now () + m_rto.Get ()).GetSeconds ());
+      m_retxEvent = Simulator::Schedule(m_rto, &MpTcpSocketBase::ReTxTimeout, this);
+    }
 
   // TODO update m_rWnd
 //  m_rWnd.Get() == 0
@@ -1478,33 +1574,46 @@ MpTcpSocketBase::NewAck(SequenceNumber32 const& dsn)
 //    #endif
   // Note the highest ACK and tell app to send more
   NS_LOG_LOGIC ("TCP " << this << " NewAck " << dsn <<
-      " nbAckedBytes " << (dsn - m_txBuffer.HeadSequence ())); // Number bytes ack'ed
+      " nbAckedBytes " << (dsn - FirstUnackedSeq())); // Number bytes ack'ed
 
 
 
 
-// TODO i should remove data at some point
+
   /**
   This is possible because packets were copied int osubflows buffers, and that there is no intent to
   reinject them on other paths
+//  m_txBuffer.DiscardUpTo(dsn);
+  TODO here I should
   **/
-  m_txBuffer.DiscardUpTo(dsn);
+  m_firstTxUnack = dsn;
 
+  SyncTxBuffers();
 
-  // TODO that should be triggered !!! it should ask the meta for data rather !
-  if (GetTxAvailable() > 0)
-    {
-      NS_LOG_INFO("Tx available");
-      NotifySend(GetTxAvailable());
-    }
-
+  // TODO wrong. what happens with NR-SACK ?
   if (dsn > m_nextTxSequence)
     {
       m_nextTxSequence = dsn; // If advanced
     }
 
+  #if 0
+  Following has been moved to SyncTxBuffers()
+  // TODO I should go through all
+  // TODO that should be triggered !!! it should ask the meta for data rather !
+  if (GetTxAvailable() > 0)
+    {
+      NS_LOG_INFO("Tx available" << GetTxAvailable());
+      NotifySend(GetTxAvailable());
+    }
+
+//  if (dsn > m_nextTxSequence)
+//    {
+//      m_nextTxSequence = dsn; // If advanced
+//    }
+
 
   // m_txFueer
+  // TODO move that elsewhere ?
   if (m_txBuffer.Size() == 0 && m_state != FIN_WAIT_1 && m_state != CLOSING)
     { // No retransmit timer if no data to retransmit
       NS_LOG_WARN (this << " Cancelled ReTxTimeout event which was set to expire at " <<
@@ -1519,7 +1628,9 @@ MpTcpSocketBase::NewAck(SequenceNumber32 const& dsn)
     {
       // In case we m_RxBuffer m_rxBuffer.Finished()
       // m_highTxMark + SequenceNumber32(1)
-      if(m_state == FIN_WAIT_1 && m_txBuffer.Size() == 0 &&  (dsn == m_txBuffer.HeadSequence() + SequenceNumber32(1) ) ) {
+      // TODO maybe
+//      if(m_state == FIN_WAIT_1 && m_txBuffer.Size() == 0 &&  (dsn == m_txBuffer.HeadSequence() + SequenceNumber32(1) ) ) {
+      if(m_state == FIN_WAIT_1 && m_txBuffer.Size() == 0 &&  (dsn == FirstUnackedSeq() + SequenceNumber32(1) ) ) {
 
         NS_LOG_LOGIC("FIN_WAIT_1 -> FIN_WAIT_2 ");
         m_state=FIN_WAIT_2;
@@ -1545,6 +1656,7 @@ MpTcpSocketBase::NewAck(SequenceNumber32 const& dsn)
     }
   // in case it freed some space in cwnd, try to send more data
   SendPendingData(m_connected);
+  #endif
 }
 
 // Send 1-byte data to probe for the window size at the receiver when
@@ -1666,7 +1778,7 @@ MpTcpSocketBase::Listen(void)
 //  Ptr<MpTcpSubFlow> sFlow = m_subflows[sFlowIdx];
 //
 //  NS_LOG_INFO ("Subflow ("<<(int)sFlowIdx<<") ReTxTimeout Expired at time "
-//        <<Simulator::Now ().GetSeconds()<< " unacked packets count is "<<sFlow->m_mapDSN.size()
+//        << Simulator::Now ().GetSeconds()<< " unacked packets count is "<<sFlow->m_mapDSN.size()
 //        << " sFlow->state: " << TcpStateName[sFlow->m_state]
 //        ); //
 //  //NS_LOG_INFO("TxSeqNb: " << sFlow->TxSeqNumber << " HighestAck: " << sFlow->highestAck);
@@ -1692,6 +1804,7 @@ void
 MpTcpSocketBase::OnSubflowDupAck(Ptr<MpTcpSubFlow> sf)
 {
   NS_LOG_DEBUG("Dup ack signaled by subflow " << sf );
+
 }
 
 
@@ -1752,32 +1865,21 @@ MpTcpSocketBase::ReduceCWND(uint8_t sFlowIdx)
 }
     #endif
 
-/** Retransmit timeout */
+/**
+Retransmit timeout
+
+This function should be very interesting because one may
+adopt different strategies here, like reinjecting on other subflows etc...
+Maybe allow for a callback to be set here.
+*/
 void
 MpTcpSocketBase::Retransmit()
 {
   NS_LOG_FUNCTION (this);
-//  NS_FATAL_ERROR("TODO");
+  NS_FATAL_ERROR("TODO reestablish retransmit ?");
   NS_LOG_ERROR("TODO");
 
   TcpSocketBase::Retransmit();
-  #if 0
-  Ptr<MpTcpSubFlow> sFlow = m_subflows[sFlowIdx];
-  // Exit From Fast Recovery
-  sFlow->m_inFastRec = false;
-  // According to RFC2581 sec.3.1, upon RTO, GetSSThresh() is set to half of flight
-  // size and cwnd is set to 1*MSS, then the lost packet is retransmitted and
-  // TCP back to slow start
-  sFlow->SetSSThresh( std::max(2 * sFlow->GetSegSize(), BytesInFlight(sFlowIdx) / 2) );
-  sFlow->cwnd = sFlow->GetSegSize(); //  sFlow->cwnd = 1.0;
-  sFlow->TxSeqNumber = sFlow->highestAck + 1; // m_nextTxSequence = m_txBuffer.HeadSequence(); // Restart from highest Ack
-  sFlow->rtt->IncreaseMultiplier();  // Double the next RTO
-  DoRetransmit(sFlowIdx);  // Retransmit the packet
-  // plotting
-  sFlow->_TimeOut.push_back(make_pair(Simulator::Now().GetSeconds(), TimeScale));
-  // rfc 3782 - Recovering from timeOut
-  //sFlow->m_recover = SequenceNumber32(sFlow->maxSeqNb + 1);
-  #endif
 }
 
 void
@@ -1875,7 +1977,7 @@ MpTcpSocketBase::GenerateKey()
     m_nextTxSequence = (uint32_t)0;
   }
 
-  m_txBuffer.SetHeadSequence(m_nextTxSequence);
+  SetTxHead(m_nextTxSequence);
   m_highTxMark = m_nextTxSequence;
 
 
@@ -2054,13 +2156,13 @@ SetupSocketTracing(Ptr<TcpSocketBase> sock, const std::string prefix)
   // In fact it might be acked but as it neds to be moved on a per-mapping basis
   //
   *streamTxUnack->GetStream() << "Time,oldUnackSequence,newUnackSequence" << std::endl
-                                  << now << ",," << sock->m_txBuffer.HeadSequence() << std::endl;
+                                  << now << ",," << sock->FirstUnackedSeq() << std::endl;
 
   *streamRxNext->GetStream() << "Time,oldRxNext,newRxNext" << std::endl
                              << now << ",," << sock->m_rxBuffer.NextRxSequence() << std::endl;
 
   *streamRxAvailable->GetStream() << "Time,oldRxAvailable,newRxAvailable" << std::endl
-                                  << now << ",," << sock->m_rxBuffer.Available() << std::endl;
+                                  << now << ",," << sock->GetRxAvailable() << std::endl;
 
   *streamRxTotal->GetStream() << "Time,oldRxTotal,newRxTotal" << std::endl
                                   << now << ",," << sock->m_rxBuffer.Size() << std::endl;
@@ -2083,9 +2185,10 @@ SetupSocketTracing(Ptr<TcpSocketBase> sock, const std::string prefix)
   // TODO je devrais etre capable de voir les CongestionWindow + tailles de buffer/ Out of order
 //  CongestionWindow
 //  Ptr<MpTcpSocketBase> sock(this);
-  NS_ASSERT(sock->TraceConnect ("NextTxSequence", "NextTxSequence", MakeBoundCallback(&dumpNextTxSequence, streamTxNext)));
-  NS_ASSERT(sock->TraceConnect ("HighestSequence", "HighestSequence", MakeBoundCallback(&dumpNextTxSequence, streamTxHighest)));
-  NS_ASSERT(sock->m_txBuffer.TraceConnect ("UnackSequence", "UnackSequence", MakeBoundCallback(&dumpNextTxSequence, streamTxUnack)));
+  NS_ASSERT(sock->TraceConnect ("NextTxSequence", "NextTxSequence", MakeBoundCallback(&dumpSequence32, streamTxNext)));
+  NS_ASSERT(sock->TraceConnect ("HighestSequence", "HighestSequence", MakeBoundCallback(&dumpSequence32, streamTxHighest)));
+//  NS_ASSERT(sock->m_txBuffer.TraceConnect ("UnackSequence", "UnackSequence", MakeBoundCallback(&dumpSequence32, streamTxUnack)));
+  NS_ASSERT(sock->TraceConnect ("UnackSequence", "UnackSequence", MakeBoundCallback(&dumpSequence32, streamTxUnack)));
 
   NS_ASSERT(sock->TraceConnect ("CongestionWindow", "CongestionWindow", MakeBoundCallback(&dumpUint32, streamCwnd)));
   NS_ASSERT(sock->TraceConnect ("State", "State", MakeBoundCallback(&dumpTcpState, streamStates) ));
@@ -2093,12 +2196,12 @@ SetupSocketTracing(Ptr<TcpSocketBase> sock, const std::string prefix)
 //  Ptr<MpTcpSocketBase> sock2 = DynamicCast<MpTcpSocketBase>(sock);
 
 //  Ptr<TcpTxBuffer> txBuffer( &sock->m_txBuffer);
-//  NS_ASSERT(txBuffer->TraceConnect ("UnackSequence", "UnackSequence", MakeBoundCallback(&dumpNextTxSequence, streamTx)));
+//  NS_ASSERT(txBuffer->TraceConnect ("UnackSequence", "UnackSequence", MakeBoundCallback(&dumpSequence32, streamTx)));
 
 //  NS_LOG_UNCOND("Starting research !!");
 
 
-  NS_ASSERT(sock->m_rxBuffer.TraceConnect ("NextRxSequence", "NextRxSequence", MakeBoundCallback(&dumpNextTxSequence, streamRxNext) ));
+  NS_ASSERT(sock->m_rxBuffer.TraceConnect ("NextRxSequence", "NextRxSequence", MakeBoundCallback(&dumpSequence32, streamRxNext) ));
   NS_ASSERT(sock->m_rxBuffer.TraceConnect ("RxTotal", "RxTotal", MakeBoundCallback(&dumpUint32, streamRxTotal) ));
   NS_ASSERT(sock->m_rxBuffer.TraceConnect ("RxAvailable", "RxAvailable", MakeBoundCallback(&dumpUint32, streamRxAvailable) ));
 
@@ -2116,6 +2219,9 @@ SetupSocketTracing(Ptr<TcpSocketBase> sock, const std::string prefix)
     NS_ASSERT(sf->TraceConnect ("SSThreshold", "SSThreshold", MakeBoundCallback(&dumpUint32, streamSSThreshold)));
     *streamSSThreshold->GetStream() << "Time,oldSSThresh,newSSThresh" << std::endl
                                   << now << ",," << sf->GetSSThresh() << std::endl;
+
+    // TODO Trace first Cwnd
+//    *streamCwnd->GetStream() << now << ",," << sf->m_cWnd.Get() << std::endl;
   }
   else if(sock->GetInstanceTypeId() == MpTcpSocketBase::GetTypeId())
   {
@@ -2469,28 +2575,27 @@ MpTcpSocketBase::ProcessDSSEstablished( const TcpHeader& tcpHeader, Ptr<TcpOptio
 
     SequenceNumber32 dack = SequenceNumber32(dss->GetDataAck());
 
-    if (dack < m_txBuffer.HeadSequence())
+    if (dack < FirstUnackedSeq())
       { // Case 1: Old ACK, ignored.
         NS_LOG_LOGIC ("Old ack Ignored " << dack  );
       }
-    else if (dack  == m_txBuffer.HeadSequence())
+    else if (dack  == FirstUnackedSeq())
       { // Case 2: Potentially a duplicated ACK
         if (dack  < m_nextTxSequence)
           {
             NS_LOG_WARN ("TODO Dupack of " << dack << " not handled." );
             // TODO add new prototpye ?
-  //          DupAck(tcpHeader,
-  //          ++m_dupAckCount);
+//            DupAck(tcpHeader, ++m_dupAckCount);
           }
         // otherwise, the ACK is precisely equal to the nextTxSequence
         NS_ASSERT( dack  <= m_nextTxSequence);
       }
-    else if (dack  > m_txBuffer.HeadSequence())
+    else if (dack  > FirstUnackedSeq())
       { // Case 3: New ACK, reset m_dupAckCount and update m_txBuffer
         NS_LOG_LOGIC ("New DataAck [" << dack  << "]");
 
         // TODO that is buggy behavior. Change that
-        m_rWnd = tcpHeader.GetWindowSize();
+        SetRemoteWindow(tcpHeader.GetWindowSize() );
         NewAck( dack );
         m_dupAckCount = 0;
       }

@@ -38,7 +38,7 @@ void
 SetupSocketTracing(Ptr<TcpSocketBase> sock, const std::string prefix);
 
 void
-dumpNextTxSequence(Ptr<OutputStreamWrapper> stream, std::string context, SequenceNumber32 oldSeq, SequenceNumber32 newSeq);
+dumpSequence32(Ptr<OutputStreamWrapper> stream, std::string context, SequenceNumber32 oldSeq, SequenceNumber32 newSeq);
 
 void
 dumpUint32(Ptr<OutputStreamWrapper> stream, std::string context, uint32_t oldVal, uint32_t newVal);
@@ -599,7 +599,23 @@ protected: // protected methods
 //  void LastAckTimeout(uint8_t sFlowIdx);
 
   virtual void
-  OnSubflowNewAck(SequenceNumber32 const& ack, Ptr<MpTcpSubFlow> sf);
+  OnSubflowNewAck(
+//    SequenceNumber32 const& ack,
+      Ptr<MpTcpSubFlow> sf);
+
+
+  /**
+   * Free space as much as possible
+   * Goes through all subflows
+   */
+  virtual void
+  SyncTxBuffers();
+
+  /**
+   * Free space as much as possible
+   */
+  virtual void
+  SyncTxBuffers(Ptr<MpTcpSubFlow> sf);
 
   /**
    *  inherited from parent: update buffers

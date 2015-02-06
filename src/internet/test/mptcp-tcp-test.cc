@@ -596,10 +596,10 @@ MpTcpTestCase::AddSimpleNetDevice6 (Ptr<Node> node, Ipv6Address ipaddr, Ipv6Pref
   return dev;
 }
 
-static class TcpTestSuite : public TestSuite
+static class MpTcpTestSuite : public TestSuite
 {
 public:
-  TcpTestSuite ()
+  MpTcpTestSuite ()
     : TestSuite ("mptcp-tcp", UNIT)
   {
 
@@ -619,6 +619,7 @@ public:
 // 2100 is ok, 2200 fails
 //    AddTestCase (new MpTcpTestCase (5000, 100, 50, 100, 20, false), TestCase::EXTENSIVE);
     AddTestCase (new MpTcpTestCase (5000, 100, 50, 100, 20, false), TestCase::QUICK);
+
 
     // Disable IPv6 tests; not supported yet
 //    AddTestCase (new MpTcpTestCase (13, 200, 200, 200, 200, true), TestCase::QUICK);
