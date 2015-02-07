@@ -115,7 +115,7 @@ public:
   \param mapping
   **/
   bool
-  DiscardAtMostOneMapping(SequenceNumber32 const& dack,
+  DiscardAtMostOneTxMapping(SequenceNumber32 const& dack,
 //  SequenceNumber32 const& ack,
     MpTcpMapping& mapping);
 

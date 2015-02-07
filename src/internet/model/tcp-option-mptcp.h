@@ -512,7 +512,9 @@ public:
   * \brief Set seq nb of acked data at MPTP level
   */
   virtual void SetDataAck(uint32_t);
-  virtual uint32_t GetDataAck(void) const;
+//  virtual SequenceNumber32
+  virtual uint32_t
+  GetDataAck(void) const;
 
   //! Unimplemented
   virtual void SetChecksum(uint16_t);

@@ -522,7 +522,8 @@ MpTcpSocketBase::AppendDataAck(TcpHeader& hdr) const
 //    dss = TcpOptionMpTcpMain::CreateMpTcpOption(TcpOptionMpTcpMain::MP_DSS);
 //  }
 
-  NS_ASSERT( (dss->GetFlags() & TcpOptionMpTcpDSS::DataAckPresent) == 0);
+
+//  NS_ASSERT( (dss->GetFlags() & TcpOptionMpTcpDSS::DataAckPresent) == 0);
 
 //   = CreateObject<TcpOptionMpTcpDSS>();
   uint32_t dack = m_rxBuffer.NextRxSequence().GetValue();
@@ -592,6 +593,7 @@ MpTcpSocketBase::ProcessMpTcpOptions(TcpHeader header, Ptr<MpTcpSubflow> sf)
           }
             break;
 
+        // TODO redirect options to mptcp id manager
         case TcpOptionMpTcpMain::MP_ADD_ADDR:
         case TcpOptionMpTcpMain::MP_REMOVE_ADDR:
         case TcpOptionMpTcpMain::MP_PRIO:
@@ -631,12 +633,16 @@ MpTcpSocketBase::ProcessDSS(const TcpHeader& tcpHeader, Ptr<TcpOptionMpTcpDSS> d
 
   // might be suboptimal but should make sure it gets properly updated
 //  m_cWnd = ComputeTotalCWND();
+//  SequenceNumber32 dfin;
+//  SequenceNumber32 dack;
+
 
   // TODO maybe this should be done within an processMPTCPoption, more global. For instance during 3WHS
   /*Because of this, an implementation MUST NOT use the RCV.WND
   field of a TCP segment at the connection level if it does not also
   carry a DSS option with a Data ACK field*/
-  if(dss->GetFlags() & TcpOptionMpTcpDSS::DataAckPresent) {
+  if(dss->GetFlags() & TcpOptionMpTcpDSS::DataAckPresent)
+  {
 
     /*
     The receive window is relative to the DATA_ACK.  As in TCP, a
@@ -656,28 +662,32 @@ MpTcpSocketBase::ProcessDSS(const TcpHeader& tcpHeader, Ptr<TcpOptionMpTcpDSS> d
     else {
 //      NS_LOG_DEBUG("Not advancing window");
     }
+
+
+
+
+
   }
 
 
 
 
 
-  #if 0
+//  #if 0
   switch(m_state) {
 
     case ESTABLISHED:
       ProcessDSSEstablished(tcpHeader, dss, sf);
       break;
 
-//    case LAST_ACK:
-//    case CLOSING:
+    case LAST_ACK:
+    case CLOSING:
 //      ProcessDSSClosing(dss,sf);
 //      break;
     case FIN_WAIT_1:
     case FIN_WAIT_2:
     case CLOSE_WAIT:
-    case LAST_ACK:
-    case CLOSING:
+
       // do nothing just wait for subflows to be closed
       ProcessDSSWait(dss,sf);
       break;
@@ -692,7 +702,7 @@ MpTcpSocketBase::ProcessDSS(const TcpHeader& tcpHeader, Ptr<TcpOptionMpTcpDSS> d
       NS_LOG_ERROR("Unhandled case" << TcpStateName[m_state]);
       break;
   };
-  #endif
+//  #endif
   // If there is any data piggybacked, store it into m_rxBuffer
 //  if (packet->GetSize() > 0)
 //    {
@@ -1537,7 +1547,7 @@ MpTcpSocketBase::SyncTxBuffers(Ptr<MpTcpSubflow> subflow)
 //    SequenceNumber32 dack = 0;
     MpTcpMapping mapping;
 
-    if(!subflow->DiscardAtMostOneMapping(FirstUnackedSeq(), mapping )) {
+    if(!subflow->DiscardAtMostOneTxMapping(FirstUnackedSeq(), mapping )) {
       NS_LOG_DEBUG("Nothing discarded");
       break;
     }
@@ -1625,9 +1635,6 @@ MpTcpSocketBase::NewAck(SequenceNumber32 const& dsn)
   // Note the highest ACK and tell app to send more
   NS_LOG_LOGIC ("TCP " << this << " NewAck " << dsn <<
       " nbAckedBytes " << (dsn - FirstUnackedSeq())); // Number bytes ack'ed
-
-
-
 
 
   /**
@@ -2604,41 +2611,48 @@ MpTcpSocketBase::CloseAllSubflows()
   }
 }
 
-#if 0
+
 void
-MpTcpSocketBase::ReceivedAck(const TcpHeader& tcpHeader, Ptr<TcpOptionMpTcpDSS> dss, Ptr<MpTcpSubflow> sf)
+MpTcpSocketBase::ReceivedAck(
+//  const TcpHeader& tcpHeader,
+//  Ptr<TcpOptionMpTcpDSS> dss
+  SequenceNumber32 dack
+  , Ptr<MpTcpSubflow> sf
+  , bool count_dupacks
+  )
 {
-    NS_ASSERT( dss->GetFlags() & TcpOptionMpTcpDSS::DataAckPresent);
+  NS_LOG_FUNCTION("Received DACK " << dack << "from subflow" << sf << "(Enable dupacks:" << count_dupacks << " )");
+//  NS_ASSERT( dss->GetFlags() & TcpOptionMpTcpDSS::DataAckPresent);
 
-    SequenceNumber32 dack = SequenceNumber32(dss->GetDataAck());
+//  SequenceNumber32 dack = SequenceNumber32(dss->GetDataAck());
 
-    if (dack < FirstUnackedSeq())
-      { // Case 1: Old ACK, ignored.
-        NS_LOG_LOGIC ("Old ack Ignored " << dack  );
-      }
-    else if (dack  == FirstUnackedSeq())
-      { // Case 2: Potentially a duplicated ACK
-        if (dack  < m_nextTxSequence)
-          {
-          /* dupackcount shall only be increased if there is only a DSS option ! */
-            NS_LOG_WARN ("TODO Dupack of " << dack << " not handled yet." );
-            // TODO add new prototpye ?
+  if (dack < FirstUnackedSeq())
+    { // Case 1: Old ACK, ignored.
+      NS_LOG_LOGIC ("Old ack Ignored " << dack  );
+    }
+  else if (dack  == FirstUnackedSeq())
+    { // Case 2: Potentially a duplicated ACK
+      if (dack  < m_nextTxSequence)
+        {
+        /* TODO dupackcount shall only be increased if there is only a DSS option ! */
+          NS_LOG_WARN ("TODO Dupack of " << dack << " not handled yet." );
+          // TODO add new prototpye ?
 //            DupAck(tcpHeader, ++m_dupAckCount);
-          }
-        // otherwise, the ACK is precisely equal to the nextTxSequence
-        NS_ASSERT( dack  <= m_nextTxSequence);
-      }
-    else if (dack  > FirstUnackedSeq())
-      { // Case 3: New ACK, reset m_dupAckCount and update m_txBuffer
-        NS_LOG_LOGIC ("New DataAck [" << dack  << "]");
+        }
+      // otherwise, the ACK is precisely equal to the nextTxSequence
+      NS_ASSERT( dack  <= m_nextTxSequence);
+    }
+  else if (dack  > FirstUnackedSeq())
+    { // Case 3: New ACK, reset m_dupAckCount and update m_txBuffer
+      NS_LOG_LOGIC ("New DataAck [" << dack  << "]");
 
-        // TODO that is buggy behavior. Change that
-        SetRemoteWindow(tcpHeader.GetWindowSize() );
-        NewAck( dack );
-        m_dupAckCount = 0;
-      }
+      NewAck( dack );
+      m_dupAckCount = 0;
+    }
+
 }
-#endif
+
+
 
 void
 MpTcpSocketBase::ProcessDSSEstablished(const TcpHeader& tcpHeader, Ptr<TcpOptionMpTcpDSS> dss, Ptr<MpTcpSubflow> sf)
@@ -2649,42 +2663,23 @@ MpTcpSocketBase::ProcessDSSEstablished(const TcpHeader& tcpHeader, Ptr<TcpOption
 //  uint32_t ack = (tcpHeader.GetAckNumber()).GetValue();
 //  uint32_t tmp = ((ack - initialSeqNb) / m_segmentSize) % mod;
 //  ACK.push_back(std::make_pair(Simulator::Now().GetSeconds(), tmp));
-  if ( dss->GetFlags() & TcpOptionMpTcpDSS::DataFin) {
+  if ( dss->GetFlags() & TcpOptionMpTcpDSS::DataFin)
+  {
+    NS_LOG_LOGIC("DFIN detected " << dss->GetDataFinDSN());
     PeerClose( SequenceNumber32(dss->GetDataFinDSN()), sf);
   }
 
 
   // TOdO replace that
 
-  if( dss->GetFlags() & TcpOptionMpTcpDSS::DataAckPresent) {
+  if( dss->GetFlags() & TcpOptionMpTcpDSS::DataAckPresent)
+  {
+    //tcpHeader,
+    ReceivedAck( SequenceNumber32(dss->GetDataAck()), sf, false);
+//    SequenceNumber32 dack = SequenceNumber32(dss->GetDataAck());
 
-    SequenceNumber32 dack = SequenceNumber32(dss->GetDataAck());
 
-    if (dack < FirstUnackedSeq())
-      { // Case 1: Old ACK, ignored.
-        NS_LOG_LOGIC ("Old ack Ignored " << dack  );
-      }
-    else if (dack  == FirstUnackedSeq())
-      { // Case 2: Potentially a duplicated ACK
-        if (dack  < m_nextTxSequence)
-          {
-            NS_LOG_WARN ("TODO Dupack of " << dack << " not handled." );
-            // TODO add new prototpye ?
-//            DupAck(tcpHeader, ++m_dupAckCount);
-          }
-        // otherwise, the ACK is precisely equal to the nextTxSequence
-        NS_ASSERT( dack  <= m_nextTxSequence);
-      }
-    else if (dack  > FirstUnackedSeq())
-      { // Case 3: New ACK, reset m_dupAckCount and update m_txBuffer
-        NS_LOG_LOGIC ("New DataAck [" << dack  << "]");
-
-        // TODO that is buggy behavior. Change that
-        SetRemoteWindow(tcpHeader.GetWindowSize() );
-        NewAck( dack );
-        m_dupAckCount = 0;
-      }
-    }
+  }
 
   //! datafin case handled at the start of the function
   if( (dss->GetFlags() & TcpOptionMpTcpDSS::DSNMappingPresent) && !dss->DataFinMappingOnly() )
@@ -2693,7 +2688,7 @@ MpTcpSocketBase::ProcessDSSEstablished(const TcpHeader& tcpHeader, Ptr<TcpOption
   }
 }
 
-/* process while in CLOSING */
+/* process while in CLOSING/LAST_ACK */
 void
 MpTcpSocketBase::ProcessDSSClosing( Ptr<TcpOptionMpTcpDSS> dss, Ptr<MpTcpSubflow> sf)
 {
@@ -2807,9 +2802,16 @@ MpTcpSocketBase::ProcessDSSWait( Ptr<TcpOptionMpTcpDSS> dss, Ptr<MpTcpSubflow> s
       }
 
     }
+    else {
+      ReceivedAck(dack,sf,false);
+    }
   }
 
 
+  if( (dss->GetFlags() & TcpOptionMpTcpDSS::DSNMappingPresent) && !dss->DataFinMappingOnly() )
+  {
+      sf->AddPeerMapping(dss->GetMapping());
+  }
 
 }
 

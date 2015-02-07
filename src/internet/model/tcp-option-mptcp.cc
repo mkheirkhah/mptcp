@@ -721,6 +721,7 @@ TcpOptionMpTcpDSS::GetSerializedSize(void) const
   return len;
 }
 
+//SequenceNumber32
 uint32_t
 TcpOptionMpTcpDSS::GetDataAck(void) const {
   NS_ASSERT( m_flags & DataAckPresent );
@@ -983,25 +984,30 @@ TcpOptionMpTcpDSS::GetFlags(void) const {
    number that corresponds with the DATA_FIN itself
    */
 bool
-TcpOptionMpTcpDSS::DataFinMappingOnly() const {
+TcpOptionMpTcpDSS::DataFinMappingOnly() const
+{
 //  return false;
   return (m_flags & DataFin) && m_dataLevelLength == 1 && m_ssn == 0;
 }
 
 bool
-TcpOptionMpTcpDSS::IsInfiniteMapping() const {
+TcpOptionMpTcpDSS::IsInfiniteMapping() const
+{
 //  The checksum, in such a case, will also be set to zero
   return (GetFlags() & DSNMappingPresent) && m_dataLevelLength == 0;
 }
 
 uint64_t
-TcpOptionMpTcpDSS::GetDataFinDSN() const {
+TcpOptionMpTcpDSS::GetDataFinDSN() const
+{
   NS_ASSERT( GetFlags() & DataFin);
 
-  if(DataFinMappingOnly()) {
+  if(DataFinMappingOnly())
+  {
     return m_dsn;
   }
-  else {
+  else
+  {
     return m_dsn + m_dataLevelLength;
   }
 }

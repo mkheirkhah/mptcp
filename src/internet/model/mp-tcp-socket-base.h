@@ -543,6 +543,13 @@ protected: // protected methods
   //! Disabled
   virtual void ReceivedAck ( Ptr<Packet>, const TcpHeader&); // Received an ACK packet
 
+  // MPTCP specfic version
+  virtual void ReceivedAck (
+    SequenceNumber32 dack
+  , Ptr<MpTcpSubflow> sf
+  , bool count_dupacks
+  );
+
   //! Disabled
   virtual void ReceivedData ( Ptr<Packet>, const TcpHeader&); // Recv of a data, put into buffer, call L7 to get it if necessary
 

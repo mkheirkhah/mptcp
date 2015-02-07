@@ -382,6 +382,7 @@ MpTcpSubflow::SendEmptyPacket(TcpHeader& header)
   /*
   TODO here we should parse the flags and append the correct option according to it
   */
+  GetMeta()->AppendDataAck( header );
 
   TcpSocketBase::SendEmptyPacket(header);
 }
@@ -480,24 +481,20 @@ MpTcpSubflow::SendDataPacket(TcpHeader& header, const SequenceNumber32& ssn, uin
     NS_FATAL_ERROR("Could not find mapping associated to ssn");
   }
 
-//  // Add list to ListErrorModel object
-//  Ptr<ListErrorModel> rem = CreateObject<ListErrorModel>();
-//  rem->SetList(sampleList);
-
-  // TODO use rather GetOrCreateOption(
   Ptr<TcpOptionMpTcpDSS> dsnOption = Create<TcpOptionMpTcpDSS>();
-
   // TODO don't send  mapping for every subsequent packet
-    // Add DSN option
-//  NS_LOG_DEBUG("Adding DSN option" << mapping);
   dsnOption->SetMapping( mapping );
+
 
 
 //  NS_ASSERT( dsnOption->GetMapping().HeadSSN() )
   header.AppendOption( dsnOption );
-//  }
 
-  // check
+  //!
+//  GetMeta()->OnSubflow
+
+  GetMeta()->AppendDataAck( header );
+
 
   return TcpSocketBase::SendDataPacket(header, ssn, maxSize);
 }
@@ -1511,25 +1508,34 @@ Called from NewAck, this
 SequenceNumber32 const& ack,
 */
 bool
-MpTcpSubflow::DiscardAtMostOneMapping(SequenceNumber32 const& dack, MpTcpMapping& mapping)
+MpTcpSubflow::DiscardAtMostOneTxMapping(SequenceNumber32 const& firstUnackedMeta, MpTcpMapping& mapping)
 //MpTcpSubflow::DiscardTxMappingsUpTo(SequenceNumber32 const& dack, SequenceNumber32 const& ack)
 {
-  NS_LOG_DEBUG(" maxDSN=" << dack
-          << " maxSSN=" << FirstUnackedSeq()
+  NS_LOG_DEBUG("Removing mappings with DSN <" << firstUnackedMeta
+          << " and SSN <" << FirstUnackedSeq()
           );
 
 //  while(true) {
 
   SequenceNumber32 headSSN = m_txBuffer.HeadSequence();
-//  MpTcpMapping mapping;
 
-  if(!m_TxMappings.GetMappingForSSN(headSSN, mapping))
+
+  //  MpTcpMapping mapping;
+  // m_state == FIN_WAIT_1 &&
+  if(headSSN >= FirstUnackedSeq())
+  {
+    NS_LOG_DEBUG("Subflow tx Buffer already empty");
+    return false;
+  }
+  else if(!m_TxMappings.GetMappingForSSN(headSSN, mapping))
   {
     m_TxMappings.Dump();
-    NS_FATAL_ERROR("Could not associate a tx mapping to ssn [" << headSSN << "]. Should be impossible");
+    NS_LOG_ERROR("Could not associate a tx mapping to ssn [" << headSSN << "]. Should be impossible");
+//    NS_FATAL_ERROR("Could not associate a tx mapping to ssn [" << headSSN << "]. Should be impossible");
+    return false;
   }
 
-  if(mapping.TailDSN() < dack && mapping.TailSSN() < FirstUnackedSeq()) {
+  if(mapping.TailDSN() < firstUnackedMeta && mapping.TailSSN() < FirstUnackedSeq()) {
     NS_LOG_DEBUG("mapping can be discarded");
     NS_ASSERT(m_TxMappings.DiscardMapping(mapping));
     m_txBuffer.DiscardUpTo(mapping.TailSSN() + SequenceNumber32(1));
