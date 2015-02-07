@@ -14,11 +14,11 @@ MpTcpPathIdManager::GetTypeId(void)
 {
   static TypeId tid = TypeId("ns3::MpTcpPathIdManager")
       .SetParent<Object>()
-//      .AddConstructor<MpTcpSubFlow>()
+//      .AddConstructor<MpTcpSubflow>()
       // TODO should be inherited
 //      .AddTraceSource("cWindow",
 //          "The congestion control window to trace.",
-//           MakeTraceSourceAccessor(&MpTcpSubFlow::m_cWnd))
+//           MakeTraceSourceAccessor(&MpTcpSubflow::m_cWnd))
     ;
   return tid;
 }

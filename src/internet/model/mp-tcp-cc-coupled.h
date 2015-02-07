@@ -41,7 +41,7 @@ public:
   /**
   \return Nb of
   */
-  virtual void OpenCWNDInCA(Ptr<MpTcpSubFlow> subflow, uint32_t ackedBytes);
+  virtual void OpenCWNDInCA(Ptr<MpTcpSubflow> subflow, uint32_t ackedBytes);
 
 protected:
   void CalculateAlpha();

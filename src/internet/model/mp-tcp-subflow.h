@@ -37,9 +37,9 @@ class MpTcpPathIdManager;
 class TcpOptionMpTcpDSS;
 
 /**
- * \class MpTcpSubFlow
+ * \class MpTcpSubflow
 */
-class MpTcpSubFlow : public TcpSocketBase
+class MpTcpSubflow : public TcpSocketBase
 {
 public:
 
@@ -65,10 +65,10 @@ public:
   Every subflow is linked to that socket.
   \param The metasocket it is linked to
   **/
-  MpTcpSubFlow();
+  MpTcpSubflow();
 
-  MpTcpSubFlow(const MpTcpSubFlow&);
-  virtual ~MpTcpSubFlow();
+  MpTcpSubflow(const MpTcpSubflow&);
+  virtual ~MpTcpSubflow();
 
   TcpStates_t
   GetState() const;
@@ -254,7 +254,7 @@ public:
   * \
   * Why do I need this already :/ ?
   */
-  virtual Ptr<MpTcpSubFlow>
+  virtual Ptr<MpTcpSubflow>
   ForkAsSubflow(void) = 0;
 
   /**

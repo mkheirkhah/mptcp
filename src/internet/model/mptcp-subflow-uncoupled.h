@@ -6,7 +6,7 @@
 namespace ns3 {
 
 
-class MpTcpSubflowUncoupled : public MpTcpSubFlow
+class MpTcpSubflowUncoupled : public MpTcpSubflow
 {
 public:
   static TypeId
@@ -15,7 +15,7 @@ public:
   virtual TypeId GetInstanceTypeId(void) const;
 
 protected:
-    Ptr<MpTcpSubFlow>
+    Ptr<MpTcpSubflow>
     ForkAsSubflow(void);
 
   virtual void OpenCwndInCA(uint32_t acked);

@@ -239,6 +239,12 @@ class MpTcpMappingContainer
   AddMappingLooseSSN(MpTcpMapping&);
 
   /**
+  TODO passer en const
+  */
+  bool
+  FindOverlappingMapping(const MpTcpMapping& mapping, MpTcpMapping& ret);
+
+  /**
   Check for overlap.
   \return < 0 if the mapping overlaps with an existing one, 0 otherwise
   **/

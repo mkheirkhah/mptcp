@@ -102,7 +102,7 @@ MpTcpCCUncoupled::GetInitialCwnd(void) const
 
 //
 //uint32_t
-//MpTcpCCUncoupled::OpenCWND(Ptr<MpTcpSubFlow> sf, uint32_t ackedBytes)
+//MpTcpCCUncoupled::OpenCWND(Ptr<MpTcpSubflow> sf, uint32_t ackedBytes)
 //{
 //  //!
 //  double adder = static_cast<double> (sf->m_segmentSize * sf->m_segmentSize) / sf->m_cWnd.Get ();
@@ -112,7 +112,7 @@ MpTcpCCUncoupled::GetInitialCwnd(void) const
 //}
 //
 //uint32_t
-//MpTcpCCUncoupled::ReduceCWND(Ptr<MpTcpSubFlow> sf)
+//MpTcpCCUncoupled::ReduceCWND(Ptr<MpTcpSubflow> sf)
 //{
 //  //!
 //  return sf->m_cWnd/2;

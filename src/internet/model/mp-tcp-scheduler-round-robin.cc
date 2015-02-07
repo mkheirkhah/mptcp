@@ -46,7 +46,7 @@ MpTcpSchedulerRoundRobin::SetMeta(Ptr<MpTcpSocketBase> metaSock)
 }
 
 //uint16_t
-Ptr<MpTcpSubFlow>
+Ptr<MpTcpSubflow>
 MpTcpSchedulerRoundRobin::GetSubflowToUseForEmptyPacket()
 {
   NS_ASSERT(m_metaSock->GetNActiveSubflows() > 0 );
@@ -95,11 +95,11 @@ MpTcpSchedulerRoundRobin::GenerateMappings(MappingVector& mappings)
   {
     // TODO check how the windows work
     //m_metaSock->
-    Ptr<MpTcpSubFlow> sf = m_metaSock->GetSubflow(m_lastUsedFlowId);
+    Ptr<MpTcpSubflow> sf = m_metaSock->GetSubflow(m_lastUsedFlowId);
     uint32_t window = sf->AvailableWindow(); // Get available window size
 //    sf->DumpInfo();
 
-      NS_LOG_LOGIC ("MpTcpSubFlow " << sf << " SendPendingData" <<
+      NS_LOG_LOGIC ("MpTcpSubflow " << sf << " SendPendingData" <<
 //          " w " << w <<
 //          " rxwin " << sf->m_rWnd <<
 //          " segsize " << sf->m_segmentSize <<

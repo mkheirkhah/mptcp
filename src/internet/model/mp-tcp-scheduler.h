@@ -23,7 +23,7 @@ public:
   \brief
   \return Subflow on which to send
   **/
-//  virtual Ptr<MpTcpSubFlow> GetSubflowToUse(Ptr<MpTcpSocketBase> metaSock);
+//  virtual Ptr<MpTcpSubflow> GetSubflowToUse(Ptr<MpTcpSocketBase> metaSock);
 
 
   /**

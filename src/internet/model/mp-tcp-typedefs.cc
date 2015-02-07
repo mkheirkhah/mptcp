@@ -208,11 +208,10 @@ MpTcpMappingContainer::Dump()
 //
 //}
 
-
-  //!
-int
-MpTcpMappingContainer::AddMappingEnforceSSN(const MpTcpMapping& mapping)
+bool
+MpTcpMappingContainer::FindOverlappingMapping(const MpTcpMapping& mapping, MpTcpMapping& ret)
 {
+  NS_LOG_DEBUG("Looking for a mapping that overlaps with " << mapping);
   for( MappingList::iterator it = m_mappings.begin(); it != m_mappings.end(); it++ )
   {
     // Check if mappings overlap
@@ -220,11 +219,26 @@ MpTcpMappingContainer::AddMappingEnforceSSN(const MpTcpMapping& mapping)
     {
 
       // Intersect
-      NS_LOG_WARN("Mappings " << mapping << " intersect with " << *it );
-      return -1;
+      NS_LOG_DEBUG("Mappings " << mapping << " intersects with " << *it );
+      ret = *it;
+      return true;
     }
 
   }
+  return false;
+}
+  //!
+int
+MpTcpMappingContainer::AddMappingEnforceSSN(const MpTcpMapping& mapping)
+{
+
+  MpTcpMapping temp;
+  if(FindOverlappingMapping(mapping, temp) && temp != mapping) {
+    NS_LOG_WARN("Mapping " << mapping << " conflicts with existing " << temp);
+    return -1;
+  }
+
+  NS_LOG_LOGIC("Adding mapping " << mapping);
   m_mappings.insert(mapping);
   return 0;
 }

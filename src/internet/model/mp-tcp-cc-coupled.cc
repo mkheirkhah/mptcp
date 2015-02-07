@@ -17,7 +17,7 @@ MpTcpCongestionCoupled::CalculateAlpha()
 
   for (uint32_t i = 0; i < m_metaSock->GetNActiveSubflows(); i++)
     {
-      Ptr<MpTcpSubFlow> sFlow = m_metaSock->GetSubflow(i);
+      Ptr<MpTcpSubflow> sFlow = m_metaSock->GetSubflow(i);
 
       Time time = sFlow->rtt->GetCurrentEstimate();
       double rtt = time.GetSeconds();
@@ -33,7 +33,7 @@ MpTcpCongestionCoupled::CalculateAlpha()
 
 //
 uint32_t
-MpTcpCongestionCoupled::OpenCWNDInCA(Ptr<MpTcpSubFlow> subflow, uint32_t ackedBytes)
+MpTcpCongestionCoupled::OpenCWNDInCA(Ptr<MpTcpSubflow> subflow, uint32_t ackedBytes)
 {
   NS_ASSERT( subflow );
 

@@ -246,7 +246,7 @@ private:
   friend class TcpSocketBase;
 
   friend class MpTcpSocketBase; //
-  friend class MpTcpSubFlow; // Matt
+  friend class MpTcpSubflow; // Matt
 
   void SendPacket (Ptr<Packet>, const TcpHeader &,
                    Ipv4Address, Ipv4Address, Ptr<NetDevice> oif = 0);

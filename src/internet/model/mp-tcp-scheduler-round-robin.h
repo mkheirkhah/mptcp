@@ -21,7 +21,7 @@ namespace ns3
 {
 
 class MpTcpSocketBase;
-class MpTcpSubFlow;
+class MpTcpSubflow;
 
 
 //typedef std::vector< std::pair<uint8_t, std::pair< SequenceNumber32,uint32_t > > > MappingVector;
@@ -66,7 +66,7 @@ public:
   /**
   Return Index of subflow to use
   */
-  virtual Ptr<MpTcpSubFlow> GetSubflowToUseForEmptyPacket();
+  virtual Ptr<MpTcpSubflow> GetSubflowToUseForEmptyPacket();
 
 protected:
   uint8_t  m_lastUsedFlowId;  //!< keep track of last used subflow

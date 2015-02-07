@@ -47,8 +47,8 @@ public:
   virtual Ptr<MpTcpSocketBase> ForkAsMeta(void);
 //  virtual Ptr<TcpSocketBase> Fork(void);
   // transform into a callback ?
-  // Callback<Ptr<MpTcpSubFlow>, Ptr<MpTcpSocketBase>, Ptr<MpTcpCongestionControl> >
-  //Ptr<MpTcpSubFlow>
+  // Callback<Ptr<MpTcpSubflow>, Ptr<MpTcpSocketBase>, Ptr<MpTcpCongestionControl> >
+  //Ptr<MpTcpSubflow>
 
   // Called by SendPendingData() to get a subflow based on round robin algorithm
 //  virtual int GeneratePartition(Ptr<MpTcpSocketBase> metaSock);

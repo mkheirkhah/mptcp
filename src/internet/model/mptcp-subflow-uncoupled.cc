@@ -15,7 +15,7 @@ TypeId
 MpTcpSubflowUncoupled::GetTypeId(void)
 {
   static TypeId tid = TypeId("ns3::MpTcpSubflowUncoupled")
-      .SetParent<MpTcpSubFlow>()
+      .SetParent<MpTcpSubflow>()
       .AddConstructor<MpTcpSubflowUncoupled>()
 
     ;
@@ -29,7 +29,7 @@ MpTcpSubflowUncoupled::GetInstanceTypeId(void) const
 }
 
 
-Ptr<MpTcpSubFlow>
+Ptr<MpTcpSubflow>
 MpTcpSubflowUncoupled::ForkAsSubflow(void)
 {
   return CopyObject<MpTcpSubflowUncoupled> (this);

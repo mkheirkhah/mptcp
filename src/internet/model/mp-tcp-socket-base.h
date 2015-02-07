@@ -27,7 +27,7 @@ class Node;
 class Packet;
 class TcpL4Protocol;
 class MpTcpPathIdManager;
-class MpTcpSubFlow;
+class MpTcpSubflow;
 //class MpTcpSchedulerRoundRobin;
 class MpTcpCongestionControl;
 class TcpOptionMpTcpDSS;
@@ -73,11 +73,11 @@ TODO:
 -should inherit from TcpSocket rather TcpSocketBase
 -should use 64 bits based buffer / sq nb
 -the children should parse MPTCP option and relay them to the father
-//  ProcessJoin(Ptr<TcpOptionMpTcpJoin>, Ptr<MpTcpSubFlow> sf);
-//  ProcessCapable(Ptr<TcpOptionMpTcpJoin>, Ptr<MpTcpSubFlow> sf);
-//  ProcessAddAddr(Ptr<TcpOptionMpTcpJoin>, Ptr<MpTcpSubFlow> sf);
-//  ProcessRemAddr(Ptr<TcpOptionMpTcpJoin>, Ptr<MpTcpSubFlow> sf);
-//  ProcessDSS(Ptr<TcpOptionMpTcpJoin>, Ptr<MpTcpSubFlow> sf);
+//  ProcessJoin(Ptr<TcpOptionMpTcpJoin>, Ptr<MpTcpSubflow> sf);
+//  ProcessCapable(Ptr<TcpOptionMpTcpJoin>, Ptr<MpTcpSubflow> sf);
+//  ProcessAddAddr(Ptr<TcpOptionMpTcpJoin>, Ptr<MpTcpSubflow> sf);
+//  ProcessRemAddr(Ptr<TcpOptionMpTcpJoin>, Ptr<MpTcpSubflow> sf);
+//  ProcessDSS(Ptr<TcpOptionMpTcpJoin>, Ptr<MpTcpSubflow> sf);
 
 // TODO inherit MpTcpSocket or TcpSocket but  would need to recreate 64bits buffer
 **/
@@ -85,7 +85,7 @@ class MpTcpSocketBase : public TcpSocketBase
 
 {
 public: // public methods
-  typedef std::vector< Ptr<MpTcpSubFlow> > SubflowList;
+  typedef std::vector< Ptr<MpTcpSubflow> > SubflowList;
 
 
   // TODO move it to protected. I've put it here for the sake of debugging/tracing
@@ -155,14 +155,14 @@ public: // public methods
   OnDataFin
   */
   virtual void
-  PeerClose( SequenceNumber32 fin_seq, Ptr<MpTcpSubFlow> sf);
+  PeerClose( SequenceNumber32 fin_seq, Ptr<MpTcpSubflow> sf);
 
   virtual void
-  OnInfiniteMapping(Ptr<TcpOptionMpTcpDSS> dss, Ptr<MpTcpSubFlow> sf);
+  OnInfiniteMapping(Ptr<TcpOptionMpTcpDSS> dss, Ptr<MpTcpSubflow> sf);
 
   /* equivalent to TCP Rst */
   virtual void
-  SendFastClose(Ptr<MpTcpSubFlow> sf);
+  SendFastClose(Ptr<MpTcpSubflow> sf);
 
   /**
   \brief Generates random key, setups isdn and token
@@ -245,7 +245,7 @@ public: // public methods
   /**
   * \return an established subflow
   */
-  Ptr<MpTcpSubFlow> GetSubflow(uint8_t);
+  Ptr<MpTcpSubflow> GetSubflow(uint8_t);
 
   virtual void ClosingOnEmpty(TcpHeader& header);
 
@@ -274,7 +274,7 @@ public: // public methods
   * \param srcAddr Address to bind to. In theory Can be an InetSocketAddress or an Inet6SocketAddress
   * for now just InetSocketAddress
   */
-  Ptr<MpTcpSubFlow> CreateSubflow(
+  Ptr<MpTcpSubflow> CreateSubflow(
     bool masterSocket
     );
 
@@ -347,7 +347,7 @@ public: // public variables
 protected: // protected methods
 
   friend class Tcp;
-  friend class MpTcpSubFlow;
+  friend class MpTcpSubflow;
 
   void CloseAllSubflows();
 
@@ -392,10 +392,10 @@ protected: // protected methods
   \param reset True if closing due to reset
   */
   void
-  OnSubflowClosed(Ptr<MpTcpSubFlow> sf, bool reset);
+  OnSubflowClosed(Ptr<MpTcpSubflow> sf, bool reset);
 
   void
-  OnSubflowDupAck(Ptr<MpTcpSubFlow> sf);
+  OnSubflowDupAck(Ptr<MpTcpSubflow> sf);
 
   /**
   \param dataSeq Used to reconstruct the mapping
@@ -403,7 +403,7 @@ protected: // protected methods
   */
   virtual void
   OnSubflowRecv(
-                Ptr<MpTcpSubFlow> sf
+                Ptr<MpTcpSubflow> sf
 //                SequenceNumber32 dataSeq, Ptr<Socket> sock
                 );
 
@@ -425,12 +425,12 @@ protected: // protected methods
   When a subflow gets connected
   TODO rename into ConnectionSucceeded
   **/
-  void OnSubflowEstablishment(Ptr<MpTcpSubFlow>);
+  void OnSubflowEstablishment(Ptr<MpTcpSubflow>);
 
   /**
   Should be called when subflows enters FIN_WAIT or LAST_ACK
   */
-  void OnSubflowClosing(Ptr<MpTcpSubFlow>);
+  void OnSubflowClosing(Ptr<MpTcpSubflow>);
 
 
   /**
@@ -546,10 +546,10 @@ protected: // protected methods
   //! Disabled
   virtual void ReceivedData ( Ptr<Packet>, const TcpHeader&); // Recv of a data, put into buffer, call L7 to get it if necessary
 
-  virtual void ProcessDSS( const TcpHeader& tcpHeader, Ptr<TcpOptionMpTcpDSS> dss, Ptr<MpTcpSubFlow> sf);
-  virtual void ProcessDSSClosing( Ptr<TcpOptionMpTcpDSS> dss, Ptr<MpTcpSubFlow> sf);
-  virtual void ProcessDSSWait( Ptr<TcpOptionMpTcpDSS> dss, Ptr<MpTcpSubFlow> sf);
-  virtual void ProcessDSSEstablished( const TcpHeader& tcpHeader, Ptr<TcpOptionMpTcpDSS> dss, Ptr<MpTcpSubFlow> sf);
+  virtual void ProcessDSS( const TcpHeader& tcpHeader, Ptr<TcpOptionMpTcpDSS> dss, Ptr<MpTcpSubflow> sf);
+  virtual void ProcessDSSClosing( Ptr<TcpOptionMpTcpDSS> dss, Ptr<MpTcpSubflow> sf);
+  virtual void ProcessDSSWait( Ptr<TcpOptionMpTcpDSS> dss, Ptr<MpTcpSubflow> sf);
+  virtual void ProcessDSSEstablished( const TcpHeader& tcpHeader, Ptr<TcpOptionMpTcpDSS> dss, Ptr<MpTcpSubflow> sf);
 
 
   /** Does nothing */
@@ -560,7 +560,7 @@ protected: // protected methods
 
   //! Disabled
   void DupAck(const TcpHeader& t, uint32_t count);
-  virtual void DupAck( SequenceNumber32 ack,Ptr<MpTcpSubFlow> );
+  virtual void DupAck( SequenceNumber32 ack,Ptr<MpTcpSubflow> );
 //  void DupAck(uint8_t sFlowIdx, DSNMapping * ptrDSN);       // Congestion control algorithms -> loss recovery
 //  void NewACK(uint8_t sFlowIdx, const TcpHeader&, TcpOptions* opt);
 //  void NewAckNewReno(uint8_t sFlowIdx, const TcpHeader&, TcpOptions* opt);
@@ -580,7 +580,7 @@ protected: // protected methods
   * @brief
   * @return
   */
-  Time ComputeReTxTimeoutForSubflow( Ptr<MpTcpSubFlow> );
+  Time ComputeReTxTimeoutForSubflow( Ptr<MpTcpSubflow> );
 
   bool DoChecksum() const;
 
@@ -593,15 +593,15 @@ protected: // protected methods
    * @param mapping
    add count param ?
   */
-  virtual void OnSubflowDupack(Ptr<MpTcpSubFlow> sf, MpTcpMapping mapping);
-  virtual void OnSubflowRetransmit(Ptr<MpTcpSubFlow> sf) ;
+  virtual void OnSubflowDupack(Ptr<MpTcpSubflow> sf, MpTcpMapping mapping);
+  virtual void OnSubflowRetransmit(Ptr<MpTcpSubflow> sf) ;
 
 //  void LastAckTimeout(uint8_t sFlowIdx);
 
   virtual void
   OnSubflowNewAck(
 //    SequenceNumber32 const& ack,
-      Ptr<MpTcpSubFlow> sf);
+      Ptr<MpTcpSubflow> sf);
 
 
   /**
@@ -615,7 +615,7 @@ protected: // protected methods
    * Free space as much as possible
    */
   virtual void
-  SyncTxBuffers(Ptr<MpTcpSubFlow> sf);
+  SyncTxBuffers(Ptr<MpTcpSubflow> sf);
 
   /**
    *  inherited from parent: update buffers
@@ -644,13 +644,14 @@ protected: // protected methods
 //  virtual uint32_t ReduceCWND(uint32_t cwnd) = 0;
 
 
-
+  void
+  ProcessMpTcpOptions(TcpHeader h, Ptr<MpTcpSubflow> sf);
 
   void OnTimeWaitTimeOut();
 
 protected: // protected variables
 
-  int CloseSubflow(Ptr<MpTcpSubFlow> sf);
+  int CloseSubflow(Ptr<MpTcpSubflow> sf);
 
   std::string m_tracePrefix;
 
@@ -728,8 +729,8 @@ private:
   /* Utility function used when a subflow changes state
     Research of the subflow is done
   */
-  void MoveSubflow(Ptr<MpTcpSubFlow> sf, mptcp_container_t to);
-  void MoveSubflow(Ptr<MpTcpSubFlow> sf, mptcp_container_t from, mptcp_container_t to);
+  void MoveSubflow(Ptr<MpTcpSubflow> sf, mptcp_container_t to);
+  void MoveSubflow(Ptr<MpTcpSubflow> sf, mptcp_container_t from, mptcp_container_t to);
 // CloseSubflow
 //  uint8_t AddLocalAddr(const Ipv4Address& address);
 //

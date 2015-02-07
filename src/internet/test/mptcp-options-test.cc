@@ -157,7 +157,7 @@ public:
 
     NS_TEST_EXPECT_MSG_EQ( m_c.expectedTokenServer, tokenServer, "Token generated does not match key (Server)");
     NS_TEST_EXPECT_MSG_EQ( m_c.expectedIdsnServer, idsnServer, "Token generated does not match key (Server)");
-//      MpTcpSubFlow::GenerateHMac(key,nonce);
+//      MpTcpSubflow::GenerateHMac(key,nonce);
 
     //!
   }

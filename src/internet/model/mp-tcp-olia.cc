@@ -99,7 +99,7 @@ MpTcpCCOlia::GetSSThresh(void) const
 TypeId
 MpTcpCCOlia::GetMpTcpSubflowTypeId()
 {
-  return MpTcpSubFlow::GetTypeId();
+  return MpTcpSubflow::GetTypeId();
 }
 
 

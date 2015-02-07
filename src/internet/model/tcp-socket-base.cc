@@ -817,6 +817,7 @@ TcpSocketBase::DoForwardUp(Ptr<Packet> packet, Ipv4Header header, uint16_t port,
     a
    receiver MUST NOT shrink the right edge of the receive window (i.e.,
    DATA_ACK + receive window
+   TODO use outofRange instead
    */
    if(tcpHeader.GetAckNumber() + tcpHeader.GetWindowSize() >= m_rxBuffer.NextRxSequence() + RemoteWindow() )
    {

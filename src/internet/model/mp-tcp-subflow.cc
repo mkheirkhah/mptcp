@@ -37,21 +37,21 @@ NS_LOG_COMPONENT_DEFINE("MpTcpSubflow");
 
 namespace ns3 {
 
-NS_OBJECT_ENSURE_REGISTERED(MpTcpSubFlow);
+NS_OBJECT_ENSURE_REGISTERED(MpTcpSubflow);
 
 TypeId
-MpTcpSubFlow::GetTypeId(void)
+MpTcpSubflow::GetTypeId(void)
 {
-  static TypeId tid = TypeId("ns3::MpTcpSubFlow")
+  static TypeId tid = TypeId("ns3::MpTcpSubflow")
       .SetParent<TcpSocketBase>()
-//      .AddConstructor<MpTcpSubFlow>()
+//      .AddConstructor<MpTcpSubflow>()
       // TODO should be inherited
       .AddTraceSource("CongestionWindow",
           "The congestion control window to trace.",
-           MakeTraceSourceAccessor(&MpTcpSubFlow::m_cWnd))
+           MakeTraceSourceAccessor(&MpTcpSubflow::m_cWnd))
       .AddTraceSource("SSThreshold",
           "The Slow Start Threshold.",
-           MakeTraceSourceAccessor(&MpTcpSubFlow::m_ssThresh))
+           MakeTraceSourceAccessor(&MpTcpSubflow::m_ssThresh))
     ;
   return tid;
 }
@@ -61,14 +61,14 @@ MpTcpSubFlow::GetTypeId(void)
 
 
 TypeId
-MpTcpSubFlow::GetInstanceTypeId(void) const
+MpTcpSubflow::GetInstanceTypeId(void) const
 {
   return GetTypeId();
 }
 
 //bool
 void
-MpTcpSubFlow::SetMeta(Ptr<MpTcpSocketBase> metaSocket)
+MpTcpSubflow::SetMeta(Ptr<MpTcpSocketBase> metaSocket)
 {
   NS_ASSERT(metaSocket);
   NS_ASSERT(m_state == CLOSED);
@@ -83,9 +83,9 @@ MpTcpSubFlow::SetMeta(Ptr<MpTcpSocketBase> metaSocket)
 }
 
 void
-MpTcpSubFlow::DumpInfo() const
+MpTcpSubflow::DumpInfo() const
 {
-      NS_LOG_LOGIC ("MpTcpSubFlow " << this << " SendPendingData" <<
+      NS_LOG_LOGIC ("MpTcpSubflow " << this << " SendPendingData" <<
 //          " w " << w <<
           " rxwin " << m_rWnd <<
           " segsize " << m_segmentSize <<
@@ -97,7 +97,7 @@ MpTcpSubFlow::DumpInfo() const
 }
 
 Ptr<TcpSocketBase>
-MpTcpSubFlow::Fork(void)
+MpTcpSubflow::Fork(void)
 {
   // Call CopyObject<> to clone me
 //  NS_LOG_ERROR("Not implemented");
@@ -106,10 +106,10 @@ MpTcpSubFlow::Fork(void)
   return ForkAsSubflow();
 }
 
-//Ptr<MpTcpSubFlow>
-//MpTcpSubFlow::ForkAsSubflow(void)
+//Ptr<MpTcpSubflow>
+//MpTcpSubflow::ForkAsSubflow(void)
 //{
-//  return CopyObject<MpTcpSubFlow> (this);
+//  return CopyObject<MpTcpSubflow> (this);
 //}
 
 /*
@@ -122,7 +122,7 @@ RFC 6824
    duplicate ACKs in a row for signaling purposes."
 */
 void
-MpTcpSubFlow::DupAck(const TcpHeader& t, uint32_t count)
+MpTcpSubflow::DupAck(const TcpHeader& t, uint32_t count)
 {
   NS_LOG_LOGIC("DupAck " << count);
 //  if( count > 3)
@@ -148,7 +148,7 @@ MpTcpSubFlow::DupAck(const TcpHeader& t, uint32_t count)
 
 // TODO check with parent's
 void
-MpTcpSubFlow::CancelAllTimers()
+MpTcpSubflow::CancelAllTimers()
 {
   NS_LOG_FUNCTION(this);
   //(int) sFlowIdx
@@ -161,7 +161,7 @@ MpTcpSubFlow::CancelAllTimers()
 
 
 void
-MpTcpSubFlow::SetSSThresh(uint32_t threshold)
+MpTcpSubflow::SetSSThresh(uint32_t threshold)
 {
   // TOODO there is a minimum value decided by meta
   m_ssThresh = threshold;
@@ -169,21 +169,21 @@ MpTcpSubFlow::SetSSThresh(uint32_t threshold)
 
 
 uint32_t
-MpTcpSubFlow::GetSSThresh(void) const
+MpTcpSubflow::GetSSThresh(void) const
 {
   return m_ssThresh.Get();
 }
 
 /** TODO remve those 2, use the meta's **/
 void
-MpTcpSubFlow::SetInitialCwnd(uint32_t cwnd)
+MpTcpSubflow::SetInitialCwnd(uint32_t cwnd)
 {
   NS_ABORT_MSG_UNLESS(m_state == CLOSED, "MpTcpsocketBase::SetInitialCwnd() cannot change initial cwnd after connection started.");
   m_initialCWnd = cwnd;
 }
 
 uint32_t
-MpTcpSubFlow::GetInitialCwnd(void) const
+MpTcpSubflow::GetInitialCwnd(void) const
 {
   return m_initialCWnd;
 }
@@ -194,7 +194,7 @@ MpTcpSubFlow::GetInitialCwnd(void) const
 
 
 TcpStates_t
-MpTcpSubFlow::GetState() const
+MpTcpSubflow::GetState() const
 {
   //!
   return m_state;
@@ -202,7 +202,7 @@ MpTcpSubFlow::GetState() const
 
 
 int
-MpTcpSubFlow::DoConnect()
+MpTcpSubflow::DoConnect()
 {
   NS_LOG_FUNCTION (this);
 
@@ -234,7 +234,7 @@ MpTcpSubFlow::DoConnect()
 
 /** Inherit from Socket class: Kill this socket and signal the peer (if any) */
 int
-MpTcpSubFlow::Close(void)
+MpTcpSubflow::Close(void)
 {
   NS_LOG_FUNCTION (this);
   // First we check to see if there is any unread rx data
@@ -268,7 +268,7 @@ MpTcpSubFlow::Close(void)
 
 
 // Does this constructor even make sense ? no ? to remove ?
-MpTcpSubFlow::MpTcpSubFlow(const MpTcpSubFlow& sock)
+MpTcpSubflow::MpTcpSubflow(const MpTcpSubflow& sock)
   : TcpSocketBase(sock),
   m_cWnd(sock.m_cWnd),
   m_ssThresh(sock.m_ssThresh),
@@ -285,7 +285,7 @@ MpTcpSubFlow::MpTcpSubFlow(const MpTcpSubFlow& sock)
   NS_LOG_LOGIC ("Invoked the copy constructor");
 }
 
-MpTcpSubFlow::MpTcpSubFlow(
+MpTcpSubflow::MpTcpSubflow(
 //Ptr<MpTcpSocketBase> metaSocket
 //, bool master
 ) :
@@ -326,7 +326,7 @@ MpTcpSubFlow::MpTcpSubFlow(
   m_gotFin = false;
 }
 
-MpTcpSubFlow::~MpTcpSubFlow()
+MpTcpSubflow::~MpTcpSubflow()
 {
   NS_LOG_FUNCTION(this);
   // TODO cancel times
@@ -344,7 +344,7 @@ MpTcpSubFlow::~MpTcpSubFlow()
 TODO maybe override that not to have the callbacks
 **/
 void
-MpTcpSubFlow::CloseAndNotify(void)
+MpTcpSubflow::CloseAndNotify(void)
 {
   //TODO
   NS_LOG_FUNCTION_NOARGS();
@@ -357,7 +357,7 @@ MpTcpSubFlow::CloseAndNotify(void)
 Maybe we could allow this providing a mapping already exists ?
 **/
 int
-MpTcpSubFlow::Send(Ptr<Packet> p, uint32_t flags)
+MpTcpSubflow::Send(Ptr<Packet> p, uint32_t flags)
 {
   NS_FATAL_ERROR("Use sendmapping instead");
   return 0;
@@ -367,7 +367,7 @@ MpTcpSubFlow::Send(Ptr<Packet> p, uint32_t flags)
 // rename globalSeqNb ?
 
 void
-MpTcpSubFlow::SendEmptyPacket(uint8_t flags)
+MpTcpSubflow::SendEmptyPacket(uint8_t flags)
 {
   NS_LOG_FUNCTION_NOARGS();
   TcpSocketBase::SendEmptyPacket(flags);
@@ -375,7 +375,7 @@ MpTcpSubFlow::SendEmptyPacket(uint8_t flags)
 
 
 void
-MpTcpSubFlow::SendEmptyPacket(TcpHeader& header)
+MpTcpSubflow::SendEmptyPacket(TcpHeader& header)
 {
   NS_LOG_FUNCTION(this << header);
 
@@ -392,7 +392,7 @@ this fct asserts when the mapping length is 0 but in fact it can be possible
 when there is an infinite mapping
 **/
 int
-MpTcpSubFlow::SendMapping(Ptr<Packet> p, MpTcpMapping& mapping)
+MpTcpSubflow::SendMapping(Ptr<Packet> p, MpTcpMapping& mapping)
 {
   NS_LOG_FUNCTION (this << mapping);
   NS_ASSERT(p);
@@ -442,7 +442,7 @@ MpTcpSubFlow::SendMapping(Ptr<Packet> p, MpTcpMapping& mapping)
 
 
 uint32_t
-MpTcpSubFlow::SendDataPacket(SequenceNumber32 seq, uint32_t maxSize, bool withAck)
+MpTcpSubflow::SendDataPacket(SequenceNumber32 seq, uint32_t maxSize, bool withAck)
 {
   //!
 //  NS_LOG_FUNCTION (this << "seq" << seq << "with max size " << maxSize << "and ack"<< withAck);  //NS_LOG_INFO("SendDataPacket -> SeqNb: " << seq);
@@ -454,7 +454,7 @@ MpTcpSubFlow::SendDataPacket(SequenceNumber32 seq, uint32_t maxSize, bool withAc
 }
 
 //uint32_t
-//MpTcpSubFlow::SendDataPacket(TcpHeader& header, const SequenceNumber32& ssn, uint32_t maxSize)
+//MpTcpSubflow::SendDataPacket(TcpHeader& header, const SequenceNumber32& ssn, uint32_t maxSize)
 //{
 //
 //}
@@ -462,8 +462,13 @@ MpTcpSubFlow::SendDataPacket(SequenceNumber32 seq, uint32_t maxSize, bool withAc
 
 // split into 2 functions 1 to GenerateHeaders, other one to add options
 // ajouter une fct DoSend
+/**
+TODO: mapping should not be automatically embedded, to allow sending mappings spanning over several
+packets
+multiple
+**/
 uint32_t
-MpTcpSubFlow::SendDataPacket(TcpHeader& header, const SequenceNumber32& ssn, uint32_t maxSize)
+MpTcpSubflow::SendDataPacket(TcpHeader& header, const SequenceNumber32& ssn, uint32_t maxSize)
 {
   NS_LOG_FUNCTION(this << "Sending SSN [" << ssn.GetValue() << "]");
 
@@ -504,7 +509,7 @@ TODO check if m_cWnd is
 
 */
 void
-MpTcpSubFlow::Retransmit(void)
+MpTcpSubflow::Retransmit(void)
 {
   NS_LOG_FUNCTION (this);
   NS_LOG_LOGIC (this << " ReTxTimeout Expired at time " << Simulator::Now ().GetSeconds ()
@@ -547,7 +552,7 @@ MpTcpSubFlow::Retransmit(void)
 
 
 void
-MpTcpSubFlow::DoRetransmit()
+MpTcpSubflow::DoRetransmit()
 {
   // TODO maybe this call should go to DoRetransmit
   GetMeta()->OnSubflowRetransmit(this);
@@ -609,7 +614,7 @@ Received a packet upon LISTEN state.
 
 */
 void
-MpTcpSubFlow::ProcessListen(Ptr<Packet> packet, const TcpHeader& tcpHeader, const Address& fromAddress, const Address& toAddress)
+MpTcpSubflow::ProcessListen(Ptr<Packet> packet, const TcpHeader& tcpHeader, const Address& fromAddress, const Address& toAddress)
 {
   NS_LOG_FUNCTION (this << tcpHeader);
 
@@ -634,15 +639,15 @@ MpTcpSubFlow::ProcessListen(Ptr<Packet> packet, const TcpHeader& tcpHeader, cons
   GetMeta()->SetRemoteWindow(tcpHeader.GetWindowSize());
 
   // Clone the socket, simulate fork
-//  Ptr<MpTcpSubFlow> newSock = Fork();
-  Ptr<MpTcpSubFlow> newSock = ForkAsSubflow();
+//  Ptr<MpTcpSubflow> newSock = Fork();
+  Ptr<MpTcpSubflow> newSock = ForkAsSubflow();
   NS_LOG_LOGIC ("Cloned a TcpSocketBase " << newSock);
   // TODO TcpSocketBase::
-  Simulator::ScheduleNow(&MpTcpSubFlow::CompleteFork, newSock, packet, tcpHeader, fromAddress, toAddress);
+  Simulator::ScheduleNow(&MpTcpSubflow::CompleteFork, newSock, packet, tcpHeader, fromAddress, toAddress);
 }
 
 Ptr<MpTcpSocketBase>
-MpTcpSubFlow::GetMeta() const
+MpTcpSubflow::GetMeta() const
 {
   NS_ASSERT(m_metaSocket);
   //!
@@ -655,26 +660,26 @@ It is also encouraged to
 Move TCP to Time_Wait state and schedule a transition to Closed state
 */
 void
-MpTcpSubFlow::TimeWait()
+MpTcpSubflow::TimeWait()
 {
   NS_LOG_INFO (TcpStateName[m_state] << " -> TIME_WAIT");
   m_state = TIME_WAIT;
   CancelAllTimers();
   // Move from TIME_WAIT to CLOSED after 2*MSL. Max segment lifetime is 2 min
   // according to RFC793, p.28
-  m_timewaitEvent = Simulator::Schedule(Seconds( m_msl), &MpTcpSubFlow::CloseAndNotify, this);
+  m_timewaitEvent = Simulator::Schedule(Seconds( m_msl), &MpTcpSubflow::CloseAndNotify, this);
 }
 
 void
-MpTcpSubFlow::ProcessEstablished(Ptr<Packet> packet, const TcpHeader& header)
+MpTcpSubflow::ProcessEstablished(Ptr<Packet> packet, const TcpHeader& header)
 {
-  Ptr<TcpOptionMpTcpDSS> dss;
-
-  //! TODO in the long term, I should rather loop over options and assign a callback ?
-  if(GetMpTcpOption(header, dss))
-  {
-    ParseDSS(packet,header,dss);
-  }
+//  Ptr<TcpOptionMpTcpDSS> dss;
+//
+//  //! TODO in the long term, I should rather loop over options and assign a callback ?
+//  if(GetMpTcpOption(header, dss))
+//  {
+//    ParseDSS(packet,header,dss);
+//  }
 
   TcpSocketBase::ProcessEstablished(packet,header);
 }
@@ -684,7 +689,7 @@ I ended up duplicating this code to update the meta r_Wnd, which would have been
 
 **/
 void
-MpTcpSubFlow::DoForwardUp(Ptr<Packet> packet, Ipv4Header header, uint16_t port, Ptr<Ipv4Interface> incomingInterface)
+MpTcpSubflow::DoForwardUp(Ptr<Packet> packet, Ipv4Header header, uint16_t port, Ptr<Ipv4Interface> incomingInterface)
 {
   NS_LOG_FUNCTION(this);
   //m_rWnd = tcpHeader.GetWindowSize();
@@ -705,10 +710,12 @@ MpTcpSubFlow::DoForwardUp(Ptr<Packet> packet, Ipv4Header header, uint16_t port, 
   TcpHeader tcpHeader;
   packet->RemoveHeader(tcpHeader);
   if (tcpHeader.GetFlags() & TcpHeader::ACK)
-    {
-      EstimateRtt(tcpHeader);
-    }
+  {
+    EstimateRtt(tcpHeader);
+  }
   ReadOptions(tcpHeader);
+
+  GetMeta()->ProcessMpTcpOptions(tcpHeader, this);
 
   //NS_LOG_INFO("After cuttingHeader: " << packet->GetSize());
   // Update Rx window size, i.e. the flow control window
@@ -810,7 +817,7 @@ MpTcpSubFlow::DoForwardUp(Ptr<Packet> packet, Ipv4Header header, uint16_t port, 
 
 }
 void
-MpTcpSubFlow::ProcessClosing(Ptr<Packet> packet, const TcpHeader& tcpHeader)
+MpTcpSubflow::ProcessClosing(Ptr<Packet> packet, const TcpHeader& tcpHeader)
 {
   NS_LOG_FUNCTION (this << tcpHeader);
 
@@ -821,17 +828,17 @@ MpTcpSubFlow::ProcessClosing(Ptr<Packet> packet, const TcpHeader& tcpHeader)
 
 /** Received a packet upon CLOSE_WAIT, FIN_WAIT_1, or FIN_WAIT_2 states */
 void
-MpTcpSubFlow::ProcessWait(Ptr<Packet> packet, const TcpHeader& tcpHeader)
+MpTcpSubflow::ProcessWait(Ptr<Packet> packet, const TcpHeader& tcpHeader)
 {
   NS_LOG_FUNCTION (this << tcpHeader);
 
-  Ptr<TcpOptionMpTcpDSS> dss;
+//  Ptr<TcpOptionMpTcpDSS> dss;
 
   //! TODO in the long term, I should rather loop over options and assign a callback ?
-  if(GetMpTcpOption(tcpHeader, dss))
-  {
-    ParseDSS(packet,tcpHeader,dss);
-  }
+//  if(GetMpTcpOption(tcpHeader, dss))
+//  {
+//    ParseDSS(packet,tcpHeader,dss);
+//  }
 
   TcpSocketBase::ProcessWait(packet,tcpHeader);
 
@@ -839,7 +846,7 @@ MpTcpSubFlow::ProcessWait(Ptr<Packet> packet, const TcpHeader& tcpHeader)
 
 
 void
-MpTcpSubFlow::CompleteFork(Ptr<Packet> p, const TcpHeader& h, const Address& fromAddress, const Address& toAddress)
+MpTcpSubflow::CompleteFork(Ptr<Packet> p, const TcpHeader& h, const Address& fromAddress, const Address& toAddress)
 {
   NS_LOG_INFO( this << "Completing fork of MPTCP subflow");
   // Get port and address from peer (connecting host)
@@ -893,14 +900,14 @@ MpTcpSubFlow::CompleteFork(Ptr<Packet> p, const TcpHeader& h, const Address& fro
 }
 
 Ptr<MpTcpPathIdManager>
-MpTcpSubFlow::GetIdManager()
+MpTcpSubflow::GetIdManager()
 {
   return GetMeta()->m_remotePathIdManager;
 }
 
 
 void
-MpTcpSubFlow::InitializeCwnd (void)
+MpTcpSubflow::InitializeCwnd (void)
 {
   NS_LOG_LOGIC(this << "InitialCWnd:" << m_initialCWnd << " SegmentSize:" << m_segmentSize);
   /*
@@ -916,7 +923,7 @@ MpTcpSubFlow::InitializeCwnd (void)
 Apparently this function is never called for now
 **/
 void
-MpTcpSubFlow::ConnectionSucceeded(void)
+MpTcpSubflow::ConnectionSucceeded(void)
 {
   // TODO use SetConnectCallback
   // SetSubflowConnectCallback
@@ -932,7 +939,7 @@ MpTcpSubFlow::ConnectionSucceeded(void)
 
 /** Received a packet upon SYN_SENT */
 void
-MpTcpSubFlow::ProcessSynSent(Ptr<Packet> packet, const TcpHeader& tcpHeader)
+MpTcpSubflow::ProcessSynSent(Ptr<Packet> packet, const TcpHeader& tcpHeader)
 {
   NS_LOG_FUNCTION (this << tcpHeader);
   NS_ASSERT(m_state == SYN_SENT);
@@ -973,7 +980,7 @@ MpTcpSubFlow::ProcessSynSent(Ptr<Packet> packet, const TcpHeader& tcpHeader)
 
       //NS_ASSERT();
       // TODO overwrite so that it warns meta
-      Simulator::ScheduleNow(&MpTcpSubFlow::ConnectionSucceeded, this);
+      Simulator::ScheduleNow(&MpTcpSubflow::ConnectionSucceeded, this);
 
 
       // check for option TODO fall back on TCP in that case
@@ -1084,7 +1091,7 @@ MpTcpSubFlow::ProcessSynSent(Ptr<Packet> packet, const TcpHeader& tcpHeader)
 
 
 //void
-//MpTcpSubFlow::SendEmptyPacket(TcpHeader& header)
+//MpTcpSubflow::SendEmptyPacket(TcpHeader& header)
 //{
 //  // Automatically append DSS
 //  if(header.GetFlags() & TcpHeader::ACK)
@@ -1097,7 +1104,7 @@ MpTcpSubFlow::ProcessSynSent(Ptr<Packet> packet, const TcpHeader& tcpHeader)
 //TcpOptionMpTcpJoin::State
 // TODO move to meta and adapt meta state
 void
-MpTcpSubFlow::AppendMpTcp3WHSOption(TcpHeader& hdr) const
+MpTcpSubflow::AppendMpTcp3WHSOption(TcpHeader& hdr) const
 {
   //NS_ASSERT(m_state == SYN_SENT || m_state == SYN_RCVD);
 
@@ -1184,14 +1191,14 @@ MpTcpSubFlow::AppendMpTcp3WHSOption(TcpHeader& hdr) const
 
 
 void
-MpTcpSubFlow::NotifySend (uint32_t spaceAvailable)
+MpTcpSubflow::NotifySend (uint32_t spaceAvailable)
 {
   GetMeta()->NotifySend(spaceAvailable);
 }
 
 // TODO and normally I should wait for a fourth ack
 void
-MpTcpSubFlow::ProcessSynRcvd(Ptr<Packet> packet, const TcpHeader& tcpHeader, const Address& fromAddress,
+MpTcpSubflow::ProcessSynRcvd(Ptr<Packet> packet, const TcpHeader& tcpHeader, const Address& fromAddress,
     const Address& toAddress)
 {
   //!
@@ -1322,7 +1329,7 @@ MpTcpSubFlow::ProcessSynRcvd(Ptr<Packet> packet, const TcpHeader& tcpHeader, con
 }
 
 bool
-MpTcpSubFlow::SendPendingData(bool withAck)
+MpTcpSubflow::SendPendingData(bool withAck)
 {
   //!
   NS_LOG_FUNCTION(this);
@@ -1331,7 +1338,7 @@ MpTcpSubFlow::SendPendingData(bool withAck)
 
 
 bool
-MpTcpSubFlow::IsMaster() const
+MpTcpSubflow::IsMaster() const
 {
   NS_ASSERT(GetMeta());
   return m_masterSocket;
@@ -1343,7 +1350,7 @@ MpTcpSubFlow::IsMaster() const
 
 
 bool
-MpTcpSubFlow::BackupSubflow() const
+MpTcpSubflow::BackupSubflow() const
 {
   return m_backupSubflow;
 }
@@ -1370,7 +1377,7 @@ http://tools.ietf.org/html/rfc6824#section-3.4.1
 
 **/
 void
-MpTcpSubFlow::AdvertiseAddress(Ipv4Address addr, uint16_t port)
+MpTcpSubflow::AdvertiseAddress(Ipv4Address addr, uint16_t port)
 {
   NS_LOG_FUNCTION("Started advertising address");
 //  NS_ASSERT( );
@@ -1424,7 +1431,7 @@ MpTcpSubFlow::AdvertiseAddress(Ipv4Address addr, uint16_t port)
 
 
 bool
-MpTcpSubFlow::StopAdvertisingAddress(Ipv4Address address)
+MpTcpSubflow::StopAdvertisingAddress(Ipv4Address address)
 {
   // TODO factor some code with AdvertiseAddress ?
   // TODO check subflow is established !!
@@ -1472,23 +1479,23 @@ MpTcpSubFlow::StopAdvertisingAddress(Ipv4Address address)
 
 
 //bool
-//MpTcpSubFlow::Finished(void)
+//MpTcpSubflow::Finished(void)
 //{
 //  return (m_gotFin && m_finSeq.GetValue() < RxSeqNumber);
 //}
 
 //void
-//MpTcpSubFlow::StartTracing( std::string traced)
+//MpTcpSubflow::StartTracing( std::string traced)
 //{
-//  //NS_LOG_UNCOND("("<< m_routeId << ") MpTcpSubFlow -> starting tracing of: "<< traced);
-//  TraceConnectWithoutContext(traced, MakeCallback(&MpTcpSubFlow::CwndTracer, this)); //"CongestionWindow"
+//  //NS_LOG_UNCOND("("<< m_routeId << ") MpTcpSubflow -> starting tracing of: "<< traced);
+//  TraceConnectWithoutContext(traced, MakeCallback(&MpTcpSubflow::CwndTracer, this)); //"CongestionWindow"
 //}
 
 
 void
-MpTcpSubFlow::ReTxTimeout()
+MpTcpSubflow::ReTxTimeout()
 {
-  NS_LOG_LOGIC("MpTcpSubFlow ReTxTimeout expired !");
+  NS_LOG_LOGIC("MpTcpSubflow ReTxTimeout expired !");
   TcpSocketBase::ReTxTimeout();
 }
 
@@ -1504,10 +1511,10 @@ Called from NewAck, this
 SequenceNumber32 const& ack,
 */
 bool
-MpTcpSubFlow::DiscardAtMostOneMapping(SequenceNumber32 const& dack, MpTcpMapping& mapping)
-//MpTcpSubFlow::DiscardTxMappingsUpTo(SequenceNumber32 const& dack, SequenceNumber32 const& ack)
+MpTcpSubflow::DiscardAtMostOneMapping(SequenceNumber32 const& dack, MpTcpMapping& mapping)
+//MpTcpSubflow::DiscardTxMappingsUpTo(SequenceNumber32 const& dack, SequenceNumber32 const& ack)
 {
-  NS_LOG_DEBUG(" maxDSN="<< dack
+  NS_LOG_DEBUG(" maxDSN=" << dack
           << " maxSSN=" << FirstUnackedSeq()
           );
 
@@ -1541,7 +1548,7 @@ SlowStart and fast recovery remains untouched in MPTCP.
 The reaction should be different depending on if we handle NR-SACK or not
 */
 void
-MpTcpSubFlow::NewAck(SequenceNumber32 const& ack)
+MpTcpSubflow::NewAck(SequenceNumber32 const& ack)
 {
   NS_LOG_FUNCTION (this << ack);
 
@@ -1608,7 +1615,7 @@ MpTcpSubFlow::NewAck(SequenceNumber32 const& ack)
       NS_LOG_LOGIC (this << " Schedule ReTxTimeout at time " <<
           Simulator::Now ().GetSeconds () << " to expire at time " <<
           (Simulator::Now () + m_rto.Get ()).GetSeconds ());
-      m_retxEvent = Simulator::Schedule(m_rto, &MpTcpSubFlow::ReTxTimeout, this);
+      m_retxEvent = Simulator::Schedule(m_rto, &MpTcpSubflow::ReTxTimeout, this);
     }
 
   if (m_rWnd.Get() == 0 && m_persistEvent.IsExpired())
@@ -1619,7 +1626,7 @@ MpTcpSubFlow::NewAck(SequenceNumber32 const& ack)
       NS_LOG_LOGIC ("Schedule persist timeout at time " <<
           Simulator::Now ().GetSeconds () << " to expire at time " <<
           (Simulator::Now () + m_persistTimeout).GetSeconds ());
-      m_persistEvent = Simulator::Schedule(m_persistTimeout, &MpTcpSubFlow::PersistTimeout, this);
+      m_persistEvent = Simulator::Schedule(m_persistTimeout, &MpTcpSubflow::PersistTimeout, this);
       NS_ASSERT(m_persistTimeout == Simulator::GetDelayLeft (m_persistEvent));
     }
 
@@ -1713,7 +1720,7 @@ MpTcpSubFlow::NewAck(SequenceNumber32 const& ack)
 }
 
 //void
-//MpTcpSubFlow::DiscardTxMappingsUpToDSN(SequenceNumber32 seq)
+//MpTcpSubflow::DiscardTxMappingsUpToDSN(SequenceNumber32 seq)
 //{
 //  NS_LOG_INFO("Discarding mappings up to " << seq);
 //  MappingList& l = m_TxMappings;
@@ -1735,14 +1742,14 @@ MpTcpSubFlow::NewAck(SequenceNumber32 const& ack)
 //}
 
 Ptr<Packet>
-MpTcpSubFlow::RecvFrom(uint32_t maxSize, uint32_t flags, Address &fromAddress)
+MpTcpSubflow::RecvFrom(uint32_t maxSize, uint32_t flags, Address &fromAddress)
 {
   NS_FATAL_ERROR("Disabled in MPTCP. Use ");
   return 0;
 }
 
 Ptr<Packet>
-MpTcpSubFlow::Recv(uint32_t maxSize, uint32_t flags)
+MpTcpSubflow::Recv(uint32_t maxSize, uint32_t flags)
 {
   //!
   NS_FATAL_ERROR("Disabled in MPTCP. Use ");
@@ -1750,7 +1757,7 @@ MpTcpSubFlow::Recv(uint32_t maxSize, uint32_t flags)
 }
 
 Ptr<Packet>
-MpTcpSubFlow::Recv(void)
+MpTcpSubflow::Recv(void)
 {
   //!
   NS_FATAL_ERROR("Disabled in MPTCP. Use ");
@@ -1759,7 +1766,7 @@ MpTcpSubFlow::Recv(void)
 
 
 //bool
-//MpTcpSubFlow::TranslateSSNtoDSN(SequenceNumber32 ssn,SequenceNumber32 &dsn)
+//MpTcpSubflow::TranslateSSNtoDSN(SequenceNumber32 ssn,SequenceNumber32 &dsn)
 //{
 //  // first find if a mapping exists
 //  MpTcpMapping mapping;
@@ -1776,7 +1783,7 @@ MpTcpSubFlow::Recv(void)
 this is private
 **/
 Ptr<Packet>
-MpTcpSubFlow::ExtractAtMostOneMapping(uint32_t maxSize, bool only_full_mapping, SequenceNumber32& headDSN)
+MpTcpSubflow::ExtractAtMostOneMapping(uint32_t maxSize, bool only_full_mapping, SequenceNumber32& headDSN)
 {
   NS_LOG_DEBUG(this << "maxSize="<< maxSize);
   MpTcpMapping mapping;
@@ -1833,7 +1840,7 @@ sf->
 */
 #if 0
 Ptr<Packet>
-MpTcpSubFlow::RecvWithMapping(uint32_t maxSize, bool only_full_mapping, SequenceNumber32 &dsn)
+MpTcpSubflow::RecvWithMapping(uint32_t maxSize, bool only_full_mapping, SequenceNumber32 &dsn)
 {
   NS_LOG_FUNCTION(this << "maxSize="<< maxSize);
   NS_FATAL_ERROR("Use ExtractAtMostOneMapping instead");
@@ -1856,7 +1863,7 @@ MpTcpSubFlow::RecvWithMapping(uint32_t maxSize, bool only_full_mapping, Sequence
 
 
 void
-MpTcpSubFlow::SetupMetaTracing(const std::string prefix)
+MpTcpSubflow::SetupMetaTracing(const std::string prefix)
 {
 //  f.open(filename, std::ofstream::out | std::ofstream::trunc);
   SetupSocketTracing(this, prefix);
@@ -1874,7 +1881,7 @@ std::ostream& ns3::operator<<(std::ostream&,const ns3::TcpOptionMptcpMain&)
 TODO I should also notify the meta, maybe with an enum saying if it's new data/old etc...
 */
 void
-MpTcpSubFlow::ReceivedData(Ptr<Packet> p, const TcpHeader& tcpHeader)
+MpTcpSubflow::ReceivedData(Ptr<Packet> p, const TcpHeader& tcpHeader)
 {
   NS_LOG_FUNCTION (this << tcpHeader);
 //  NS_LOG_FUNCTION (this << tcpHeader);NS_LOG_LOGIC ("seq " << tcpHeader.GetSequenceNumber () <<
@@ -1989,7 +1996,7 @@ MpTcpSubFlow::ReceivedData(Ptr<Packet> p, const TcpHeader& tcpHeader)
 
 */
 uint32_t
-MpTcpSubFlow::UnAckDataCount()
+MpTcpSubflow::UnAckDataCount()
 {
   NS_LOG_FUNCTION (this);
 //  return GetMeta()->UnAckDataCount();
@@ -1998,7 +2005,7 @@ MpTcpSubFlow::UnAckDataCount()
 
 // TODO unsure ?
 uint32_t
-MpTcpSubFlow::BytesInFlight()
+MpTcpSubflow::BytesInFlight()
 {
   NS_LOG_FUNCTION (this);
   return TcpSocketBase::BytesInFlight();
@@ -2007,7 +2014,7 @@ MpTcpSubFlow::BytesInFlight()
 /* TODO unsure ?
 */
 uint32_t
-MpTcpSubFlow::AvailableWindow()
+MpTcpSubflow::AvailableWindow()
 {
   NS_LOG_FUNCTION (this);
 
@@ -2018,7 +2025,7 @@ MpTcpSubFlow::AvailableWindow()
 /* this should be ok
 */
 uint32_t
-MpTcpSubFlow::Window (void)
+MpTcpSubflow::Window (void)
 {
   NS_LOG_FUNCTION (this);
   return std::min ( RemoteWindow(), m_cWnd.Get ());
@@ -2026,7 +2033,7 @@ MpTcpSubFlow::Window (void)
 }
 
 uint32_t
-MpTcpSubFlow::RemoteWindow()
+MpTcpSubflow::RemoteWindow()
 {
   NS_LOG_FUNCTION (this);
   return GetMeta()->RemoteWindow();
@@ -2034,7 +2041,7 @@ MpTcpSubFlow::RemoteWindow()
 
 // Ok
 uint16_t
-MpTcpSubFlow::AdvertisedWindowSize(void)
+MpTcpSubflow::AdvertisedWindowSize(void)
 {
   NS_LOG_DEBUG(this);
   return GetMeta()->AdvertisedWindowSize();
@@ -2061,17 +2068,17 @@ Because of this, an implementation MUST NOT use the RCV.WND
    carry a DSS option with a Data ACK field.
 */
 void
-MpTcpSubFlow::SetRemoteWindow(uint32_t win_size)
+MpTcpSubflow::SetRemoteWindow(uint32_t win_size)
 {
   NS_FATAL_ERROR("This function should never be called. Only meta can update remote window");
 //  NS_LOG_FUNCTION(win_size);
-//  MpTcpSubFlow::GetMeta()->SetRemoteWindow()
+//  MpTcpSubflow::GetMeta()->SetRemoteWindow()
 //  TcpSocketBase::SetRemoteWindow(win_size);
 }
 
 
 void
-MpTcpSubFlow::ClosingOnEmpty(TcpHeader& header)
+MpTcpSubflow::ClosingOnEmpty(TcpHeader& header)
 {
   /* TODO the question is: is that ever called ?
   */
@@ -2110,12 +2117,12 @@ MpTcpSubFlow::ClosingOnEmpty(TcpHeader& header)
 
 //! TODO call directly parent
 void
-MpTcpSubFlow::ParseDSS(Ptr<Packet> p, const TcpHeader& header,Ptr<TcpOptionMpTcpDSS> dss)
+MpTcpSubflow::ParseDSS(Ptr<Packet> p, const TcpHeader& header,Ptr<TcpOptionMpTcpDSS> dss)
 {
   //!
 //  NS_FATAL_ERROR("TO REMOVE. Use meta->ProcessDSS")
   NS_ASSERT(dss);
-  GetMeta()->ProcessDSS(header, dss, Ptr<MpTcpSubFlow>(this));
+  GetMeta()->ProcessDSS(header, dss, Ptr<MpTcpSubflow>(this));
 
 }
 
@@ -2129,7 +2136,7 @@ Upon ack receival we need to act depending on if it's new or not
 this is called
 */
 void
-MpTcpSubFlow::ReceivedAck(Ptr<Packet> p, const TcpHeader& header)
+MpTcpSubflow::ReceivedAck(Ptr<Packet> p, const TcpHeader& header)
 {
   NS_LOG_FUNCTION (this << header);
 
@@ -2140,25 +2147,25 @@ MpTcpSubFlow::ReceivedAck(Ptr<Packet> p, const TcpHeader& header)
 
 // TODO remove
 bool
-MpTcpSubFlow::AddPeerMapping(const MpTcpMapping& mapping)
+MpTcpSubflow::AddPeerMapping(const MpTcpMapping& mapping)
 {
-  //! TODO check if there is already such a mapping?
-  // check in meta ? if it supervises everything ?
   NS_LOG_FUNCTION(this << mapping);
+
+
   NS_ASSERT(m_RxMappings.AddMappingEnforceSSN( mapping ) ==0 );
-  m_RxMappings.Dump();
+//  m_RxMappings.Dump();
   return true;
 }
 
 //void
-//MpTcpSubFlow::CwndTracer(uint32_t oldval, uint32_t newval)
+//MpTcpSubflow::CwndTracer(uint32_t oldval, uint32_t newval)
 //{
 //  //NS_LOG_UNCOND("Subflow "<< m_routeId <<": Moving cwnd from " << oldval << " to " << newval);
 //  cwndTracer.push_back(make_pair(Simulator::Now().GetSeconds(), newval));
 //}
 
 //void
-//MpTcpSubFlow::SetFinSequence(const SequenceNumber32& s)
+//MpTcpSubflow::SetFinSequence(const SequenceNumber32& s)
 //{
 //  NS_LOG_FUNCTION (this);
 //  m_gotFin = true;
