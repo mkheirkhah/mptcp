@@ -520,7 +520,8 @@ protected:
 //private:
 
 private:
-
+  virtual void
+  SendPacket(TcpHeader header, Ptr<Packet> p);
 
   bool m_backupSubflow; //!< Priority
   bool m_masterSocket;  //!< True if this is the first subflow established (with MP_CAPABLE)

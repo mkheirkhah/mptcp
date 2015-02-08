@@ -76,9 +76,12 @@ public:
   \return True if mappings share DSN space
   Check if there is an overlap over DSN space or SSN space
   Decline to DSN and SSN ?
+  Rename to overlap
   */
   bool
   Intersect(const MpTcpMapping&) const;
+
+
 
   void
   SetDSN(SequenceNumber32 const&);
@@ -107,6 +110,7 @@ public:
 
   /**
    *  <= X <= TailDSN dsn
+   Last byte covered by the segment
    */
   SequenceNumber32 TailDSN (void) const;
   SequenceNumber32 TailSSN (void) const;
@@ -214,6 +218,7 @@ class MpTcpMappingContainer
 //  SequenceNumber32 FirstMappedSSN (void) const;
 
   /**
+  TODO this would be better out of the class since it
   REturn last mapped SSN.
   If Empty will take the one from the buff.
   */
@@ -228,6 +233,21 @@ class MpTcpMappingContainer
     void
     Dump();
 
+  /*
+
+  */
+//  bool
+//  CheckIfMappingCovered(SequenceNumber32 start, uint32_t len, std::vector<MpTcpMapping>& mappings);
+
+  /**
+  TODO passer en const
+  one can iterate over it to find a range
+  */
+  bool
+//  FindOverlappingMapping(const MpTcpMapping& mapping, MpTcpMapping& ret);
+  FindOverlappingMapping(SequenceNumber32 start, uint32_t len, MpTcpMapping& ret);
+
+
 
   /**
   TODO this one generates disturbing logs, we should do it otherwise
@@ -238,11 +258,6 @@ class MpTcpMappingContainer
   int
   AddMappingLooseSSN(MpTcpMapping&);
 
-  /**
-  TODO passer en const
-  */
-  bool
-  FindOverlappingMapping(const MpTcpMapping& mapping, MpTcpMapping& ret);
 
   /**
   Check for overlap.

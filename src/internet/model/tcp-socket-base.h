@@ -284,7 +284,7 @@ protected:
   SendDataPacket(TcpHeader& header,SequenceNumber32 seq,uint32_t maxSize);
 
   // this one should be private
-private:
+//private:
   // pacekt can be null ?
   virtual void
   SendPacket(TcpHeader header, Ptr<Packet> p);

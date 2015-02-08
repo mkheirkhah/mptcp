@@ -461,42 +461,77 @@ MpTcpSubflow::SendDataPacket(SequenceNumber32 seq, uint32_t maxSize, bool withAc
 //}
 
 
-// split into 2 functions 1 to GenerateHeaders, other one to add options
-// ajouter une fct DoSend
-/**
-TODO: mapping should not be automatically embedded, to allow sending mappings spanning over several
-packets
-multiple
-**/
-uint32_t
-MpTcpSubflow::SendDataPacket(TcpHeader& header, const SequenceNumber32& ssn, uint32_t maxSize)
-{
-  NS_LOG_FUNCTION(this << "Sending SSN [" << ssn.GetValue() << "]");
+  /* We don't automatically embed mappings since we want the possibility to create mapping spanning over several segments
 
+
+//   here, it should already have been put in the packet, we just check
+//  that the
+
+  */
+
+void
+MpTcpSubflow::SendPacket(TcpHeader header, Ptr<Packet> p)
+{
   MpTcpMapping mapping;
-  bool result = m_TxMappings.GetMappingForSSN(ssn, mapping);
-  if(!result)
+
+  SequenceNumber32 ssnHead = header.GetSequenceNumber();
+//  uint32_t p->GetSize()
+  SequenceNumber32 ssnTail = ssnHead + SequenceNumber32(p->GetSize());
+
+//  uint32_t coveredLen = 0;
+  /**
+  TODO move that to SendPacket
+   Packets may contain data described by several mappings
+  */
+  while(ssnHead < ssnTail)
   {
-    m_TxMappings.Dump();
-    NS_FATAL_ERROR("Could not find mapping associated to ssn");
+    NS_LOG_DEBUG("Looking for mapping that overlaps with ssn " << ssnHead);
+
+    NS_ASSERT_MSG(m_TxMappings.FindOverlappingMapping(ssnHead, ssnTail - ssnHead, mapping), "Sent data not covered by mappings");
+    //!
+    NS_ASSERT_MSG(mapping.HeadSSN() <= ssnHead, "Mapping can only start");
+
+    ssnHead = mapping.TailSSN() + SequenceNumber32(1);
+    NS_LOG_DEBUG("mapping " << mapping << " covers it");
+
   }
 
-  Ptr<TcpOptionMpTcpDSS> dsnOption = Create<TcpOptionMpTcpDSS>();
-  // TODO don't send  mapping for every subsequent packet
-  dsnOption->SetMapping( mapping );
+  TcpSocketBase::SendPacket(header,p);
+}
+
+/**
+**/
+uint32_t
+MpTcpSubflow::SendDataPacket(TcpHeader& header, const SequenceNumber32& ssnHead, uint32_t length)
+{
+  NS_LOG_FUNCTION(this << "Sending packet starting at SSN [" << ssnHead.GetValue() << "] with len=" << length);
 
 
 
-//  NS_ASSERT( dsnOption->GetMapping().HeadSSN() )
-  header.AppendOption( dsnOption );
 
-  //!
-//  GetMeta()->OnSubflow
+//  bool result = m_TxMappings.GetMappingForSSN(ssn, mapping);
+//  if(!result)
+//  {
+//    m_TxMappings.Dump();
+//    NS_FATAL_ERROR("Could not find mapping associated to ssn");
+//  }
 
+  // TODO remove or move elsewhere
+//  Ptr<TcpOptionMpTcpDSS> dsnOption = Create<TcpOptionMpTcpDSS>();
+//  // TODO don't send  mapping for every subsequent packet
+//  dsnOption->SetMapping( mapping );
+//
+//
+//
+////  NS_ASSERT( dsnOption->GetMapping().HeadSSN() )
+//  header.AppendOption( dsnOption );
+
+
+  //! We put a dack in every segment 'coz wi r crazy YOUHOU
   GetMeta()->AppendDataAck( header );
 
 
-  return TcpSocketBase::SendDataPacket(header, ssn, maxSize);
+  return TcpSocketBase::SendDataPacket(header, ssnHead, length);
 }
 
 
