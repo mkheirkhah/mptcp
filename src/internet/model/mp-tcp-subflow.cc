@@ -382,7 +382,10 @@ MpTcpSubflow::SendEmptyPacket(TcpHeader& header)
   /*
   TODO here we should parse the flags and append the correct option according to it
   */
-  GetMeta()->AppendDataAck( header );
+  if(m_state != SYN_SENT && m_state != SYN_RCVD)
+  {
+    GetMeta()->AppendDataAck( header );
+  }
 
   TcpSocketBase::SendEmptyPacket(header);
 }
@@ -428,7 +431,7 @@ MpTcpSubflow::SendMapping(Ptr<Packet> p, MpTcpMapping& mapping)
     // TODO GetMappingForDSN
     // GetMappingForSSN
   //GetMappingForSegment(m_TxMappings,)
-  NS_ASSERT_MSG(m_TxMappings.AddMappingLooseSSN( mapping  ) >= 0,"2 mappings overlap");
+  NS_ASSERT_MSG(m_TxMappings.AddMappingLooseSSN( mapping  ) >= 0, "2 mappings overlap");
 
   //}
   NS_LOG_DEBUG("mapped updated: " << mapping);
@@ -507,31 +510,30 @@ MpTcpSubflow::SendDataPacket(TcpHeader& header, const SequenceNumber32& ssnHead,
   NS_LOG_FUNCTION(this << "Sending packet starting at SSN [" << ssnHead.GetValue() << "] with len=" << length);
 
 
+  MpTcpMapping mapping;
+
+  bool result = m_TxMappings.GetMappingForSSN(ssnHead, mapping);
+  if(!result)
+  {
+    m_TxMappings.Dump();
+    NS_FATAL_ERROR("Could not find mapping associated to ssn");
+  }
+
+  Ptr<TcpOptionMpTcpDSS> dsnOption = Create<TcpOptionMpTcpDSS>();
+  // TODO don't send  mapping for every subsequent packet
+  dsnOption->SetMapping(mapping);
 
 
-//  bool result = m_TxMappings.GetMappingForSSN(ssn, mapping);
-//  if(!result)
-//  {
-//    m_TxMappings.Dump();
-//    NS_FATAL_ERROR("Could not find mapping associated to ssn");
-//  }
 
-  // TODO remove or move elsewhere
-//  Ptr<TcpOptionMpTcpDSS> dsnOption = Create<TcpOptionMpTcpDSS>();
-//  // TODO don't send  mapping for every subsequent packet
-//  dsnOption->SetMapping( mapping );
-//
-//
-//
-////  NS_ASSERT( dsnOption->GetMapping().HeadSSN() )
-//  header.AppendOption( dsnOption );
+//  NS_ASSERT( dsnOption->GetMapping().HeadSSN() )
+  header.AppendOption(dsnOption);
 
 
   //! We put a dack in every segment 'coz wi r crazy YOUHOU
   GetMeta()->AppendDataAck( header );
 
-
-  return TcpSocketBase::SendDataPacket(header, ssnHead, length);
+  // Here we set the maxsize to the size of the mapping
+  return TcpSocketBase::SendDataPacket(header, ssnHead, mapping.GetLength());
 }
 
 
@@ -864,16 +866,8 @@ MpTcpSubflow::ProcessWait(Ptr<Packet> packet, const TcpHeader& tcpHeader)
 {
   NS_LOG_FUNCTION (this << tcpHeader);
 
-//  Ptr<TcpOptionMpTcpDSS> dss;
-
-  //! TODO in the long term, I should rather loop over options and assign a callback ?
-//  if(GetMpTcpOption(tcpHeader, dss))
-//  {
-//    ParseDSS(packet,tcpHeader,dss);
-//  }
 
   TcpSocketBase::ProcessWait(packet,tcpHeader);
-
 }
 
 
@@ -1676,10 +1670,12 @@ MpTcpSubflow::NewAck(SequenceNumber32 const& ack)
       " numberAck " << (ack - FirstUnackedSeq())); // Number bytes ack'ed
 
 
-  m_firstTxUnack = ack;
+  m_firstTxUnack = std::min(ack, m_txBuffer.TailSequence());
 
   // TODO: get mapping associated with that Ack and
-  if(!m_TxMappings.GetMappingForSSN( SequenceNumber32(ack-1), mapping)) {
+  // TODO could && m_state != FIN_WAIT_1
+  // TODO I believe we could change that into something else
+  if(!m_TxMappings.GetMappingForSSN( SequenceNumber32(ack-1), mapping) ) {
 
     NS_LOG_WARN("Late ack ! Mapping likely to have been discared already. Dumping Tx Mappings:");
     m_TxMappings.Dump();
@@ -1707,10 +1703,11 @@ MpTcpSubflow::NewAck(SequenceNumber32 const& ack)
     **/
 //    m_TxMappings.DiscardMappingsUpToDSN()
 
-      GetMeta()->OnSubflowNewAck(this);
+
   }
 
 
+  GetMeta()->OnSubflowNewAck(this);
 // TODO I should call
 
 
@@ -1722,7 +1719,11 @@ MpTcpSubflow::NewAck(SequenceNumber32 const& ack)
 
   if (ack > m_nextTxSequence)
     {
-      m_nextTxSequence = ack; // If advanced
+//      if(m_state == FIN_WAIT_1 || m_state == CLOSING) {
+//
+//      }
+//      NS_LOG_DEBUG("Advancing m_nextTxSequence from " << m_nextTxSequence  << " to " << ack);
+      m_nextTxSequence = std::min(ack, m_txBuffer.TailSequence()); // If advanced
     }
 
   if (m_txBuffer.Size() == 0 && m_state != FIN_WAIT_1 && m_state != CLOSING)
@@ -1736,6 +1737,7 @@ MpTcpSubflow::NewAck(SequenceNumber32 const& ack)
 
   if (m_txBuffer.Size() == 0)
     {
+      NS_LOG_DEBUG("No tx buffer");
 //      throughput = 10000000 * 8 / (Simulator::Now().GetSeconds() - fLowStartTime);
 //      NS_LOG_UNCOND("goodput -> " << throughput / 1000000 << " Mbps {Tx Buffer is now empty}  P-AckHits:" << pAckHit);
       return;

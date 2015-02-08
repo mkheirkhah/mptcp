@@ -84,7 +84,10 @@ TODO:
 class MpTcpSocketBase : public TcpSocketBase
 
 {
-public: // public methods
+public:
+  /** public methods
+  TODO this could be done differently
+  **/
   typedef std::vector< Ptr<MpTcpSubflow> > SubflowList;
 
 
@@ -101,8 +104,17 @@ public: // public methods
 //  MpTcpSocketBase(Ptr<Node> node);
   virtual ~MpTcpSocketBase();
 
-  void
+  virtual void
   OnSubflowNewCwnd(std::string context, uint32_t oldCwnd, uint32_t newCwnd);
+
+
+  virtual void
+  DoRetransmit();
+
+  virtual void
+  OnSubflowNewState(std::string context,
+//    Ptr<MpTcpSubflow> sf,
+    TcpStates_t  oldState, TcpStates_t newState);
 
   // Window Management
   virtual uint32_t
@@ -567,7 +579,9 @@ protected: // protected methods
 
   //! Disabled
   void DupAck(const TcpHeader& t, uint32_t count);
-  virtual void DupAck( SequenceNumber32 ack,Ptr<MpTcpSubflow> );
+
+  virtual void
+  DupAck( SequenceNumber32 ack, Ptr<MpTcpSubflow> , uint32_t count);
 //  void DupAck(uint8_t sFlowIdx, DSNMapping * ptrDSN);       // Congestion control algorithms -> loss recovery
 //  void NewACK(uint8_t sFlowIdx, const TcpHeader&, TcpOptions* opt);
 //  void NewAckNewReno(uint8_t sFlowIdx, const TcpHeader&, TcpOptions* opt);

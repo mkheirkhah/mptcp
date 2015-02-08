@@ -1958,6 +1958,7 @@ TcpSocketBase::SendPendingData(bool withAck)
   NS_LOG_FUNCTION (this << " with Ack:" << withAck);
   if (m_txBuffer.Size() == 0)
     {
+//      NS_LOG_DEBUG("")
       return false;                           // Nothing to send
     }
   if (m_endPoint == 0 && m_endPoint6 == 0)
@@ -1971,7 +1972,11 @@ TcpSocketBase::SendPendingData(bool withAck)
   // TODO this part may be buggy, returns -1
   while (true)
     {
-      if(m_txBuffer.SizeFromSequence(m_nextTxSequence) == 0) {
+      /* WARNING This can be tricky here since if m_nextTxSequence > head it will return -1,
+      which is wrapped
+      */
+      if(m_txBuffer.SizeFromSequence(m_nextTxSequence) == 0)
+      {
         NS_LOG_DEBUG("Nothing to send");
         break;
       }
@@ -2190,8 +2195,8 @@ TcpSocketBase::NewAck(SequenceNumber32 const& ack)
     }
   if (m_txBuffer.Size() == 0)
     {
-      throughput = 10000000 * 8 / (Simulator::Now().GetSeconds() - fLowStartTime);
-      NS_LOG_UNCOND("goodput -> " << throughput / 1000000 << " Mbps {Tx Buffer is now empty}  P-AckHits:" << pAckHit);
+//      throughput = 10000000 * 8 / (Simulator::Now().GetSeconds() - fLowStartTime);
+      NS_LOG_UNCOND("{Tx Buffer is now empty}  P-AckHits:" << pAckHit);
       return;
     }
   // Try to send more data

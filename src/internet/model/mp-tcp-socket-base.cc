@@ -688,18 +688,19 @@ MpTcpSocketBase::ProcessDSS(const TcpHeader& tcpHeader, Ptr<TcpOptionMpTcpDSS> d
     case FIN_WAIT_2:
     case CLOSE_WAIT:
 
+    case TIME_WAIT:
       // do nothing just wait for subflows to be closed
       ProcessDSSWait(dss,sf);
       break;
-    case TIME_WAIT:
-      // do nothing
-      break;
 
-    case LISTEN:
+
     case SYN_RCVD:
+      NS_LOG_ERROR("Unhandled DSS but Thing is I should not receive a DSS ack right now right ?");
+      break;
+    case LISTEN:
     case SYN_SENT:
     default:
-      NS_LOG_ERROR("Unhandled case" << TcpStateName[m_state]);
+      NS_FATAL_ERROR("Unhandled case to process DSS" << TcpStateName[m_state]);
       break;
   };
 //  #endif
@@ -714,10 +715,12 @@ MpTcpSocketBase::ProcessDSS(const TcpHeader& tcpHeader, Ptr<TcpOptionMpTcpDSS> d
 
 
 void
-MpTcpSocketBase::DupAck( SequenceNumber32 ack,Ptr<MpTcpSubflow> sf)
+MpTcpSocketBase::DupAck( SequenceNumber32 dack,Ptr<MpTcpSubflow> sf, uint32_t count)
 {
   //!
-  NS_LOG_ERROR("Duplicate ACK, TODO");
+  NS_LOG_ERROR("TODO Duplicate ACK " << dack);
+
+//  NS_LOG_WARN("TODO DupAck " << count);
   /*
   As discussed earlier, however, an MPTCP
    implementation MUST NOT treat duplicate ACKs with any MPTCP option,
@@ -804,7 +807,32 @@ MpTcpSocketBase::Fork(void)
 void
 MpTcpSocketBase::DupAck(const TcpHeader& t, uint32_t count)
 {
-  NS_ASSERT_MSG(false,"Should never be called");
+  NS_ASSERT_MSG(false,"Should never be called. Use overloeaded dupack instead");
+
+//  NS_LOG_LOGIC("DupAck " << count);
+//  NS_LOG_WARN("TODO DupAck " << count);
+//  if( count > 3)
+//  GetMeta()->OnSubflowDupAck(this);
+
+  //! Regerenate mappings for that
+  //! Reset the m_nextTxSequence to the dupacked value
+
+
+//  NS_LOG_FUNCTION (this << "t " << count);
+//  if (count == m_retxThresh && !m_inFastRec)
+//    { // triple duplicate ack triggers fast retransmit (RFC2581, sec.3.2)
+//      m_ssThresh = std::max (2 * m_segmentSize, BytesInFlight () / 2);
+//      m_cWnd = m_ssThresh + 3 * m_segmentSize;
+//      m_inFastRec = true;
+//      NS_LOG_INFO ("Triple dupack. Entering fast recovery. Reset cwnd to " << m_cWnd << ", ssthresh to " << m_ssThresh);
+//      DoRetransmit ();
+//    }
+//  else if (m_inFastRec)
+//    { // In fast recovery, inc cwnd for every additional dupack (RFC2581, sec.3.2)
+//      m_cWnd += m_segmentSize;
+//      NS_LOG_INFO ("In fast recovery. Increased cwnd to " << m_cWnd);
+//      SendPendingData (m_connected);
+//    };
 }
 //...........................................................................................
 
@@ -947,6 +975,19 @@ MpTcpSocketBase::OnSubflowNewCwnd(std::string context, uint32_t oldCwnd, uint32_
   m_cWnd = ComputeTotalCWND();
 }
 
+/**
+
+*/
+void
+MpTcpSocketBase::OnSubflowNewState(std::string context,
+//  Ptr<MpTcpSubflow> sf,
+  TcpStates_t  oldState, TcpStates_t newState)
+{
+  NS_LOG_LOGIC("subflow " << " state changed from " << TcpStateName[oldState] << " to " << TcpStateName[newState]);
+//  OnSubflowNewState
+//  if(newState)
+}
+
 /*
 TODO it should block subflow creation until it received a DSS on a new subflow
 TODO rename ? CreateAndAdd? Add ? Start ? Initiate
@@ -1002,6 +1043,14 @@ MpTcpSocketBase::CreateSubflow(bool masterSocket)
   thus we resort to the tracing system to track subflows cwin
   **/
   NS_ASSERT(sFlow->TraceConnect ("CongestionWindow", "CongestionWindow", MakeCallback(&MpTcpSocketBase::OnSubflowNewCwnd, this)));
+
+
+  /**
+  We need to act on certain states
+  according to doc "There is not a version with bound arguments."
+  , sFlow
+  **/
+  NS_ASSERT(sFlow->TraceConnect ("State", "State", MakeCallback(&MpTcpSocketBase::OnSubflowNewState, this)) );
 
 
   sFlow->SetInitialCwnd( GetInitialCwnd() );  //! Could be done maybe in SetMeta ?
@@ -1425,9 +1474,8 @@ MpTcpSocketBase::PeerClose( SequenceNumber32 dsn, Ptr<MpTcpSubflow> sf)
 
       // TODO should send dataACK
       TcpHeader header;
-      AppendDataAck(header);
       sf->GenerateEmptyPacketHeader(header,TcpHeader::ACK);
-      //!
+      AppendDataAck(header);
       sf->SendEmptyPacket(header);
 //      return;
 //    }
@@ -1556,7 +1604,11 @@ MpTcpSocketBase::SyncTxBuffers(Ptr<MpTcpSubflow> subflow)
     returned mapping discarded because we don't support NR sack right now
     **/
     NS_LOG_DEBUG("subflow Tx mapping " << mapping << " discarded");
-    m_txBuffer.DiscardUpTo( mapping.TailDSN());
+
+    /*
+    DiscardUpTo  Discard data up to but not including this sequence number.
+    */
+    m_txBuffer.DiscardUpTo( mapping.TailDSN() + SequenceNumber32(1));
   }
 }
 
@@ -1643,14 +1695,14 @@ MpTcpSocketBase::NewAck(SequenceNumber32 const& dsn)
 //  m_txBuffer.DiscardUpTo(dsn);
   TODO here I should
   **/
-  m_firstTxUnack = dsn;
+  m_firstTxUnack = std::min(dsn, m_txBuffer.TailSequence());;
 
   SyncTxBuffers();
 
   // TODO wrong. what happens with NR-SACK ?
-  if (dsn > m_nextTxSequence)
+  if (m_firstTxUnack > m_nextTxSequence)
     {
-      m_nextTxSequence = dsn; // If advanced
+      m_nextTxSequence = m_firstTxUnack; // If advanced
     }
 
   #if 0
@@ -1932,12 +1984,64 @@ Maybe allow for a callback to be set here.
 void
 MpTcpSocketBase::Retransmit()
 {
-  NS_LOG_FUNCTION (this);
-  NS_FATAL_ERROR("TODO reestablish retransmit ?");
-  NS_LOG_ERROR("TODO");
-
-  TcpSocketBase::Retransmit();
+  NS_LOG_LOGIC(this);
+//  NS_FATAL_ERROR("TODO reestablish retransmit ?");
+//  NS_LOG_ERROR("TODO");
+  m_nextTxSequence = FirstUnackedSeq(); // Start from highest Ack
+//  m_rtt->IncreaseMultiplier(); // Double the timeout value for next retx timer
+  m_dupAckCount = 0;
+  DoRetransmit(); // Retransmit the packet
+//  TcpSocketBase::Retransmit();
 }
+
+
+
+void
+MpTcpSocketBase::DoRetransmit()
+{
+  NS_LOG_FUNCTION (this);
+  // Retransmit SYN packet
+  if (m_state == SYN_SENT)
+    {
+      if (m_cnCount > 0)
+        {
+          NS_FATAL_ERROR("TODO");
+//          SendEmptyPacket(TcpHeader::SYN);
+        }
+      else
+        {
+          NotifyConnectionFailed();
+        }
+      return;
+    }
+
+  // Retransmit non-data packet: Only if in FIN_WAIT_1 or CLOSING state
+  if (m_txBuffer.Size() == 0)
+    {
+      if (m_state == FIN_WAIT_1 || m_state == CLOSING)
+        {
+          // Must have lost FIN, re-send
+//          SendEmptyPacket(TcpHeader::FIN);
+          TcpHeader header;
+        Ptr<MpTcpSubflow> subflow = GetSubflow(0);
+//          m_state = FIN_WAIT_1;
+          subflow->GenerateEmptyPacketHeader(header,TcpHeader::ACK);
+    //      SendEmptyPacket(header);
+          AppendDataFin(header);
+          subflow->SendEmptyPacket(header);
+
+        }
+      return;
+    }
+  // Retransmit a data packet: Call SendDataPacket
+  NS_LOG_LOGIC ("TcpSocketBase " << this << " retxing seq " << FirstUnackedSeq ());
+  // normally here m_nextTxSequence has been set to firstUna
+  uint32_t sz = SendDataPacket(FirstUnackedSeq(), m_segmentSize, true);
+  // In case of RTO, advance m_nextTxSequence
+  m_nextTxSequence = std::max(m_nextTxSequence.Get(), FirstUnackedSeq() + sz);
+  //reTxTrack.push_back(std::make_pair(Simulator::Now().GetSeconds(), ns3::TcpNewReno::cWnd));
+}
+
 
 void
 MpTcpSocketBase::ReTxTimeout()
@@ -2434,60 +2538,6 @@ MpTcpSocketBase::ComputeReTxTimeoutForSubflow( Ptr<MpTcpSubflow> sf)
 }
 
 
-/*
- * When dupAckCount reach to the default value of 3 then TCP goes to ack recovery process.
- */
- #if 0
-void
-MpTcpSocketBase::DupAck(uint8_t sFlowIdx, DSNMapping* ptrDSN)
-{
-  Ptr<MpTcpSubflow> sFlow = m_subflows[sFlowIdx];
-  sFlow->m_dupAckCount++;
-  ptrDSN->dupAckCount++; // Used for evaluation purposes only
-  uint32_t cwnd = sFlow->cwnd.Get();
-  uint32_t m_segmentSize = sFlow->GetSegSize();
-  ComputeTotalCWND();
-
-  // Plotting
-  uint32_t tmp = (((ptrDSN->subflowSeqNumber) - sFlow->initialSequenceNumber) / sFlow->GetSegSize() % mod);
-  sFlow->DUPACK.push_back(make_pair(Simulator::Now().GetSeconds(), tmp));
-
-  // Congestion control algorithms
-  if (sFlow->m_dupAckCount == 3 && !sFlow->m_inFastRec)
-    { // FastRetrasmsion
-      NS_LOG_WARN (Simulator::Now().GetSeconds() <<" DupAck -> Subflow ("<< (int)sFlowIdx <<") 3rd duplicated ACK for segment ("<<ptrDSN->subflowSeqNumber<<")");
-
-      // Cut the window to the half
-      ReduceCWND(sFlowIdx, ptrDSN);
-
-      // Plotting
-      sFlow->_FReTx.push_back(make_pair(Simulator::Now().GetSeconds(), TimeScale));
-    }
-  else if (sFlow->m_inFastRec)
-    { // Fast Recovery
-      // Increase cwnd for every additional DupACK (RFC2582, sec.3 bullet #3)
-      sFlow->cwnd += m_segmentSize;
-
-      // Plotting
-      DupAcks.push_back(make_pair(Simulator::Now().GetSeconds(), sFlow->cwnd));
-      sFlow->ssthreshtrack.push_back(make_pair(Simulator::Now().GetSeconds(), sFlow->GetSSThresh()));
-      NS_LOG_WARN ("DupAck-> FastRecovery. Increase cwnd by one MSS, from " << cwnd <<" -> " << sFlow->cwnd << " : " << (sFlowIdx));
-
-      // Send more data into pipe if possible to get ACK clock going
-      SendPendingData();
-    }
-  else
-    {
-      NS_LOG_WARN("Limited transmit is not enabled... DupAcks: " << ptrDSN->dupAckCount);
-    }
-//  else if (!sFlow->m_inFastRec && sFlow->m_limitedTx && m_sendingBuffer->PendingData() > 0)
-//    { // RFC3042 Limited transmit: Send a new packet for each duplicated ACK before fast retransmit
-//      NS_LOG_INFO ("Limited transmit");
-//      uint32_t sz = SendDataPacket(sFlowIdx, sFlow->MSS, false); // WithAck or Without ACK?
-//      NotifyDataSent(sz);
-//    };
-}
-#endif
 
 
 
@@ -2632,12 +2682,13 @@ MpTcpSocketBase::ReceivedAck(
     }
   else if (dack  == FirstUnackedSeq())
     { // Case 2: Potentially a duplicated ACK
-      if (dack  < m_nextTxSequence)
+      if (dack  < m_nextTxSequence && count_dupacks)
         {
         /* TODO dupackcount shall only be increased if there is only a DSS option ! */
-          NS_LOG_WARN ("TODO Dupack of " << dack << " not handled yet." );
+//          NS_LOG_WARN ("TODO Dupack of " << dack << " not handled yet." );
           // TODO add new prototpye ?
-//            DupAck(tcpHeader, ++m_dupAckCount);
+
+            DupAck(dack, sf, ++m_dupAckCount);
         }
       // otherwise, the ACK is precisely equal to the nextTxSequence
       NS_ASSERT( dack  <= m_nextTxSequence);
@@ -2756,7 +2807,7 @@ MpTcpSocketBase::ProcessDSSWait( Ptr<TcpOptionMpTcpDSS> dss, Ptr<MpTcpSubflow> s
 
   if(dss->GetFlags() & TcpOptionMpTcpDSS::DataFin)
   {
-    NS_LOG_LOGIC("Received datafin ");
+    NS_LOG_LOGIC("Received DFIN");
     if(m_state == FIN_WAIT_1)
     {
       // TODO send
@@ -2771,7 +2822,6 @@ MpTcpSocketBase::ProcessDSSWait( Ptr<TcpOptionMpTcpDSS> dss, Ptr<MpTcpSubflow> s
 
     }
     else {
-
       SendFastClose(sf);
 //      CloseAndNotify();
     }
@@ -2782,28 +2832,52 @@ MpTcpSocketBase::ProcessDSSWait( Ptr<TcpOptionMpTcpDSS> dss, Ptr<MpTcpSubflow> s
   if(dss->GetFlags() & TcpOptionMpTcpDSS::DataAckPresent)
   {
     SequenceNumber32 dack(dss->GetDataAck() );
+    ReceivedAck(dack,sf,false);
+
+
     NS_LOG_INFO("dack=" << dack <<  " to compare with m_nextTxSequence=" << m_nextTxSequence);
 //    if (dack == m_rxBuffer.NextRxSequence())
-    if (dack == m_nextTxSequence)
-    { // This ACK corresponds to the DATA FIN sent
-      NS_LOG_LOGIC("Ack corresponds to DFIN sent");
-      if(m_state == FIN_WAIT_1) {
+//    if (dack == m_nextTxSequence)
+//    { // This ACK corresponds to the DATA FIN sent
+//      NS_LOG_LOGIC("Ack corresponds to DFIN sent");
+//      NS_LOG_DEBUG("Setting m_nextTxSequence to ");
+//      m_nextTxSequence = dack;
+//      SyncTxBuffers();
+
+      if(m_state == FIN_WAIT_1 && FirstUnackedSeq() == m_txBuffer.TailSequence()) {
         NS_LOG_LOGIC(" FIN_WAIT_1 -> FIN_WAIT_2");
         m_state= FIN_WAIT_2;
         return;
       }
-      // CLOSING or LAST_ACK
-      else if(m_state == CLOSING || m_state == LAST_ACK){
-        TimeWait();
-        return;
-      }
-      else {
-        NS_LOG_ERROR("dack=" << dack << " not equal to the one expected " << dack);
-      }
-
-    }
-    else {
-      ReceivedAck(dack,sf,false);
+//      // CLOSING or LAST_ACK
+//      else if(m_state == CLOSING || m_state == LAST_ACK){
+//        TimeWait();
+//        return;
+//      }
+//      else {
+//        NS_LOG_ERROR("dack=" << dack << " not equal to the one expected " << m_nextTxSequence);
+//      }
+  // Check if the close responder sent an in-sequence FIN, if so, respond ACK
+  if ((m_state == FIN_WAIT_1 || m_state == FIN_WAIT_2) && m_rxBuffer.Finished())
+    {
+      if (m_state == FIN_WAIT_1)
+        {
+          NS_LOG_INFO ("FIN_WAIT_1 -> CLOSING");
+          m_state = CLOSING;
+          if (m_txBuffer.Size() == 0 && FirstUnackedSeq() == m_txBuffer.TailSequence())
+            { // This ACK corresponds to the FIN sent
+              TimeWait();
+            }
+        }
+      else if (m_state == FIN_WAIT_2)
+        {
+          TimeWait();
+        }
+//      SendEmptyPacket(TcpHeader::ACK);
+      if (!m_shutdownRecv)
+        {
+          NotifyDataRecv();
+        }
     }
   }
 
@@ -2812,6 +2886,8 @@ MpTcpSocketBase::ProcessDSSWait( Ptr<TcpOptionMpTcpDSS> dss, Ptr<MpTcpSubflow> s
   {
       sf->AddPeerMapping(dss->GetMapping());
   }
+
+
 
 }
 
@@ -3010,10 +3086,10 @@ MpTcpSocketBase::DoPeerClose(void)
     { // Need to ack, the application will close later
 //    #error TODO send Dataack
       TcpHeader header;
-      AppendDataAck(header);
+
       GenerateEmptyPacketHeader(header,TcpHeader::ACK);
       //!
-
+      AppendDataAck(header);
       GetSubflow(0)->SendEmptyPacket(header);
     }
 
@@ -3059,31 +3135,36 @@ void
 MpTcpSocketBase::AppendDataFin(TcpHeader& header) const
 //const
 {
+  NS_LOG_LOGIC("Appending a DFIN with seq " << m_txBuffer.TailSequence());
 //  NS_ASSERT(m_state == )
   Ptr<TcpOptionMpTcpDSS> dss;
   GetOrCreateMpTcpOption(header,dss);
 //  if(!GetMpTcpOption(header,dss))
 //    dss = Create<>(TcpOptionMpTcpMain::MP_DSS);
 
-  // TODO we should replace this by sthg else like m_nextTxSequence ?
-//  dss->EnableDataFin( m_txBuffer.TailSequence() );
-//well so far this worked
+  //well so far this worked
+  // TailSequence = lastByte (+1) of the buffer
   dss->EnableDataFin( m_txBuffer.TailSequence() );
 }
 
 
 /** Do the action to close the socket. Usually send a packet with appropriate
- flags depended on the current m_state. */
+ flags depended on the current m_state.
 
+ TODO use a closeAndNotify in more situations
+ */
 int
 MpTcpSocketBase::DoClose()
 {
-  NS_LOG_FUNCTION(this);
+  NS_LOG_FUNCTION(this << " in state " << TcpStateName[m_state]);
 
   // TODO close all subflows
   // TODO send a data fin
+  // TODO ideally we should be able to work without any subflows and
+  // retransmit as soon as we get a subflow up !
+  // TODO we should ask the scheduler on what subflow to send the messages
   TcpHeader header;
-  Ptr<MpTcpSubflow> subflow = GetSubflow(0);
+
 
 
   switch (m_state)
@@ -3091,25 +3172,30 @@ MpTcpSocketBase::DoClose()
   case SYN_RCVD:
   case ESTABLISHED:
 // send FIN to close the peer
+      {
       NS_LOG_INFO ("ESTABLISHED -> FIN_WAIT_1");
+
+        Ptr<MpTcpSubflow> subflow = GetSubflow(0);
       m_state = FIN_WAIT_1;
       subflow->GenerateEmptyPacketHeader(header,TcpHeader::ACK);
 //      SendEmptyPacket(header);
       AppendDataFin(header);
       subflow->SendEmptyPacket(header);
-
+      }
       break;
 
   case CLOSE_WAIT:
+      {
 // send ACK to close the peer
       NS_LOG_INFO ("CLOSE_WAIT -> LAST_ACK");
       m_state = LAST_ACK;
 
+      Ptr<MpTcpSubflow> subflow = GetSubflow(0);
       subflow->GenerateEmptyPacketHeader(header, TcpHeader::ACK);
       AppendDataAck(header);
       subflow->SendEmptyPacket(header);
 //      SendEmptyPacket(TcpHeader::FIN | TcpHeader::ACK);
-
+      }
 
       break;
 
@@ -3137,7 +3223,11 @@ MpTcpSocketBase::DoClose()
   case CLOSED:
   case FIN_WAIT_1:
   case FIN_WAIT_2:
+    break;
   case TIME_WAIT:
+//      CloseAndNotify();
+      break;
+
   default: /* mute compiler */
 // Do nothing in these four states
       break;
