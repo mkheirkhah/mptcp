@@ -1420,6 +1420,7 @@ MpTcpSocketBase::PeerClose( SequenceNumber32 dsn, Ptr<MpTcpSubflow> sf)
 
 
 //  SequenceNumber32 dsn = SequenceNumber32 (dss->GetDataFinDSN() );
+  // TODO the range check should be generalized somewhere else
   if( dsn < m_rxBuffer.NextRxSequence() || m_rxBuffer.MaxRxSequence() < dsn) {
 
     NS_LOG_INFO("dsn " << dsn << " out of expected range [ " << m_rxBuffer.NextRxSequence()  << " - " << m_rxBuffer.MaxRxSequence() << " ]" );
@@ -2803,13 +2804,13 @@ been acknowledged by DATA_ACKs.
 void
 MpTcpSocketBase::ProcessDSSWait( Ptr<TcpOptionMpTcpDSS> dss, Ptr<MpTcpSubflow> sf)
 {
-  NS_LOG_FUNCTION (this << dss << " from " << sf);
+  NS_LOG_FUNCTION (this << dss << " from " << sf << " while in state [" << TcpStateName[m_state] << "]");
 
   if(dss->GetFlags() & TcpOptionMpTcpDSS::DataFin)
   {
     NS_LOG_LOGIC("Received DFIN");
-    if(m_state == FIN_WAIT_1)
-    {
+//    if(m_state == FIN_WAIT_1)
+//    {
       // TODO send
       PeerClose( SequenceNumber32(dss->GetDataFinDSN() ), sf);
 //      TcpHeader header;
@@ -2820,11 +2821,11 @@ MpTcpSocketBase::ProcessDSSWait( Ptr<TcpOptionMpTcpDSS> dss, Ptr<MpTcpSubflow> s
 //      NS_LOG_INFO("FIN_WAIT_1 -> CLOSING");
 //      m_state = CLOSING;
 
-    }
-    else {
-      SendFastClose(sf);
-//      CloseAndNotify();
-    }
+//    }
+//    else {
+//      SendFastClose(sf);
+////      CloseAndNotify();
+//    }
   }
 
   // TODO I should check
