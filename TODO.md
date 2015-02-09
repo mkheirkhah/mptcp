@@ -30,17 +30,17 @@ Generic:
 * rename GetMeta() into Meta() ?
 * rename isn into ISS as in TCP RFC
 * dans core/model/test.cc, log warn message when fullness not accepted
+* http://www.nsnam.org/doxygen/group__makeboundcallback.html#ga1725d6362e6065faa0709f7c93f8d770
 * provide in meta a list of pending options that can be consumed by subflow
 * Note that new subflows MUST NOT be established (using the process documented in Section 3.2) until a Digital Signature Standard (DSS) option has been successfully received across th
 * Unmultiplex attribute MPTCP connection according to token
 * IPv6 support
 * add the possibility of setting priorities, ie the ability for a subflow to act as backup. Also take into account at scheduling level
 * implement callback support : need to change ns3 ? (matt)
-* when removing a subflow, flip with last one and update Id. Make sure it doesn't provoke any bug
 * let RTO be chosen by meta
 * crypto materials checks
+* I would remove ns3::Ipv4L3Protocol::GetAddress and replace it with calls like GetInterface().GetAddress .
 * on MP_join store the addresses Id
-* Extend TcpTxBuffer to support mappings ?
 * remove the files for mptcpsocketfactory, it's not needed: we cna use a tcpsocketfacotry
 * test what happens when we remove the master socket while the connection keeps going. It should provoke problems since endpoint is not allocated anymore
 * Possibility for applications to provie their fine grain tuning

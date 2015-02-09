@@ -107,6 +107,8 @@ public:
   virtual void
   OnSubflowNewCwnd(std::string context, uint32_t oldCwnd, uint32_t newCwnd);
 
+  virtual
+  int ConnectNewSubflow(const Address &local, const Address &remote);
 
   virtual void
   DoRetransmit();
@@ -188,9 +190,12 @@ public:
   bool IsConnected() const;
 
   // Public interface for MPTCP
-  virtual int Bind();                         // Bind a socket by setting up endpoint in TcpL4Protocol
-  virtual int Bind(const Address &address);   // Bind a socket ... to specific add:port
-  virtual int Connect(const Address &address);
+  virtual int
+  Bind();                         // Bind a socket by setting up endpoint in TcpL4Protocol
+  virtual int
+  Bind(const Address &address);   // Bind a socket ... to specific add:port
+  virtual int
+  Connect(const Address &address);
 
   // TODO to remove there is no equivalent in parent's class
 //  virtual int Connect(Ipv4Address servAddr, uint16_t servPort);
@@ -318,6 +323,8 @@ public:
                           Callback<void, uint8_t> remoteRemAddrCb);
 
   /**
+
+
   **/
 //  virtual void GetAllAdvertisedSources(std::vector<InetSocketAddress> addresses);
 

@@ -5,6 +5,7 @@ import subprocess
 available_suites = [
     "tcp",
     "mptcp-tcp",
+    "mptcp-tcp-multi",
     "mptcp-option",
     "mptcp-mapping"
 ]
@@ -45,7 +46,7 @@ NS_LOG += "*=error|warn|prefix_node|prefix_func"
 # NS_LOG += ":PointToPointNetDevice"
 # NS_LOG += ":PointToPointChannel"
 # NS_LOG += ":DropTailQueue"
-
+NS_LOG += ":MpTcpMultiSuite"
 NS_LOG += ":MpTcpTestSuite"
 NS_LOG += ":TcpSocketBase"
 NS_LOG += ":MpTcpSchedulerRoundRobin"
@@ -65,7 +66,7 @@ NS_LOG += ":TcpTxBuffer"
 # NS_LOG += ":TcpHeader=*"
 # NS_LOG=":TcpOptionMpTcp=*"
 # NS_LOG=":MpTcpOptionsTestSuite=*"
-# NS_LOG += ":TcpL4Protocol"
+NS_LOG += ":TcpL4Protocol"
 # NS_LOG += ":TraceHelper:PointToPointHelper"
 # OUTPUT_FILENAME="xp.txt"
 # NS_LOG=":MpTcpTestSuite=*|prefix_func:Socket=*"

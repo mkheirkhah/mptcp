@@ -195,6 +195,27 @@ MpTcpSocketBase::~MpTcpSocketBase(void)
 //  NS_LOG_INFO(Simulator::Now().GetSeconds() << " ["<< this << "] ~MpTcpSocketBase ->" << m_tcp );
 }
 
+
+
+int
+MpTcpSocketBase::ConnectNewSubflow(const Address &local, const Address &remote)
+{
+  NS_ASSERT_MSG(InetSocketAddress::IsMatchingType(local) && InetSocketAddress::IsMatchingType(remote), "only support ipv4");
+
+  //!
+  NS_LOG_LOGIC("Trying to add a new subflow " << InetSocketAddress::ConvertFrom(local).GetIpv4() << "->" << InetSocketAddress::ConvertFrom(remote).GetIpv4());
+
+
+
+  // false => not master (this is silly I know)
+  Ptr<MpTcpSubflow> sf = CreateSubflow(false);
+
+  NS_ASSERT(sf->Bind(local) == 0);
+  NS_ASSERT(sf->Connect(remote) == 0);
+
+  return 0;
+}
+
 uint64_t
 MpTcpSocketBase::GetLocalKey() const
 {
