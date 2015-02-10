@@ -43,6 +43,8 @@
 #include "tcp-socket-factory-impl.h"
 #include "tcp-newreno.h"
 #include "rtt-estimator.h"
+#include "tcp-option-mptcp.h"
+#include "mp-tcp-socket-base.h"
 
 #include <vector>
 #include <sstream>
@@ -336,6 +338,10 @@ TcpL4Protocol::Receive(Ptr<Packet> packet, Ipv4Header const &ipHeader, Ptr<Ipv4I
   NS_LOG_FUNCTION (this << packet << ipHeader << incomingInterface);
   NS_LOG_DEBUG(" Receive -> m_socketsSize: "<< m_sockets.size());
   NS_LOG_DEBUG(" ----------------------------------------------");
+
+  Ipv4EndPointDemux::EndPoints endPoints;
+
+
   for (uint32_t i=0 ; i< m_sockets.size(); i++){
       NS_LOG_DEBUG("Socket: "<< m_sockets[i]);
   }
@@ -354,11 +360,7 @@ TcpL4Protocol::Receive(Ptr<Packet> packet, Ipv4Header const &ipHeader, Ptr<Ipv4I
   //Ipv4Address destination = ipHeader.GetDestination();
 //  uint16_t srcPort = tcpHeader.GetSourcePort();
   //uint16_t dstPort = tcpHeader.GetDestinationPort();
-  NS_LOG_INFO(this << "TcpL4Protocol:Receive    -> "<< tcpHeader);
-  //NS_LOG_INFO(this << "TcpL4Protocol:Receive -> srcPort: "<< srcPort << " dstPort: " << dstPort);
-  //
-  // MPTCP related modification----------------------------
-  // Extract MPTCP options if there is any
+
 //  vector<TcpOptions*> options = tcpHeader.GetOptions();
 //  uint8_t flags = tcpHeader.GetFlags();
 //  bool hasSyn = flags & TcpHeader::SYN;
@@ -397,9 +399,79 @@ TcpL4Protocol::Receive(Ptr<Packet> packet, Ipv4Header const &ipHeader, Ptr<Ipv4I
       return IpL4Protocol::RX_CSUM_FAILED;
     }
 
+  NS_LOG_INFO(this << "TcpL4Protocol:Receive    -> "<< tcpHeader);
   NS_LOG_LOGIC ("TcpL4Protocol "<<this<<" received a packet");
-  Ipv4EndPointDemux::EndPoints endPoints = m_endPoints->Lookup(ipHeader.GetDestination(), tcpHeader.GetDestinationPort(),
-      ipHeader.GetSource(), tcpHeader.GetSourcePort(), incomingInterface);
+  //NS_LOG_INFO(this << "TcpL4Protocol:Receive -> srcPort: "<< srcPort << " dstPort: " << dstPort);
+  //
+
+  // We assume the socket already exists
+     endPoints = m_endPoints->Lookup(ipHeader.GetDestination(), tcpHeader.GetDestinationPort(),
+        ipHeader.GetSource(), tcpHeader.GetSourcePort(), incomingInterface);
+
+
+  /**
+  TODO clean this part, maybe TcpL4protocol should be reworked a bit
+  **/
+  if (endPoints.empty())
+  {
+      NS_LOG_LOGIC ("No Ipv4 endpoints matched on TcpL4Protocol, checking if it's a MPTCP JOIN"<<this);
+    // MPTCP related modification----------------------------
+    // Extract MPTCP options if there is any
+    Ptr<TcpOptionMpTcpJoin> join;
+
+    // If it is a SYN packet with an MP_JOIN option
+    if( (tcpHeader.GetFlags() & TcpHeader::SYN) && GetMpTcpOption(tcpHeader, join)
+        && join->GetState() == TcpOptionMpTcpJoin::Syn)
+    {
+
+      // if it is the first syn
+  //    if(join->GetState() == TcpOptionMpTcpJoin::Syn) {
+  //! We should find the token
+        NS_LOG_ERROR("TODO find the TOKEN " << join->GetPeerToken());
+//        endPoints = m_endPoints->LookupToken(ipHeader.GetDestination(), join->GetPeerToken());
+//        GetBoundNetDevice()
+
+        /* We go through all the metas to find one with the correct token */
+        for(std::vector<Ptr<TcpSocketBase> >::iterator it = m_sockets.begin(), last(m_sockets.end());
+          it != last;
+          it++
+         )
+        {
+          Ptr<MpTcpSocketBase> meta = DynamicCast<MpTcpSocketBase>( *it );
+          if(meta && meta->GetToken() == join->GetPeerToken() )
+          {
+
+            // TODO check that
+            // ipHeader.GetDestination()
+            // belongs to the remote host !!
+            // for now we assume it is ok
+
+            Ipv4EndPoint *endP =  meta->NewSubflowRequest(
+                  InetSocketAddress(ipHeader.GetSource(),tcpHeader.GetSourcePort() ),
+                  InetSocketAddress(ipHeader.GetDestination(), tcpHeader.GetDestinationPort() ) ,
+                  join
+                  );
+            if(endP) {
+              endPoints.push_back( endP);
+            }
+          }
+
+
+
+        }
+
+
+        NS_ASSERT_MSG(endPoints.size () == 1, "Demux returned more or less than one endpoint");
+//        (*endPoints.begin())->ForwardUp(packet, ipHeader, tcpHeader.GetSourcePort(), incomingInterface);
+
+  //    }
+  //    else {
+  //      NS_LOG_DEBUG("Ignore MP_JOIN with state " << join->GetState());
+  //    }
+
+    }
+  }
+
   if (endPoints.empty())
     {
       if (this->GetObject<Ipv6L3Protocol>() != 0)

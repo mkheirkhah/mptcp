@@ -24,6 +24,7 @@ args = parser.parse_args()
 if args.debug:
     cmd = "./waf --run test-runner --command-template=\"gdb -ex 'run --suite={suite} {verbose} {tofile}' --args %s \" "
 else:
+    timeout = 200
     cmd = "./waf --run \"test-runner --suite={suite} --fullness={fullness} {verbose} \" {tofile}"
 
 
@@ -67,6 +68,7 @@ NS_LOG += ":TcpTxBuffer"
 # NS_LOG=":TcpOptionMpTcp=*"
 # NS_LOG=":MpTcpOptionsTestSuite=*"
 NS_LOG += ":TcpL4Protocol"
+NS_LOG += ":Ipv4EndPoint:Ipv4EndPointDemux"
 # NS_LOG += ":TraceHelper:PointToPointHelper"
 # OUTPUT_FILENAME="xp.txt"
 # NS_LOG=":MpTcpTestSuite=*|prefix_func:Socket=*"
@@ -74,6 +76,16 @@ NS_LOG += ":TcpL4Protocol"
 
 os.environ['NS_LOG'] = NS_LOG
 
+# TODO catch
+# ./waf --run "test-runner --suite=mptcp-tcp-multi --fullness=QUICK  "  > xp.txt 2>&1
+# ^CTraceback (most recent call last):
+#   File "/home/teto/ns3/launch_test.py", line 91, in <module>
+#     ret = subprocess.call(cmd, shell=True, timeout=timeout if timeout else None)
+#   File "/usr/lib/python3.4/subprocess.py", line 539, in call
+#     return p.wait(timeout=timeout)
+#   File "/usr/lib/python3.4/subprocess.py", line 1560, in wait
+#     time.sleep(delay)
+# KeyboardInterrupt
 
 # provoked prompts in sublimetext, annoying
 # os.system("rm source/*")
@@ -83,10 +95,10 @@ print("Executed Command:\n%s" % cmd)
 
 # os.system(cmd)
 
-timeout=200
+
 # , timeout=timeout
 try:
-    ret = subprocess.call(cmd, shell=True)
+    ret = subprocess.call(cmd, shell=True, timeout=timeout if timeout else None)
 except subprocess.TimeoutExpired:
     print("Timeout expired. try setting a longer timeout")
 
@@ -102,10 +114,12 @@ if args.graph:
     os.system("mptcpexporter pcap2sql test-0-1.pcap")
     os.system("mptcpgraph ")
 
+os.system("truncate --size=40000 %s" % (args.out,), shell=true)
+
 
 for i in ['server', 'source']:
     print("Content of folder '%s':" % (i,))
     os.system("ls -l %s" % (i,))
 
 # print("Content of folder 'server':")
-os.system("./draw_plots.sh")
+# os.system("./draw_plots.sh")

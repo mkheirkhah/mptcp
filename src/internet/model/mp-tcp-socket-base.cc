@@ -150,7 +150,8 @@ MpTcpSocketBase::MpTcpSocketBase() :
   m_localToken(0),
   m_peerKey(0),
   m_peerToken(0),
-  m_doChecksum(false)
+  m_doChecksum(false),
+  m_receivedDSS(false)
 {
   NS_LOG_FUNCTION(this);
 
@@ -609,6 +610,7 @@ MpTcpSocketBase::ProcessMpTcpOptions(TcpHeader header, Ptr<MpTcpSubflow> sf)
             break;
         case TcpOptionMpTcpMain::MP_DSS:
           {
+
             Ptr<TcpOptionMpTcpDSS> dss = DynamicCast<TcpOptionMpTcpDSS>(opt);
             ProcessDSS(header,dss,sf);
           }
@@ -656,7 +658,12 @@ MpTcpSocketBase::ProcessDSS(const TcpHeader& tcpHeader, Ptr<TcpOptionMpTcpDSS> d
 //  m_cWnd = ComputeTotalCWND();
 //  SequenceNumber32 dfin;
 //  SequenceNumber32 dack;
-
+  if(!m_receivedDSS )
+  {
+    NS_LOG_LOGIC("First DSS received !");
+    m_receivedDSS = true;
+    ConnectionSucceeded();
+  }
 
   // TODO maybe this should be done within an processMPTCPoption, more global. For instance during 3WHS
   /*Because of this, an implementation MUST NOT use the RCV.WND
@@ -1110,6 +1117,47 @@ MpTcpSocketBase::DoForwardUp(Ptr<Packet> packet, Ipv4Header header, uint16_t por
 }
 
 
+uint32_t
+MpTcpSocketBase::GetToken() const
+{
+  NS_ASSERT(m_state == ESTABLISHED);
+  return m_localToken;
+}
+
+
+Ipv4EndPoint*
+MpTcpSocketBase::NewSubflowRequest(
+const Address & fromAddress,
+const Address & toAddress,
+Ptr<TcpOptionMpTcpJoin> join
+)
+{
+  NS_LOG_LOGIC("Received request for a new subflow");
+  NS_LOG_WARN("TODO check if destination exists here");
+  NS_ASSERT(InetSocketAddress::IsMatchingType(fromAddress) && InetSocketAddress::IsMatchingType(toAddress));
+  //join->GetState() == TcpOptionMpTcpJoin::Syn &&
+  NS_ASSERT(join->GetPeerToken() == m_localToken);
+
+  //! TODO check we can accept the creation of a new subflow (did we receive a DSS already ?)
+  NS_ASSERT(m_state == ESTABLISHED);
+
+  //! TODO here we should trigger a callback to say if we accept the connection or not
+  // (and create a helper that acts as a path manager)
+  bool accept_connection = true;
+  if(!accept_connection)
+  {
+    NS_LOG_LOGIC("Refusing establishement of a new subflow");
+    return 0;
+  }
+
+  //! accepted subflow
+  Ptr<MpTcpSubflow> subflow = CreateSubflow(false);
+  NS_ASSERT_MSG(subflow->Bind(toAddress), "TODO we didn't check that dest ip belonged to the same node, hence this error; subflow should never have been created !!");
+  subflow->Listen();
+  return subflow->m_endPoint;
+}
+
+
 /**
 Need to override parent's otherwise it allocates an endpoint to the meta socket
 and upon connection , the tcp subflow can't allocate
@@ -1144,7 +1192,16 @@ MpTcpSocketBase::Connect(const Address & toAddress)
         return ret;
       }
       // NS_LOG_INFO ("looks like successful connection");
-//      m_endPoint = sFlow->m_endPoint;
+
+      /**
+      * We need to copy the m_endPoint and prevent it from being unallocated otherwise
+      a 2nd socket could be created again and *overrides* this one .
+      */
+      if(sFlow->IsMaster()) {
+        m_endPoint = sFlow->m_endPoint;
+      }
+
+
 //      m_endPoint6 = sFlow->m_endPoint6;
 
       m_subflows[Others].push_back( sFlow );
@@ -2134,7 +2191,7 @@ MpTcpSocketBase::GenerateTokenForKey( mptcp_crypto_t alg, uint64_t key, uint32_t
 
 
 
-
+// TODO rename into GenerateAndRegisterKey ?
 uint64_t
 MpTcpSocketBase::GenerateKey()
 {
@@ -2163,6 +2220,10 @@ MpTcpSocketBase::GenerateKey()
   SetTxHead(m_nextTxSequence);
   m_highTxMark = m_nextTxSequence;
 
+
+  // TODO update m_endPoint
+//  m_endPoint->m_mptcpLocalKey = m_localKey;
+//  m_endPoint->m_mptcpToken = m_localToken;
 
   return m_localKey;
 }
@@ -2249,6 +2310,7 @@ MpTcpSocketBase::MoveSubflow(Ptr<MpTcpSubflow> subflow, mptcp_container_t to)
 
 }
 
+// TODO this could be done when tracking the subflow m_state
 void
 MpTcpSocketBase::OnSubflowEstablishment(Ptr<MpTcpSubflow> subflow)
 {
@@ -2278,6 +2340,7 @@ MpTcpSocketBase::OnSubflowEstablishment(Ptr<MpTcpSubflow> subflow)
     {
       // If client
       NS_LOG_DEBUG("I am client, amn't I ?");
+//       TODO replace with another
       Simulator::ScheduleNow(&MpTcpSocketBase::ConnectionSucceeded, this);
     }
   }

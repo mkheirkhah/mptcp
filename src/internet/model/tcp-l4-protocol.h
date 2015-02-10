@@ -270,7 +270,7 @@ private:
 
   // TODO
   std::vector<Ptr<TcpSocketBase> > m_sockets;      //!< list of sockets
-  std::map<uint32_t, Ipv4EndPoint* > m_TokenMap;   //!< list of Token
+//  std::map<uint32_t, Ipv4EndPoint* > m_TokenMap;   //!< list of Token TODO remove
   IpL4Protocol::DownTargetCallback m_downTarget;   //!< Callback to send packets over IPv4
   IpL4Protocol::DownTargetCallback6 m_downTarget6; //!< Callback to send packets over IPv6
 };

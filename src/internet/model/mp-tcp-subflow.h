@@ -236,6 +236,8 @@ public:
   virtual void
   ClosingOnEmpty(TcpHeader& header);
 
+  virtual void
+  DeallocateEndPoint(void);
   /*
   TODO move to meta.
   This should generate an *absolute*

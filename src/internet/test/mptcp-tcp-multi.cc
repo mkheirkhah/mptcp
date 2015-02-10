@@ -211,11 +211,27 @@ MpTcpMultihomedTestCase::DoTeardown (void)
 }
 
 
+/**
+Normally this should be called twice ...
+**/
 void
 MpTcpMultihomedTestCase::SourceConnectionSuccessful(Ptr<Socket> sock)
 {
-  NS_LOG_LOGIC("connection successful. ");
-  NS_LOG_WARN("TODO check this is called after the receival of 1st DSS !!!");
+
+  Ptr<MpTcpSocketBase> meta =  DynamicCast<MpTcpSocketBase>(sock);
+
+  NS_LOG_LOGIC("connection successful. Meta state=" << TcpSocket::TcpStateName[meta->GetState() ]
+              << " received a DSS: " << meta->m_receivedDSS
+              );
+
+  if(! meta->m_receivedDSS) {
+    //!
+    NS_LOG_DEBUG("No DSS received yet");
+    return;
+  }
+
+
+//  NS_LOG_WARN("TODO check this is called after the receival of 1st DSS !!!");
   m_connect_cb_called = true;
 //  NS_FATAL_ERROR("Connect failed");
    // TODO now we can create an additionnal subflow
@@ -235,7 +251,8 @@ MpTcpMultihomedTestCase::SourceConnectionSuccessful(Ptr<Socket> sock)
   InetSocketAddress local( sourceAddr, serverPort);
   InetSocketAddress remote(serverAddr);
 
-  sourceMeta ->ConnectNewSubflow(local, remote);
+//  sourceMeta ->ConnectNewSubflow(local, remote);
+//  Simulator::Schedule( )
 }
 
 

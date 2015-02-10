@@ -321,7 +321,7 @@ public:
   Destroy(void); // Kill this socket by zeroing its attributes
   void
   Destroy6(void); // Kill this socket by zeroing its attributes
-  void
+  virtual void
   DeallocateEndPoint(void); // Deallocate m_endPoint
   virtual void
   PeerClose(Ptr<Packet>, const TcpHeader&); // Received a FIN from peer, notify rx buffer
@@ -452,6 +452,8 @@ public: //temporary
   TracedValue<SequenceNumber32> m_nextTxSequence; //< Next seqnum to be sent (SND.NXT), ReTx pushes it back
   TracedValue<SequenceNumber32> m_highTxMark;     //< Highest seqno ever sent, regardless of ReTx
   TracedValue<SequenceNumber32> m_firstTxUnack;   //< First unacknowledged seq nb  (SND.UNA)
+
+  TcpStates_t GetState() const { return m_state;};
 
   SequenceNumber32 m_lastAckSent;   //< No of last ack sent
 

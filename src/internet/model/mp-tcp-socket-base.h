@@ -31,6 +31,7 @@ class MpTcpSubflow;
 //class MpTcpSchedulerRoundRobin;
 class MpTcpCongestionControl;
 class TcpOptionMpTcpDSS;
+class TcpOptionMpTcpJoin;
 class OutputStreamWrapper;
 
 
@@ -67,6 +68,10 @@ launch an assert. You can notice those via the comments "//! Disabled"
 
 As such many inherited (protected) functions are overriden & left empty.
 
+
+ConnectionSucceeded may be called twice; once when it goes to established
+and the second time when it sees
+ Simulator::ScheduleNow(&MpTcpSocketBase::ConnectionSucceeded, this);
 
 TODO:
 -rename in MetaSocket ?
@@ -107,8 +112,8 @@ public:
   virtual void
   OnSubflowNewCwnd(std::string context, uint32_t oldCwnd, uint32_t newCwnd);
 
-  virtual
-  int ConnectNewSubflow(const Address &local, const Address &remote);
+  virtual int
+  ConnectNewSubflow(const Address &local, const Address &remote);
 
   virtual void
   DoRetransmit();
@@ -133,8 +138,8 @@ public:
   void
   ProcessWait(Ptr<Packet> packet, const TcpHeader& tcpHeader);
 
-  static
-  void GenerateTokenForKey( mptcp_crypto_t alg, uint64_t key, uint32_t& token, uint64_t& idsn);
+  static void
+  GenerateTokenForKey( mptcp_crypto_t alg, uint64_t key, uint32_t& token, uint64_t& idsn);
 
   /* Sum congestio nwindows across subflows to compute global cwin
   WARNING: it does not take flows that are closing yet so that may be a weakness depending on the scenario
@@ -181,7 +186,10 @@ public:
   /**
   \brief Generates random key, setups isdn and token
   **/
-  virtual uint64_t GenerateKey();
+  virtual uint64_t
+  GenerateKey();
+
+
 
   /**
   * TODO when is it considered
@@ -341,7 +349,8 @@ public: // public variables
   } mptcp_container_t;
   // TODO move back to protected/private later on
 
-
+  virtual uint32_t
+  GetToken() const;
   // Evaluation & plotting parameters and containers
 //  int MSS;    // Maximum Segment Size : use GetSegSize instead
 //  double RTT; //
@@ -368,7 +377,10 @@ protected: // protected methods
   friend class Tcp;
   friend class MpTcpSubflow;
 
-  void CloseAllSubflows();
+
+
+  virtual void
+  CloseAllSubflows();
 
 //  virtual int SetLocalToken(uint32_t token) const;
 
@@ -621,8 +633,11 @@ protected: // protected methods
    * @param mapping
    add count param ?
   */
-  virtual void OnSubflowDupack(Ptr<MpTcpSubflow> sf, MpTcpMapping mapping);
-  virtual void OnSubflowRetransmit(Ptr<MpTcpSubflow> sf) ;
+  virtual void
+  OnSubflowDupack(Ptr<MpTcpSubflow> sf, MpTcpMapping mapping);
+
+  virtual void
+  OnSubflowRetransmit(Ptr<MpTcpSubflow> sf) ;
 
 //  void LastAckTimeout(uint8_t sFlowIdx);
 
@@ -671,13 +686,27 @@ protected: // protected methods
 //  virtual uint32_t OpenCWND(uint32_t cwnd, uint32_t ackedBytes) = 0;
 //  virtual uint32_t ReduceCWND(uint32_t cwnd) = 0;
 
-
-  void
+  virtual void
   ProcessMpTcpOptions(TcpHeader h, Ptr<MpTcpSubflow> sf);
 
-  void OnTimeWaitTimeOut();
+  virtual void
+  OnTimeWaitTimeOut();
+
 
 protected: // protected variables
+
+  friend class TcpL4Protocol;
+
+  /**
+  called by TcpL4protocol when receiving an MP_JOIN taht does not fit
+  to any Ipv4endpoint. Thus twe create one.
+  **/
+  virtual Ipv4EndPoint*
+  NewSubflowRequest(
+  const Address & fromAddress,
+  const Address & toAddress,
+  Ptr<TcpOptionMpTcpJoin> join
+  );
 
   int CloseSubflow(Ptr<MpTcpSubflow> sf);
 
@@ -750,6 +779,9 @@ private:
   uint32_t m_peerToken;
 
   bool     m_doChecksum;  //!< Compute the checksum. Negociated during 3WHS
+
+public:
+  bool     m_receivedDSS;  //!< True if we received at least one DSS
 
 private:
 

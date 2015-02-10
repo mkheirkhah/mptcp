@@ -30,7 +30,7 @@
 #include "ns3/mp-tcp-id-manager.h"
 //#include "ns3/ipv4-address.h"
 #include "ns3/trace-helper.h"
-
+#include <algorithm>
 #include <openssl/sha.h>
 
 NS_LOG_COMPONENT_DEFINE("MpTcpSubflow");
@@ -645,7 +645,7 @@ MpTcpSubflow::DoRetransmit()
 
 /**
 Received a packet upon LISTEN state.
-
+En fait il n'y a pas vraiment de ProcessListen :s si ?
 */
 void
 MpTcpSubflow::ProcessListen(Ptr<Packet> packet, const TcpHeader& tcpHeader, const Address& fromAddress, const Address& toAddress)
@@ -870,6 +870,49 @@ MpTcpSubflow::ProcessWait(Ptr<Packet> packet, const TcpHeader& tcpHeader)
   TcpSocketBase::ProcessWait(packet,tcpHeader);
 }
 
+/** Deallocate the end point and cancel all the timers */
+void
+MpTcpSubflow::DeallocateEndPoint(void)
+{
+  if (m_endPoint != 0)
+    {
+      m_endPoint->SetDestroyCallback(MakeNullCallback<void>());
+
+      /* TODO we should not deallocate the endpoint as long as either the meta or this subflow
+      is alive !
+      */
+      if(!IsMaster() ) {
+        m_tcp->DeAllocate(m_endPoint);
+      }
+      m_endPoint = 0;
+
+      Ptr<TcpSocketBase> tmp( (TcpSocketBase*)this);
+      Ptr<TcpSocketBase> tmp3(this);
+      TcpSocketBase* tmp2 = (TcpSocketBase*)this;
+      std::vector<Ptr<TcpSocketBase> >::iterator it = std::find(
+            m_tcp->m_sockets.begin(), m_tcp->m_sockets.end(),
+            tmp2
+            );
+      if (it != m_tcp->m_sockets.end())
+        {
+          m_tcp->m_sockets.erase(it);
+        }
+      CancelAllTimers();
+    }
+//  if (m_endPoint6 != 0)
+//    {
+//      m_endPoint6->SetDestroyCallback(MakeNullCallback<void>());
+//      m_tcp->DeAllocate(m_endPoint6);
+//      m_endPoint6 = 0;
+//      std::vector<Ptr<TcpSocketBase> >::iterator it = std::find(m_tcp->m_sockets.begin(), m_tcp->m_sockets.end(), this);
+//      if (it != m_tcp->m_sockets.end())
+//        {
+//          m_tcp->m_sockets.erase(it);
+//        }
+//      CancelAllTimers();
+//    }
+}
+
 
 void
 MpTcpSubflow::CompleteFork(Ptr<Packet> p, const TcpHeader& h, const Address& fromAddress, const Address& toAddress)
@@ -895,6 +938,11 @@ MpTcpSubflow::CompleteFork(Ptr<Packet> p, const TcpHeader& h, const Address& fro
 
   m_tcp->m_sockets.push_back(this);
 //  }
+
+  if(IsMaster()) {
+    NS_LOG_LOGIC("Is master, setting endpoint token");
+    m_endPoint->m_mptcpToken = GetMeta()->m_localToken;
+  }
 
   // Change the cloned socket from LISTEN state to SYN_RCVD
   NS_LOG_INFO ( TcpStateName[m_state] << " -> SYN_RCVD");

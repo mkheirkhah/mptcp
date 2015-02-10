@@ -46,9 +46,10 @@ Generic:
 * Possibility for applications to provie their fine grain tuning
 * During 3WHS, we send 2 acks in a row, one with a wrong seq nb
 * delayed data acks ? (is it worth in mptcp ?) anyhow should be disabled by default
-
+* in TcpL4Protocol, before dispatching based on the token, we should check if the destination ip also exists on the device with the correct token: it should prevent some collisions
 
 Requests for ns3;
+* what happens if I bind several times ?
 * add ssthreshold tracing (maybe fast recovery too)
 * SetInitialCWnd as an attribute ?
 * Add member RemoteWindow in TcpSocketBase
