@@ -107,6 +107,7 @@ print("Executed Command:\n%s" % cmd)
 
 if ret:
     print("ERROR: command returned error code %d" % (ret))
+    os.system("truncate --size=40000 %s" % (args.out,))
     exit(1)
 
 if args.graph:
@@ -114,7 +115,7 @@ if args.graph:
     os.system("mptcpexporter pcap2sql test-0-1.pcap")
     os.system("mptcpgraph ")
 
-os.system("truncate --size=40000 %s" % (args.out,), shell=true)
+
 
 
 for i in ['server', 'source']:

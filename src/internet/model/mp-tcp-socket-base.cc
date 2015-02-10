@@ -710,8 +710,8 @@ MpTcpSocketBase::ProcessDSS(const TcpHeader& tcpHeader, Ptr<TcpOptionMpTcpDSS> d
 
     case LAST_ACK:
     case CLOSING:
-//      ProcessDSSClosing(dss,sf);
-//      break;
+      ProcessDSSClosing(dss,sf);
+      break;
     case FIN_WAIT_1:
     case FIN_WAIT_2:
     case CLOSE_WAIT:
@@ -2857,8 +2857,8 @@ MpTcpSocketBase::ProcessDSSClosing( Ptr<TcpOptionMpTcpDSS> dss, Ptr<MpTcpSubflow
   }
 
 
-  if(dss->GetFlags() & TcpOptionMpTcpDSS::DataAckPresent) {
-
+  if(dss->GetFlags() & TcpOptionMpTcpDSS::DataAckPresent)
+  {
     SequenceNumber32 dack(dss->GetDataAck());
     NS_LOG_LOGIC("Received while closing dack="<< dack);
     // TODO maybe add 1 since it acknowledges the datafin ?
@@ -2943,7 +2943,11 @@ MpTcpSocketBase::ProcessDSSWait( Ptr<TcpOptionMpTcpDSS> dss, Ptr<MpTcpSubflow> s
 //        NS_LOG_ERROR("dack=" << dack << " not equal to the one expected " << m_nextTxSequence);
 //      }
   // Check if the close responder sent an in-sequence FIN, if so, respond ACK
-  if ((m_state == FIN_WAIT_1 || m_state == FIN_WAIT_2) && m_rxBuffer.Finished())
+
+
+    // Finished renvoie m_gotFin && m_finSeq < m_nextRxSeq
+    NS_LOG_DEBUG("Is Rx Buffer finished ?" << m_rxBuffer.Finished());
+    if ((m_state == FIN_WAIT_1 || m_state == FIN_WAIT_2) && m_rxBuffer.Finished())
     {
       if (m_state == FIN_WAIT_1)
         {

@@ -486,7 +486,7 @@ MpTcpTestCase::SetupDefaultSim (void)
   //Ptr<SimpleChannel> channel = CreateObject<SimpleChannel> ();
   //dev0->SetChannel (channel);
   //dev1->SetChannel (channel);
-  Time::SetResolution (Time::MS);
+
 
 //  Ptr<SocketFactory> sockFactory0 = node0->GetObject<MpTcpSocketFactory> ();
   Ptr<SocketFactory> sockFactory0 = node0->GetObject<TcpSocketFactory> ();
@@ -607,6 +607,7 @@ public:
 //    Config::SetDefault ("ns3::TcpL4Protocol::SocketType", StringValue("ns3::MpTcpCCOlia") );
     Config::SetDefault ("ns3::TcpL4Protocol::SocketType", StringValue("ns3::MpTcpCCUncoupled") );
 
+    Time::SetResolution (Time::MS);
     // Arguments to these test cases are 1) totalStreamSize,
     // 2) source write size, 3) source read size
     // 4) server write size, and 5) server read size
