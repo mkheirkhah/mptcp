@@ -509,7 +509,7 @@ MpTcpMultihomedTestCase::SetupDefaultSim (void)
   //Ptr<SimpleChannel> channel = CreateObject<SimpleChannel> ();
   //dev0->SetChannel (channel);
   //dev1->SetChannel (channel);
-  Time::SetResolution (Time::MS);
+
 
 //  Ptr<SocketFactory> sockFactory0 = m_serverNode->GetObject<MpTcpSocketFactory> ();
   Ptr<SocketFactory> sockFactory0 = m_serverNode->GetObject<TcpSocketFactory> ();
@@ -638,22 +638,23 @@ public:
     : TestSuite ("mptcp-tcp-multi", UNIT)
   {
 
+
     // TODO addition by matt
 //    Config::SetDefault ("ns3::TcpL4Protocol::SocketType", StringValue("ns3::MpTcpCCOlia") );
     Config::SetDefault ("ns3::TcpL4Protocol::SocketType", StringValue("ns3::MpTcpCCUncoupled") );
-
+//    Time::SetResolution (Time::MS);
     // Arguments to these test cases are 1) totalStreamSize,
     // 2) source write size, 3) source read size
     // 4) server write size, and 5) server read size
     // with units of bytes
-    AddTestCase (new MpTcpMultihomedTestCase (13, 200, 200, 200, 200, false), TestCase::QUICK);
+//    AddTestCase (new MpTcpMultihomedTestCase (13, 200, 200, 200, 200, false), TestCase::QUICK);
 //    AddTestCase (new MpTcpMultihomedTestCase (13, 1, 1, 1, 1, false), TestCase::QUICK);
 //    AddTestCase (new MpTcpMultihomedTestCase (100000, 100, 50, 100, 20, false), TestCase::QUICK);
 
 // here it's a test where I lower streamsize to see where it starts failing.
 // 2100 is ok, 2200 fails
 //    AddTestCase (new MpTcpMultihomedTestCase (5000, 100, 50, 100, 20, false), TestCase::EXTENSIVE);
-//    AddTestCase (new MpTcpMultihomedTestCase (5000, 100, 50, 100, 20, false), TestCase::QUICK);
+    AddTestCase (new MpTcpMultihomedTestCase (5000, 100, 50, 100, 20, false), TestCase::QUICK);
 
 
     // Disable IPv6 tests; not supported yet
