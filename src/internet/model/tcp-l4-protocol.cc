@@ -453,6 +453,7 @@ TcpL4Protocol::Receive(Ptr<Packet> packet, Ipv4Header const &ipHeader, Ptr<Ipv4I
                   join
                   );
 
+            // TODO check that it sends a RST otherwise
             if(endP)
             {
               endPoints.push_back(endP);

@@ -280,6 +280,8 @@ public:
   virtual uint32_t
   RemoteWindow();
 
+  virtual int
+  Listen(void);
   /**
   TODO some options should be forwarded to the meta socket
   */

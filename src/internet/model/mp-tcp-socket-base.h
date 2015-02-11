@@ -359,7 +359,12 @@ public:
 
   **/
 //  virtual void GetAllAdvertisedSources(std::vector<InetSocketAddress> addresses);
-
+  Ptr<MpTcpSubflow>
+  CreateSubflowAndCompleteFork(
+  bool masterSocket,
+//  Ptr<Packet> p,
+ const TcpHeader& h, const Address& fromAddress, const Address& toAddress
+);
 
   void GetAllAdvertisedDestinations(std::vector<InetSocketAddress>& );
 
@@ -375,26 +380,11 @@ public: // public variables
 
   virtual uint32_t
   GetToken() const;
-  // Evaluation & plotting parameters and containers
-//  int MSS;    // Maximum Segment Size : use GetSegSize instead
-//  double RTT; //
+
 
   // Apparently used for plotting. I guess this should go outside, into helpers maybe ?
   double TimeScale;
 
-//  GnuplotCollection gnu;  //!< plotting
-//
-//  std::list<uint32_t> sampleList;
-
-  // TODO remove in favor of parents' ?
-//  std::vector<pair<double, double> > totalCWNDtrack;
-//  std::vector<pair<double, double> > reTxTrack;
-//  std::vector<pair<double, double> > timeOutTrack;
-//  std::vector<pair<double, double> > PartialAck;
-//  std::vector<pair<double, double> > FullAck;
-//  std::vector<pair<double, double> > DupAcks;
-//  std::vector<pair<double, double> > PacketDrop;
-//  std::vector<pair<double, double> > TxQueue;
 
 protected: // protected methods
 

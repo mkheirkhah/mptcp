@@ -646,11 +646,14 @@ MpTcpSubflow::DoRetransmit()
 /**
 Received a packet upon LISTEN state.
 En fait il n'y a pas vraiment de ProcessListen :s si ?
+TODO remove that one, it should never be called ?
 */
 void
 MpTcpSubflow::ProcessListen(Ptr<Packet> packet, const TcpHeader& tcpHeader, const Address& fromAddress, const Address& toAddress)
 {
   NS_LOG_FUNCTION (this << tcpHeader);
+
+  NS_FATAL_ERROR("This function should never be called, shoud it ?!");
 
   // Extract the flags. PSH and URG are not honoured.
   uint8_t tcpflags = tcpHeader.GetFlags() & ~(TcpHeader::PSH | TcpHeader::URG);
@@ -678,7 +681,14 @@ MpTcpSubflow::ProcessListen(Ptr<Packet> packet, const TcpHeader& tcpHeader, cons
   Ptr<MpTcpSubflow> newSock = ForkAsSubflow();
   NS_LOG_LOGIC ("Cloned a TcpSocketBase " << newSock);
   // TODO TcpSocketBase::
-  Simulator::ScheduleNow(&MpTcpSubflow::CompleteFork, newSock, packet, tcpHeader, fromAddress, toAddress);
+  Simulator::ScheduleNow(
+      &MpTcpSubflow::CompleteFork,
+      newSock,
+      packet,
+      tcpHeader,
+      fromAddress,
+      toAddress
+      );
 }
 
 Ptr<MpTcpSocketBase>
@@ -921,8 +931,6 @@ MpTcpSubflow::CompleteFork(Ptr<Packet> p, const TcpHeader& h, const Address& fro
   NS_LOG_INFO( this << "Completing fork of MPTCP subflow");
   // Get port and address from peer (connecting host)
   // TODO upstream ns3 should assert that to and from Address are of the same kind
-  if(IsMaster())
-  {
 
     if (InetSocketAddress::IsMatchingType(toAddress))
       {
@@ -941,10 +949,12 @@ MpTcpSubflow::CompleteFork(Ptr<Packet> p, const TcpHeader& h, const Address& fro
 
     m_tcp->m_sockets.push_back(this);
 
-
-    NS_LOG_LOGIC("Is master, setting endpoint token");
-    m_endPoint->m_mptcpToken = GetMeta()->GetToken();
-  }
+//  if(IsMaster())
+//  {
+//
+//    NS_LOG_LOGIC("Is master, setting endpoint token");
+//
+//  }
 
   // Change the cloned socket from LISTEN state to SYN_RCVD
   NS_LOG_INFO ( TcpStateName[m_state] << " -> SYN_RCVD");
@@ -1266,6 +1276,12 @@ MpTcpSubflow::AppendMpTcp3WHSOption(TcpHeader& hdr) const
 //  if()
 }
 
+
+int
+MpTcpSubflow::Listen(void)
+{
+  NS_FATAL_ERROR("This should never be called. The meta will make the subflow pass from LISTEN to ESTABLISHED.");
+}
 
 void
 MpTcpSubflow::NotifySend (uint32_t spaceAvailable)
