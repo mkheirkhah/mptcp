@@ -194,6 +194,10 @@ MpTcpSocketBase::~MpTcpSocketBase(void)
 //  m_tcp = 0;
 //  CancelAllSubflowTimers();
 //  NS_LOG_INFO(Simulator::Now().GetSeconds() << " ["<< this << "] ~MpTcpSocketBase ->" << m_tcp );
+
+  m_newSubflowConnected = MakeNullCallback<void, Ptr<MpTcpSubflow> >();
+  m_joinSubflowCreated = MakeNullCallback<void, Ptr<MpTcpSubflow> >();
+  m_joinConnectionSucceeded = MakeNullCallback<void, Ptr<MpTcpSubflow> >();
 }
 
 
@@ -2278,7 +2282,8 @@ MpTcpSocketBase::MoveSubflow(Ptr<MpTcpSubflow> subflow, mptcp_container_t to)
 
   NS_LOG_DEBUG("Moving subflow " << subflow << " to " << containerNames[to]);
 
-  for(int i = 0; i < Maximum; ++i) {
+  for(int i = 0; i < Maximum; ++i)
+  {
 
 //    Established
 //    NS_LOG_INFO("Closing all subflows in state [" << containerNames [i] << "]");
@@ -2350,17 +2355,65 @@ MpTcpSocketBase::OnSubflowEstablishment(Ptr<MpTcpSubflow> subflow)
   //[subflow->m_positionInVector] = ;
   MoveSubflow(subflow, Others, Established);
 
-  // For now, there is no subflow deletion so this should be good enough, else it will crash
-  std::stringstream os;
-  os << m_tracePrefix << "subflow" <<  m_subflows[Established].size();
+
+//  m_subflows[Established].size()
+  ;
   //
-  subflow->SetupMetaTracing(os.str());
+  subflow->SetupMetaTracing(
+//  os.str()
+  m_tracePrefix
+  );
 
   // TODO setup callbacks
 
 
   // In all cases we should move the subflow from
   //Ptr<Socket> sock
+}
+
+
+void
+MpTcpSocketBase::NotifySubflowCreatedOnJoinRequest(Ptr<MpTcpSubflow> sf)
+{
+  if (!m_joinSubflowCreated.IsNull ())
+  {
+      m_joinSubflowCreated (sf);
+  }
+}
+
+void
+MpTcpSocketBase::NotifyJoinAccepted(Ptr<MpTcpSubflow> sf)
+{
+  if (!m_joinConnectionSucceeded.IsNull ())
+    {
+      m_joinConnectionSucceeded (sf);
+    }
+}
+
+//
+void
+MpTcpSocketBase::SetJoinAcceptCallback(
+  Callback<void, Ptr<MpTcpSubflow> > connectionCreated
+)
+{
+  NS_LOG_FUNCTION(this << &connectionCreated);
+  m_joinConnectionSucceeded = connectionCreated;
+}
+
+void
+MpTcpSocketBase::SetJoinConnectCallback(
+  Callback<void, Ptr<MpTcpSubflow> > connectionSucceeded)
+{
+  NS_LOG_FUNCTION(this << &connectionSucceeded);
+  m_joinConnectionSucceeded = connectionSucceeded;
+}
+
+void
+MpTcpSocketBase::SetJoinCreatedCallback(
+  Callback<void, Ptr<MpTcpSubflow> > connectionCreated)
+{
+  NS_LOG_FUNCTION(this << &connectionCreated);
+  m_joinSubflowCreated = connectionCreated;
 }
 
 

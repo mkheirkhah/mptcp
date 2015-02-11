@@ -171,8 +171,9 @@ MpTcpMapping::Configure( SequenceNumber32  dataSeqNb, uint16_t mappingSize)
 ///// MpTcpMappingContainer
 /////
 MpTcpMappingContainer::MpTcpMappingContainer(void) :
-  m_txBuffer(0),
-  m_rxBuffer(0)
+  m_txBuffer(0)
+  //,
+//  m_rxBuffer(0)
 {
   NS_LOG_LOGIC(this);
 }

@@ -12,40 +12,40 @@ node="server"
 prefix="meta_" 
 
 
+nb_of_subflows=$(ls -alt source/subflow*_cwnd.csv | wc -l)
+
+echo "================="
+echo "${nb_of_subflows} Found"
+echo "================="
+
+
 array=( "server" "source" )
 for node in "${array[@]}"
 do
 	# echo "NODE $node"
 	# Tx
 	gnuplot -e "node='$node';prefix='meta_';output='${node}_meta_tx'"  plots/tx.plot
-	gnuplot -e "node='$node';prefix='subflow1_';output='${node}_subflow1_tx'"  plots/tx.plot
+	gnuplot -e "node='$node';prefix='subflow';output='${node}_subflow_tx';nb_of_subflows='${nb_of_subflows}'"  plots/tx.plot
 
 	# Rx
 	gnuplot -e "node='$node';prefix='meta_';output='${node}_meta_rx'"  plots/rx.plot
-	gnuplot -e "node='$node';prefix='subflow1_';output='${node}_subflow1_rx'"  plots/rx.plot
+	gnuplot -e "node='$node';prefix='subflow';output='${node}_subflow_rx';nb_of_subflows='${nb_of_subflows}'"  plots/rx.plot
 
-	# Cwin (does not care about the prefix)
-	gnuplot -e "node='$node';prefix='subflow1_';output='${node}_cwnd'"  plots/cwnd.plot
-	gnuplot -e "node='$node';prefix='subflow1_';output='${node}_rwnd'"  plots/rwnd.plot
+	# Cwin/rwin (does not care about the prefix)
+	# gnuplot -e "node='$node';prefix='subflow';output='${node}_cwnd';nb_of_subflows='${nb_of_subflows}'"  plots/cwnd.plot
+	# gnuplot -e "node='$node';prefix='subflow';output='${node}_rwnd';nb_of_subflows='${nb_of_subflows}'"  plots/rwnd.plot
 
 	# 
-	gnuplot -e "node='$node';prefix='subflow1_';output='${node}_rwnd'"  plots/rwnd.plot
+	# gnuplot -e "node='$node';prefix='subflow_';output='${node}_rwnd'"  plots/rwnd.plot
 	
-	montage ${node}_meta_tx ${node}_subflow1_tx ${node}_meta_rx ${node}_subflow1_rx ${node}_cwnd ${node}_rwnd  -tile 2x3 -geometry +1+1 ${node}_recap.png
+	montage ${node}_meta_tx ${node}_subflow_tx ${node}_meta_rx ${node}_subflow_rx ${node}_cwnd ${node}_rwnd  -tile 2x3 -geometry +1+1 ${node}_recap.png
 done
-
-# gnuplot -e "node='server';prefix='meta_';output='server_meta_tx'"  plots/txNext_vs_txMax.plot
-# gnuplot -e "node='server';prefix='subflow1_';output='server_subflow1_tx'"  plots/txNext_vs_txMax.plot
-
-
-# gnuplot -e "node='source';prefix='meta_';output='source_meta_tx'"  plots/txNext_vs_txMax.plot
-# gnuplot -e "node='source';prefix='subflow1_';output='source_subflow1_tx'"  plots/txNext_vs_txMax.plot
-# gnuplot -e "term='$terminal'" delta.plot
 
 # to do the montage, you need imagemagick
 # -geometry +2+2
 
-montage server_recap.png source_recap.png -tile 2x1 -geometry +1+1 all.png 
+
+# montage server_recap.png source_recap.png -tile 2x1 -geometry +1+1 all.png 
 
 
 cmd="xdg-open all.png"

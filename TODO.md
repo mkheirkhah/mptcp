@@ -26,6 +26,7 @@ List of tests:
 * Tokens stay the same along the connection
 
 
+
 Generic:
 * rename GetMeta() into Meta() ?
 * rename isn into ISS as in TCP RFC
@@ -80,6 +81,9 @@ use "/NodeList/[i]/DeviceList/[i]" ?
 * Buffer::CheckNoZero can be simplified
 * should be able to bind to a specific worth via an attribute 
 
+
+
+* Should we create an MultipathSocket used by SCTP and/or mptcp ?
 
 
 Thoughts on upstreaming

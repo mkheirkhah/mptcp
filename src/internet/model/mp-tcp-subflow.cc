@@ -953,9 +953,10 @@ MpTcpSubflow::CompleteFork(Ptr<Packet> p, const TcpHeader& h, const Address& fro
 
   SetupCallback();
 
-  // TODO upload
+  // TODO make it so that m_txBuffer becomes useless (it is used only to assign
+  // SSN <-> DSN mappings
   m_TxMappings.m_txBuffer = &m_txBuffer;
-  m_RxMappings.m_rxBuffer = &m_rxBuffer;
+//  m_RxMappings.m_rxBuffer = &m_rxBuffer;
 
   // Set the sequence number and send SYN+ACK (ok)
   m_rxBuffer.SetNextRxSequence(h.GetSequenceNumber() + SequenceNumber32(1));
@@ -1956,7 +1957,15 @@ MpTcpSubflow::RecvWithMapping(uint32_t maxSize, bool only_full_mapping, Sequence
 void
 MpTcpSubflow::SetupMetaTracing(const std::string prefix)
 {
+  NS_LOG_LOGIC("Setup tracing for sf " << this << " with prefix " << prefix);
 //  f.open(filename, std::ofstream::out | std::ofstream::trunc);
+
+  // For now, there is no subflow deletion so this should be good enough, else it will crash
+  std::stringstream os;
+  //! we start at 1 because it's nicer
+  static int counter = 1;
+  os << prefix << "subflow" <<  counter++;
+
   SetupSocketTracing(this, prefix);
 }
 

@@ -40,6 +40,7 @@
 #include "ns3/string.h"
 #include "ns3/tcp-socket-base.h"
 #include "ns3/mp-tcp-socket-base.h"
+#include "ns3/mp-tcp-subflow.h"
 
 #include "ns3/ipv4-end-point.h"
 #include "ns3/arp-l3-protocol.h"
@@ -451,6 +452,23 @@ Assign (const Ptr<NetDevice> &device)
 }
 #endif
 
+//Callback<bool, const Address &> m_joinRequest
+//Callback<void, Ptr<MpTcpSubflow> > m_joinConnectionSucceeded;
+
+
+void
+HandleSubflowCreated(Ptr<MpTcpSubflow> subflow)
+{
+  NS_LOG_LOGIC("Socket accepted JOIN of a new subflow");
+}
+
+
+void
+HandleSubflowConnected(Ptr<MpTcpSubflow> subflow)
+{
+  NS_LOG_LOGIC("successufl JOIN of subflow " << subflow );
+}
+
 
 /**
 relier chaque interface
@@ -535,18 +553,29 @@ MpTcpMultihomedTestCase::SetupDefaultSim (void)
   InetSocketAddress serverlocaladdr (serverMainAddr, serverPort);
   InetSocketAddress serverremoteaddr (serverMainAddr, serverPort);
   NS_LOG_DEBUG("serverMainAddr" << serverlocaladdr);
-  server->Bind (serverlocaladdr);
-  server->Listen ();
-  server->SetAcceptCallback (MakeNullCallback<bool, Ptr< Socket >, const Address &> (),
+  server_meta->Bind (serverlocaladdr);
+  server_meta->Listen ();
+  server_meta->SetAcceptCallback (MakeNullCallback<bool, Ptr< Socket >, const Address &> (),
                              MakeCallback (&MpTcpMultihomedTestCase::ServerHandleConnectionCreated,this));
 
 //  NS_LOG_INFO( "test" << server);
-  source->SetRecvCallback (MakeCallback (&MpTcpMultihomedTestCase::SourceHandleRecv, this));
-  source->SetSendCallback (MakeCallback (&MpTcpMultihomedTestCase::SourceHandleSend, this));
+  source_meta->SetRecvCallback (MakeCallback (&MpTcpMultihomedTestCase::SourceHandleRecv, this));
+  source_meta->SetSendCallback (MakeCallback (&MpTcpMultihomedTestCase::SourceHandleSend, this));
 
-  source->Connect (serverremoteaddr);
+  source_meta->Connect (serverremoteaddr);
 
-  source->SetConnectCallback (
+  /*
+  Callback when a subflow successfully connected
+  */
+  source_meta->SetJoinAcceptCallback(
+    MakeCallback (&HandleSubflowConnected)
+  );
+
+  source_meta->SetJoinConnectCallback(
+    MakeCallback (&HandleSubflowCreated)
+    );
+
+  source_meta->SetConnectCallback (
 //    Callback< void, Ptr< Socket > > connectionSucceeded, Callback< void, Ptr< Socket > > connectionFailed
     MakeCallback (&MpTcpMultihomedTestCase::SourceConnectionSuccessful, this),
     MakeCallback (&MpTcpMultihomedTestCase::SourceConnectionFailed, this)

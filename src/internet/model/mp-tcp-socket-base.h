@@ -109,6 +109,24 @@ public:
 //  MpTcpSocketBase(Ptr<Node> node);
   virtual ~MpTcpSocketBase();
 
+
+  /**
+  these callbacks will be passed on to
+  **/
+  virtual void
+  SetJoinAcceptCallback(Callback<void, Ptr<MpTcpSubflow> >);
+
+  virtual void
+  SetJoinConnectCallback(Callback<void, Ptr<MpTcpSubflow> >);
+
+  virtual void
+  SetJoinCreatedCallback(Callback<void, Ptr<MpTcpSubflow> >);
+
+
+  void
+  NotifySubflowCreatedOnJoinRequest(Ptr<MpTcpSubflow> sf);
+
+
   virtual void
   OnSubflowNewCwnd(std::string context, uint32_t oldCwnd, uint32_t newCwnd);
 
@@ -272,7 +290,8 @@ public:
   */
   Ptr<MpTcpSubflow> GetSubflow(uint8_t);
 
-  virtual void ClosingOnEmpty(TcpHeader& header);
+  virtual void
+  ClosingOnEmpty(TcpHeader& header);
 
   /**
   Sends RST on all subflows
@@ -697,6 +716,10 @@ protected: // protected variables
 
   friend class TcpL4Protocol;
 
+  void
+  NotifyJoinAccepted(Ptr<MpTcpSubflow> sf);
+
+
   /**
   called by TcpL4protocol when receiving an MP_JOIN taht does not fit
   to any Ipv4endpoint. Thus twe create one.
@@ -796,6 +819,15 @@ private:
 //
 //  bool RemLocalAddr(Ipv4Address,uint8_t&);
 
+  Callback<void, Ptr<MpTcpSubflow> > m_joinConnectionSucceeded;  //!< connection succeeded callback
+//  Callback<void, Ptr<Socket> >                   m_connectionFailed;     //!< connection failed callback
+//  Callback<void, Ptr<Socket> >                   m_normalClose;          //!< connection closed callback
+//  Callback<void, Ptr<Socket> >                   m_errorClose;           //!< connection closed due to errors callback
+  Callback<bool, const Address &>   m_joinRequest;    //!< connection request callback
+  Callback<void, Ptr<MpTcpSubflow> >    m_joinSubflowCreated; //!< connection created callback
+//  , const Address&, bool master
+// , const Address &, bool master
+  Callback<void, Ptr<MpTcpSubflow> >    m_newSubflowConnected; //!< connection created callback
 
 };
 

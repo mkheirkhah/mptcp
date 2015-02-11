@@ -25,6 +25,15 @@ if (!exists("output")) {
 	exit gnuplot
 }
 
+if (!exists("nb_of_subflows")) {
+	print("Missing parameter 'nb_of_subflows', setting it to -1")
+	nb_of_subflows=-1
+	# output='output.png'
+	# exit gnuplot
+}
+
+
+
 if (!exists("node")) {
 	print("Missing parameter 'node'")
 	exit gnuplot
