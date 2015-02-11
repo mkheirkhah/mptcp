@@ -445,14 +445,21 @@ TcpL4Protocol::Receive(Ptr<Packet> packet, Ipv4Header const &ipHeader, Ptr<Ipv4I
             // ipHeader.GetDestination()
             // belongs to the remote host !!
             // for now we assume it is ok
+            NS_LOG_DEBUG("Found meta matching MP_JOIN token " << join->GetPeerToken());
 
             Ipv4EndPoint *endP =  meta->NewSubflowRequest(
                   InetSocketAddress(ipHeader.GetSource(),tcpHeader.GetSourcePort() ),
                   InetSocketAddress(ipHeader.GetDestination(), tcpHeader.GetDestinationPort() ) ,
                   join
                   );
-            if(endP) {
-              endPoints.push_back( endP);
+
+            if(endP)
+            {
+              endPoints.push_back(endP);
+
+              // if we don't break here, then it will infintely loop, each time pushing a new SocketBase with a valid token
+              break;
+              //return IpL4Protocol::RX_OK;
             }
           }
 

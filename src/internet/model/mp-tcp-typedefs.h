@@ -276,9 +276,9 @@ class MpTcpMappingContainer
 
 //  TracedValue<SequenceNumber32> m_highestMappedSSN; //!<
 
-    bool m_receiveMode;
-    TcpTxBuffer* m_txBuffer;
-    TcpRxBuffer* m_rxBuffer;
+//    bool m_receiveMode;
+    TcpTxBuffer* m_txBuffer;  //!< used to map DSN to SSN, should be removed
+
   protected:
     MappingList m_mappings;     //!<
 };

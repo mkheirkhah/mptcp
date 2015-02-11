@@ -60,15 +60,16 @@ NS_LOG += ":MpTcpSubflowUncoupled"
 # NS_LOG += ":Config"
 # NS_LOG += ":TypeId" # to look for AddTraceSource
 NS_LOG += ":TcpTestSuite"
-NS_LOG += ":TcpRxBuffer"
+# NS_LOG += ":TcpRxBuffer"
 # NS_LOG += ":PcapFile"
-NS_LOG += ":TcpTxBuffer"
+# NS_LOG += ":TcpTxBuffer"
 # NS_LOG += ":MpTcpMapping=*"
 # NS_LOG += ":TcpHeader=*"
 # NS_LOG=":TcpOptionMpTcp=*"
 # NS_LOG=":MpTcpOptionsTestSuite=*"
 NS_LOG += ":TcpL4Protocol"
-NS_LOG += ":Ipv4EndPoint:Ipv4EndPointDemux"
+NS_LOG += ":Ipv4EndPoint"
+NS_LOG += ":Ipv4EndPointDemux"
 # NS_LOG += ":TraceHelper:PointToPointHelper"
 # OUTPUT_FILENAME="xp.txt"
 # NS_LOG=":MpTcpTestSuite=*|prefix_func:Socket=*"
@@ -107,15 +108,13 @@ print("Executed Command:\n%s" % cmd)
 
 if ret:
     print("ERROR: command returned error code %d" % (ret))
-    os.system("truncate --size=40000 %s" % (args.out,))
+    # os.system("truncate --size=100000 %s" % (args.out,))
     exit(1)
 
 if args.graph:
     # 
     os.system("mptcpexporter pcap2sql test-0-1.pcap")
     os.system("mptcpgraph ")
-
-
 
 
 for i in ['server', 'source']:

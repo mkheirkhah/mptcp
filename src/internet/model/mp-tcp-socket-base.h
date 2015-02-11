@@ -126,6 +126,8 @@ public:
   void
   NotifySubflowCreatedOnJoinRequest(Ptr<MpTcpSubflow> sf);
 
+  void
+  NotifySubflowConnectedOnJoin(Ptr<MpTcpSubflow> sf);
 
   virtual void
   OnSubflowNewCwnd(std::string context, uint32_t oldCwnd, uint32_t newCwnd);
@@ -137,9 +139,12 @@ public:
   DoRetransmit();
 
   virtual void
-  OnSubflowNewState(std::string context,
-//    Ptr<MpTcpSubflow> sf,
-    TcpStates_t  oldState, TcpStates_t newState);
+  OnSubflowNewState(
+    std::string context,
+    Ptr<MpTcpSubflow> sf,
+    TcpStates_t  oldState,
+    TcpStates_t newState
+    );
 
   // Window Management
   virtual uint32_t
@@ -716,8 +721,6 @@ protected: // protected variables
 
   friend class TcpL4Protocol;
 
-  void
-  NotifyJoinAccepted(Ptr<MpTcpSubflow> sf);
 
 
   /**
@@ -736,7 +739,8 @@ protected: // protected variables
   std::string m_tracePrefix;
 
 
-  virtual TypeId GetMpTcpSubflowTypeId() = 0;
+  virtual TypeId
+  GetMpTcpSubflowTypeId() = 0;
 
   /**
   *
@@ -755,7 +759,9 @@ protected: // protected variables
 //  virtual void OnAddAddress(MpTcpAddressInfo);
 //  virtual void OnRemAddress();
 
-  bool m_mpEnabled;   //!< True if remote host is MPTCP compliant (not used so far. could be disabled)
+//!< True if remote host is MPTCP compliant (not used so far. could be disabled)
+// May be redundant with m_dssEnabled
+  bool m_mpEnabled;
 
   // TODO rename since will track local too.
   Ptr<MpTcpPathIdManager> m_remotePathIdManager;  //!< Keep track of advertised ADDR id advertised by remote endhost

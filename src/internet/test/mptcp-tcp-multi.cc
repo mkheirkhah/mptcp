@@ -222,15 +222,16 @@ MpTcpMultihomedTestCase::SourceConnectionSuccessful(Ptr<Socket> sock)
   Ptr<MpTcpSocketBase> meta =  DynamicCast<MpTcpSocketBase>(sock);
 
   NS_LOG_LOGIC("connection successful. Meta state=" << TcpSocket::TcpStateName[meta->GetState() ]
-              << " received a DSS: " << meta->m_receivedDSS
+//              << " received a DSS: " << meta->m_receivedDSS
               );
 
   if(! meta->m_receivedDSS) {
     //!
-    NS_LOG_DEBUG("No DSS received yet");
+    NS_LOG_INFO("No DSS received yet => Not fully established. Do nothing");
     return;
   }
 
+  NS_LOG_INFO("At least one DSS received => fully established. Asking for a new subflow");
 
 //  NS_LOG_WARN("TODO check this is called after the receival of 1st DSS !!!");
   m_connect_cb_called = true;
@@ -252,7 +253,7 @@ MpTcpMultihomedTestCase::SourceConnectionSuccessful(Ptr<Socket> sock)
   InetSocketAddress local( sourceAddr, serverPort);
   InetSocketAddress remote(serverAddr);
 
-//  sourceMeta ->ConnectNewSubflow(local, remote);
+  sourceMeta ->ConnectNewSubflow(local, remote);
 //  Simulator::Schedule( )
 }
 
@@ -459,14 +460,21 @@ Assign (const Ptr<NetDevice> &device)
 void
 HandleSubflowCreated(Ptr<MpTcpSubflow> subflow)
 {
-  NS_LOG_LOGIC("Socket accepted JOIN of a new subflow");
+  NS_LOG_LOGIC("Socket accepted JOIN of a new subflow" << subflow);
 }
 
 
 void
 HandleSubflowConnected(Ptr<MpTcpSubflow> subflow)
 {
-  NS_LOG_LOGIC("successufl JOIN of subflow " << subflow );
+  if( subflow->IsMaster() ) {
+    NS_LOG_LOGIC("successful establishement of first subflow " << subflow);
+    return;
+  }
+
+  //! ce n'est pas le master donc forcement il s'agit d'un join
+  NS_LOG_LOGIC("successful JOIN of subflow " << subflow );
+
 }
 
 
@@ -567,11 +575,12 @@ MpTcpMultihomedTestCase::SetupDefaultSim (void)
   /*
   Callback when a subflow successfully connected
   */
-  source_meta->SetJoinAcceptCallback(
+  source_meta->SetJoinConnectCallback(
     MakeCallback (&HandleSubflowConnected)
   );
 
-  source_meta->SetJoinConnectCallback(
+  //! cb when server creates
+  server_meta->SetJoinCreatedCallback(
     MakeCallback (&HandleSubflowCreated)
     );
 

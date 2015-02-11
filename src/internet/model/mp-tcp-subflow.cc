@@ -77,7 +77,7 @@ MpTcpSubflow::SetMeta(Ptr<MpTcpSocketBase> metaSocket)
 
   // kinda hackish
   m_TxMappings.m_txBuffer = &m_txBuffer;
-  m_RxMappings.m_rxBuffer = &m_rxBuffer;
+//  m_RxMappings.m_rxBuffer = &m_rxBuffer;
 
 //  return true;
 }
@@ -664,6 +664,7 @@ MpTcpSubflow::ProcessListen(Ptr<Packet> packet, const TcpHeader& tcpHeader, cons
 
   // Call socket's notify function to let the server app know we got a SYN
   // If the server app refuses the connection, do nothing
+  // TODO should be moved to
   if (!NotifyConnectionRequest(fromAddress))
     {
       return;
@@ -920,28 +921,29 @@ MpTcpSubflow::CompleteFork(Ptr<Packet> p, const TcpHeader& h, const Address& fro
   NS_LOG_INFO( this << "Completing fork of MPTCP subflow");
   // Get port and address from peer (connecting host)
   // TODO upstream ns3 should assert that to and from Address are of the same kind
+  if(IsMaster())
+  {
 
-  if (InetSocketAddress::IsMatchingType(toAddress))
-    {
-      m_endPoint = m_tcp->Allocate(InetSocketAddress::ConvertFrom(toAddress).GetIpv4(),
-          InetSocketAddress::ConvertFrom(toAddress).GetPort(), InetSocketAddress::ConvertFrom(fromAddress).GetIpv4(),
-          InetSocketAddress::ConvertFrom(fromAddress).GetPort());
-      m_endPoint6 = 0;
-    }
-  else if (Inet6SocketAddress::IsMatchingType(toAddress))
-    {
-      m_endPoint6 = m_tcp->Allocate6(Inet6SocketAddress::ConvertFrom(toAddress).GetIpv6(),
-          Inet6SocketAddress::ConvertFrom(toAddress).GetPort(), Inet6SocketAddress::ConvertFrom(fromAddress).GetIpv6(),
-          Inet6SocketAddress::ConvertFrom(fromAddress).GetPort());
-      m_endPoint = 0;
-    }
+    if (InetSocketAddress::IsMatchingType(toAddress))
+      {
+        m_endPoint = m_tcp->Allocate(InetSocketAddress::ConvertFrom(toAddress).GetIpv4(),
+            InetSocketAddress::ConvertFrom(toAddress).GetPort(), InetSocketAddress::ConvertFrom(fromAddress).GetIpv4(),
+            InetSocketAddress::ConvertFrom(fromAddress).GetPort());
+        m_endPoint6 = 0;
+      }
+    else if (Inet6SocketAddress::IsMatchingType(toAddress))
+      {
+        m_endPoint6 = m_tcp->Allocate6(Inet6SocketAddress::ConvertFrom(toAddress).GetIpv6(),
+            Inet6SocketAddress::ConvertFrom(toAddress).GetPort(), Inet6SocketAddress::ConvertFrom(fromAddress).GetIpv6(),
+            Inet6SocketAddress::ConvertFrom(fromAddress).GetPort());
+        m_endPoint = 0;
+      }
 
-  m_tcp->m_sockets.push_back(this);
-//  }
+    m_tcp->m_sockets.push_back(this);
 
-  if(IsMaster()) {
+
     NS_LOG_LOGIC("Is master, setting endpoint token");
-    m_endPoint->m_mptcpToken = GetMeta()->m_localToken;
+    m_endPoint->m_mptcpToken = GetMeta()->GetToken();
   }
 
   // Change the cloned socket from LISTEN state to SYN_RCVD
@@ -966,7 +968,7 @@ MpTcpSubflow::CompleteFork(Ptr<Packet> p, const TcpHeader& h, const Address& fro
   TcpHeader answerHeader;
   GenerateEmptyPacketHeader(answerHeader, TcpHeader::SYN | TcpHeader::ACK );
 
-  m_masterSocket = true;  //!< Only for the master socket completeFork is called
+
 
   AppendMpTcp3WHSOption(answerHeader);
 
@@ -1416,6 +1418,7 @@ bool
 MpTcpSubflow::IsMaster() const
 {
   NS_ASSERT(GetMeta());
+//  GetMeta->Mas
   return m_masterSocket;
   // TODO it will never return true
 //  return (m_endPoint == m_metaSocket->m_endPoint); // This is master subsock, its endpoint is the same as connection endpoint.
