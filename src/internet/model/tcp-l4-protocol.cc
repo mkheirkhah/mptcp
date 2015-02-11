@@ -427,7 +427,9 @@ TcpL4Protocol::Receive(Ptr<Packet> packet, Ipv4Header const &ipHeader, Ptr<Ipv4I
       // if it is the first syn
   //    if(join->GetState() == TcpOptionMpTcpJoin::Syn) {
   //! We should find the token
-        NS_LOG_ERROR("TODO find the TOKEN " << join->GetPeerToken());
+        NS_LOG_INFO("TODO find the TOKEN " << join->GetPeerToken()
+            << " among " << m_sockets.size() << " sockets "
+            );
 //        endPoints = m_endPoints->LookupToken(ipHeader.GetDestination(), join->GetPeerToken());
 //        GetBoundNetDevice()
 
@@ -448,11 +450,15 @@ TcpL4Protocol::Receive(Ptr<Packet> packet, Ipv4Header const &ipHeader, Ptr<Ipv4I
             NS_LOG_DEBUG("Found meta matching MP_JOIN token " << join->GetPeerToken());
 
             Ipv4EndPoint *endP =  meta->NewSubflowRequest(
+                  tcpHeader,
                   InetSocketAddress(ipHeader.GetSource(),tcpHeader.GetSourcePort() ),
                   InetSocketAddress(ipHeader.GetDestination(), tcpHeader.GetDestinationPort() ) ,
                   join
                   );
 
+            NS_LOG_DEBUG("value of endP" << endP);
+//            Simulator::Schedule()
+            // Return RX_OK
             // TODO check that it sends a RST otherwise
             if(endP)
             {
@@ -469,7 +475,7 @@ TcpL4Protocol::Receive(Ptr<Packet> packet, Ipv4Header const &ipHeader, Ptr<Ipv4I
         }
 
 
-        NS_ASSERT_MSG(endPoints.size () == 1, "Demux returned more or less than one endpoint");
+//        NS_ASSERT_MSG(endPoints.size () == 1, "Demux returned more or less than one endpoint");
 //        (*endPoints.begin())->ForwardUp(packet, ipHeader, tcpHeader.GetSourcePort(), incomingInterface);
 
   //    }

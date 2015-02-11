@@ -124,6 +124,7 @@ static const std::string containerNames[MpTcpSocketBase::Maximum] = {
 MpTcpSocketBase::MpTcpSocketBase(const MpTcpSocketBase& sock) :
   TcpSocketBase(sock),
   m_mpEnabled(sock.m_mpEnabled),
+  m_ssThresh(sock.m_ssThresh),
   m_initialCWnd(sock.m_initialCWnd),
   m_server(sock.m_server), //! true, if I am forked
   m_localKey(sock.m_localKey),
@@ -136,6 +137,7 @@ MpTcpSocketBase::MpTcpSocketBase(const MpTcpSocketBase& sock) :
   m_joinSubflowCreated(sock.m_joinSubflowCreated),
   m_newSubflowConnected(sock.m_newSubflowConnected)
 {
+  //! Scheduler may have some states, thus generate a new one
   m_remotePathIdManager = Create<MpTcpPathIdManagerImpl>();
   m_scheduler = Create<MpTcpSchedulerRoundRobin>();
   m_scheduler->SetMeta(this);
@@ -147,7 +149,9 @@ MpTcpSocketBase::MpTcpSocketBase(const MpTcpSocketBase& sock) :
 // TODO implement a copy constructor
 MpTcpSocketBase::MpTcpSocketBase() :
   TcpSocketBase(),
+
   m_mpEnabled(false),
+    m_ssThresh(0),
   m_initialCWnd(10), // TODO reset to 1
   m_server(true),
   m_localKey(0),
@@ -164,11 +168,6 @@ MpTcpSocketBase::MpTcpSocketBase() :
   m_scheduler = Create<MpTcpSchedulerRoundRobin>();
   m_scheduler->SetMeta(this);
 
-
-  mod = 60; // ??
-
-  // TODO should be generated either on connect or fork, not here ?
-  m_localKey = GenerateKey();
 
 }
 
@@ -441,7 +440,7 @@ MpTcpSocketBase::CompleteFork(
 
   // got moved to constructor
   //! TODOOOOO
-//  m_localKey = GenerateKey();
+  m_localKey = GenerateKey();
 //  uint64_t idsn = 0;
 //  GenerateTokenForKey( MPTCP_SHA1, m_localKey, m_localToken, idsn );
 
@@ -449,7 +448,8 @@ MpTcpSocketBase::CompleteFork(
   // We only setup destroy callback for MPTCP connection's endPoints, not on subflows endpoints.
   SetupCallback();
 
-//  m_tcp->m_sockets.push_back(this);
+  // Otherwise when looking for the token on an MP_JOIN it is not found
+  m_tcp->m_sockets.push_back(this);
 
   // Create new master subflow (master subsock) and assign its endpoint to the connection endpoint
   Ptr<MpTcpSubflow> sFlow = CreateSubflow(true);
@@ -1187,6 +1187,8 @@ MpTcpSocketBase::GetToken() const
 
 Ipv4EndPoint*
 MpTcpSocketBase::NewSubflowRequest(
+//Ptr<Packet> p,
+const TcpHeader & header,
 const Address & fromAddress,
 const Address & toAddress,
 Ptr<TcpOptionMpTcpJoin> join
@@ -1212,9 +1214,14 @@ Ptr<TcpOptionMpTcpJoin> join
   }
 
   //! accepted subflow false => not master
-  Ptr<MpTcpSubflow> subflow = CreateSubflow(false);
+  Ptr<MpTcpSubflow> subflow = CreateSubflowAndCompleteFork(
+      false,
+      header,
+      fromAddress,
+      toAddress
+      );
 
-  NS_ASSERT_MSG(subflow->Bind(toAddress) == 0, "TODO we didn't check that dest ip belonged to the same node, hence this error; subflow should never have been created !!");
+//  NS_ASSERT_MSG(subflow->Bind(toAddress) == 0, "TODO we didn't check that dest ip belonged to the same node, hence this error; subflow should never have been created !!");
 
 //  subflow->Listen();
 
@@ -1234,6 +1241,10 @@ MpTcpSocketBase::Connect(const Address & toAddress)
   NS_LOG_FUNCTION(this);
 
   // TODO may have to set m_server to false here
+
+  // generated either on connect or fork
+  m_localKey = GenerateKey();
+
 
   if( IsConnected() )
   {

@@ -1253,11 +1253,11 @@ MpTcpSubflow::AppendMpTcp3WHSOption(TcpHeader& hdr) const
         {
           join->SetState(TcpOptionMpTcpJoin::SynAck);
           //! TODO request from meta its id
-          uint8_t id = 0;
+          static uint8_t id = 0;
           // TODO
-          NS_FATAL_ERROR("TODO");
+          NS_LOG_WARN("IDs are incremental, there is no real");
   //        id = GetIdManager()->GetLocalAddrId( InetSocketAddress(m_endPoint->GetLocalAddress(),m_endPoint->GetLocalPort()) );
-          join->SetAddressId( id );
+          join->SetAddressId( id++ );
           join->SetTruncatedHmac(424242); // who cares
           join->SetNonce(4242); //! truly random :)
         }

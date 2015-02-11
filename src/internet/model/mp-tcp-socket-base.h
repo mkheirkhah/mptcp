@@ -719,9 +719,10 @@ protected: // protected variables
   **/
   virtual Ipv4EndPoint*
   NewSubflowRequest(
-  const Address & fromAddress,
-  const Address & toAddress,
-  Ptr<TcpOptionMpTcpJoin> join
+    const TcpHeader & header,
+    const Address & fromAddress,
+    const Address & toAddress,
+    Ptr<TcpOptionMpTcpJoin> join
   );
 
   int CloseSubflow(Ptr<MpTcpSubflow> sf);

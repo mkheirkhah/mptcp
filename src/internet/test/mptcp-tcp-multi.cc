@@ -460,7 +460,7 @@ Assign (const Ptr<NetDevice> &device)
 void
 HandleSubflowCreated(Ptr<MpTcpSubflow> subflow)
 {
-  NS_LOG_LOGIC("Socket accepted JOIN of a new subflow" << subflow);
+  NS_LOG_LOGIC("Created new subflow" << subflow << " is master: " << subflow->IsMaster());
 }
 
 
