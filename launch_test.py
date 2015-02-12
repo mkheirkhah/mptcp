@@ -21,6 +21,8 @@ parser.add_argument("--graph", "-g", action="store_true", help="Convert pcap to 
 
 args = parser.parse_args()
 
+timeout = None
+
 if args.debug:
     cmd = "./waf --run test-runner --command-template=\"gdb -ex 'run --suite={suite} {verbose} {tofile}' --args %s \" "
 else:

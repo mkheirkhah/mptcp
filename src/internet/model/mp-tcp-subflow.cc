@@ -1018,7 +1018,7 @@ MpTcpSubflow::ConnectionSucceeded(void)
   //!
   //if(IsMaster()Ķ
      //GetMeta()->NotifyConnectionSucceeded();
-  NS_LOG_LOGIC("Connection succeeded");
+  NS_LOG_LOGIC(this << "Connection succeeded");
   m_connected = true;
   GetMeta()->OnSubflowEstablishment(this);
   TcpSocketBase::ConnectionSucceeded();
@@ -1194,6 +1194,7 @@ void
 MpTcpSubflow::AppendMpTcp3WHSOption(TcpHeader& hdr) const
 {
   //NS_ASSERT(m_state == SYN_SENT || m_state == SYN_RCVD);
+  NS_LOG_FUNCTION(this << hdr);
 
   if( IsMaster() )
   {
@@ -1229,13 +1230,13 @@ MpTcpSubflow::AppendMpTcp3WHSOption(TcpHeader& hdr) const
       case TcpHeader::SYN:
         {
           join->SetState(TcpOptionMpTcpJoin::Syn);
-          uint32_t token = 0;
-          uint64_t idsn = 0;
+//          uint32_t token = 0;
+//          uint64_t idsn = 0;
 //          int result = 0;
 //          result =
-          MpTcpSocketBase::GenerateTokenForKey( MPTCP_SHA1, GetMeta()->GetRemoteKey(), token, idsn );
+//          MpTcpSocketBase::GenerateTokenForKey( MPTCP_SHA1, GetMeta()->GetRemoteKey(), token, idsn );
 
-          join->SetPeerToken(token);
+          join->SetPeerToken(GetMeta()->m_peerToken);
           join->SetNonce(0);
         }
         break;
@@ -1244,8 +1245,8 @@ MpTcpSubflow::AppendMpTcp3WHSOption(TcpHeader& hdr) const
         {
           uint8_t hmac[20];
 
-        join->SetState(TcpOptionMpTcpJoin::Ack);
-        join->SetHmac( hmac );
+          join->SetState(TcpOptionMpTcpJoin::Ack);
+          join->SetHmac( hmac );
         }
         break;
 

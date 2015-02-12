@@ -1,3 +1,3 @@
 #!/bin/sh
 rm -f source/* server/*
-mkdir source server
+mkdir -p source server

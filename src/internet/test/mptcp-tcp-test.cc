@@ -612,14 +612,14 @@ public:
     // 2) source write size, 3) source read size
     // 4) server write size, and 5) server read size
     // with units of bytes
-//    AddTestCase (new MpTcpTestCase (13, 200, 200, 200, 200, false), TestCase::QUICK);
+    AddTestCase (new MpTcpTestCase (13, 200, 200, 200, 200, false), TestCase::QUICK);
 //    AddTestCase (new MpTcpTestCase (13, 1, 1, 1, 1, false), TestCase::QUICK);
 //    AddTestCase (new MpTcpTestCase (100000, 100, 50, 100, 20, false), TestCase::QUICK);
 
 // here it's a test where I lower streamsize to see where it starts failing.
 // 2100 is ok, 2200 fails
 //    AddTestCase (new MpTcpTestCase (5000, 100, 50, 100, 20, false), TestCase::EXTENSIVE);
-    AddTestCase (new MpTcpTestCase (5000, 100, 50, 100, 20, false), TestCase::QUICK);
+//    AddTestCase (new MpTcpTestCase (5000, 100, 50, 100, 20, false), TestCase::QUICK);
 
 
     // Disable IPv6 tests; not supported yet

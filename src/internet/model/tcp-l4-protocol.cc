@@ -439,9 +439,21 @@ TcpL4Protocol::Receive(Ptr<Packet> packet, Ipv4Header const &ipHeader, Ptr<Ipv4I
           it++
          )
         {
+
           Ptr<MpTcpSocketBase> meta = DynamicCast<MpTcpSocketBase>( *it );
-          if(meta && meta->GetToken() == join->GetPeerToken() )
+          Address addr;
+          (*it)->GetSockName(addr);
+          NS_LOG_DEBUG("Socket ipv4: " << InetSocketAddress::ConvertFrom(addr).GetIpv4() );
+          if(!meta) {
+            NS_LOG_DEBUG("this is not an mptcp socket");
+            continue;
+          }
+
+          if(meta->GetToken() != join->GetPeerToken() )
           {
+            NS_LOG_DEBUG("Token " << meta->GetToken() << " differ from MP_JOIN token " << join->GetPeerToken());
+            continue;
+          }
 
             // TODO check that
             // ipHeader.GetDestination()
@@ -456,12 +468,13 @@ TcpL4Protocol::Receive(Ptr<Packet> packet, Ipv4Header const &ipHeader, Ptr<Ipv4I
                   join
                   );
 
-            NS_LOG_DEBUG("value of endP" << endP);
+            NS_LOG_DEBUG("value of endP=" << endP);
 //            Simulator::Schedule()
             // Return RX_OK
             // TODO check that it sends a RST otherwise
             if(endP)
             {
+              NS_LOG_DEBUG("subflow endpoint pushed in vector");
               endPoints.push_back(endP);
 
               // if we don't break here, then it will infintely loop, each time pushing a new SocketBase with a valid token
@@ -483,7 +496,7 @@ TcpL4Protocol::Receive(Ptr<Packet> packet, Ipv4Header const &ipHeader, Ptr<Ipv4I
   //      NS_LOG_DEBUG("Ignore MP_JOIN with state " << join->GetState());
   //    }
 
-    }
+
   }
 
   if (endPoints.empty())

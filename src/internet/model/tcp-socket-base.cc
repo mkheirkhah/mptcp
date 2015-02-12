@@ -111,7 +111,7 @@ TcpSocketBase::TcpSocketBase(void) :
     m_firstTxUnack(0),
     m_rxBuffer(0), m_txBuffer(0), m_state(CLOSED), m_errno(ERROR_NOTERROR), m_closeNotified(false), m_closeOnEmpty(
         false), m_shutdownSend(false), m_shutdownRecv(false), m_connected(false),
-    m_nullIsn(false),
+    m_nullIsn(true),
     m_segmentSize(0),
     // For attribute initialization consistency (quiet valgrind)
     m_rWnd(0)

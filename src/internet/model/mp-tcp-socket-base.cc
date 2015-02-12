@@ -338,13 +338,13 @@ MpTcpSocketBase::SetPeerKey(uint64_t remoteKey)
 
 
   //! TODO generate remote token/IDSN
-  MpTcpSocketBase::GenerateTokenForKey(MPTCP_SHA1,m_peerKey,m_peerToken,idsn);
+  MpTcpSocketBase::GenerateTokenForKey(MPTCP_SHA1, m_peerKey, m_peerToken, idsn);
 
   //! TODO Set in TcpSocketBase an attribute to enable idsn random
   // motivation is that it's clearer to plot from 0
-  if(m_nullIsn) {
+  if(m_nullIsn)
+  {
     idsn = 0;
-
   }
   // + 1 ?
   m_rxBuffer.SetNextRxSequence(SequenceNumber32( (uint32_t)idsn ));
@@ -464,8 +464,6 @@ MpTcpSocketBase::CompleteFork(
   NS_ASSERT_MSG(sFlow,"Contact ns3 team");
 
   // upon subflow destruction this m_endpoint should be .
-//  m_endPoint = 0;
-//  m_endPoint6 = 0;
 
 
 //  Simulator::ScheduleNow(&MpTcpSocketBase:: , this, fromAddress);
@@ -1013,6 +1011,7 @@ onSubflowNewState(
   TcpStates_t newState
   )
 {
+  NS_LOG_UNCOND("onSubflowNewState wrapper");
     meta->OnSubflowNewState(
       "context",sf,oldState,newState);
 }
@@ -1028,7 +1027,7 @@ MpTcpSocketBase::OnSubflowNewState(std::string context,
   TcpStates_t newState
 )
 {
-  NS_LOG_LOGIC("subflow " << " state changed from " << TcpStateName[oldState] << " to " << TcpStateName[newState]);
+  NS_LOG_LOGIC("subflow " << sf << " state changed from " << TcpStateName[oldState] << " to " << TcpStateName[newState]);
 //  OnSubflowNewState
 //  if(newState)
   if(newState == ESTABLISHED)
@@ -1075,20 +1074,22 @@ MpTcpSocketBase::CreateSubflowAndCompleteFork(
   Ptr<Packet> p = Create<Packet>();
 
   m_subflows[Others].push_back( sFlow );
+//
+//  Simulator::ScheduleNow(
+//      &MpTcpSubflow::CompleteFork,
+//      sFlow,
+//      p,
+//      mptcpHeader,
+//      fromAddress,
+//      toAddress
+//    );
+  sFlow->CompleteFork(p, mptcpHeader, fromAddress,toAddress);
 
-  Simulator::ScheduleNow(
-      &MpTcpSubflow::CompleteFork,
-      sFlow,
-      p,
-      mptcpHeader,
-      fromAddress,
-      toAddress
-    );
 
   //! TODO steal endpoint ?
-    if(sFlow->IsMaster()) {
-      m_endPoint = sFlow->m_endPoint;
-    }
+  if(sFlow->IsMaster()) {
+    m_endPoint = sFlow->m_endPoint;
+  }
 
   return sFlow;
 }
@@ -2080,6 +2081,7 @@ MpTcpSocketBase::GenerateTokenForKey( mptcp_crypto_t alg, uint64_t key, uint32_t
 {
   NS_ASSERT_MSG(alg == MPTCP_SHA1, "Only sha1 hmac currently supported (and standardised !)");
 
+  NS_LOG_UNCOND("Generating token/key from key=" << key);
   const int DIGEST_SIZE_IN_BYTES = SHA_DIGEST_LENGTH; //20
 
   const int KEY_SIZE_IN_BYTES = 8;
@@ -2109,6 +2111,7 @@ MpTcpSocketBase::GenerateTokenForKey( mptcp_crypto_t alg, uint64_t key, uint32_t
 
   idsn = it_digest.ReadNtohU64();
 
+  NS_LOG_UNCOND("Resulting token=" << token << " and idsn=" << idsn);
 }
 
 //int
@@ -2146,11 +2149,13 @@ MpTcpSocketBase::GenerateKey()
 
   TODO add a SetInitialSeqNb member into TcpSocketBase
   **/
-  if(m_nullIsn) {
-    m_nextTxSequence = (uint32_t)idsn;
-  }
-  else {
+  if(m_nullIsn)
+  {
     m_nextTxSequence = (uint32_t)0;
+  }
+  else
+  {
+    m_nextTxSequence = (uint32_t)idsn;
   }
 
   SetTxHead(m_nextTxSequence);
@@ -2199,6 +2204,8 @@ MpTcpSocketBase::MoveSubflow(Ptr<MpTcpSubflow> subflow, mptcp_container_t from, 
   NS_LOG_DEBUG("Moving subflow " << subflow << " from " << containerNames[from] << " to " << containerNames[to]);
   NS_ASSERT(from != to);
   SubflowList::iterator it = std::find(m_subflows[from].begin(), m_subflows[from].end(), subflow);
+
+  NS_ASSERT(it != m_subflows[from].end());
   m_subflows[to].push_back(*it);
   m_subflows[from].erase(it);
 }
@@ -2278,6 +2285,8 @@ MpTcpSocketBase::OnSubflowEstablishment(Ptr<MpTcpSubflow> subflow)
       // If client
       NS_LOG_DEBUG("I am client, amn't I ?");
 //       TODO replace with another
+//      NotifySubflowConnectedOnJoin();
+//      NotifyConnectionSucceeded();
       Simulator::ScheduleNow(&MpTcpSocketBase::ConnectionSucceeded, this);
     }
   }
