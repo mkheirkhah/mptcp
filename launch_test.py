@@ -16,7 +16,7 @@ parser = argparse.ArgumentParser(description="Helper to debug mptcp")
 parser.add_argument("suite", choices=available_suites, help="Launch gdb")
 parser.add_argument("--debug", '-d', action="store_true", help="Launch gdb")
 parser.add_argument("--out", "-o", default="", nargs='?', help="redirect ns3 results output to a file")
-parser.add_argument("--verbose", "-v", default="", help="to enable more output")
+parser.add_argument("--verbose", "-v", action="store_const", default="", const="--verbose", help="to enable more output")
 parser.add_argument("--graph", "-g", action="store_true", help="Convert pcap to sqlite db and then plot")
 
 args = parser.parse_args()
@@ -69,9 +69,9 @@ NS_LOG += ":TcpTestSuite"
 # NS_LOG += ":TcpHeader=*"
 # NS_LOG=":TcpOptionMpTcp=*"
 # NS_LOG=":MpTcpOptionsTestSuite=*"
-NS_LOG += ":TcpL4Protocol"
-NS_LOG += ":Ipv4EndPoint"
-NS_LOG += ":Ipv4EndPointDemux"
+# NS_LOG += ":TcpL4Protocol"
+# NS_LOG += ":Ipv4EndPoint"
+# NS_LOG += ":Ipv4EndPointDemux"
 # NS_LOG += ":TraceHelper:PointToPointHelper"
 # OUTPUT_FILENAME="xp.txt"
 # NS_LOG=":MpTcpTestSuite=*|prefix_func:Socket=*"
@@ -104,6 +104,11 @@ try:
     ret = subprocess.call(cmd, shell=True, timeout=timeout if timeout else None)
 except subprocess.TimeoutExpired:
     print("Timeout expired. try setting a longer timeout")
+finally:
+    # will be done whatever the results
+    os.system("mergecap -w server.pcapng test-0-1.pcap test-0-2.pcap")
+    os.system("mergecap -w source.pcapng test-1-1.pcap test-1-2.pcap")
+
 
 print("Exported:\n%s" % NS_LOG)
 print("Executed Command:\n%s" % cmd)
@@ -115,7 +120,7 @@ if ret:
 
 if args.graph:
     # 
-    os.system("mptcpexporter pcap2sql test-0-1.pcap")
+    os.system("mptcpexporter pcap2sql source.pcapng")
     os.system("mptcpgraph ")
 
 

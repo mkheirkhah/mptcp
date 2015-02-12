@@ -315,12 +315,15 @@ public:
   virtual void
   Retransmit(void);
 
-        // TODO support IPv6
+
   Ptr<MpTcpPathIdManager>
   GetIdManager();
 
+  /**
+  Temporary, for debug
+  **/
   void
-  SetupMetaTracing(const std::string prefix);
+  SetupTracing(const std::string prefix);
 
 //  MpTcpMapping getSegmentOfACK( uint32_t ack);
 
@@ -486,15 +489,6 @@ protected:
   MpTcpMappingContainer m_TxMappings;  //!< List of mappings to send
   MpTcpMappingContainer m_RxMappings;  //!< List of mappings to receive
 
-  // parent should provide it ?
-  Ptr<RttMeanDeviation> rtt;  // RTT calculator
-  std::multiset<double> measuredRTT;
-  Time m_lastMeasuredRtt;       // Last measured RTT, used for plotting
-
-
-  bool m_gotFin;              // Whether FIN is received
-//  SequenceNumber32 m_finSeq;  // SeqNb of received FIN
-
 
 //    uint32_t m_m_ssThresh;           // Slow start threshold
 
@@ -531,7 +525,7 @@ private:
   bool m_masterSocket;  //!< True if this is the first subflow established (with MP_CAPABLE)
 
   uint32_t m_localNonce;  //!< Store local host token, generated during the 3-way handshake
-  uint32_t m_remoteToken; //!< Store remote host token
+//  uint32_t m_remoteToken; //!< Store remote host token
 
 };
 

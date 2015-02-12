@@ -273,13 +273,12 @@ MpTcpSubflow::MpTcpSubflow(const MpTcpSubflow& sock)
   m_cWnd(sock.m_cWnd),
   m_ssThresh(sock.m_ssThresh),
   m_initialCWnd (sock.m_initialCWnd),
-  m_localNonce(sock.m_localNonce),
-  m_remoteToken(sock.m_remoteToken)
-  // TODO
-
+  m_masterSocket(sock.m_masterSocket),
+  m_localNonce(sock.m_localNonce)
+// , m_remoteToken(sock.m_remoteToken)
+// TODO
 //    m_retxThresh (sock.m_retxThresh),
 //    m_inFastRec (false),
-//    m_limitedTx (sock.m_limitedTx)
 {
   NS_LOG_FUNCTION (this);
   NS_LOG_LOGIC ("Invoked the copy constructor");
@@ -287,43 +286,27 @@ MpTcpSubflow::MpTcpSubflow(const MpTcpSubflow& sock)
 
 MpTcpSubflow::MpTcpSubflow(
 //Ptr<MpTcpSocketBase> metaSocket
-//, bool master
 ) :
     TcpSocketBase(),
     m_routeId(0),
     m_ssThresh(65535),
     m_initialCWnd(10),
-//    m_mapDSN(0),
-    m_lastMeasuredRtt(Seconds(0.0)),
-     // TODO move out to MpTcpCControl
 //    m_metaSocket(metaSocket),
     m_backupSubflow(false),
-    m_localNonce(0),
-    m_remoteToken(0)
+    m_masterSocket(false),
+    m_localNonce(0)
 {
   NS_LOG_FUNCTION(this);
-
-  // TODO use/create function to generate initial random number seq
-//  TxSeqNumber = rand() % 1000;
-//  RxSeqNumber = 0;
-
-// Set up by factory no ?
-//  rtt = CreateObject<RttMeanDeviation>();
-//  rtt->Gain(0.1);
-//  Time estimate;
-//  estimate = Seconds(1.5);
-//  rtt->SetCurrentEstimate(estimate);
   m_cnRetries = 3;
   Time est = MilliSeconds(200);
   m_cnTimeout = est;
 //  initialSequnceNumber = 0;
   m_retxThresh = 3; // TODO retrieve from meta
   m_inFastRec = false;
-  m_limitedTx = false;
+//  m_limitedTx = false;
   m_dupAckCount = 0;
 //  PktCount = 0;
   m_recover = SequenceNumber32(0);
-  m_gotFin = false;
 }
 
 MpTcpSubflow::~MpTcpSubflow()
@@ -1012,16 +995,11 @@ Apparently this function is never called for now
 void
 MpTcpSubflow::ConnectionSucceeded(void)
 {
-  // TODO use SetConnectCallback
-  // SetSubflowConnectCallback
-  // Use callbacks on
-  //!
-  //if(IsMaster()Ķ
-     //GetMeta()->NotifyConnectionSucceeded();
+
   NS_LOG_LOGIC(this << "Connection succeeded");
   m_connected = true;
   GetMeta()->OnSubflowEstablishment(this);
-  TcpSocketBase::ConnectionSucceeded();
+//  TcpSocketBase::ConnectionSucceeded();
 }
 
 /** Received a packet upon SYN_SENT */
@@ -1431,14 +1409,21 @@ MpTcpSubflow::SendPendingData(bool withAck)
 }
 
 
+/**
+TODO m_masterSocket should not be necessary
+*/
 bool
 MpTcpSubflow::IsMaster() const
 {
   NS_ASSERT(GetMeta());
-//  GetMeta->Mas
+
   return m_masterSocket;
   // TODO it will never return true
-//  return (m_endPoint == m_metaSocket->m_endPoint); // This is master subsock, its endpoint is the same as connection endpoint.
+//  TcpStates_t metaState = GetMeta()->GetState();
+//  return (metaState == SYN_RCVD
+//      || metaState == SYN_SENT
+//    || m_endPoint == GetMeta()->m_endPoint
+//); // This is master subsock, its endpoint is the same as connection endpoint.
   // is that enough ?
 //  return (m_metaSocket->m_subflows.size() == 1);
 }
@@ -1573,11 +1558,6 @@ MpTcpSubflow::StopAdvertisingAddress(Ipv4Address address)
 
 
 
-//bool
-//MpTcpSubflow::Finished(void)
-//{
-//  return (m_gotFin && m_finSeq.GetValue() < RxSeqNumber);
-//}
 
 //void
 //MpTcpSubflow::StartTracing( std::string traced)
@@ -1975,9 +1955,9 @@ MpTcpSubflow::RecvWithMapping(uint32_t maxSize, bool only_full_mapping, Sequence
 
 
 void
-MpTcpSubflow::SetupMetaTracing(const std::string prefix)
+MpTcpSubflow::SetupTracing(const std::string prefix)
 {
-  NS_LOG_LOGIC("Setup tracing for sf " << this << " with prefix " << prefix);
+  NS_LOG_LOGIC("Setup tracing for sf " << this << " with prefix [" << prefix << "]");
 //  f.open(filename, std::ofstream::out | std::ofstream::trunc);
 
   // For now, there is no subflow deletion so this should be good enough, else it will crash
@@ -2276,23 +2256,5 @@ MpTcpSubflow::AddPeerMapping(const MpTcpMapping& mapping)
 //  m_RxMappings.Dump();
   return true;
 }
-
-//void
-//MpTcpSubflow::CwndTracer(uint32_t oldval, uint32_t newval)
-//{
-//  //NS_LOG_UNCOND("Subflow "<< m_routeId <<": Moving cwnd from " << oldval << " to " << newval);
-//  cwndTracer.push_back(make_pair(Simulator::Now().GetSeconds(), newval));
-//}
-
-//void
-//MpTcpSubflow::SetFinSequence(const SequenceNumber32& s)
-//{
-//  NS_LOG_FUNCTION (this);
-//  m_gotFin = true;
-//  m_finSeq = s;
-//  if (RxSeqNumber == m_finSeq.GetValue())
-//    ++RxSeqNumber;
-//}
-
 
 } // end of ns3

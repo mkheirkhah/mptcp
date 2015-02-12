@@ -535,39 +535,9 @@ protected: // protected methods
   // Connection closing operations
 //  virtual int DoClose(uint8_t sFlowIdx);
 
-//  bool CloseMultipathConnection();      // Close MPTCP connection is possible
-//  void PeerClose(uint8_t sFlow, Ptr<Packet> p, const TcpHeader& tcpHeader);
-//  void DoPeerClose(uint8_t sFlowIdx);
-//  void CloseAndNotify(uint8_t sFlowIdx);
-//  void Destroy(void);
-//  void DestroySubflowMapDSN(void);
-//  void DestroyUnOrdered();
 
-  // Why do we need those ?
-//  void CancelAllTimers(uint8_t sFlowIdx);
-//  void DeallocateEndPoint(uint8_t sFlowIdx);
-  void CancelAllSubflowTimers(void);
-//  void TimeWait(uint8_t sFlowIdx);
 
   void ProcessListen  (Ptr<Packet>, const TcpHeader&, const Address&, const Address&);
-
-  // State transition functions
-
-  ///////////////////////////////////
-  // TODO move ALL these to subflow
-  ///////////////////////////////////
-//  void ProcessListen  (uint8_t sFlowIdx, Ptr<Packet>, const TcpHeader&, const Address&, const Address&);
-//void ProcessEstablished (uint8_t sFlowIdx, Ptr<Packet>, const TcpHeader&);
-
-
-//  void ProcessSynSent (uint8_t sFlowIdx, Ptr<Packet>, const TcpHeader&);
-//  void ProcessSynRcvd (uint8_t sFlowIdx, Ptr<Packet>, const TcpHeader&, const Address&, const Address&);
-//  void ProcessWait    (uint8_t sFlowIdx, Ptr<Packet>, const TcpHeader&);
-//  void ProcessClosing (uint8_t sFlowIdx, Ptr<Packet>, const TcpHeader&);
-//  void ProcessLastAck (uint8_t sFlowIdx, Ptr<Packet>, const TcpHeader&);
-
-
-
 
   // Manage data Tx/Rx
   virtual Ptr<TcpSocketBase> Fork(void);
@@ -727,8 +697,9 @@ protected: // protected variables
 
   int CloseSubflow(Ptr<MpTcpSubflow> sf);
 
-  std::string m_tracePrefix;
 
+  void
+  DumpSubflows() const;
 
   virtual TypeId
   GetMpTcpSubflowTypeId() = 0;
@@ -749,6 +720,8 @@ protected: // protected variables
 
 //  virtual void OnAddAddress(MpTcpAddressInfo);
 //  virtual void OnRemAddress();
+
+  std::string m_tracePrefix;      //!< help naming csv files
 
 //!< True if remote host is MPTCP compliant (not used so far. could be disabled)
 // May be redundant with m_dssEnabled

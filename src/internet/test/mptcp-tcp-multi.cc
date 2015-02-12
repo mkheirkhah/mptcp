@@ -250,8 +250,10 @@ MpTcpMultihomedTestCase::SourceConnectionSuccessful(Ptr<Socket> sock)
   Ipv4Address serverAddr = m_serverNode->GetObject<Ipv4>()->GetAddress(2,0).GetLocal();
   Ipv4Address sourceAddr = m_sourceNode->GetObject<Ipv4>()->GetAddress(2,0).GetLocal();
 
-  InetSocketAddress local( sourceAddr, serverPort);
-  InetSocketAddress remote(serverAddr);
+  //! TODO, we should be able to not specify a port but it seems buggy so for now, let's set a port
+//  InetSocketAddress local( sourceAddr);
+  InetSocketAddress local(sourceAddr, 4420);
+  InetSocketAddress remote(serverAddr, serverPort);
 
   sourceMeta ->ConnectNewSubflow(local, remote);
 //  Simulator::Schedule( )

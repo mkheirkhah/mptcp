@@ -123,6 +123,7 @@ static const std::string containerNames[MpTcpSocketBase::Maximum] = {
 
 MpTcpSocketBase::MpTcpSocketBase(const MpTcpSocketBase& sock) :
   TcpSocketBase(sock),
+  m_tracePrefix(sock.m_tracePrefix),
   m_mpEnabled(sock.m_mpEnabled),
   m_ssThresh(sock.m_ssThresh),
   m_initialCWnd(sock.m_initialCWnd),
@@ -423,13 +424,7 @@ MpTcpSocketBase::CompleteFork(
 //
 //  NS_ASSERT(InetSocketAddress::ConvertFrom(fromAddress).GetIpv4() == m_endPoint->GetPeerAddress());
 //  NS_ASSERT(InetSocketAddress::ConvertFrom(fromAddress).GetPort() == m_endPoint->GetPeerPort());
-
-//  Ptr<TcpOption> option = mptcpHeader.GetOption(TcpOption::MPTCP);
-//  Ptr<TcpOptionMpTcpMain> opt2 = DynamicCast<TcpOptionMpTcpMain>(option);
-
   Ptr<TcpOptionMpTcpCapable> mpc;
-//   = DynamicCast<TcpOptionMpTcpCapable>(option);
-
   NS_ASSERT( GetMpTcpOption(mptcpHeader, mpc) );
 
   m_server = true;
@@ -437,13 +432,8 @@ MpTcpSocketBase::CompleteFork(
   NS_LOG_INFO("peer key " << mpc->GetSenderKey() );
   SetPeerKey( mpc->GetSenderKey() );
 
-
   // got moved to constructor
-  //! TODOOOOO
   m_localKey = GenerateKey();
-//  uint64_t idsn = 0;
-//  GenerateTokenForKey( MPTCP_SHA1, m_localKey, m_localToken, idsn );
-
 
   // We only setup destroy callback for MPTCP connection's endPoints, not on subflows endpoints.
   SetupCallback();
@@ -452,10 +442,11 @@ MpTcpSocketBase::CompleteFork(
   m_tcp->m_sockets.push_back(this);
 
   // Create new master subflow (master subsock) and assign its endpoint to the connection endpoint
-  Ptr<MpTcpSubflow> sFlow = CreateSubflow(true);
+  Ptr<MpTcpSubflow> sFlow = CreateSubflowAndCompleteFork(true,mptcpHeader, fromAddress, toAddress);
+
   // TODO may be moved as well ?
-  m_subflows[Others].push_back( sFlow );
-  Simulator::ScheduleNow(&MpTcpSubflow::CompleteFork, sFlow, p, mptcpHeader, fromAddress, toAddress);
+//  m_subflows[Others].push_back( sFlow );
+//  Simulator::ScheduleNow(&MpTcpSubflow::CompleteFork, sFlow, p, mptcpHeader, fromAddress, toAddress);
 
   ComputeTotalCWND();
 
@@ -496,22 +487,11 @@ MpTcpSocketBase::Send(Ptr<Packet> p, uint32_t flags)
 
 
 
-void
-MpTcpSocketBase::CancelAllSubflowTimers(void)
-{
-  NS_LOG_FUNCTION_NOARGS();
-
-  // TODO use iterator
-//  for (uint32_t i = 0; i < m_subflows.size(); i++)
-//    {
-//      Ptr<MpTcpSubflow> sFlow = m_subflows[i];
-//      if (sFlow->m_state != CLOSED)
-//        {
-//          sFlow->CancelAllTimers();
-//          NS_LOG_INFO("CancelAllSubflowTimers() -> Subflow:" << i);
-//        }
-//    }
-}
+//void
+//MpTcpSocketBase::CancelAllSubflowTimers(void)
+//{
+//  NS_LOG_FUNCTION_NOARGS();
+//}
 
 
 // Receipt of new packet, put into Rx buffer
@@ -1073,7 +1053,7 @@ MpTcpSocketBase::CreateSubflowAndCompleteFork(
 
   Ptr<Packet> p = Create<Packet>();
 
-  m_subflows[Others].push_back( sFlow );
+
 //
 //  Simulator::ScheduleNow(
 //      &MpTcpSubflow::CompleteFork,
@@ -1087,7 +1067,8 @@ MpTcpSocketBase::CreateSubflowAndCompleteFork(
 
 
   //! TODO steal endpoint ?
-  if(sFlow->IsMaster()) {
+  if(sFlow->IsMaster())
+  {
     m_endPoint = sFlow->m_endPoint;
   }
 
@@ -1127,6 +1108,7 @@ MpTcpSocketBase::CreateSubflow(bool masterSocket)
     NS_LOG_ERROR("Already attempting to establish a connection");
     return 0;
   }
+  // TODO remove CLOSEWAIT right ?
   else if(m_state == TIME_WAIT || m_state == CLOSE_WAIT || m_state == CLOSING)
   {
     NS_LOG_ERROR("Not allowed to  create new subflow ");
@@ -1158,6 +1140,8 @@ MpTcpSocketBase::CreateSubflow(bool masterSocket)
   sFlow->SetInitialCwnd( GetInitialCwnd() );  //! Could be done maybe in SetMeta ?
   NS_ASSERT_MSG( sFlow, "Contact ns3 team");
 
+
+  m_subflows[Others].push_back( sFlow );
 
   NS_LOG_INFO ( "subflow " << sFlow << " associated with node " << sFlow->m_node);
   return sFlow;
@@ -1282,7 +1266,7 @@ MpTcpSocketBase::Connect(const Address & toAddress)
 
 //      m_endPoint6 = sFlow->m_endPoint6;
 
-      m_subflows[Others].push_back( sFlow );
+//      m_subflows[Others].push_back( sFlow );
 
 //      NS_ASSERT( );
 //      SendEmptyPacket(TcpHeader::SYN);
@@ -2205,12 +2189,37 @@ MpTcpSocketBase::MoveSubflow(Ptr<MpTcpSubflow> subflow, mptcp_container_t from, 
   NS_ASSERT(from != to);
   SubflowList::iterator it = std::find(m_subflows[from].begin(), m_subflows[from].end(), subflow);
 
-  NS_ASSERT(it != m_subflows[from].end());
+//  NS_ASSERT();
+  if(it == m_subflows[from].end())
+  {
+    NS_LOG_ERROR("Could not find subflow in *from* container. It may have already been moved by another callback ");
+    DumpSubflows();
+    return;
+  }
+
   m_subflows[to].push_back(*it);
   m_subflows[from].erase(it);
 }
 
 
+void
+MpTcpSocketBase::DumpSubflows() const
+{
+  NS_LOG_FUNCTION(this << "\n");
+  for(int i = 0; i < Maximum; ++i)
+  {
+
+    NS_LOG_UNCOND("===== container [" << containerNames[i] << "]");
+//    Established
+//    NS_LOG_INFO("Closing all subflows in state [" << containerNames [i] << "]");
+    for( SubflowList::const_iterator it = m_subflows[i].begin(); it != m_subflows[i].end(); it++ )
+    {
+      NS_LOG_UNCOND("- subflow [" << *it  << "]");
+
+    }
+
+  }
+}
 /*
 We shouldn't need the from container, it could be found
 */
@@ -2258,7 +2267,7 @@ MpTcpSocketBase::MoveSubflow(Ptr<MpTcpSubflow> subflow, mptcp_container_t to)
 void
 MpTcpSocketBase::OnSubflowEstablishment(Ptr<MpTcpSubflow> subflow)
 {
-  NS_LOG_LOGIC(this << "New subflow " <<subflow << " established");
+  NS_LOG_LOGIC(this << " (=meta) New subflow " << subflow << " established");
   //Ptr<MpTcpSubflow> subflow = DynamicCast<MpTcpSubflow>(sock);
 
   NS_ASSERT_MSG(subflow,"Contact ns3 team");
@@ -2297,13 +2306,9 @@ MpTcpSocketBase::OnSubflowEstablishment(Ptr<MpTcpSubflow> subflow)
   MoveSubflow(subflow, Others, Established);
 
 
-//  m_subflows[Established].size()
-  ;
+//  m_subflows[Established].size();
   //
-  subflow->SetupMetaTracing(
-//  os.str()
-  m_tracePrefix
-  );
+  subflow->SetupTracing(m_tracePrefix);
 
   // TODO setup callbacks
 
@@ -2483,6 +2488,7 @@ MpTcpSocketBase::SetupMetaTracing(std::string prefix)
 
 //  prefix = m_tracePrefix + "/meta";
 
+  // TODO move out to
   SetupSocketTracing(this, m_tracePrefix + "/meta");
 }
 
@@ -3477,41 +3483,6 @@ MpTcpSocketBase::OpenCWND(uint8_t sFlowIdx, uint32_t ackedBytes)
 }
 #endif
 
-//void
-//MpTcpSocketBase::calculateAlpha()
-//{
-//  // this method is called whenever a congestion happen in order to regulate the agressivety of m_subflows
-//  // alpha = cwnd_total * MAX(cwnd_i / rtt_i^2) / {SUM(cwnd_i / rtt_i))^2}   //RFC 6356 formula (2)
-//
-//  NS_LOG_FUNCTION_NOARGS ();
-//  alpha = 0;
-//  double maxi = 0;
-//  double sumi = 0;
-//
-//  for (uint32_t i = 0; i < m_subflows.size(); i++)
-//    {
-//      Ptr<MpTcpSubflow> sFlow = m_subflows[i];
-//
-//      Time time = sFlow->rtt->GetCurrentEstimate();
-//      double rtt = time.GetSeconds();
-//      double tmpi = sFlow->cwnd.Get() / (rtt * rtt);
-//      if (maxi < tmpi)
-//        maxi = tmpi;
-//
-//      sumi += sFlow->cwnd.Get() / rtt;
-//    }
-//  alpha = (m_totalCwnd * maxi) / (sumi * sumi);
-//}
-
-//void
-//MpTcpSocketBase::calculateSmoothedCWND(uint8_t sFlowIdx)
-//{
-//  Ptr<MpTcpSubflow> sFlow = m_subflows[sFlowIdx];
-//  if (sFlow->scwnd < sFlow->MSS)
-//    sFlow->scwnd = sFlow->cwnd;
-//  else
-//    sFlow->scwnd = sFlow->scwnd * 0.875 + sFlow->cwnd * 0.125;
-//}
 
 
 
