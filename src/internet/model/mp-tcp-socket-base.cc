@@ -444,8 +444,6 @@ MpTcpSocketBase::CompleteFork(
   // Create new master subflow (master subsock) and assign its endpoint to the connection endpoint
   Ptr<MpTcpSubflow> sFlow = CreateSubflowAndCompleteFork(true,mptcpHeader, fromAddress, toAddress);
 
-  // TODO may be moved as well ?
-//  m_subflows[Others].push_back( sFlow );
 //  Simulator::ScheduleNow(&MpTcpSubflow::CompleteFork, sFlow, p, mptcpHeader, fromAddress, toAddress);
 
   ComputeTotalCWND();
@@ -858,10 +856,11 @@ MpTcpSocketBase::GetRxAvailable(void) const
 void
 MpTcpSocketBase::OnSubflowClosed(Ptr<MpTcpSubflow> subflow, bool reset)
 {
-  NS_LOG_LOGIC("Subflow " << subflow  << "definitely closed");
+  NS_LOG_LOGIC("Subflow " << subflow  << " definitely closed");
   //! TODO it should remove itself from the list of subflows and when 0 are active
   // it should call CloseAndNotify ?
-  if(reset) {
+  if(reset)
+  {
     NS_FATAL_ERROR("Case not handled yet.");
   }
 
@@ -2341,11 +2340,12 @@ MpTcpSocketBase::NotifySubflowConnectedOnJoin(Ptr<MpTcpSubflow> sf)
 //
 void
 MpTcpSocketBase::SetJoinAcceptCallback(
-  Callback<void, Ptr<MpTcpSubflow> > connectionCreated
+  Callback<void, Ptr<MpTcpSubflow> > connectionRequested
 )
 {
-  NS_LOG_FUNCTION(this << &connectionCreated);
-  m_joinConnectionSucceeded = connectionCreated;
+  NS_LOG_FUNCTION(this << &connectionRequested);
+  NS_FATAL_ERROR("TODO not implemented yet");
+//  m_joinConnectionSucceeded = connectionCreated;
 }
 
 void

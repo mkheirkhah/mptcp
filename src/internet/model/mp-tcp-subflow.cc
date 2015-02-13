@@ -930,7 +930,7 @@ MpTcpSubflow::CompleteFork(Ptr<Packet> p, const TcpHeader& h, const Address& fro
         m_endPoint = 0;
       }
 
-    m_tcp->m_sockets.push_back(this);
+//    m_tcp->m_sockets.push_back(this);
 
 //  if(IsMaster())
 //  {

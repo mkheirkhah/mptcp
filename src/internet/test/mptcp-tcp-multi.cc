@@ -385,6 +385,7 @@ Ptr<Node>
 MpTcpMultihomedTestCase::CreateInternetNode ()
 {
   Ptr<Node> node = CreateObject<Node> ();
+  NS_LOG_INFO("New node with id=" << node->GetId());
   //ARP
   Ptr<ArpL3Protocol> arp = CreateObject<ArpL3Protocol> ();
   node->AggregateObject (arp);
@@ -491,6 +492,7 @@ MpTcpMultihomedTestCase::SetupDefaultSim (void)
 {
   // TODO this number should be made configurable
   int nbOfDevices = 2;
+  NS_LOG_UNCOND("SetupDefaultSim Start ");
 
   const char* netmask = "255.255.255.0";
 
@@ -503,9 +505,7 @@ MpTcpMultihomedTestCase::SetupDefaultSim (void)
 
   for(int i = 0; i < nbOfDevices; ++i)
   {
-//0s -1 MpTcpMultiSuite:SetupDefaultSim(): [DEBUG] setting ipv4 base 192.168.0.0
-//0s -1 MpTcpMultiSuite:SetupDefaultSim(): [DEBUG] setting ipv4 base 192.168.1.0
-//    const char* ipaddr0 = "";
+
     std::stringstream netAddr;
     netAddr << "192.168." << i << ".0";
 
@@ -519,14 +519,8 @@ MpTcpMultihomedTestCase::SetupDefaultSim (void)
     NS_LOG_DEBUG("setting ipv4 base " << netAddr.str());
     ipv4.SetBase( netAddr.str().c_str(), netmask);
     ipv4.Assign(cont);
-    //ipv4.Assign(m_sourceNode);
-    //Ptr<SimpleNetDevice> dev0 = AddSimpleNetDevice (m_serverNode, ipaddr0, netmask);
-    //Ptr<SimpleNetDevice> dev1 = AddSimpleNetDevice (m_sourceNode, ipaddr1, netmask);
-
     /// Added by matt for debugging purposes
-    //EnablePcapAll ("tcp-bulk-send", false);
-    //TCP
-  //  PcapHelperForDevice helper;
+
     //PointToPointHelper helper;
     //helper.EnablePcapAll("test",true);
     //helper.EnablePcapAll("testmptcp",false);
@@ -534,23 +528,17 @@ MpTcpMultihomedTestCase::SetupDefaultSim (void)
   }
   //pcap.EnablePcapInternal("mptcp",dev,true,true);
 
-  //Ptr<SimpleChannel> channel = CreateObject<SimpleChannel> ();
-  //dev0->SetChannel (channel);
-  //dev1->SetChannel (channel);
 
 
-//  Ptr<SocketFactory> sockFactory0 = m_serverNode->GetObject<MpTcpSocketFactory> ();
   Ptr<SocketFactory> sockFactory0 = m_serverNode->GetObject<TcpSocketFactory> ();
   Ptr<SocketFactory> sockFactory1 = m_sourceNode->GetObject<TcpSocketFactory> ();
 
+  // a wrapper that calls m_tcp->CreateSocket ();
   Ptr<Socket> server = sockFactory0->CreateSocket ();
   Ptr<Socket> source = sockFactory1->CreateSocket ();
 
   Ptr<MpTcpSocketBase> server_meta = DynamicCast<MpTcpSocketBase>(server);
   Ptr<MpTcpSocketBase> source_meta = DynamicCast<MpTcpSocketBase>(source);
-
-//  server_meta->SetupMetaTracing("server");
-  source_meta->SetupMetaTracing("source");
 
 
 
@@ -562,18 +550,24 @@ MpTcpMultihomedTestCase::SetupDefaultSim (void)
   Ipv4Address serverMainAddr = m_serverNode->GetObject<Ipv4>()->GetAddress(1,0).GetLocal();
   InetSocketAddress serverlocaladdr (serverMainAddr, serverPort);
   InetSocketAddress serverremoteaddr (serverMainAddr, serverPort);
-  NS_LOG_DEBUG("serverMainAddr" << serverlocaladdr);
+  NS_LOG_DEBUG("serverMainAddr=" << serverlocaladdr);
   server_meta->Bind (serverlocaladdr);
   server_meta->Listen ();
   server_meta->SetAcceptCallback (MakeNullCallback<bool, Ptr< Socket >, const Address &> (),
                              MakeCallback (&MpTcpMultihomedTestCase::ServerHandleConnectionCreated,this));
 
+  NS_LOG_UNCOND("Server Meta:" << server_meta << " NodeId:" << server_meta->GetNode()->GetId());
+  NS_LOG_UNCOND("Client Meta:" << source_meta << " NodeId:" << source_meta->GetNode()->GetId());
 //  NS_LOG_INFO( "test" << server);
   source_meta->SetRecvCallback (MakeCallback (&MpTcpMultihomedTestCase::SourceHandleRecv, this));
   source_meta->SetSendCallback (MakeCallback (&MpTcpMultihomedTestCase::SourceHandleSend, this));
 
-  source_meta->Connect (serverremoteaddr);
+  source_meta->SetConnectCallback (
+//    Callback< void, Ptr< Socket > > connectionSucceeded, Callback< void, Ptr< Socket > > connectionFailed
+    MakeCallback (&MpTcpMultihomedTestCase::SourceConnectionSuccessful, this),
+    MakeCallback (&MpTcpMultihomedTestCase::SourceConnectionFailed, this)
 
+    );
   /*
   Callback when a subflow successfully connected
   */
@@ -586,12 +580,15 @@ MpTcpMultihomedTestCase::SetupDefaultSim (void)
     MakeCallback (&HandleSubflowCreated)
     );
 
-  source_meta->SetConnectCallback (
-//    Callback< void, Ptr< Socket > > connectionSucceeded, Callback< void, Ptr< Socket > > connectionFailed
-    MakeCallback (&MpTcpMultihomedTestCase::SourceConnectionSuccessful, this),
-    MakeCallback (&MpTcpMultihomedTestCase::SourceConnectionFailed, this)
+//  server_meta->SetupMetaTracing("server");
+  source_meta->SetupMetaTracing("source");
 
-    );
+
+  source_meta->Connect (serverremoteaddr);
+
+
+
+
 }
 
 void
@@ -687,8 +684,8 @@ public:
     // 2) source write size, 3) source read size
     // 4) server write size, and 5) server read size
     // with units of bytes
-    AddTestCase (new MpTcpMultihomedTestCase (13, 200, 200, 200, 200, false), TestCase::QUICK);
-//    AddTestCase (new MpTcpMultihomedTestCase (13, 1, 1, 1, 1, false), TestCase::QUICK);
+//    AddTestCase (new MpTcpMultihomedTestCase (13, 200, 200, 200, 200, false), TestCase::QUICK);
+    AddTestCase (new MpTcpMultihomedTestCase (13, 1, 1, 1, 1, false), TestCase::QUICK);
 //    AddTestCase (new MpTcpMultihomedTestCase (100000, 100, 50, 100, 20, false), TestCase::QUICK);
 
 // here it's a test where I lower streamsize to see where it starts failing.

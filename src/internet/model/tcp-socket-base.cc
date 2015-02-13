@@ -244,7 +244,10 @@ TcpSocketBase::Bind(void)
       m_errno = ERROR_ADDRNOTAVAIL;
       return -1;
     }
-  m_tcp->m_sockets.push_back(this);
+  if (std::find(m_tcp->m_sockets.begin(), m_tcp->m_sockets.end(), this) == m_tcp->m_sockets.end())
+    {
+      m_tcp->m_sockets.push_back (this);
+    }
   return SetupCallback();
 }
 
@@ -258,7 +261,10 @@ TcpSocketBase::Bind6(void)
       m_errno = ERROR_ADDRNOTAVAIL;
       return -1;
     }
-  m_tcp->m_sockets.push_back(this);
+  if (std::find(m_tcp->m_sockets.begin(), m_tcp->m_sockets.end(), this) == m_tcp->m_sockets.end())
+    {
+      m_tcp->m_sockets.push_back (this);
+    }
   return SetupCallback();
 }
 
@@ -326,7 +332,10 @@ TcpSocketBase::Bind(const Address &address)
       m_errno = ERROR_INVAL;
       return -1;
     }
-  m_tcp->m_sockets.push_back(this);
+  if (std::find(m_tcp->m_sockets.begin(), m_tcp->m_sockets.end(), this) == m_tcp->m_sockets.end())
+    {
+      m_tcp->m_sockets.push_back (this);
+    }
   NS_LOG_LOGIC ("TcpSocketBase " << this << " got an endpoint: " << m_endPoint);
 
   return SetupCallback();
@@ -431,6 +440,7 @@ TcpSocketBase::Close(void)
 
   if (m_rxBuffer.Size() != 0)
     {
+      NS_LOG_INFO("There are still " << m_rxBuffer.Size() << " bytes in RxBuffer ");
       SendRST();
       return 0;
     }
@@ -1821,6 +1831,8 @@ TcpSocketBase::DeallocateEndPoint(void)
       m_endPoint->SetDestroyCallback(MakeNullCallback<void>());
       m_tcp->DeAllocate(m_endPoint);
       m_endPoint = 0;
+
+      // TODO replace with an std::remove
       std::vector<Ptr<TcpSocketBase> >::iterator it = std::find(m_tcp->m_sockets.begin(), m_tcp->m_sockets.end(), this);
       if (it != m_tcp->m_sockets.end())
         {

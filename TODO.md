@@ -80,7 +80,7 @@ use "/NodeList/[i]/DeviceList/[i]" ?
 * remove useless dependancy between TcpHeader and TcpRxBuffer::Add .  
 * Buffer::CheckNoZero can be simplified
 * should be able to bind to a specific worth via an attribute 
-
+* in ipv4endpointDemux:Deallocate, hat could be simplified
 
 
 * Should we create an MultipathSocket used by SCTP and/or mptcp ?

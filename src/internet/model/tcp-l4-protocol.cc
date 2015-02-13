@@ -178,7 +178,8 @@ TcpL4Protocol::DoDispose(void)
 Ptr<Socket>
 TcpL4Protocol::CreateSocket(TypeId socketTypeId)
 {
-  NS_LOG_FUNCTION_NOARGS ();
+//  NS_LOG_FUNCTION_NOARGS ();
+  NS_LOG_FUNCTION("Creating socket of type=" << socketTypeId);
   ObjectFactory rttFactory;
   ObjectFactory socketFactory;
   rttFactory.SetTypeId(m_rttTypeId);
@@ -342,8 +343,9 @@ TcpL4Protocol::Receive(Ptr<Packet> packet, Ipv4Header const &ipHeader, Ptr<Ipv4I
   Ipv4EndPointDemux::EndPoints endPoints;
 
 
-  for (uint32_t i=0 ; i< m_sockets.size(); i++){
-      NS_LOG_DEBUG("Socket: "<< m_sockets[i]);
+  for (uint32_t i=0 ; i< m_sockets.size(); i++)
+  {
+      NS_LOG_DEBUG("Socket: "<< m_sockets[i] << " NodeId: " << m_sockets[i]->GetNode()->GetId());
   }
   NS_LOG_DEBUG(" ----------------------------------------------");
   TcpHeader tcpHeader;

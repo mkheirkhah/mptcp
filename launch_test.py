@@ -55,7 +55,7 @@ NS_LOG += ":TcpSocketBase"
 NS_LOG += ":MpTcpSchedulerRoundRobin"
 # NS_LOG += ":SimpleNetDevice"
 # NS_LOG += ":ObjectBase=error|warn"
-# NS_LOG += ":Socket"
+NS_LOG += ":Socket"
 # logic:error:warn
 NS_LOG += ":MpTcpSubflow:MpTcpSocketBase"
 NS_LOG += ":MpTcpSubflowUncoupled"
@@ -69,8 +69,8 @@ NS_LOG += ":TcpTestSuite"
 # NS_LOG += ":TcpHeader=*"
 # NS_LOG=":TcpOptionMpTcp=*"
 # NS_LOG=":MpTcpOptionsTestSuite=*"
-# NS_LOG += ":TcpL4Protocol"
-# NS_LOG += ":Ipv4EndPoint"
+NS_LOG += ":TcpL4Protocol"
+NS_LOG += ":Ipv4EndPoint"
 # NS_LOG += ":Ipv4EndPointDemux"
 # NS_LOG += ":TraceHelper:PointToPointHelper"
 # OUTPUT_FILENAME="xp.txt"
@@ -106,9 +106,9 @@ except subprocess.TimeoutExpired:
     print("Timeout expired. try setting a longer timeout")
 finally:
     # will be done whatever the results
-    os.system("mergecap -w server.pcapng test-0-1.pcap test-0-2.pcap")
-    os.system("mergecap -w source.pcapng test-1-1.pcap test-1-2.pcap")
-
+    # os.system("mergecap -w server.pcapng test-0-1.pcap test-0-2.pcap")
+    # os.system("mergecap -w source.pcapng test-1-1.pcap test-1-2.pcap")
+    pass
 
 print("Exported:\n%s" % NS_LOG)
 print("Executed Command:\n%s" % cmd)
