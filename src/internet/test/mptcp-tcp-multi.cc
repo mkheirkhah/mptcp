@@ -464,6 +464,17 @@ void
 HandleSubflowCreated(Ptr<MpTcpSubflow> subflow)
 {
   NS_LOG_LOGIC("Created new subflow [" << subflow << "]. Is master: " << subflow->IsMaster());
+
+  if(subflow->IsMaster())
+  {
+    NS_LOG_LOGIC("successful establishement of first subflow " << subflow);
+  }
+  else
+  {
+    //! ce n'est pas le master donc forcement il s'agit d'un join
+    NS_LOG_LOGIC("successful JOIN of subflow " << subflow );
+  }
+  subflow->GetMeta()->SetupSubflowTracing(subflow);
 }
 
 

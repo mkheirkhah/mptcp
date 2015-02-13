@@ -53,6 +53,6 @@ cmd="xdg-open all.png"
 echo $cmd
 
 shift
-if [ $# -gt 0 ]; then
-	eval $cmd
+if [ $# -gt 1 ]; then
+	$cmd
 fi

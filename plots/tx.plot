@@ -13,17 +13,16 @@ set title sprintf("%s %s: Highest Tx vs NextTx", node, prefix)
 
 
 # if monomode
-if (nb_of_subflows < 0) {
-	print("Print in monomode")
-	plot  \
-	sprintf("%s/%sTxNext.csv", node, prefix)  using x_axis:"newNextTxSequence" with linespoints pointtype 3 title "Tx Next seq to send in order", \
-	sprintf("%s/%sTxUnack.csv", node, prefix)  using x_axis:"newUnackSequence" with linespoints pointtype 2 title "Tx First unack seq sf " 
+# if (nb_of_subflows < 0) {
+# 	print("Print in monomode")
+# 	plot  \
+# 	sprintf("%s/%sTxNext.csv", node, prefix)  using x_axis:"newNextTxSequence" with linespoints pointtype 3 title "Tx Next seq to send in order", \
+# 	sprintf("%s/%sTxUnack.csv", node, prefix)  using x_axis:"newUnackSequence" with linespoints pointtype 2 title "Tx First unack seq sf " 
 
-}
-else {
-	print("Print in multimode")
-	plot for [id=1:nb_of_subflows] \
-		sprintf("%s/%s%d_TxNext.csv", node, prefix, id)  using x_axis:"newNextTxSequence" with linespoints pointtype 3 title "Tx Next seq to send in order", \
-		sprintf("%s/%s%d_TxUnack.csv", node, prefix, id)  using x_axis:"newUnackSequence" with linespoints pointtype 2 title sprintf("Tx First unack seq sf %d",id) 
-	# sprintf("%s/%sTxHighest.csv", node, prefix) using x_axis:"newHighestSequence" with linespoints pointtype 1 title "Max seq sent ever"
-}
+# }
+# else {
+
+plot for [id=1:nb_of_subflows] \
+	filename("TxNext.csv", id) using x_axis:"newNextTxSequence" with linespoints pointtype 3 title "Tx Next seq to send in order", \
+	filename("TxUnack.csv", id) using x_axis:"newUnackSequence" with linespoints pointtype 2 title sprintf("Tx First unack seq sf %d",id) 
+# sprintf("%s/%sTxHighest.csv", node, prefix) using x_axis:"newHighestSequence" with linespoints pointtype 1 title "Max seq sent ever"

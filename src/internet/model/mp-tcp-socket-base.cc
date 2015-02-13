@@ -124,7 +124,7 @@ static const std::string containerNames[MpTcpSocketBase::Maximum] = {
 MpTcpSocketBase::MpTcpSocketBase(const MpTcpSocketBase& sock) :
   TcpSocketBase(sock),
   m_tracePrefix(sock.m_tracePrefix),
-  m_prefixCounter(0),
+  m_prefixCounter(1), //!< Start at one
   m_mpEnabled(sock.m_mpEnabled),
   m_ssThresh(sock.m_ssThresh),
   m_initialCWnd(sock.m_initialCWnd),
@@ -153,7 +153,7 @@ MpTcpSocketBase::MpTcpSocketBase(const MpTcpSocketBase& sock) :
 MpTcpSocketBase::MpTcpSocketBase() :
   TcpSocketBase(),
   m_tracePrefix("default"),
-  m_prefixCounter(0),
+  m_prefixCounter(1),
   m_mpEnabled(false),
     m_ssThresh(0),
   m_initialCWnd(10), // TODO reset to 1

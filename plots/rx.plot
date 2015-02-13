@@ -15,14 +15,7 @@ set title sprintf("%s %s: ", node, prefix)
 # I may use csvfix join to do that
 
 # TODO move it to common
-if (nb_of_subflows < 0) {
-	print("Print in monomode")
-	filename(suffix,id) = sprintf("%s/%s%s", node, prefix, suffix)
-}
-else {
-	print("Print in multimode")
-	filename(suffix,id) = sprintf("%s/%s%d_%s", node, prefix, id, suffix)	
-}
+
 # if monomode
 
 plot for [id=1:nb_of_subflows] \

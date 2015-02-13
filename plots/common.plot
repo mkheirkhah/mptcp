@@ -43,6 +43,18 @@ if (!exists("prefix")) {
 	exit gnuplot
 }
 
+
+
+if (nb_of_subflows < 0) {
+	print("Print in monomode")
+	filename(suffix,id) = sprintf("%s/%s%s", node, prefix, suffix)
+}
+else {
+	print("Print in multimode")
+	filename(suffix,id) = sprintf("%s/%s%d_%s", node, prefix, id, suffix)	
+}
+
+
 # set terminal term
 
 set terminal png size 800,600
