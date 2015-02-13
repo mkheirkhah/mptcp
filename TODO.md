@@ -28,6 +28,8 @@ List of tests:
 
 
 Generic:
+* I should call setupTracing on subflow from user provided functions
+* Call MoveSubflow when state changes discovered ?
 * rename GetMeta() into Meta() ?
 * rename isn into ISS as in TCP RFC
 * dans core/model/test.cc, log warn message when fullness not accepted
@@ -77,12 +79,12 @@ use "/NodeList/[i]/DeviceList/[i]" ?
 * TcpRxBuffer::IncNextRxSequence sounds like a bad idea; may break some things
 * propose a safer TcpState machine 
 * Add a TcpRxBuffer::HeadSeqNb() const function
-* remove useless dependancy between TcpHeader and TcpRxBuffer::Add .  
+* remove useless dependancy between TcpHeader and TcpRxBuffer::Add 
+* Trace m_state in TcpSocketBase to log state changes
 * Buffer::CheckNoZero can be simplified
 * should be able to bind to a specific worth via an attribute 
 * in ipv4endpointDemux:Deallocate, hat could be simplified
-
-
+* add a --disable-scratchpad flag to speedup compilation
 * Should we create an MultipathSocket used by SCTP and/or mptcp ?
 
 

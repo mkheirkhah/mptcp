@@ -322,8 +322,8 @@ public:
   /**
   Temporary, for debug
   **/
-  void
-  SetupTracing(const std::string prefix);
+//  void
+//  SetupTracing(const std::string prefix);
 
 //  MpTcpMapping getSegmentOfACK( uint32_t ack);
 
@@ -393,10 +393,11 @@ protected:
   **/
 //  virtual void
 //  AppendDataAck(TcpHeader& hdr) const;
-
+public:
   Ptr<MpTcpSocketBase>
   GetMeta() const;
 
+protected:
   virtual void
   ReceivedAck(Ptr<Packet>, const TcpHeader&); // Received an ACK packet
   virtual void
@@ -525,6 +526,8 @@ private:
   bool m_masterSocket;  //!< True if this is the first subflow established (with MP_CAPABLE)
 
   uint32_t m_localNonce;  //!< Store local host token, generated during the 3-way handshake
+
+  int m_prefixCounter;  //!< Temporary variable to help with prefix generation . To remove later
 //  uint32_t m_remoteToken; //!< Store remote host token
 
 };

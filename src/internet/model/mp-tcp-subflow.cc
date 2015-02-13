@@ -275,6 +275,7 @@ MpTcpSubflow::MpTcpSubflow(const MpTcpSubflow& sock)
   m_initialCWnd (sock.m_initialCWnd),
   m_masterSocket(sock.m_masterSocket),
   m_localNonce(sock.m_localNonce)
+
 // , m_remoteToken(sock.m_remoteToken)
 // TODO
 //    m_retxThresh (sock.m_retxThresh),
@@ -1296,10 +1297,25 @@ MpTcpSubflow::ProcessSynRcvd(Ptr<Packet> packet, const TcpHeader& tcpHeader, con
 //      NS_LOG_LOGIC("Updating receive window");
 //      GetMeta()->SetRemoteWindow(tcpHeader.GetWindowSize());
 
-
+//0.07s 0 0.07 [node 0: ] MpTcpSubflow:ProcessSynRcvd(0x1f1cc20, 4420 > 50000 [ ACK ] Seq=1 Ack=1 Win=65535
+//ns3::TcpOptionMpTcpMain(MP_JOIN: [Ack] with hash [TODO]) ns3::TcpOptionMpTcpMain( MP_DSS: Acknowledges [1680] ))
       // Expecting ack
-      Ptr<TcpOptionMpTcpCapable> main;
-      NS_ASSERT( GetMpTcpOption(tcpHeader, main) );
+      Ptr<TcpOptionMpTcpCapable> mp_capable;
+      Ptr<TcpOptionMpTcpJoin>    mp_join;
+      if(GetMpTcpOption(tcpHeader, mp_capable))
+      {
+        NS_LOG_INFO("Received a MP_CAPABLE");
+        NS_ASSERT_MSG( IsMaster(), "Makes no sense to receive an MP_CAPABLE if we are not the master subflow");
+      }
+      else if(GetMpTcpOption(tcpHeader, mp_join))
+      {
+        NS_LOG_INFO("Received a MP_JOIN");
+        NS_ASSERT_MSG( !IsMaster(), "Makes no sense to receive an MP_JOIN if we are the master");
+
+      }
+      else {
+        NS_FATAL_ERROR("We should have received either an MP_JOIN or MP_CAPABLE. Fallback to TCP is not supported.");
+      }
 //      NS_LOG_INFO ( "Should contain both keys" );
 
 
@@ -1319,7 +1335,10 @@ MpTcpSubflow::ProcessSynRcvd(Ptr<Packet> packet, const TcpHeader& tcpHeader, con
       // Remove to get the behaviour of old NS-3 code.
       m_delAckCount = m_delAckMaxCount;
       ReceivedAck(packet, tcpHeader);
+
+      // TODO this may be remvoed otherwise it will be
       GetMeta()->OnSubflowEstablishment(this);
+
       NotifyNewConnectionCreated(this, fromAddress);
       // As this connection is established, the socket is available to send data now
       if (GetTxAvailable() > 0)
@@ -1954,20 +1973,11 @@ MpTcpSubflow::RecvWithMapping(uint32_t maxSize, bool only_full_mapping, Sequence
 
 
 
-void
-MpTcpSubflow::SetupTracing(const std::string prefix)
-{
-  NS_LOG_LOGIC("Setup tracing for sf " << this << " with prefix [" << prefix << "]");
-//  f.open(filename, std::ofstream::out | std::ofstream::trunc);
-
-  // For now, there is no subflow deletion so this should be good enough, else it will crash
-  std::stringstream os;
-  //! we start at 1 because it's nicer
-  static int counter = 1;
-  os << prefix << "subflow" <<  counter++;
-
-  SetupSocketTracing(this, prefix);
-}
+//void
+//MpTcpSubflow::SetupTracing(const std::string prefix)
+//{
+//
+//}
 
 
 /**

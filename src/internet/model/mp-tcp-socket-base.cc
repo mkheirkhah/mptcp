@@ -124,6 +124,7 @@ static const std::string containerNames[MpTcpSocketBase::Maximum] = {
 MpTcpSocketBase::MpTcpSocketBase(const MpTcpSocketBase& sock) :
   TcpSocketBase(sock),
   m_tracePrefix(sock.m_tracePrefix),
+  m_prefixCounter(0),
   m_mpEnabled(sock.m_mpEnabled),
   m_ssThresh(sock.m_ssThresh),
   m_initialCWnd(sock.m_initialCWnd),
@@ -137,6 +138,7 @@ MpTcpSocketBase::MpTcpSocketBase(const MpTcpSocketBase& sock) :
   m_joinRequest(sock.m_joinRequest),
   m_joinSubflowCreated(sock.m_joinSubflowCreated),
   m_newSubflowConnected(sock.m_newSubflowConnected)
+
 {
   //! Scheduler may have some states, thus generate a new one
   m_remotePathIdManager = Create<MpTcpPathIdManagerImpl>();
@@ -150,7 +152,8 @@ MpTcpSocketBase::MpTcpSocketBase(const MpTcpSocketBase& sock) :
 // TODO implement a copy constructor
 MpTcpSocketBase::MpTcpSocketBase() :
   TcpSocketBase(),
-
+  m_tracePrefix("default"),
+  m_prefixCounter(0),
   m_mpEnabled(false),
     m_ssThresh(0),
   m_initialCWnd(10), // TODO reset to 1
@@ -2299,21 +2302,8 @@ MpTcpSocketBase::OnSubflowEstablishment(Ptr<MpTcpSubflow> subflow)
     }
   }
 
-
-
   //[subflow->m_positionInVector] = ;
   MoveSubflow(subflow, Others, Established);
-
-
-//  m_subflows[Established].size();
-  //
-  subflow->SetupTracing(m_tracePrefix);
-
-  // TODO setup callbacks
-
-
-  // In all cases we should move the subflow from
-  //Ptr<Socket> sock
 }
 
 
@@ -2379,6 +2369,7 @@ for bad plots.
 void
 SetupSocketTracing(Ptr<TcpSocketBase> sock, const std::string prefix)
 {
+  NS_LOG_UNCOND("SetupSocketTracing called with sock " << sock << " and prefix [" << prefix << "]");
   std::ios::openmode mode = std::ofstream::out | std::ofstream::trunc;
 
   AsciiTraceHelper asciiTraceHelper;
@@ -2490,6 +2481,22 @@ MpTcpSocketBase::SetupMetaTracing(std::string prefix)
 
   // TODO move out to
   SetupSocketTracing(this, m_tracePrefix + "/meta");
+}
+
+void
+MpTcpSocketBase::SetupSubflowTracing(Ptr<MpTcpSubflow> sf)
+{
+  NS_ASSERT_MSG(m_tracePrefix.length() != 0, "please call SetupMetaTracing before." );
+  NS_LOG_LOGIC("Setup tracing for sf " << this << " with prefix [" << m_tracePrefix << "]");
+//  f.open(filename, std::ofstream::out | std::ofstream::trunc);
+
+  // For now, there is no subflow deletion so this should be good enough, else it will crash
+  std::stringstream os;
+  //! we start at 1 because it's nicer
+
+  os << m_tracePrefix << "subflow" <<  m_prefixCounter++;
+
+  SetupSocketTracing(this, os.str().c_str());
 }
 
 

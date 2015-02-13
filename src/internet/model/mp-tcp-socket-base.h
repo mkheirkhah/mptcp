@@ -151,11 +151,15 @@ public:
   BytesInFlight();  // Return total bytes in flight of a subflow
 
   /**
+  ONLY TEMPORARY
   Used to export a whole range of statistics to csv files (filenames hardcoded).
   This would likely need a rework before upstream, for instance to allow
   enabling/disabling
   **/
-  virtual void SetupMetaTracing(std::string prefix);
+  virtual void
+  SetupMetaTracing(std::string prefix);
+  virtual void
+  SetupSubflowTracing(Ptr<MpTcpSubflow> sf);
 
 
   void
@@ -721,8 +725,11 @@ protected: // protected variables
 //  virtual void OnAddAddress(MpTcpAddressInfo);
 //  virtual void OnRemAddress();
 
+public:
   std::string m_tracePrefix;      //!< help naming csv files
+  int m_prefixCounter;
 
+protected:
 //!< True if remote host is MPTCP compliant (not used so far. could be disabled)
 // May be redundant with m_dssEnabled
   bool m_mpEnabled;
