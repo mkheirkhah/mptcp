@@ -405,49 +405,6 @@ Assign (const Ptr<NetDevice> &device)
 }
 #endif
 
-// Attach callbacks
-//void
-//SetupCallbacks(Ptr<Socket> sock,
-////std::ofstream f,
-//const std::string prefix)
-//{
-////  f.open(filename, std::ofstream::out | std::ofstream::trunc);
-//
-//  AsciiTraceHelper asciiTraceHelper;
-//  Ptr<OutputStreamWrapper> streamNextTx = asciiTraceHelper.CreateFileStream (prefix+"_nextTx.csv");
-//  Ptr<OutputStreamWrapper> streamHighest = asciiTraceHelper.CreateFileStream (prefix+"_highest.csv");
-//  Ptr<OutputStreamWrapper> streamRxAvailable = asciiTraceHelper.CreateFileStream (prefix+"_RxAvailable.csv");
-//  Ptr<OutputStreamWrapper> streamRxTotal = asciiTraceHelper.CreateFileStream (prefix+"_RxTotal.csv");
-//  Ptr<OutputStreamWrapper> streamTx = asciiTraceHelper.CreateFileStream (prefix+"_Tx.csv");
-//
-//  *streamNextTx->GetStream() << "Time,oldNextTxSequence,newNextTxSequence\n";
-//  *streamHighest->GetStream() << "Time,oldHighestSequence,newHighestSequence\n";
-//  *streamRxAvailable->GetStream() << "Time,oldRxAvailable,newRxAvailable\n";
-//  *streamRxTotal->GetStream() << "Time,oldRxTotal,newRxTotal\n";
-//  *streamTx->GetStream() << "Time,oldTx,newTx\n";
-//
-////  , HighestSequence, RWND\n";
-//
-////  NS_ASSERT(f.is_open());
-//
-//  // TODO je devrais etre capable de voir les CongestionWindow + tailles de buffer/ Out of order
-////  CongestionWindow
-//
-//  sock->TraceConnect ("NextTxSequence", "NextTxSequence", MakeBoundCallback(&dumpNextTxSequence, streamNextTx) );
-////  sock->TraceConnect ("NextTxSequence", "NextTxSequence", MakeBoundCallback(&dumpNextTxSequence, streamNextTx) );
-////  sock->TraceConnectWithoutContext ("NextTxSequence", MakeBoundCallback(&dumpNextTxSequence, stream) );
-////  sock->TraceConnect ("NextTxSequence", "server", MakeBoundCallback(&dumpNextTxSequence) );
-//
-//
-//  sock->TraceConnect ("HighestSequence", "HighestSequence", MakeBoundCallback(&dumpNextTxSequence, streamHighest) );
-//
-//  Ptr<MpTcpSocketBase> sock2 = DynamicCast<MpTcpSocketBase>(sock);
-//  sock2->m_rxBuffer.TraceConnect ("RxTotal", "RxTotal", MakeBoundCallback(&dumpNextTxSequence, streamRxTotal) );
-//  sock2->m_rxBuffer.TraceConnect ("RxAvailable", "RxAvailable", MakeBoundCallback(&dumpNextTxSequence, streamRxAvailable) );
-//  sock2->m_txBuffer.TraceConnect ("UnackSequence", "UnackSequence", MakeBoundCallback(&dumpNextTxSequence, streamTx) );
-////  sock->TraceConnect ("RWND", "RWND", MakeBoundCallback(&dumpUint32), stream);
-//}
-
 
 void
 MpTcpTestCase::SetupDefaultSim (void)

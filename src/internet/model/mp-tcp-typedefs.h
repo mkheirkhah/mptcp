@@ -50,7 +50,6 @@ typedef enum
 
 /**
 TODO rename later into MpTcpDSNMapping
-if we were in C++11 could be a tuple
 DSN=Data Sequence Number (mptcp option level)
 SSN=Subflow Sequence Number (TCP legacy seq nb)
 
@@ -64,7 +63,7 @@ public:
 
 
   /**
-
+  TODO maybe remove
   **/
   void Configure( SequenceNumber32  dataSeqNb, uint16_t mappingSize);
 
@@ -81,16 +80,20 @@ public:
   bool
   Intersect(const MpTcpMapping&) const;
 
-
-
+  /**
+   *
+   */
   void
-  SetDSN(SequenceNumber32 const&);
+  SetHeadDSN(SequenceNumber32 const&);
 
-  void
+  /**
+   * \brief Set mapping length
+   */
+  virtual void
   SetMappingSize(uint16_t const&);
 
   /**
-  * \param dsn Data seqNb
+  * \param ssn Data seqNb
   */
   bool IsSSNInRange(SequenceNumber32 const& ssn) const;
 
@@ -109,10 +112,13 @@ public:
   TranslateSSNToDSN(const SequenceNumber32& ssn,SequenceNumber32& dsn) const;
 
   /**
-   *  <= X <= TailDSN dsn
-   Last byte covered by the segment
+   * \return The last MPTCP sequence number included in the mapping
    */
   SequenceNumber32 TailDSN (void) const;
+
+  /**
+  * \return The last subflow sequence number included in the mapping
+  */
   SequenceNumber32 TailSSN (void) const;
 
   /**
@@ -124,22 +130,22 @@ public:
   /**
   * Necessary for std::set to sort mappings
   * Compares data seq nb
+  * \brief Compares mapping based on their DSN number. It is required when inserting into a set
   */
   bool operator<(MpTcpMapping const& ) const;
 
 
   // getters
   virtual
-  //uint64_t
   SequenceNumber32
-  HeadDSN() const; // { return m_dataSequenceNumber; }
+  HeadDSN() const;
 
   // TODO rename into GetMappedSSN Head ?
   virtual SequenceNumber32
-  HeadSSN() const; // { return m_subflowSequenceNumber; }
+  HeadSSN() const;
 
   virtual uint16_t
-  GetLength() const ; //{ return m_dataLevelLength; }
+  GetLength() const ;
 
   /**
 
@@ -190,7 +196,7 @@ class MpTcpMappingContainer
 
 
   /**
-  SequenceNumber32 ?
+   * \brief Discard mappings which TailDSN() < maxDsn and TailSSN() < maxSSN
 
   This can be called only when dsn is in the meta socket Rx buffer and in order
   (since it may renegate some data when out of order).
@@ -200,7 +206,7 @@ class MpTcpMappingContainer
   \return Number of mappings discarded. >= 0
   **/
   int
-  DiscardMappingsUpToSN(const SequenceNumber32& dsn, const SequenceNumber32& ssn);
+  DiscardMappingsUpToSN(const SequenceNumber32& maxDsn, const SequenceNumber32& maxSsn);
 
 
   /**
@@ -227,11 +233,11 @@ class MpTcpMappingContainer
 //  TcpRxBuffer
 //  TcpTxBuffer
 
-    /**
-    For debug purpose. Dump all registered mappings
-    **/
-    void
-    Dump();
+  /**
+  For debug purpose. Dump all registered mappings
+  **/
+  void
+  Dump() const;
 
   /*
 
@@ -240,17 +246,18 @@ class MpTcpMappingContainer
 //  CheckIfMappingCovered(SequenceNumber32 start, uint32_t len, std::vector<MpTcpMapping>& mappings);
 
   /**
-  TODO passer en const
-  one can iterate over it to find a range
-  */
+   * \brief one can iterate over it to find a range
+   * \param
+   */
   bool
 //  FindOverlappingMapping(const MpTcpMapping& mapping, MpTcpMapping& ret);
-  FindOverlappingMapping(SequenceNumber32 start, uint32_t len, MpTcpMapping& ret);
+  FindOverlappingMapping(SequenceNumber32 headSSN, uint32_t len, MpTcpMapping& ret) const;
 
 
 
   /**
-  TODO this one generates disturbing logs, we should do it otherwise
+  TODO this one generates disturbing logs, we should remove it
+  and do it otherwise
 
   Will map the mapping to the first unmapped SSN
   \return Same value as for AddMappingEnforceSSN
@@ -273,13 +280,10 @@ class MpTcpMappingContainer
   bool
   GetMappingForSSN( const SequenceNumber32& ssn, MpTcpMapping& m);
 
-
-//  TracedValue<SequenceNumber32> m_highestMappedSSN; //!<
-
-//    bool m_receiveMode;
+//  TODO should be removed
     TcpTxBuffer* m_txBuffer;  //!< used to map DSN to SSN, should be removed
 
-  protected:
+protected:
     MappingList m_mappings;     //!<
 };
 

@@ -60,6 +60,13 @@ public:
   // TODO pass it as virtual ?
   virtual TypeId GetInstanceTypeId(void) const;
 
+
+  /**
+  */
+  uint32_t
+  GetTxAvailable() const;
+
+
   /**
   the metasocket is the socket the application is talking to.
   Every subflow is linked to that socket.
@@ -114,9 +121,8 @@ public:
   \param ack
   \param mapping
   **/
-  bool
+  virtual bool
   DiscardAtMostOneTxMapping(SequenceNumber32 const& dack,
-//  SequenceNumber32 const& ack,
     MpTcpMapping& mapping);
 
   /**
@@ -127,9 +133,15 @@ public:
   virtual bool
   StopAdvertisingAddress(Ipv4Address);
 
+  /**
+   * \brief This is important. This should first request data from the meta
+   */
   virtual void
   NotifySend (uint32_t spaceAvailable);
 
+  /**
+   * for debug
+   */
   void
   DumpInfo() const;
 

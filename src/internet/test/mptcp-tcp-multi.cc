@@ -225,9 +225,10 @@ MpTcpMultihomedTestCase::SourceConnectionSuccessful(Ptr<Socket> sock)
 //              << " received a DSS: " << meta->m_receivedDSS
               );
 
-  if(! meta->m_receivedDSS) {
+  if(! meta->m_receivedDSS)
+  {
     //!
-    NS_LOG_INFO("No DSS received yet => Not fully established. Do nothing");
+    NS_LOG_INFO("No DSS received yet => Not fully established. Can't create any subflow");
     return;
   }
 
@@ -257,6 +258,8 @@ MpTcpMultihomedTestCase::SourceConnectionSuccessful(Ptr<Socket> sock)
 
   sourceMeta ->ConnectNewSubflow(local, remote);
 //  Simulator::Schedule( )
+
+// TODO la je dois envoyer des donnees
 }
 
 
@@ -278,6 +281,7 @@ MpTcpMultihomedTestCase::ServerHandleConnectionCreated (Ptr<Socket> s, const Add
   // TODO setup tracing there !
 
   Ptr<MpTcpSocketBase> server_meta = DynamicCast<MpTcpSocketBase>(s);
+  NS_ASSERT_MSG(server_meta, "Was expecting a meta socket !");
   server_meta->SetupMetaTracing("server");
 }
 
@@ -699,14 +703,14 @@ public:
     // 2) source write size, 3) source read size
     // 4) server write size, and 5) server read size
     // with units of bytes
-//    AddTestCase (new MpTcpMultihomedTestCase (13, 200, 200, 200, 200, false), TestCase::QUICK);
+    AddTestCase (new MpTcpMultihomedTestCase (13, 200, 200, 200, 200, false), TestCase::QUICK);
 //    AddTestCase (new MpTcpMultihomedTestCase (13, 1, 1, 1, 1, false), TestCase::QUICK);
 //    AddTestCase (new MpTcpMultihomedTestCase (100000, 100, 50, 100, 20, false), TestCase::QUICK);
 
 // here it's a test where I lower streamsize to see where it starts failing.
 // 2100 is ok, 2200 fails
 //    AddTestCase (new MpTcpMultihomedTestCase (5000, 100, 50, 100, 20, false), TestCase::EXTENSIVE);
-    AddTestCase (new MpTcpMultihomedTestCase (5000, 100, 50, 100, 20, false), TestCase::QUICK);
+//    AddTestCase (new MpTcpMultihomedTestCase (10000, 100, 50, 100, 20, false), TestCase::QUICK);
 
 
     // Disable IPv6 tests; not supported yet

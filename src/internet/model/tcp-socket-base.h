@@ -139,6 +139,7 @@ public:
   virtual void
   BindToNetDevice(Ptr<NetDevice> netdevice); // NetDevice with my m_endPoint
 
+  // TODO I bet we could remove lots of it
   //MKs
   std::vector<std::pair<double, uint32_t> > cwndTrack;
   std::vector<std::pair<double, uint32_t> > SSTrack;

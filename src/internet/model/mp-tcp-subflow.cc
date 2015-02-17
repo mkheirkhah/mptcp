@@ -999,7 +999,7 @@ MpTcpSubflow::ConnectionSucceeded(void)
 
   NS_LOG_LOGIC(this << "Connection succeeded");
   m_connected = true;
-  GetMeta()->OnSubflowEstablishment(this);
+//  GetMeta()->OnSubflowEstablishment(this);
 //  TcpSocketBase::ConnectionSucceeded();
 }
 
@@ -1044,15 +1044,9 @@ MpTcpSubflow::ProcessSynSent(Ptr<Packet> packet, const TcpHeader& tcpHeader)
 
 //      NS_LOG_INFO("Received a SYN/ACK as answer");
 
-      //NS_ASSERT();
-      // TODO overwrite so that it warns meta
-      Simulator::ScheduleNow(&MpTcpSubflow::ConnectionSucceeded, this);
+//      Simulator::ScheduleNow(&MpTcpSubflow::ConnectionSucceeded, this);
 
-
-      // check for option TODO fall back on TCP in that case
-//      NS_ASSERT( tcpHeader.HasOption( TcpOption::MPTCP ) );
-
-
+      uint8_t addressId = 0;
 
       // Check cryptographic materials
       if( IsMaster())
@@ -1095,11 +1089,10 @@ MpTcpSubflow::ProcessSynSent(Ptr<Packet> packet, const TcpHeader& tcpHeader)
         NS_ASSERT_MSG( GetMpTcpOption(tcpHeader, join), "There must be an MP_JOIN option in the SYN Packet" );
         NS_ASSERT_MSG( join && join->GetState() == TcpOptionMpTcpJoin::SynAck, "the MPTCP join option received is not of the expected 1 out of 3 MP_JOIN types." );
 
-        // Here we should check the tokens
+        addressId = join->GetAddressId();
+        // TODO Here we should check the tokens
 //        uint8_t buf[20] =
 //        opt3->GetTruncatedHmac();
-
-
       }
 
       m_retxEvent.Cancel();
@@ -1108,7 +1101,7 @@ MpTcpSubflow::ProcessSynSent(Ptr<Packet> packet, const TcpHeader& tcpHeader)
       SetTxHead(m_nextTxSequence);
 
       // TODO support IPv6
-      GetIdManager()->AddRemoteAddr(0, m_endPoint->GetPeerAddress(), m_endPoint->GetPeerPort() );
+      GetIdManager()->AddRemoteAddr(addressId, m_endPoint->GetPeerAddress(), m_endPoint->GetPeerPort() );
 
       TcpHeader answerHeader;
       GenerateEmptyPacketHeader(answerHeader, TcpHeader::ACK);
@@ -1177,9 +1170,10 @@ MpTcpSubflow::AppendMpTcp3WHSOption(TcpHeader& hdr) const
 
   if( IsMaster() )
   {
-
+    //! Use an MP_CAPABLE option
     Ptr<TcpOptionMpTcpCapable> mpc =  CreateObject<TcpOptionMpTcpCapable>();
-    switch(hdr.GetFlags()){
+    switch(hdr.GetFlags())
+    {
       case TcpHeader::SYN:
       case (TcpHeader::SYN | TcpHeader::ACK):
         mpc->SetSenderKey( GetMeta()->GetLocalKey() );
@@ -1232,10 +1226,10 @@ MpTcpSubflow::AppendMpTcp3WHSOption(TcpHeader& hdr) const
       case (TcpHeader::SYN | TcpHeader::ACK):
         {
           join->SetState(TcpOptionMpTcpJoin::SynAck);
-          //! TODO request from meta its id
+          //! TODO request from idmanager an id
           static uint8_t id = 0;
           // TODO
-          NS_LOG_WARN("IDs are incremental, there is no real");
+          NS_LOG_WARN("IDs are incremental, there is no real logic behind it yet");
   //        id = GetIdManager()->GetLocalAddrId( InetSocketAddress(m_endPoint->GetLocalAddress(),m_endPoint->GetLocalPort()) );
           join->SetAddressId( id++ );
           join->SetTruncatedHmac(424242); // who cares
@@ -1282,13 +1276,13 @@ MpTcpSubflow::ProcessSynRcvd(Ptr<Packet> packet, const TcpHeader& tcpHeader, con
 
   // Extract the flags. PSH and URG are not honoured.
   uint8_t tcpflags = tcpHeader.GetFlags() & ~(TcpHeader::PSH | TcpHeader::URG);
+
+  //! TODO replace by FirstUnack
   if (tcpflags == 0 || (tcpflags == TcpHeader::ACK && m_nextTxSequence + SequenceNumber32(1) == tcpHeader.GetAckNumber()))
     { // If it is bare data, accept it and move to ESTABLISHED state. This is
       // possibly due to ACK lost in 3WHS. If in-sequence ACK is received, the
       // handshake is completed nicely.
-      NS_LOG_INFO ( "SYN_RCVD -> ESTABLISHED");
-      // TODO we should check for the mptcp capable option
-      m_state = ESTABLISHED;
+
       m_connected = true;
       m_retxEvent.Cancel();
       m_highTxMark = ++m_nextTxSequence;
@@ -1313,7 +1307,8 @@ MpTcpSubflow::ProcessSynRcvd(Ptr<Packet> packet, const TcpHeader& tcpHeader, con
         NS_ASSERT_MSG( !IsMaster(), "Makes no sense to receive an MP_JOIN if we are the master");
 
       }
-      else {
+      else
+      {
         NS_FATAL_ERROR("We should have received either an MP_JOIN or MP_CAPABLE. Fallback to TCP is not supported.");
       }
 //      NS_LOG_INFO ( "Should contain both keys" );
@@ -1331,15 +1326,20 @@ MpTcpSubflow::ProcessSynRcvd(Ptr<Packet> packet, const TcpHeader& tcpHeader, con
           m_endPoint6->SetPeer(Inet6SocketAddress::ConvertFrom(fromAddress).GetIpv6(),
               Inet6SocketAddress::ConvertFrom(fromAddress).GetPort());
         }
+
+      NS_LOG_INFO ( "SYN_RCVD -> ESTABLISHED");
+      // TODO we should check for the mptcp capable option
+      m_state = ESTABLISHED;
+
       // Always respond to first data packet to speed up the connection.
       // Remove to get the behaviour of old NS-3 code.
       m_delAckCount = m_delAckMaxCount;
       ReceivedAck(packet, tcpHeader);
 
       // TODO this may be remvoed otherwise it will be
-      GetMeta()->OnSubflowEstablishment(this);
+//      GetMeta()->OnSubflowEstablishment(this);
 
-      NotifyNewConnectionCreated(this, fromAddress);
+//      NotifyNewConnectionCreated(this, fromAddress);
       // As this connection is established, the socket is available to send data now
       if (GetTxAvailable() > 0)
         {
@@ -1632,7 +1632,8 @@ MpTcpSubflow::DiscardAtMostOneTxMapping(SequenceNumber32 const& firstUnackedMeta
     return false;
   }
 
-  if(mapping.TailDSN() < firstUnackedMeta && mapping.TailSSN() < FirstUnackedSeq()) {
+  if(mapping.TailDSN() < firstUnackedMeta && mapping.TailSSN() < FirstUnackedSeq())
+  {
     NS_LOG_DEBUG("mapping can be discarded");
     NS_ASSERT(m_TxMappings.DiscardMapping(mapping));
     m_txBuffer.DiscardUpTo(mapping.TailSSN() + SequenceNumber32(1));
@@ -1641,6 +1642,16 @@ MpTcpSubflow::DiscardAtMostOneTxMapping(SequenceNumber32 const& firstUnackedMeta
 
 //  }
   return false;
+}
+
+
+
+
+uint32_t
+MpTcpSubflow::GetTxAvailable() const
+{
+  //!
+  return TcpSocketBase::GetTxAvailable();
 }
 
 /**

@@ -376,6 +376,11 @@ public:
   /**
   this part is for ACK. Not implemented yet. Always 0
   **/
+
+  /**
+  * \brief
+  * \return 0 for now (not implemented)
+  */
   virtual const uint8_t* GetHmac(void) const;
   virtual void SetHmac(uint8_t hmac[20]) ;
 

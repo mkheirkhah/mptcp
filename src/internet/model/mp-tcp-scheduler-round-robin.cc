@@ -88,7 +88,6 @@ MpTcpSchedulerRoundRobin::GenerateMappings(MappingVector& mappings)
   // TODO rewrite pr que cela fasse comme dans
 //  int testedSf = 0;
   int i = 0;
-  //, flowId = m_lastUsedFlowId;
   for(
       ;
     i < (int)m_metaSock->GetNActiveSubflows()
@@ -97,12 +96,15 @@ MpTcpSchedulerRoundRobin::GenerateMappings(MappingVector& mappings)
     )
   {
     uint32_t left = m_metaSock->m_txBuffer.SizeFromSequence( metaNextTxSeq );
-    if(left <= 0) {
+    if(left <= 0)
+    {
       NS_LOG_DEBUG("Nothing to send from meta");
       return 0;
     }
 
-    NS_LOG_DEBUG("Meta Tx to send:" << left);
+    NS_LOG_DEBUG("Meta Tx to send:" << left
+              << " over [" << (int)m_metaSock->GetNActiveSubflows() << "] active subflow(s)"
+              );
 
 
     // TODO check how the windows work
@@ -148,7 +150,7 @@ MpTcpSchedulerRoundRobin::GenerateMappings(MappingVector& mappings)
       NS_LOG_DEBUG("Most likely window is equal to 0 which should not happen");
       continue;
     }
-    NS_ASSERT_MSG(amountOfDataToSend > 0,"Most likely window is equal to 0 which should not happen");
+    NS_ASSERT_MSG(amountOfDataToSend > 0, "Most likely window is equal to 0 which should not happen");
 //    }
 //    else {
 //        NS_LOG_DEBUG("No window available [" << window << "]");

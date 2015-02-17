@@ -155,7 +155,7 @@ MpTcpSocketBase::MpTcpSocketBase() :
   m_tracePrefix("default"),
   m_prefixCounter(1),
   m_mpEnabled(false),
-    m_ssThresh(0),
+  m_ssThresh(0),
   m_initialCWnd(10), // TODO reset to 1
   m_server(true),
   m_localKey(0),
@@ -462,7 +462,9 @@ MpTcpSocketBase::CompleteFork(
 
   // TODO remove that, it should be done by the subflow complete fork
   m_connected = true;
-  NotifyNewConnectionCreated(this,fromAddress);
+
+  NotifyNewConnectionCreated(this, fromAddress);
+
   // As this connection is established, the socket is available to send data now
   if (GetTxAvailable() > 0)
   {
@@ -514,6 +516,12 @@ MpTcpSocketBase::AppendDataAck(TcpHeader& hdr) const
   NS_LOG_FUNCTION(this);
 
   Ptr<TcpOptionMpTcpDSS> dss;
+
+  //! if a bigger dataack is already set, what happens ?
+//  if(GetOrCreateMpTcpOption(hdr, dss) && (dss->GetFlags() & ))
+//  {
+//
+//  }
   GetOrCreateMpTcpOption(hdr, dss);
 //  Ptr<TcpOptionMpTcpDSS> dss;
 //  if(!GetMpTcpOption(hdr,dss)) {
@@ -678,7 +686,8 @@ MpTcpSocketBase::ProcessDSS(const TcpHeader& tcpHeader, Ptr<TcpOptionMpTcpDSS> d
 
 
 //  #if 0
-  switch(m_state) {
+  switch(m_state)
+  {
 
     case ESTABLISHED:
       ProcessDSSEstablished(tcpHeader, dss, sf);
@@ -1014,25 +1023,32 @@ MpTcpSocketBase::OnSubflowNewState(std::string context,
 //  if(newState)
   if(newState == ESTABLISHED)
   {
+
+
+
+
+    //!
+    MoveSubflow(sf,Others,Established);
+
+
+
     // subflow did SYN_RCVD -> ESTABLISHED
     if(oldState == SYN_RCVD)
     {
       NS_LOG_LOGIC("Subflow created");
-
-      //! TODO We should try to steal the endpoint
-      if( sf->IsMaster())
-      {
-        NS_LOG_LOGIC("Master subflow created, copying its endpoint");
-        m_endPoint = sf->m_endPoint;
-        m_endPoint->m_mptcpToken = GetToken();
-      }
-
-      NotifySubflowCreatedOnJoinRequest(sf);
+//      Simulator::ScheduleNow(&MpTcpSocketBase::OnSubflowCreated, this, sf);
+      // TODO schedule it else it sends nothing ?
+      OnSubflowCreated(sf);
     }
     // subflow did SYN_SENT -> ESTABLISHED
     else if(oldState == SYN_SENT)
     {
-      NotifySubflowConnectedOnJoin(sf);
+      // TODO schedule it else it sends nothing ?
+//      Simulator::ScheduleNow(&MpTcpSocketBase::OnSubflowEstablishment, this, sf);
+      OnSubflowEstablishment(sf);
+    }
+    else {
+      NS_FATAL_ERROR("Impossible");
     }
   }
 
@@ -1261,7 +1277,8 @@ MpTcpSocketBase::Connect(const Address & toAddress)
       * We need to copy the m_endPoint and prevent it from being unallocated otherwise
       a 2nd socket could be created again and *overrides* this one .
       */
-      if(sFlow->IsMaster()) {
+      if(sFlow->IsMaster())
+      {
         m_endPoint = sFlow->m_endPoint;
       }
 
@@ -1447,7 +1464,8 @@ MpTcpSocketBase::PeerClose( SequenceNumber32 dsn, Ptr<MpTcpSubflow> sf)
 
   // Simultaneous close: Application invoked Close() when we are processing this FIN packet
   TcpStates_t old_state = m_state;
-  switch(m_state) {
+  switch(m_state)
+  {
     case FIN_WAIT_1:
       m_state = CLOSING;
       break;
@@ -2242,7 +2260,8 @@ MpTcpSocketBase::MoveSubflow(Ptr<MpTcpSubflow> subflow, mptcp_container_t to)
 
       SubflowList::iterator it = std::find(m_subflows[i].begin(), m_subflows[i].end(), subflow);
 //      NS_ASSERT(it != m_subflows[from].end() ); //! the subflow must exist
-      if(it != m_subflows[i].end()) {
+      if(it != m_subflows[i].end())
+      {
           NS_LOG_DEBUG("Found sf in container [" << containerNames[i] << "]");
 //          if( i == to) {
 //            NS_LOG_WARN("destination container is same as source");
@@ -2265,6 +2284,40 @@ MpTcpSocketBase::MoveSubflow(Ptr<MpTcpSubflow> subflow, mptcp_container_t to)
 
 }
 
+
+/*
+TODO rename into subflow created
+*/
+void
+MpTcpSocketBase::OnSubflowCreated(Ptr<MpTcpSubflow> subflow)
+{
+  ComputeTotalCWND();
+
+  //! TODO We should try to steal the endpoint
+  if(subflow->IsMaster())
+  {
+    NS_LOG_LOGIC("Master subflow created, copying its endpoint");
+    m_endPoint = subflow->m_endPoint;
+    m_endPoint->m_mptcpToken = GetToken();
+    if(m_state == SYN_SENT || m_state == SYN_RCVD)
+    {
+      NS_LOG_LOGIC("Meta " << TcpStateName[m_state] << " -> ESTABLISHED");
+      m_state = ESTABLISHED;
+    }
+    else
+    {
+      NS_LOG_WARN("Unhandled case where subflow got established while meta in " << TcpStateName[m_state] );
+    }
+  // from
+//    InetSocketAddress addr(subflow->m_endPoint->GetPeerAddress(), subflow->m_endPoint->GetPeerPort());
+//    NotifyNewConnectionCreated(subflow, addr);
+  }
+//  else
+//  {
+  Simulator::ScheduleNow(&MpTcpSocketBase::NotifySubflowCreatedOnJoinRequest, this, subflow );
+//  }
+}
+
 // TODO this could be done when tracking the subflow m_state
 void
 MpTcpSocketBase::OnSubflowEstablishment(Ptr<MpTcpSubflow> subflow)
@@ -2272,38 +2325,37 @@ MpTcpSocketBase::OnSubflowEstablishment(Ptr<MpTcpSubflow> subflow)
   NS_LOG_LOGIC(this << " (=meta) New subflow " << subflow << " established");
   //Ptr<MpTcpSubflow> subflow = DynamicCast<MpTcpSubflow>(sock);
 
-  NS_ASSERT_MSG(subflow,"Contact ns3 team");
-
+  NS_ASSERT_MSG(subflow, "Contact ns3 team");
 
   ComputeTotalCWND();
 
   if(subflow->IsMaster())
   {
-    //<< (m_server) ? "server" : "client"
-    NS_LOG_INFO("Master subflow established, moving meta(server:" << m_server << ") from " << TcpStateName[m_state] << " to ESTABLISHED state");
-    m_state = ESTABLISHED;
+    NS_LOG_LOGIC("Master subflow established, moving meta(server:" << m_server << ") from " << TcpStateName[m_state] << " to ESTABLISHED state");
+    if(m_state == SYN_SENT || m_state == SYN_RCVD)
+    {
+      NS_LOG_LOGIC("Meta " << TcpStateName[m_state] << " -> ESTABLISHED");
+      m_state = ESTABLISHED;
+    }
+    else
+    {
+      NS_LOG_WARN("Unhandled case where subflow got established while meta in " << TcpStateName[m_state] );
+    }
 
-
-    // TODO relay connection establishement to sthg else ?
-    // TODO  should move
-    // NS_LOG_INFO("Moving from temporary to active");
-    // will set m_connected to true;
-//    NotifyNewConnectionCreated
     SetRemoteWindow( subflow->m_rWnd );
     // TODO move that to the SYN_RCVD
-    if(! m_server)
-    {
-      // If client
-      NS_LOG_DEBUG("I am client, amn't I ?");
-//       TODO replace with another
-//      NotifySubflowConnectedOnJoin();
-//      NotifyConnectionSucceeded();
-      Simulator::ScheduleNow(&MpTcpSocketBase::ConnectionSucceeded, this);
-    }
+    // If client
+    NS_ASSERT_MSG( !m_server, "This meta should have initiated the connection");
+//    NS_LOG_DEBUG("I am client, amn't I ?");
+    Simulator::ScheduleNow(&MpTcpSocketBase::ConnectionSucceeded, this);
   }
-
+  else
+  {
+    Simulator::ScheduleNow(&MpTcpSocketBase::NotifySubflowConnectedOnJoin, this, subflow);
+  }
   //[subflow->m_positionInVector] = ;
-  MoveSubflow(subflow, Others, Established);
+  // done elsewhere
+//  MoveSubflow(subflow, Others, Established);
 }
 
 

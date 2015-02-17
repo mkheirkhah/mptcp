@@ -32,7 +32,7 @@
 #include "ns3/internet-stack-helper.h"
 #include "ns3/applications-module.h"
 #include "ns3/network-module.h"
-//#include "ns3/mp-tcp-socket-factory-impl.h"
+
 
 #include "ns3/internet-module.h"
 #include "ns3/applications-module.h"
@@ -41,7 +41,6 @@
 #include "ns3/point-to-point-module.h"
 #include "ns3/pcap-file.h"
 #include "ns3/tcp-option-mptcp.h"
-//#include "ns3/point-to-point-channel.h"
 #include <string>
 
 NS_LOG_COMPONENT_DEFINE ("MpTcpOptionsTestSuite");

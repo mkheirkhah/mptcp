@@ -52,9 +52,9 @@ operator<<(std::ostream& os, const MpTcpMapping& mapping)
 }
 
 void
-MpTcpMapping::SetDSN(SequenceNumber32 const& dsn)
+MpTcpMapping::SetHeadDSN(SequenceNumber32 const& dsn)
 {
-  NS_LOG_LOGIC(this << " mapping to" << dsn);
+  NS_LOG_DEBUG(this << " mapping to" << dsn);
   m_dataSequenceNumber = dsn;
 }
 
@@ -62,7 +62,7 @@ MpTcpMapping::SetDSN(SequenceNumber32 const& dsn)
 void
 MpTcpMapping::MapToSSN( SequenceNumber32 const& seq)
 {
-  NS_LOG_LOGIC(this << " mapping to ssn ["<< seq << "]");
+  NS_LOG_DEBUG(this << " mapping to ssn ["<< seq << "]");
   m_subflowSequenceNumber = seq;
 }
 
@@ -90,8 +90,7 @@ bool
 MpTcpMapping::operator!=( const MpTcpMapping& mapping) const
 {
   //!
-  return !( *this == mapping
-    );
+  return !( *this == mapping);
 }
 
 
@@ -101,7 +100,7 @@ MpTcpMapping::HeadDSN() const
   return m_dataSequenceNumber;
 }
 
-// TODO rename into GetMappedSSN Head ?
+
 SequenceNumber32
 MpTcpMapping::HeadSSN() const
 {
@@ -125,11 +124,6 @@ MpTcpMapping::TailDSN(void) const
 SequenceNumber32
 MpTcpMapping::TailSSN(void) const
 {
-//  NS_LOG_UNCOND("TailSSN called");
-//  GetLength();
-//  NS_LOG_UNCOND("GetLength called");
-//  HeadSSN();
-//  NS_LOG_UNCOND("HeadSSN called");
   return(HeadSSN()+GetLength()-1);
 }
 
@@ -184,10 +178,10 @@ MpTcpMappingContainer::~MpTcpMappingContainer(void)
 }
 
 void
-MpTcpMappingContainer::Dump()
+MpTcpMappingContainer::Dump() const
 {
   NS_LOG_UNCOND("\n==== Dumping list of mappings ====");
-  for( MappingList::iterator it = m_mappings.begin(); it != m_mappings.end(); it++ )
+  for( MappingList::const_iterator it = m_mappings.begin(); it != m_mappings.end(); it++ )
   {
 
     NS_LOG_UNCOND( *it );
@@ -222,19 +216,20 @@ MpTcpMappingContainer::Dump()
 //
 //}
 bool
-MpTcpMappingContainer::FindOverlappingMapping(SequenceNumber32 start, uint32_t len,  MpTcpMapping& ret)
+MpTcpMappingContainer::FindOverlappingMapping(SequenceNumber32 headSSN, uint32_t len,  MpTcpMapping& ret) const
 {
-  SequenceNumber32 tailSSN = start+SequenceNumber32(len);
-  NS_LOG_DEBUG("Looking for a mapping that overlaps with [" << start << "- " << tailSSN << "]");
-  for( MappingList::iterator it = m_mappings.begin(); it != m_mappings.end(); it++ )
+  SequenceNumber32 tailSSN = headSSN + SequenceNumber32(len);
+  NS_LOG_DEBUG("Looking for a mapping that overlaps with [" << headSSN << "- " << tailSSN << "]");
+  for( MappingList::const_iterator it = m_mappings.begin(); it != m_mappings.end(); it++ )
   {
     // Check if mappings overlap
 //    if(it->IsSSNInRange(mapping) && mapping != *it )
-    if(it->IsSSNInRange(start) || it->IsSSNInRange(tailSSN) )
+  // Faux si le mapping est encore plus petit
+    if(it->IsSSNInRange(headSSN) || it->IsSSNInRange(tailSSN) )
     {
 
       // Intersect
-      NS_LOG_DEBUG("Mappings intersects with " << *it );
+      NS_LOG_DEBUG("Mapping intersects with " << *it );
       ret = *it;
       return true;
     }
@@ -248,8 +243,10 @@ MpTcpMappingContainer::AddMappingEnforceSSN(const MpTcpMapping& mapping)
 {
 
   MpTcpMapping temp;
-  if(FindOverlappingMapping(mapping.HeadSSN(), mapping.GetLength(), temp) && temp != mapping) {
+  if(FindOverlappingMapping(mapping.HeadSSN(), mapping.GetLength(), temp) && temp != mapping)
+  {
     NS_LOG_WARN("Mapping " << mapping << " conflicts with existing " << temp);
+    Dump();
     return -1;
   }
 
@@ -258,7 +255,9 @@ MpTcpMappingContainer::AddMappingEnforceSSN(const MpTcpMapping& mapping)
   return 0;
 }
 
-
+/*
+TODO remove
+*/
 int
 MpTcpMappingContainer::AddMappingLooseSSN(MpTcpMapping& mapping)
 {

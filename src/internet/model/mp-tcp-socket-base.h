@@ -293,8 +293,10 @@ public:
   \return Number of connected subflows (that is that ran the 3whs)
   */
   SubflowList::size_type GetNActiveSubflows() const;
-  // uint8
+
+
   /**
+  *
   * \return an established subflow
   */
   Ptr<MpTcpSubflow> GetSubflow(uint8_t);
@@ -463,18 +465,36 @@ protected: // protected methods
   virtual void
   TimeWait();
 
+  /**
+   * \brief Creates a DSS option if does not exist and configures it to have a dataack
+   * TODO what happens if existing datack already set ?
+   */
   virtual void
   AppendDataAck(TcpHeader& hdr) const;
 
-  /* put it outside ? */
+  /**
+   *
+   */
   virtual void
   AppendDataFin(TcpHeader& header) const;
 
   /**
-  When a subflow gets connected
+  Called when a subflow that initiated the connection
+  gets established
+
   TODO rename into ConnectionSucceeded
+  Notify ?
   **/
   void OnSubflowEstablishment(Ptr<MpTcpSubflow>);
+
+  /**
+  Called when a subflow that received a connection
+  request gets established
+
+  TODO I don't like the name,rename later
+  */
+  void
+  OnSubflowCreated(Ptr<MpTcpSubflow> subflow);
 
   /**
   Should be called when subflows enters FIN_WAIT or LAST_ACK
@@ -737,9 +757,6 @@ protected:
   // TODO rename since will track local too.
   Ptr<MpTcpPathIdManager> m_remotePathIdManager;  //!< Keep track of advertised ADDR id advertised by remote endhost
 
-
-//  MappingList m_unOrdered;  //!< buffer that hold the out of sequence received packet
-
   // Congestion control
   /***
   TODO the scheduler is so closely
@@ -759,26 +776,19 @@ protected:
 // Already defined in
 //  uint32_t m_segmentSize;          // Segment size
 
-
-
-  // TODO replace with parent's traced values
-//  uint64_t nextTxSequence;       // Next expected sequence number to send in connection level
-//  uint64_t nextRxSequence;       // Next expected sequence number to receive in connection level
-
-
   // TODO make private ? check what it does
   // should be able to rmeove one
-  bool m_server;
+  bool m_server;  //!< True if this socket is the result of a fork, ie it was originally LISTENing
 
 private:
   // TODO rename into m_localKey  and move tokens into subflow (maybe not even needed)
-  uint64_t m_localKey;  //!< Store local host token, generated during the 3-way handshake
-  uint32_t m_localToken;
+  uint64_t m_localKey;    //!< Store local host token, generated during the 3-way handshake
+  uint32_t m_localToken;  //!< Generated from key
 
   uint64_t m_peerKey; //!< Store remote host token
   uint32_t m_peerToken;
 
-  bool     m_doChecksum;  //!< Compute the checksum. Negociated during 3WHS
+  bool     m_doChecksum;  //!< Compute the checksum. Negociated during 3WHS. Unused
 
 public:
   bool     m_receivedDSS;  //!< True if we received at least one DSS
