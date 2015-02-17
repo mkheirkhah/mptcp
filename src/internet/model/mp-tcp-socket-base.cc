@@ -2349,10 +2349,10 @@ MpTcpSocketBase::OnSubflowEstablishment(Ptr<MpTcpSubflow> subflow)
 //    NS_LOG_DEBUG("I am client, amn't I ?");
     Simulator::ScheduleNow(&MpTcpSocketBase::ConnectionSucceeded, this);
   }
-  else
-  {
-    Simulator::ScheduleNow(&MpTcpSocketBase::NotifySubflowConnectedOnJoin, this, subflow);
-  }
+//  else
+//  {
+    Simulator::ScheduleNow(&MpTcpSocketBase::NotifySubflowConnected, this, subflow);
+//  }
   //[subflow->m_positionInVector] = ;
   // done elsewhere
 //  MoveSubflow(subflow, Others, Established);
@@ -2370,7 +2370,7 @@ MpTcpSocketBase::NotifySubflowCreatedOnJoinRequest(Ptr<MpTcpSubflow> sf)
 }
 
 void
-MpTcpSocketBase::NotifySubflowConnectedOnJoin(Ptr<MpTcpSubflow> sf)
+MpTcpSocketBase::NotifySubflowConnected(Ptr<MpTcpSubflow> sf)
 {
   NS_LOG_FUNCTION(this << sf);
   if (!m_joinConnectionSucceeded.IsNull ())
@@ -2466,7 +2466,7 @@ SetupSocketTracing(Ptr<TcpSocketBase> sock, const std::string prefix)
 
   // We don't plot it, just looking at it so we don't care of the initial state
   *streamStates->GetStream() << "Time,oldState,newState" << std::endl;
-//                            << now << ",," << sock->m_state << std::endl;
+
 
 //  , HighestSequence, RWND\n";
 
@@ -2511,12 +2511,15 @@ SetupSocketTracing(Ptr<TcpSocketBase> sock, const std::string prefix)
                                   << now << ",," << sf->GetSSThresh() << std::endl;
 
     // TODO Trace first Cwnd
+    *streamStates->GetStream() << now << ",," << sf->GetState() << std::endl;
 //    *streamCwnd->GetStream() << now << ",," << sf->m_cWnd.Get() << std::endl;
   }
   else if(sock->GetInstanceTypeId() == MpTcpSocketBase::GetTypeId())
   {
     //! Does nothing for now
     // could go to SetupMetaTracing
+    Ptr<MpTcpSocketBase> meta = DynamicCast<MpTcpSocketBase>(sock);
+    *streamStates->GetStream() << now << ",," << meta->GetState() << std::endl;
   }
   else {
     NS_FATAL_ERROR("The passed sock is not related to MPTCP (which is not a problem in absolute terms)");

@@ -127,7 +127,7 @@ public:
   NotifySubflowCreatedOnJoinRequest(Ptr<MpTcpSubflow> sf);
 
   void
-  NotifySubflowConnectedOnJoin(Ptr<MpTcpSubflow> sf);
+  NotifySubflowConnected(Ptr<MpTcpSubflow> sf);
 
   virtual void
   OnSubflowNewCwnd(std::string context, uint32_t oldCwnd, uint32_t newCwnd);

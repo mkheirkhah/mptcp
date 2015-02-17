@@ -220,6 +220,7 @@ MpTcpMultihomedTestCase::SourceConnectionSuccessful(Ptr<Socket> sock)
 {
 
   Ptr<MpTcpSocketBase> meta =  DynamicCast<MpTcpSocketBase>(sock);
+  NS_ASSERT_MSG(meta, "WTF ?!!");
 
   NS_LOG_LOGIC("connection successful. Meta state=" << TcpSocket::TcpStateName[meta->GetState() ]
 //              << " received a DSS: " << meta->m_receivedDSS
@@ -240,8 +241,8 @@ MpTcpMultihomedTestCase::SourceConnectionSuccessful(Ptr<Socket> sock)
    // TODO now we can create an additionnal subflow
 
 
-   Ptr<MpTcpSocketBase> sourceMeta = DynamicCast<MpTcpSocketBase>(sock);
-   NS_ASSERT_MSG(sourceMeta, "WTF ?!!");
+//   Ptr<MpTcpSocketBase> sourceMeta = DynamicCast<MpTcpSocketBase>(sock);
+
 
 //   NS_LOG_DEBUG("meta in state " << meta->m_state);
 
@@ -256,7 +257,7 @@ MpTcpMultihomedTestCase::SourceConnectionSuccessful(Ptr<Socket> sock)
   InetSocketAddress local(sourceAddr, 4420);
   InetSocketAddress remote(serverAddr, serverPort);
 
-  sourceMeta ->ConnectNewSubflow(local, remote);
+  meta->ConnectNewSubflow(local, remote);
 //  Simulator::Schedule( )
 
 // TODO la je dois envoyer des donnees
@@ -703,14 +704,14 @@ public:
     // 2) source write size, 3) source read size
     // 4) server write size, and 5) server read size
     // with units of bytes
-    AddTestCase (new MpTcpMultihomedTestCase (13, 200, 200, 200, 200, false), TestCase::QUICK);
+//    AddTestCase (new MpTcpMultihomedTestCase (13, 200, 200, 200, 200, false), TestCase::QUICK);
 //    AddTestCase (new MpTcpMultihomedTestCase (13, 1, 1, 1, 1, false), TestCase::QUICK);
 //    AddTestCase (new MpTcpMultihomedTestCase (100000, 100, 50, 100, 20, false), TestCase::QUICK);
 
 // here it's a test where I lower streamsize to see where it starts failing.
 // 2100 is ok, 2200 fails
 //    AddTestCase (new MpTcpMultihomedTestCase (5000, 100, 50, 100, 20, false), TestCase::EXTENSIVE);
-//    AddTestCase (new MpTcpMultihomedTestCase (10000, 100, 50, 100, 20, false), TestCase::QUICK);
+    AddTestCase (new MpTcpMultihomedTestCase (10000, 100, 50, 100, 20, false), TestCase::QUICK);
 
 
     // Disable IPv6 tests; not supported yet
