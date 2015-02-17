@@ -171,21 +171,23 @@ MpTcpSubflow::SetSSThresh(uint32_t threshold)
 uint32_t
 MpTcpSubflow::GetSSThresh(void) const
 {
-  return m_ssThresh.Get();
+//  return GetMeta()->GetSSThresh();
+  return m_ssThresh;
 }
 
 /** TODO remve those 2, use the meta's **/
 void
 MpTcpSubflow::SetInitialCwnd(uint32_t cwnd)
 {
-  NS_ABORT_MSG_UNLESS(m_state == CLOSED, "MpTcpsocketBase::SetInitialCwnd() cannot change initial cwnd after connection started.");
-  m_initialCWnd = cwnd;
+  NS_FATAL_ERROR("Use meta socket SetInitialCwnd instead");
+//  NS_ABORT_MSG_UNLESS(m_state == CLOSED, "MpTcpsocketBase::SetInitialCwnd() cannot change initial cwnd after connection started.");
+//  m_initialCWnd = cwnd;
 }
 
 uint32_t
 MpTcpSubflow::GetInitialCwnd(void) const
 {
-  return m_initialCWnd;
+  return GetMeta()->GetInitialCwnd();
 }
 
 
@@ -206,6 +208,7 @@ MpTcpSubflow::DoConnect()
 {
   NS_LOG_FUNCTION (this);
 
+  InitializeCwnd ();
 
   // A new connection is allowed only if this socket does not have a connection
   if (m_state == CLOSED || m_state == LISTEN || m_state == SYN_SENT || m_state == LAST_ACK || m_state == CLOSE_WAIT)
@@ -214,7 +217,7 @@ MpTcpSubflow::DoConnect()
       GenerateEmptyPacketHeader(header,TcpHeader::SYN);
 
       // code moved inside SendEmptyPacket
-      InitializeCwnd ();
+
       AppendMpTcp3WHSOption(header);
 
       TcpSocketBase::SendEmptyPacket(header);
@@ -986,7 +989,8 @@ MpTcpSubflow::InitializeCwnd (void)
    * not be larger than 2 MSS (RFC2581, sec.3.1). Both m_initiaCWnd and
    * m_segmentSize are set by the attribute system in ns3::TcpSocket.
    */
-  m_cWnd = m_initialCWnd * m_segmentSize;
+  m_cWnd = GetInitialCwnd() * GetSegSize();
+  NS_LOG_DEBUG("m_cWnd set to " << m_cWnd);
 }
 
 

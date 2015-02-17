@@ -156,7 +156,7 @@ MpTcpSocketBase::MpTcpSocketBase() :
   m_prefixCounter(1),
   m_mpEnabled(false),
   m_ssThresh(0),
-  m_initialCWnd(10), // TODO reset to 1
+  m_initialCWnd(1),
   m_server(true),
   m_localKey(0),
   m_localToken(0),
@@ -1140,7 +1140,9 @@ MpTcpSocketBase::CreateSubflow(bool masterSocket)
   // So that we know when the connection gets established
   //sFlow->SetConnectCallback( MakeCallback (&MpTcpSocketBase::OnSubflowEstablishment, Ptr<MpTcpSocketBase>(this) ) );
   sFlow->SetMeta(this);
-  sFlow->m_masterSocket = masterSocket; // TODO Maybe useless . remove ?
+
+  // TODO Maybe useless, master could be recognized based on endpoint  or mptcp state
+  sFlow->m_masterSocket = masterSocket;
 
 
   /**
@@ -1154,8 +1156,8 @@ MpTcpSocketBase::CreateSubflow(bool masterSocket)
 //  NS_ASSERT(sFlow->TraceConnect ("State", "State", MakeCallback(&MpTcpSocketBase::OnSubflowNewState, this)) );
   NS_ASSERT(sFlow->TraceConnectWithoutContext ("State", MakeBoundCallback(&onSubflowNewState, this, sFlow)) );
 
-
-  sFlow->SetInitialCwnd( GetInitialCwnd() );  //! Could be done maybe in SetMeta ?
+// this makes no sense *lol*
+//  sFlow->SetInitialCwnd( GetInitialCwnd() );  //! Could be done maybe in SetMeta ?
   NS_ASSERT_MSG( sFlow, "Contact ns3 team");
 
 

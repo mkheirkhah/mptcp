@@ -51,6 +51,9 @@ public:
   virtual void OpenCwndInCA(uint32_t acked) = 0;
   virtual void ReduceCwnd() = 0;
 
+  /**
+   * \return Value defined by meta socket GetSSThresh
+   */
   virtual uint32_t
   GetSSThresh(void) const;
 
@@ -62,6 +65,7 @@ public:
 
 
   /**
+  * \brief
   */
   uint32_t
   GetTxAvailable() const;
@@ -377,12 +381,24 @@ protected:
   virtual void
   ConnectionSucceeded(void);
 
+
+  /**
+   * \brief NOOP. Initial cwnd should be set by meta.
+   */
   virtual void
   SetSSThresh(uint32_t threshold);
 
 
+  /**
+   * \brief NOOP. Initial cwnd should be set by meta.
+   */
   virtual void
   SetInitialCwnd(uint32_t cwnd);
+
+
+  /**
+   * \return Value defined by meta socket GetInitialCwnd
+   */
   virtual uint32_t
   GetInitialCwnd(void) const;
 
