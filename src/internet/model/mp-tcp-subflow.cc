@@ -1042,7 +1042,7 @@ MpTcpSubflow::ProcessSynSent(Ptr<Packet> packet, const TcpHeader& tcpHeader)
              (m_nextTxSequence + SequenceNumber32(1) == tcpHeader.GetAckNumber()))
     {
 
-//      NS_LOG_INFO("Received a SYN/ACK as answer");
+      NS_LOG_INFO("Received a SYN/ACK as answer");
 
 //      Simulator::ScheduleNow(&MpTcpSubflow::ConnectionSucceeded, this);
 
@@ -1138,10 +1138,13 @@ MpTcpSubflow::ProcessSynSent(Ptr<Packet> packet, const TcpHeader& tcpHeader)
 //      NS_LOG_INFO("initialSeqNb: " << initialSeqNb);
     }
   else
-    { // Other in-sequence input
+    {
+      NS_LOG_WARN("Unexpected case");
+
+      // Other in-sequence input
       if (tcpflags != TcpHeader::RST)
         { // When (1) rx of FIN+ACK; (2) rx of FIN; (3) rx of bad flags
-          NS_LOG_LOGIC ("Illegal flag " << std::hex << static_cast<uint32_t> (tcpflags) << std::dec << " received. Reset packet is sent.");
+          NS_LOG_LOGIC ("Illegal flag " << TcpHeaderFlagsToString(tcpflags) << " received. Reset packet is sent.");
           SendRST();
         }
       CloseAndNotify();
