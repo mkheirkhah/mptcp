@@ -17,14 +17,29 @@ using namespace ns3;
 class MpTcpMappingTestCase : public TestCase
 {
 public:
-    MpTcpMappingTestCase (SequenceNumber32 headDSN, SequenceNumber32 mappedToSSN,uint16_t length) :
+    MpTcpMappingTestCase (
+      SequenceNumber32 headDSN, SequenceNumber32 mappedToSSN, uint16_t length,
+      SequenceNumber32 headDSNbis, SequenceNumber32 mappedToSSNbis, uint16_t length2,
+      bool overlap
+
+      ) :
         TestCase("Mptcp mapping testcase"),
+        //posLShd{250, 330, 512, 600, 680} // non static array initializers only available in C++11
+
+
         m_headDSN(headDSN),
         m_mappedSSN(mappedToSSN),
-        m_length(length)
+        m_length(length),
+
+        m_headDSNbis(headDSNbis),
+        m_mappedSSNbis(mappedToSSNbis),
+        m_lengthbis(length2),
+
+        m_shouldOverlap(overlap)
     {
         NS_LOG_FUNCTION(this);
-
+//        m_headDSN[0] = headDSN;
+//        m_headDSN[1] = headDSN2;
     }
 
     virtual ~MpTcpMappingTestCase ()
@@ -34,10 +49,12 @@ public:
 
     virtual void DoRun(void)
     {
-      MpTcpMapping map0, map1;
-      MpTcpMappingContainer con0;
+      MpTcpMapping map0, map1, map2;
+      MpTcpMappingContainer con0,con1;
 
-      map0.Configure(m_headDSN, m_length);
+//      map0.Configure(m_headDSN, m_length);
+      map0.SetHeadDSN( m_headDSN );
+      map0.SetMappingSize( m_length );
       NS_TEST_EXPECT_MSG_EQ( map0.HeadDSN(), m_headDSN, "Broken setter or getter");
       NS_TEST_EXPECT_MSG_EQ( map0.GetLength(), m_length, "Broken setter");
 
@@ -45,13 +62,13 @@ public:
       map1 = map0;
 
 
-      NS_TEST_EXPECT_MSG_EQ( map0.TailDSN(), m_headDSN + (uint32_t)m_length-1,"");
-      NS_TEST_EXPECT_MSG_EQ( map0.TailSSN(), m_mappedSSN + (uint32_t)m_length-1,"");
+      NS_TEST_EXPECT_MSG_EQ( map0.TailDSN(), m_headDSN + (uint32_t)m_length-1,"Tail DSN in included in the mapping");
+      NS_TEST_EXPECT_MSG_EQ( map0.TailSSN(), m_mappedSSN + (uint32_t)m_length-1, "Tail SSN should be included in the mapping");
 
 
 //      NS_TEST_ASSERT()
 
-      NS_TEST_EXPECT_MSG_EQ(map1, map0,"Mappings have all values in common");
+      NS_TEST_EXPECT_MSG_EQ(map1, map0, "Mappings have all values in common");
       map1.MapToSSN(m_headDSN- (uint32_t)m_length);
       // Not true anymore
 //      NS_TEST_EXPECT_MSG_EQ(map1, map0, "Mappings should be considered equal even if they are mappped to different SSN");
@@ -60,8 +77,13 @@ public:
       //,""
       SequenceNumber32 temp;
 
-      NS_TEST_EXPECT_MSG_EQ(map0.TranslateSSNToDSN(map0.HeadSSN(), temp), true, "temp should overlap the mapping");
+      NS_TEST_EXPECT_MSG_EQ(map0.TranslateSSNToDSN(map0.HeadSSN()- 4, temp), false, "ssn should not be in range");
+      NS_TEST_EXPECT_MSG_EQ(map0.TranslateSSNToDSN(map0.HeadSSN(), temp), true, "ssn should be in range");
       NS_TEST_EXPECT_MSG_EQ(temp, map0.HeadDSN(), "HeadSSN must map to HeadDSN");
+
+      NS_TEST_EXPECT_MSG_EQ(map0.TranslateSSNToDSN(map0.TailSSN() + 4, temp), false, "ssn should not be in range");
+      NS_TEST_EXPECT_MSG_EQ(map0.TranslateSSNToDSN(map0.TailSSN(), temp), true, "ssn should be in range");
+      NS_TEST_EXPECT_MSG_EQ(temp, map0.TailDSN(), "TailSSN must map to HeadDSN");
 
 
 
@@ -108,8 +130,28 @@ public:
 
 
 //      con0.AddMapping(map0);
-      NS_TEST_EXPECT_MSG_EQ(con0.AddMapping(map0), true, "This is the first time");
-      NS_TEST_EXPECT_MSG_EQ(con0.AddMapping(map0), false, "They should intersect");
+      MpTcpMapping ret, overlap;
+//      overlap.SetHeadDSN(map0.HeadDSN());
+//      overlap.SetMappingSize(map0.GetLength() + 4);
+      overlap.SetHeadDSN(m_headDSNbis);
+      overlap.SetMappingSize(m_lengthbis);
+      overlap.MapToSSN(m_mappedSSNbis);
+
+      NS_TEST_EXPECT_MSG_EQ(con0.AddMapping(map0), true, "This is the first mapping registered");
+      NS_TEST_EXPECT_MSG_EQ(con1.AddMapping(overlap), true, "This is the first mapping registered");
+
+      NS_TEST_EXPECT_MSG_EQ(con0.FindOverlappingMapping(map0, false, ret), true, "Don't ignore identical mappings");
+      NS_TEST_EXPECT_MSG_EQ(ret, map0, "Previous test should have filled ret with mapping equal to map0");
+
+//      NS_TEST_EXPECT_MSG_EQ(con0.FindOverlappingMapping(overlap, false, ret), m_shouldOverlap, "Ignore identical mappings so it should find none");
+      NS_TEST_EXPECT_MSG_EQ(con1.FindOverlappingMapping(map0, false, ret), m_shouldOverlap, "Ignore identical mappings so it should find none");
+
+
+
+
+      //! Now we add an overlapping mapping
+
+//      NS_TEST_EXPECT_MSG_EQ(con0.AddMapping(map0), false, "They should intersect");
 
 //        TestSerialize();
 //        TestDeserialize();
@@ -118,6 +160,13 @@ protected:
   const SequenceNumber32 m_headDSN;
   const SequenceNumber32 m_mappedSSN;
   const uint16_t m_length;
+
+  const SequenceNumber32 m_headDSNbis;
+  const SequenceNumber32 m_mappedSSNbis;
+  const uint16_t m_lengthbis;
+
+
+  const bool m_shouldOverlap;
 };
 
 
@@ -132,12 +181,29 @@ public:
 //    {
 
         ////////////////////////////////////////////////
-        ////
-        ////
+        //// HeadDSN/headSSN/Length x 2  / shouldoverlap
 
-        AddTestCase(new MpTcpMappingTestCase( SequenceNumber32(10), SequenceNumber32(60),40),QUICK);
-        AddTestCase(new MpTcpMappingTestCase( SequenceNumber32(50), SequenceNumber32(1),2),QUICK);
-        AddTestCase(new MpTcpMappingTestCase( SequenceNumber32(50), SequenceNumber32(1),1),QUICK);
+        AddTestCase(new MpTcpMappingTestCase(
+                SequenceNumber32(10), SequenceNumber32(60),40,
+                SequenceNumber32(10), SequenceNumber32(60),40,
+                true), QUICK);
+
+        AddTestCase(new MpTcpMappingTestCase(
+            SequenceNumber32(50), SequenceNumber32(1), 80,
+            SequenceNumber32(100), SequenceNumber32(10),800,
+            true), QUICK);
+
+        AddTestCase(new MpTcpMappingTestCase(
+            SequenceNumber32(50), SequenceNumber32(1), 40,
+            SequenceNumber32(90), SequenceNumber32(80), 1000,
+            false), QUICK);
+
+//  Mapping DSN [6560-6659] mapped to SSN [6561-6660]
+//     with DSN [6660-6759] mapped to SSN [6661-6760]
+        AddTestCase(new MpTcpMappingTestCase(
+          SequenceNumber32(6560), SequenceNumber32(6561), 100,
+          SequenceNumber32(6660), SequenceNumber32(6661), 100,
+          false), QUICK);
 
  }
 

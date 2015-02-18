@@ -311,7 +311,8 @@ public:
           uint32_t dataLvlLen = 32;
           uint64_t dsn = 54;
           uint32_t ssn = 40;
-          mapping.Configure( SequenceNumber32(dsn), dataLvlLen);
+          mapping.SetHeadDSN( SequenceNumber32(dsn));
+          mapping.SetMappingSize(dataLvlLen);
           mapping.MapToSSN( SequenceNumber32(ssn));
 
 

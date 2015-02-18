@@ -487,6 +487,7 @@ TcpSocketBase::Send(Ptr<Packet> p, uint32_t flags)
       // Store the packet into Tx buffer
       if (!m_txBuffer.Add(p))
         { // TxBuffer overflow, send failed
+          NS_LOG_INFO("TX buffer overflow");
           m_errno = ERROR_MSGSIZE;
           return -1;
         }

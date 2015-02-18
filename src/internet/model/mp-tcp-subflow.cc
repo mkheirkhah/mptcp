@@ -371,7 +371,7 @@ MpTcpSubflow::SendEmptyPacket(TcpHeader& header)
   */
   if(m_state != SYN_SENT && m_state != SYN_RCVD)
   {
-    GetMeta()->AppendDataAck( header );
+    GetMeta()->AppendDataAck(header);
   }
 
   TcpSocketBase::SendEmptyPacket(header);
@@ -381,6 +381,10 @@ MpTcpSubflow::SendEmptyPacket(TcpHeader& header)
 //! GetLength()
 this fct asserts when the mapping length is 0 but in fact it can be possible
 when there is an infinite mapping
+
+Probleme ici c si j'essaye
+
+
 **/
 int
 MpTcpSubflow::SendMapping(Ptr<Packet> p, MpTcpMapping& mapping)
@@ -400,37 +404,69 @@ MpTcpSubflow::SendMapping(Ptr<Packet> p, MpTcpMapping& mapping)
   //{*
   // TODO in fact there could be an overlap between recorded mappings and the current one
   // so the following check is not enough. To change later
-  if(m_txBuffer.Available() < mapping.GetLength())
-  {
-    NS_LOG_ERROR("Too much data to send");
-    return -ERROR_MSGSIZE;
-  }
 
+//  if(m_txBuffer.Available() < mapping.GetLength())
+//  {
+//    NS_LOG_ERROR("Too much data to send");
+//    return -ERROR_MSGSIZE;
+//  }
+  NS_LOG_FUNCTION (this << p);
+//  NS_ABORT_MSG_IF(flags, "use of flags is not supported in TcpSocketBase::Send()");
+  //! & !m_closeOnEmpty
+  if (m_state == ESTABLISHED || m_state == SYN_SENT || m_state == CLOSE_WAIT)
+    {
 
-    //MpTcpMapping mapping;
-    //mapping.Configure( mptcpSeq, p->GetSize()  );
+      SequenceNumber32 savedTail = m_txBuffer.TailSequence();
+      // Store the packet into Tx buffer
+      if (!m_txBuffer.Add(p))
+        { // TxBuffer overflow, send failed
+          NS_LOG_INFO("TX buffer overflow");
+          m_errno = ERROR_MSGSIZE;
+          return -1;
+        }
 
+      //! add succeeded
+      NS_LOG_DEBUG(mapping << "Mapped to SSN=" << savedTail);
+      mapping.MapToSSN( savedTail );
+      NS_ASSERT_MSG(m_TxMappings.AddMapping( mapping  ) >= 0, "2 mappings overlap");
+
+      // Submit the data to lower layers
+      NS_LOG_LOGIC ("txBufSize=" << m_txBuffer.Size () << " state " << TcpStateName[m_state]);
+      if (m_state == ESTABLISHED || m_state == CLOSE_WAIT)
+        {
+          NS_LOG_DEBUG("m_nextTxSequence [" << m_nextTxSequence << "]");
+          // Try to send the data out
+          SendPendingData(m_connected);
+        }
+      return p->GetSize();
+    }
+  else
+    { // Connection not established yet
+      m_errno = ERROR_NOTCONN;
+      return -1; // Send failure
+    }
+
+    return 0;
   // In fact this must be mapped to the last unmapped value
-//  NS_LOG_UNCOND("before mapping to ssn m_nextTxSequence [" << m_nextTxSequence << "]");
-//  mapping.MapToSSN( m_nextTxSequence );
+  // NS_LOG_UNCOND("before mapping to ssn m_nextTxSequence [" << m_nextTxSequence << "]");
 
-    // record mapping TODO check if it does not already exist
-    // TODO GetMappingForDSN
-    // GetMappingForSSN
-  //GetMappingForSegment(m_TxMappings,)
+// First UnmappedSSN
+//  m_mappings.rbegin()->TailSSN() + 1
+// TODO map just in time ? how does the kernel ?
+
 
   // TODO je viens de le changer, on doit assigner le SSN ici
 //  NS_ASSERT_MSG(m_TxMappings.AddMappingLooseSSN( mapping  ) >= 0, "2 mappings overlap");
-  NS_ASSERT_MSG(m_TxMappings.AddMapping( mapping  ) >= 0, "2 mappings overlap");
+//  NS_ASSERT_MSG(m_TxMappings.AddMapping( mapping  ) >= 0, "2 mappings overlap");
+//
+//  //}
+//  NS_LOG_DEBUG("mapped updated: " << mapping);
+//
+//  int res = TcpSocketBase::Send(p,0);
+//
+//  NS_ASSERT(ret >= 0);
 
-  //}
-  NS_LOG_DEBUG("mapped updated: " << mapping);
-
-  int res = TcpSocketBase::Send(p,0);
-
-
-
-  return res;
+//  return res;
 }
 
 
@@ -2289,7 +2325,7 @@ MpTcpSubflow::AddPeerMapping(const MpTcpMapping& mapping)
   NS_LOG_FUNCTION(this << mapping);
 
   // MATT
-  NS_ASSERT(m_RxMappings.AddMapping( mapping ) );
+  NS_ASSERT(m_RxMappings.AddMapping( mapping ));
 //  m_RxMappings.Dump();
   return true;
 }

@@ -709,7 +709,8 @@ TcpOptionMpTcpDSS::GetMapping(void) const
     length--;
 
   mapping.MapToSSN( SequenceNumber32(m_ssn)  );
-  mapping.Configure( SequenceNumber32(m_dsn), length);
+  mapping.SetHeadDSN( SequenceNumber32(m_dsn) );
+  mapping.SetMappingSize(length);
   return mapping;
 }
 

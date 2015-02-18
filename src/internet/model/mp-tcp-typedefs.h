@@ -66,7 +66,7 @@ public:
   /**
   TODO maybe remove
   **/
-  void Configure( SequenceNumber32  dataSeqNb, uint16_t mappingSize);
+//  void Configure( SequenceNumber32  dataSeqNb, uint16_t mappingSize);
 
   /**
   * \brief Set subflow sequence number
@@ -276,7 +276,7 @@ class MpTcpMappingContainer
    * \param
    */
   bool
-  FindOverlappingMapping(const MpTcpMapping& mapping, MpTcpMapping& ret) const;
+  FindOverlappingMapping(const MpTcpMapping& mapping, bool ignore_identical, MpTcpMapping& ret) const;
 //  FindOverlappingMapping(SequenceNumber32 headSSN, uint32_t len, MpTcpMapping& ret) const;
 
 
@@ -294,6 +294,7 @@ class MpTcpMappingContainer
 
   /**
    * \brief
+   * Should do no check
    * \note Check for overlap.
    * \return False if the dsn range overlaps with a registered mapping, true otherwise
    * TODO rename to Register/AddMapping

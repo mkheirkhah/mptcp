@@ -1815,10 +1815,17 @@ MpTcpSocketBase::SendPendingData(bool withAck)
 
   MappingVector mappings;
   //mappings.reserve( GetNActiveSubflows() );
-  //
   m_scheduler->GenerateMappings(mappings);
 
 
+  // Just dump the generated mappings
+  NS_LOG_UNCOND("=================\nGenerated mappings");
+  for(MappingVector::iterator it(mappings.begin()); it  != mappings.end(); it++ )
+  {
+    MpTcpMapping& mapping = it->second;
+    NS_LOG_UNCOND("Send " << it->second << " on sf " << it->first);
+  }
+  NS_LOG_UNCOND("=================");
 
 //  NS_ASSERT_MSG( mappings.size() == GetNActiveSubflows(), "The number of mappings should be equal to the nb of already established subflows" );
 
