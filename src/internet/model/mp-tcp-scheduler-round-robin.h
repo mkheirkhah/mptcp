@@ -52,8 +52,18 @@ public:
 //            >
 
   /**
-  subflowId: pair(start,size)
-  TODO should take into account backup priorities of subflows
+   * \brief This function is responsible for generating a list of packets to send
+   *   and to specify on which subflow to send.
+   *
+   *   These *mappings* will be passed on to the meta socket that will send them without altering the
+   *   mappings.
+   *   It is of utmost importance to generate a perfect mapping !!! Any deviation
+   *   from the foreseen mapping will trigger an error and crash the simulator
+   *
+   *
+   * subflowId: pair(start,size)
+   *
+   * TODO should take into account backup priorities of subflows
   */
   virtual int
   GenerateMappings(MappingVector& );

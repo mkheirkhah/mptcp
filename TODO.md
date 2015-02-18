@@ -56,6 +56,7 @@ Generic:
 * according to RFC "DSN out of window (during normal operation): drop the data, do not send Data ACKs"
 
 Requests for ns3;
+* in TcpSocket, move all the Get** members from private to public
 * what happens if I bind several times ?
 * add ssthreshold tracing (maybe fast recovery too)
 * SetInitialCWnd as an attribute ?

@@ -181,6 +181,14 @@ public:
   void
   GenerateSendvsACK();
 
+
+public:
+  virtual uint32_t
+  GetSegSize(void) const;
+  virtual uint32_t
+  GetRcvBufSize(void) const;
+  virtual uint32_t
+  GetSSThresh(void) const = 0;
 protected:
   // Implementing ns3::TcpSocket -- Attribute get/set
   virtual void
@@ -189,16 +197,10 @@ protected:
   GetSndBufSize(void) const;
   virtual void
   SetRcvBufSize(uint32_t size);
-  virtual uint32_t
-  GetRcvBufSize(void) const;
   virtual void
   SetSegSize(uint32_t size);
-  virtual uint32_t
-  GetSegSize(void) const;
   virtual void
   SetSSThresh(uint32_t threshold) = 0;
-  virtual uint32_t
-  GetSSThresh(void) const = 0;
   virtual void
   SetInitialCwnd(uint32_t cwnd) = 0;
   virtual uint32_t

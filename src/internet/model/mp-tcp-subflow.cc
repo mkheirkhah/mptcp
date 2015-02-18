@@ -76,7 +76,7 @@ MpTcpSubflow::SetMeta(Ptr<MpTcpSocketBase> metaSocket)
   m_metaSocket = metaSocket;
 
   // kinda hackish
-  m_TxMappings.m_txBuffer = &m_txBuffer;
+//  m_TxMappings.m_txBuffer = &m_txBuffer;
 //  m_RxMappings.m_rxBuffer = &m_rxBuffer;
 
 //  return true;
@@ -179,7 +179,7 @@ MpTcpSubflow::GetSSThresh(void) const
 void
 MpTcpSubflow::SetInitialCwnd(uint32_t cwnd)
 {
-  NS_FATAL_ERROR("Use meta socket SetInitialCwnd instead");
+  NS_LOG_WARN("NOOP: Use meta socket SetInitialCwnd instead");
 //  NS_ABORT_MSG_UNLESS(m_state == CLOSED, "MpTcpsocketBase::SetInitialCwnd() cannot change initial cwnd after connection started.");
 //  m_initialCWnd = cwnd;
 }
@@ -418,7 +418,10 @@ MpTcpSubflow::SendMapping(Ptr<Packet> p, MpTcpMapping& mapping)
     // TODO GetMappingForDSN
     // GetMappingForSSN
   //GetMappingForSegment(m_TxMappings,)
-  NS_ASSERT_MSG(m_TxMappings.AddMappingLooseSSN( mapping  ) >= 0, "2 mappings overlap");
+
+  // TODO je viens de le changer, on doit assigner le SSN ici
+//  NS_ASSERT_MSG(m_TxMappings.AddMappingLooseSSN( mapping  ) >= 0, "2 mappings overlap");
+  NS_ASSERT_MSG(m_TxMappings.AddMapping( mapping  ) >= 0, "2 mappings overlap");
 
   //}
   NS_LOG_DEBUG("mapped updated: " << mapping);
@@ -457,8 +460,9 @@ MpTcpSubflow::SendDataPacket(SequenceNumber32 seq, uint32_t maxSize, bool withAc
 //   here, it should already have been put in the packet, we just check
 //  that the
 
-  */
+*/
 
+// pass as const ref
 void
 MpTcpSubflow::SendPacket(TcpHeader header, Ptr<Packet> p)
 {
@@ -471,15 +475,20 @@ MpTcpSubflow::SendPacket(TcpHeader header, Ptr<Packet> p)
 //  uint32_t coveredLen = 0;
   /**
   TODO move that to SendPacket
+
+  In this loop, we make sure we don't send data for which there is no
+  Tx mapping. A packet may be spanned over
    Packets may contain data described by several mappings
   */
   while(ssnHead < ssnTail)
   {
     NS_LOG_DEBUG("Looking for mapping that overlaps with ssn " << ssnHead);
 
-    NS_ASSERT_MSG(m_TxMappings.FindOverlappingMapping(ssnHead, ssnTail - ssnHead, mapping), "Sent data not covered by mappings");
-    //!
-    NS_ASSERT_MSG(mapping.HeadSSN() <= ssnHead, "Mapping can only start");
+    // TODO je viens de le changer
+//    NS_ASSERT_MSG(m_TxMappings.FindOverlappingMapping(ssnHead, ssnTail - ssnHead, mapping), "Sent data not covered by mappings");
+    NS_ASSERT_MSG( m_TxMappings.GetMappingForSSN(ssnHead, mapping), "Sent data not covered by mappings");
+//    ssnTail =
+//    NS_ASSERT_MSG(mapping.HeadSSN() <= ssnHead, "Mapping can only start");
 
     ssnHead = mapping.TailSSN() + SequenceNumber32(1);
     NS_LOG_DEBUG("mapping " << mapping << " covers it");
@@ -954,7 +963,7 @@ MpTcpSubflow::CompleteFork(Ptr<Packet> p, const TcpHeader& h, const Address& fro
 
   // TODO make it so that m_txBuffer becomes useless (it is used only to assign
   // SSN <-> DSN mappings
-  m_TxMappings.m_txBuffer = &m_txBuffer;
+//  m_TxMappings.m_txBuffer = &m_txBuffer;
 //  m_RxMappings.m_rxBuffer = &m_rxBuffer;
 
   // Set the sequence number and send SYN+ACK (ok)
@@ -2279,8 +2288,8 @@ MpTcpSubflow::AddPeerMapping(const MpTcpMapping& mapping)
 {
   NS_LOG_FUNCTION(this << mapping);
 
-
-  NS_ASSERT(m_RxMappings.AddMappingEnforceSSN( mapping ) ==0 );
+  // MATT
+  NS_ASSERT(m_RxMappings.AddMapping( mapping ) );
 //  m_RxMappings.Dump();
   return true;
 }

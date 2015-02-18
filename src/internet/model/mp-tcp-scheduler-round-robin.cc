@@ -142,8 +142,14 @@ MpTcpSchedulerRoundRobin::GenerateMappings(MappingVector& mappings)
 
 //    if( window > 0)
 //    {
+
+    // TODO
+
     NS_LOG_DEBUG("subflow Window available [" << window << "]");
     amountOfDataToSend = std::min( window, left );
+
+    //! Can't send more than SegSize
+    amountOfDataToSend = std::min( amountOfDataToSend , sf->GetSegSize());
     NS_LOG_DEBUG("Amount of data to send [" << amountOfDataToSend  << "]");
     if(amountOfDataToSend <= 0)
     {

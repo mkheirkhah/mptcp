@@ -61,15 +61,20 @@ class MpTcpMapping
 public:
   MpTcpMapping(void);
 
+  virtual ~MpTcpMapping(void);
 
   /**
   TODO maybe remove
   **/
   void Configure( SequenceNumber32  dataSeqNb, uint16_t mappingSize);
 
-  void MapToSSN( SequenceNumber32 const& seq);
+  /**
+  * \brief Set subflow sequence number
+  * \param headSSN
+  */
+  void MapToSSN( SequenceNumber32 const& headSSN);
 
-  virtual ~MpTcpMapping(void) {};
+
 
   /**
   \return True if mappings share DSN space
@@ -77,8 +82,17 @@ public:
   Decline to DSN and SSN ?
   Rename to overlap
   */
-  bool
-  Intersect(const MpTcpMapping&) const;
+//  bool
+//  Intersect(const MpTcpMapping&) const;
+
+  /**
+  TODO do the same for DSNs
+  **/
+  virtual bool
+  OverlapRangeSSN(const SequenceNumber32& headSSN, const uint16_t& len) const;
+
+  virtual bool
+  OverlapRangeDSN(const SequenceNumber32& headDSN, const uint16_t& len) const;
 
   /**
    *
@@ -108,8 +122,13 @@ public:
   * \return True if ssn belonged to this mapping, then a dsn would have been computed
   *
   */
+  // TODO should be done by the user
   bool
   TranslateSSNToDSN(const SequenceNumber32& ssn,SequenceNumber32& dsn) const;
+    /**
+    **/
+//    bool
+//    TranslateSSNtoDSN(const SequenceNumber32& ssn,SequenceNumber32 &dsn);
 
   /**
    * \return The last MPTCP sequence number included in the mapping
@@ -134,36 +153,49 @@ public:
   */
   bool operator<(MpTcpMapping const& ) const;
 
-
-  // getters
-  virtual
-  SequenceNumber32
+  /**
+   * \return MPTCP sequence number for the first mapped byte
+   */
+  virtual SequenceNumber32
   HeadDSN() const;
 
   // TODO rename into GetMappedSSN Head ?
+  /**
+   * \return subflow sequence number for the first mapped byte
+   */
   virtual SequenceNumber32
   HeadSSN() const;
 
+  /**
+  * \return mapping length
+  */
   virtual uint16_t
   GetLength() const ;
 
   /**
-
+   * \brief Mapping are equal if everything concord, SSN/DSN and length
   */
   virtual bool operator==( const MpTcpMapping&) const;
+
+  /**
+   * \return Not ==
+   */
   virtual bool operator!=( const MpTcpMapping& mapping) const;
 
 
   // TODO should be SequenceNumber64
 protected:
 //  SequenceNumber64 m_dataSequenceNumber;   //!< MPTCP level
-  SequenceNumber32 m_dataSequenceNumber;   //!< MPTCP level
-  SequenceNumber32 m_subflowSequenceNumber;  //!<
+  SequenceNumber32 m_dataSequenceNumber;   //!< MPTCP sequence number
+  SequenceNumber32 m_subflowSequenceNumber;  //!< subflow sequence number
   uint16_t m_dataLevelLength;  //!< mapping length / size
 //  bool m_send;  //!< Set to true if mapping already sent & acknowledged ?
 };
 
 
+/**
+* \brief sorted on DSNs
+*/
 typedef std::set<MpTcpMapping> MappingList;
 
 
@@ -182,10 +214,6 @@ class MpTcpMappingContainer
     MpTcpMappingContainer(void);
     virtual ~MpTcpMappingContainer(void);
 
-    /**
-    **/
-    bool
-    TranslateSSNtoDSN(const SequenceNumber32& ssn,SequenceNumber32 &dsn);
 
     /**
     * Removes all mappings that covered dataspace seq nbs strictly lower than "dsn"
@@ -228,10 +256,7 @@ class MpTcpMappingContainer
   REturn last mapped SSN.
   If Empty will take the one from the buff.
   */
-  SequenceNumber32 FirstUnmappedSSN(void) const;
-
-//  TcpRxBuffer
-//  TcpTxBuffer
+//  SequenceNumber32 FirstUnmappedSSN(void) const;
 
   /**
   For debug purpose. Dump all registered mappings
@@ -247,11 +272,12 @@ class MpTcpMappingContainer
 
   /**
    * \brief one can iterate over it to find a range
+   * TODO it should look for DSN and SSN overlaps
    * \param
    */
   bool
-//  FindOverlappingMapping(const MpTcpMapping& mapping, MpTcpMapping& ret);
-  FindOverlappingMapping(SequenceNumber32 headSSN, uint32_t len, MpTcpMapping& ret) const;
+  FindOverlappingMapping(const MpTcpMapping& mapping, MpTcpMapping& ret) const;
+//  FindOverlappingMapping(SequenceNumber32 headSSN, uint32_t len, MpTcpMapping& ret) const;
 
 
 
@@ -262,26 +288,28 @@ class MpTcpMappingContainer
   Will map the mapping to the first unmapped SSN
   \return Same value as for AddMappingEnforceSSN
   */
-  int
-  AddMappingLooseSSN(MpTcpMapping&);
+//  int
+//  AddMappingLooseSSN(MpTcpMapping&);
 
 
   /**
-  Check for overlap.
-  \return < 0 if the mapping overlaps with an existing one, 0 otherwise
+   * \brief
+   * \note Check for overlap.
+   * \return False if the dsn range overlaps with a registered mapping, true otherwise
+   * TODO rename to Register/AddMapping
   **/
-  int
-  AddMappingEnforceSSN(const MpTcpMapping&);
+  bool
+  AddMapping(const MpTcpMapping&);
 
   /**
   * \param l list
   * \param m pass on the mapping you want to retrieve
   */
   bool
-  GetMappingForSSN( const SequenceNumber32& ssn, MpTcpMapping& m);
+  GetMappingForSSN(const SequenceNumber32& ssn, MpTcpMapping& m);
 
 //  TODO should be removed
-    TcpTxBuffer* m_txBuffer;  //!< used to map DSN to SSN, should be removed
+//    TcpTxBuffer* m_txBuffer;  //!< used to map DSN to SSN, should be removed
 
 protected:
     MappingList m_mappings;     //!<

@@ -94,6 +94,8 @@ os.environ['NS_LOG'] = NS_LOG
 # os.system("rm source/*")
 # os.system("rm server/*")
 
+# remove output folders and recreate them 
+os.system("clean.sh")
 print("Executed Command:\n%s" % cmd)
 
 # os.system(cmd)
@@ -106,8 +108,8 @@ except subprocess.TimeoutExpired:
     print("Timeout expired. try setting a longer timeout")
 finally:
     # will be done whatever the results
-    os.system("mergecap -w server.pcapng test-0-1.pcap test-0-2.pcap")
-    os.system("mergecap -w source.pcapng test-1-1.pcap test-1-2.pcap")
+    os.system("mergecap -w server.pcap test-0-1.pcap test-0-2.pcap")
+    os.system("mergecap -w source.pcap test-1-1.pcap test-1-2.pcap")
     pass
 
 print("Exported:\n%s" % NS_LOG)

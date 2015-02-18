@@ -392,6 +392,8 @@ public: // public variables
   double TimeScale;
 
 
+  virtual uint32_t GetSSThresh(void) const;
+
 protected: // protected methods
 
   friend class Tcp;
@@ -414,7 +416,7 @@ protected: // protected methods
   TODO rename to GetMinSSThreshold;
   **/
   virtual void SetSSThresh(uint32_t threshold);
-  virtual uint32_t GetSSThresh(void) const;
+
 
   void
   SetRemoteWindow(uint32_t win_size);

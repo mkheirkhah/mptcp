@@ -70,7 +70,7 @@ public:
    * \return the object TypeId
    */
   static TypeId GetTypeId (void);
- 
+
   TcpSocket (void);
   virtual ~TcpSocket (void);
 
@@ -78,6 +78,24 @@ public:
    * \brief Literal names of TCP states for use in log messages
    */
   static const char* const TcpStateName[LAST_STATE];
+
+  /**
+   * \brief Get the send buffer size.
+   * \returns the buffer size (in bytes)
+   */
+  virtual uint32_t GetSndBufSize (void) const = 0;
+
+  /**
+   * \brief Get the receive buffer size.
+   * \returns the buffer size (in bytes)
+   */
+  virtual uint32_t GetRcvBufSize (void) const = 0;
+
+  /**
+   * \brief Get the segment size.
+   * \returns the segment size (in bytes)
+   */
+  virtual uint32_t GetSegSize (void) const = 0;
 
 private:
   // Indirect the attribute setting and getting through private virtual methods
@@ -89,22 +107,10 @@ private:
   virtual void SetSndBufSize (uint32_t size) = 0;
 
   /**
-   * \brief Get the send buffer size.
-   * \returns the buffer size (in bytes)
-   */
-  virtual uint32_t GetSndBufSize (void) const = 0;
-
-  /**
    * \brief Set the receive buffer size.
    * \param size the buffer size (in bytes)
    */
   virtual void SetRcvBufSize (uint32_t size) = 0;
-
-  /**
-   * \brief Get the receive buffer size.
-   * \returns the buffer size (in bytes)
-   */
-  virtual uint32_t GetRcvBufSize (void) const = 0;
 
   /**
    * \brief Set the segment size.
@@ -112,11 +118,6 @@ private:
    */
   virtual void SetSegSize (uint32_t size) = 0;
 
-  /**
-   * \brief Get the segment size.
-   * \returns the segment size (in bytes)
-   */
-  virtual uint32_t GetSegSize (void) const = 0;
 
   /**
    * \brief Set the Slow Start Threshold.

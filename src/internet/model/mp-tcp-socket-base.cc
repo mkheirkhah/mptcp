@@ -2513,7 +2513,7 @@ SetupSocketTracing(Ptr<TcpSocketBase> sock, const std::string prefix)
                                   << now << ",," << sf->GetSSThresh() << std::endl;
 
     // TODO Trace first Cwnd
-    *streamStates->GetStream() << now << ",," << sf->GetState() << std::endl;
+    *streamStates->GetStream() << now << ",," << TcpSocket::TcpStateName[sf->GetState()] << std::endl;
 //    *streamCwnd->GetStream() << now << ",," << sf->m_cWnd.Get() << std::endl;
   }
   else if(sock->GetInstanceTypeId() == MpTcpSocketBase::GetTypeId())
@@ -2521,7 +2521,7 @@ SetupSocketTracing(Ptr<TcpSocketBase> sock, const std::string prefix)
     //! Does nothing for now
     // could go to SetupMetaTracing
     Ptr<MpTcpSocketBase> meta = DynamicCast<MpTcpSocketBase>(sock);
-    *streamStates->GetStream() << now << ",," << meta->GetState() << std::endl;
+    *streamStates->GetStream() << now << ",," << TcpSocket::TcpStateName[meta->GetState()] << std::endl;
   }
   else {
     NS_FATAL_ERROR("The passed sock is not related to MPTCP (which is not a problem in absolute terms)");
