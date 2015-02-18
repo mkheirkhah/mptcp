@@ -32,8 +32,8 @@ do
 	gnuplot -e "node='$node';prefix='subflow';output='${node}_subflow_rx';nb_of_subflows='${nb_of_subflows}'"  plots/rx.plot
 
 	# Cwin/rwin (does not care about the prefix)
-	# gnuplot -e "node='$node';prefix='subflow';output='${node}_cwnd';nb_of_subflows='${nb_of_subflows}'"  plots/cwnd.plot
-	# gnuplot -e "node='$node';prefix='subflow';output='${node}_rwnd';nb_of_subflows='${nb_of_subflows}'"  plots/rwnd.plot
+	gnuplot -e "node='$node';prefix='subflow';output='${node}_cwnd';nb_of_subflows='${nb_of_subflows}'"  plots/cwnd.plot
+	gnuplot -e "node='$node';prefix='subflow';output='${node}_rwnd';nb_of_subflows='${nb_of_subflows}'"  plots/rwnd.plot
 
 	# 
 	# gnuplot -e "node='$node';prefix='subflow_';output='${node}_rwnd'"  plots/rwnd.plot

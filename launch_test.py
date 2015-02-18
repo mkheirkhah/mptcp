@@ -95,7 +95,7 @@ os.environ['NS_LOG'] = NS_LOG
 # os.system("rm server/*")
 
 # remove output folders and recreate them 
-os.system("clean.sh")
+os.system("./clean.sh")
 print("Executed Command:\n%s" % cmd)
 
 # os.system(cmd)

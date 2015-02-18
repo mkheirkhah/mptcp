@@ -87,6 +87,8 @@ MpTcpSchedulerRoundRobin::GenerateMappings(MappingVector& mappings)
 
   // TODO rewrite pr que cela fasse comme dans
   // cette boucle sert à rien
+  // TODO on ne veut générer des mappings que si besoin est .
+  // Par exemple lors d'une retransmission ca va planter
   int i = 0;
   for(
       ;

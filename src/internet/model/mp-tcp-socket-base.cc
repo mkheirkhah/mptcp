@@ -1823,7 +1823,7 @@ MpTcpSocketBase::SendPendingData(bool withAck)
   for(MappingVector::iterator it(mappings.begin()); it  != mappings.end(); it++ )
   {
     MpTcpMapping& mapping = it->second;
-    NS_LOG_UNCOND("Send " << it->second << " on sf " << it->first);
+    NS_LOG_UNCOND("Send " << it->second << " on sf " << (int)it->first);
   }
   NS_LOG_UNCOND("=================");
 
@@ -2034,7 +2034,8 @@ MpTcpSocketBase::DoRetransmit()
     {
       if (m_cnCount > 0)
         {
-          NS_FATAL_ERROR("TODO");
+          // TODO
+          NS_FATAL_ERROR("TODO, first syn didn't reach it should be resent. Maybe this shoudl be let to the subflow");
 //          SendEmptyPacket(TcpHeader::SYN);
         }
       else
@@ -2064,10 +2065,13 @@ MpTcpSocketBase::DoRetransmit()
     }
   // Retransmit a data packet: Call SendDataPacket
   NS_LOG_LOGIC ("TcpSocketBase " << this << " retxing seq " << FirstUnackedSeq ());
+
+  m_nextTxSequence = FirstUnackedSeq();
+  SendPendingData(true);
   // normally here m_nextTxSequence has been set to firstUna
-  uint32_t sz = SendDataPacket(FirstUnackedSeq(), m_segmentSize, true);
-  // In case of RTO, advance m_nextTxSequence
-  m_nextTxSequence = std::max(m_nextTxSequence.Get(), FirstUnackedSeq() + sz);
+//  uint32_t sz = SendDataPacket(, m_segmentSize, true);
+//  // In case of RTO, advance m_nextTxSequence
+//  m_nextTxSequence = std::max(m_nextTxSequence.Get(), FirstUnackedSeq() + sz);
   //reTxTrack.push_back(std::make_pair(Simulator::Now().GetSeconds(), ns3::TcpNewReno::cWnd));
 }
 
