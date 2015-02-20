@@ -45,7 +45,7 @@ done
 # -geometry +2+2
 
 
-# montage server_recap.png source_recap.png -tile 2x1 -geometry +1+1 all.png 
+montage server_recap.png source_recap.png -tile 2x1 -geometry +1+1 all.png 
 
 
 cmd="xdg-open all.png"

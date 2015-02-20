@@ -18,10 +18,10 @@ set title sprintf("%s %s: ", node, prefix)
 
 # if monomode
 
-plot for [id=1:nb_of_subflows] \
-	filename("RxAvailable.csv", id)  using x_axis:"newRxAvailable" with linespoints pointtype 3 title "RxAvailable (custom, no out of order)", \
-	filename("RxNext.csv", id) using x_axis:"newRxNext" with linespoints pointtype 1 title "RxNext (official)", \
-	filename("RxTotal.csv", id) using x_axis:"newRxTotal" with linespoints pointtype 2 title "RxTotal (custom, out of order included)"
+plot \
+	for [id=1:nb_of_subflows] filename("RxAvailable.csv", id)  using x_axis:"newRxAvailable" with linespoints pointtype 3 title set_title("RxAvailable (no out of order)",id), \
+	for [id=1:nb_of_subflows] filename("RxNext.csv", id) using x_axis:"newRxNext" with linespoints pointtype 1 title set_title("RxNext ",id), \
+	for [id=1:nb_of_subflows] filename("RxTotal.csv", id) using x_axis:"newRxTotal" with linespoints pointtype 2 title set_title("RxTotal (out of order included)", id)
 # }
 # else {
 	

@@ -225,6 +225,7 @@ MpTcpSocketBase::ConnectNewSubflow(const Address &local, const Address &remote)
   NS_ASSERT(sf->Bind(local) == 0);
   NS_ASSERT(sf->Connect(remote) == 0);
 
+  SetupSubflowTracing(sf);
   return 0;
 }
 
@@ -443,6 +444,8 @@ MpTcpSocketBase::CompleteFork(
 
   // Otherwise when looking for the token on an MP_JOIN it is not found
   m_tcp->m_sockets.push_back(this);
+
+  SetupMetaTracing(m_tracePrefix);
 
   // Create new master subflow (master subsock) and assign its endpoint to the connection endpoint
   Ptr<MpTcpSubflow> sFlow = CreateSubflowAndCompleteFork(true,mptcpHeader, fromAddress, toAddress);
@@ -1082,7 +1085,7 @@ MpTcpSocketBase::CreateSubflowAndCompleteFork(
 //      toAddress
 //    );
   sFlow->CompleteFork(p, mptcpHeader, fromAddress,toAddress);
-
+  SetupSubflowTracing(sFlow);
 
   //! TODO steal endpoint ?
   if(sFlow->IsMaster())
@@ -1097,6 +1100,8 @@ MpTcpSocketBase::CreateSubflowAndCompleteFork(
 TODO it should block subflow creation until it received a DSS on a new subflow
 TODO rename ? CreateAndAdd? Add ? Start ? Initiate
 TODO do it so that it does not return the subflow. Should make for fewer mistakes
+
+C'est là qu'il faut activer le socket tracing
 */
 Ptr<MpTcpSubflow>
 MpTcpSocketBase::CreateSubflow(bool masterSocket)
@@ -1266,6 +1271,7 @@ MpTcpSocketBase::Connect(const Address & toAddress)
 
       // This function will allocate a new one
       int ret = sFlow->Connect(toAddress);
+      SetupSubflowTracing(sFlow);
 
       if(ret != 0)
       {
@@ -1819,11 +1825,11 @@ MpTcpSocketBase::SendPendingData(bool withAck)
 
 
   // Just dump the generated mappings
-  NS_LOG_UNCOND("=================\nGenerated mappings");
+  NS_LOG_UNCOND("=================\nGenerated mappings for node=" << (int)GetNode()->GetId());
   for(MappingVector::iterator it(mappings.begin()); it  != mappings.end(); it++ )
   {
     MpTcpMapping& mapping = it->second;
-    NS_LOG_UNCOND("Send " << it->second << " on sf " << (int)it->first);
+    NS_LOG_UNCOND("Send " << it->second << " on sf id=" << (int)it->first);
   }
   NS_LOG_UNCOND("=================");
 
@@ -2029,6 +2035,8 @@ void
 MpTcpSocketBase::DoRetransmit()
 {
   NS_LOG_FUNCTION (this);
+
+
   // Retransmit SYN packet
   if (m_state == SYN_SENT)
     {
@@ -2065,6 +2073,7 @@ MpTcpSocketBase::DoRetransmit()
     }
   // Retransmit a data packet: Call SendDataPacket
   NS_LOG_LOGIC ("TcpSocketBase " << this << " retxing seq " << FirstUnackedSeq ());
+  NS_FATAL_ERROR("TODO later, but for the tests only, it should not be necesssary ?! Check for anything suspicious");
 
   m_nextTxSequence = FirstUnackedSeq();
   SendPendingData(true);
@@ -2555,7 +2564,7 @@ void
 MpTcpSocketBase::SetupSubflowTracing(Ptr<MpTcpSubflow> sf)
 {
   NS_ASSERT_MSG(m_tracePrefix.length() != 0, "please call SetupMetaTracing before." );
-  NS_LOG_LOGIC("Setup tracing for sf " << this << " with prefix [" << m_tracePrefix << "]");
+  NS_LOG_LOGIC("Meta=" << this << " Setup tracing for sf " << sf << " with prefix [" << m_tracePrefix << "]");
 //  f.open(filename, std::ofstream::out | std::ofstream::trunc);
 
   // For now, there is no subflow deletion so this should be good enough, else it will crash
@@ -2564,7 +2573,7 @@ MpTcpSocketBase::SetupSubflowTracing(Ptr<MpTcpSubflow> sf)
 
   os << m_tracePrefix << "subflow" <<  m_prefixCounter++;
 
-  SetupSocketTracing(this, os.str().c_str());
+  SetupSocketTracing(sf, os.str().c_str());
 }
 
 
@@ -2602,7 +2611,7 @@ MpTcpSocketBase::OnSubflowDupack(Ptr<MpTcpSubflow> sf, MpTcpMapping mapping)
 void
 MpTcpSocketBase::OnSubflowRetransmit(Ptr<MpTcpSubflow> sf)
 {
-  NS_LOG_WARN("Subflow retransmit. Nothing done by meta");
+  NS_LOG_INFO("Subflow retransmit. Nothing done by meta");
 }
 
 
@@ -2870,7 +2879,7 @@ MpTcpSocketBase::ReceivedAck(
 void
 MpTcpSocketBase::ProcessDSSEstablished(const TcpHeader& tcpHeader, Ptr<TcpOptionMpTcpDSS> dss, Ptr<MpTcpSubflow> sf)
 {
-  NS_LOG_FUNCTION (this << dss << " from " << sf);
+  NS_LOG_FUNCTION (this << *dss << " from subflow " << sf);
 
 //  #if 0
 //  uint32_t ack = (tcpHeader.GetAckNumber()).GetValue();
@@ -2887,7 +2896,7 @@ MpTcpSocketBase::ProcessDSSEstablished(const TcpHeader& tcpHeader, Ptr<TcpOption
 
   if( dss->GetFlags() & TcpOptionMpTcpDSS::DataAckPresent)
   {
-    //tcpHeader,
+//    NS_LOG_DEBUG("DataAck detected");
     ReceivedAck( SequenceNumber32(dss->GetDataAck()), sf, false);
 //    SequenceNumber32 dack = SequenceNumber32(dss->GetDataAck());
 

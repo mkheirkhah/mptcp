@@ -128,13 +128,17 @@ void
 Ipv4EndPoint::ForwardUp (Ptr<Packet> p, const Ipv4Header& header, uint16_t sport,
                          Ptr<Ipv4Interface> incomingInterface)
 {
-  NS_LOG_FUNCTION (this << p << &header << sport << incomingInterface);
+  NS_LOG_FUNCTION (this << "packet=" << p << "&header=" << &header << " sport="<< sport << " interface=" << incomingInterface);
 
   if (!m_rxCallback.IsNull ())
     {
       Simulator::ScheduleNow (&Ipv4EndPoint::DoForwardUp, this, p, header, sport,
                               incomingInterface);
     }
+  else
+  {
+    NS_LOG_WARN("No callback");
+  }
 }
 void
 Ipv4EndPoint::DoForwardUp (Ptr<Packet> p, const Ipv4Header& header, uint16_t sport,

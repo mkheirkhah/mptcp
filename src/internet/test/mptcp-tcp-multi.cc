@@ -283,7 +283,7 @@ MpTcpMultihomedTestCase::ServerHandleConnectionCreated (Ptr<Socket> s, const Add
 
   Ptr<MpTcpSocketBase> server_meta = DynamicCast<MpTcpSocketBase>(s);
   NS_ASSERT_MSG(server_meta, "Was expecting a meta socket !");
-  server_meta->SetupMetaTracing("server");
+//  server_meta->SetupMetaTracing("server");
 }
 
 void
@@ -479,7 +479,7 @@ HandleSubflowCreated(Ptr<MpTcpSubflow> subflow)
     //! ce n'est pas le master donc forcement il s'agit d'un join
     NS_LOG_LOGIC("successful JOIN of subflow " << subflow );
   }
-  subflow->GetMeta()->SetupSubflowTracing(subflow);
+//  subflow->GetMeta()->SetupSubflowTracing(subflow);
 }
 
 
@@ -497,7 +497,7 @@ HandleSubflowConnected(Ptr<MpTcpSubflow> subflow)
     //! ce n'est pas le master donc forcement il s'agit d'un join
     NS_LOG_LOGIC("successful JOIN of subflow " << subflow );
   }
-  subflow->GetMeta()->SetupSubflowTracing(subflow);
+//  subflow->GetMeta()->SetupSubflowTracing(subflow);
 }
 
 
@@ -602,7 +602,7 @@ MpTcpMultihomedTestCase::SetupDefaultSim (void)
 
 //  server_meta->SetupMetaTracing("server");
   source_meta->SetupMetaTracing("source");
-
+  server_meta->SetupMetaTracing("server");
 
   source_meta->Connect (serverremoteaddr);
 

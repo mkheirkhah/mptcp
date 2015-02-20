@@ -62,7 +62,7 @@ NS_LOG += ":MpTcpSubflowUncoupled"
 # NS_LOG += ":Config"
 # NS_LOG += ":TypeId" # to look for AddTraceSource
 NS_LOG += ":TcpTestSuite"
-# NS_LOG += ":TcpRxBuffer"
+NS_LOG += ":TcpRxBuffer"
 # NS_LOG += ":PcapFile"
 # NS_LOG += ":TcpTxBuffer"
 NS_LOG += ":MpTcpMapping"
@@ -108,8 +108,8 @@ except subprocess.TimeoutExpired:
     print("Timeout expired. try setting a longer timeout")
 finally:
     # will be done whatever the results
-    os.system("mergecap -w server.pcap test-0-1.pcap test-0-2.pcap")
-    os.system("mergecap -w source.pcap test-1-1.pcap test-1-2.pcap")
+    os.system("./mergepcaps.sh")
+    # os.system("mergecap -w source.pcap test-1-1.pcap test-1-2.pcap")
     pass
 
 print("Exported:\n%s" % NS_LOG)

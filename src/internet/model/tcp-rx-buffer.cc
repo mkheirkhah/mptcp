@@ -236,7 +236,7 @@ TcpRxBuffer::Add (Ptr<Packet> p, SequenceNumber32 const& _headSeq)
   // We now know how much we are going to store, trim the packet
   if (headSeq >= tailSeq)
     {
-      NS_LOG_LOGIC ("Nothing to buffer");
+      NS_LOG_LOGIC ("->Nothing to buffer");
       return false; // Nothing to buffer anyway
     }
   else

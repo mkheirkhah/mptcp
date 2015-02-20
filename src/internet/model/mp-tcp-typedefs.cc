@@ -26,7 +26,7 @@ MpTcpMapping::~MpTcpMapping(void)
 void
 MpTcpMapping::SetMappingSize(uint16_t const& length)
 {
-  NS_LOG_DEBUG(this << length);
+  NS_LOG_DEBUG(this << " length=" << length);
   m_dataLevelLength = length;
 }
 
@@ -59,7 +59,7 @@ operator<<(std::ostream& os, const MpTcpMapping& mapping)
 void
 MpTcpMapping::SetHeadDSN(SequenceNumber32 const& dsn)
 {
-  NS_LOG_DEBUG(this << " mapping to" << dsn);
+  NS_LOG_DEBUG(this << " headDSN=" << dsn);
   m_dataSequenceNumber = dsn;
 }
 
@@ -67,7 +67,7 @@ MpTcpMapping::SetHeadDSN(SequenceNumber32 const& dsn)
 void
 MpTcpMapping::MapToSSN( SequenceNumber32 const& seq)
 {
-  NS_LOG_DEBUG(this << " mapping to ssn ["<< seq << "]");
+  NS_LOG_DEBUG(this << " mapping to ssn=" << seq);
   m_subflowSequenceNumber = seq;
 }
 

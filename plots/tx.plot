@@ -22,7 +22,7 @@ set title sprintf("%s %s: Highest Tx vs NextTx", node, prefix)
 # }
 # else {
 
-plot for [id=1:nb_of_subflows] \
-	filename("TxNext.csv", id) using x_axis:"newNextTxSequence" with linespoints pointtype 3 title "Tx Next seq to send in order", \
-	filename("TxUnack.csv", id) using x_axis:"newUnackSequence" with linespoints pointtype 2 title sprintf("Tx First unack seq sf %d",id) 
+plot  \
+	for [id=1:nb_of_subflows] filename("TxNext.csv", id) using x_axis:"newNextTxSequence" with linespoints pointtype 3 title set_title("Tx NextSeq ",id), \
+	for [id=1:nb_of_subflows] filename("TxUnack.csv", id) using x_axis:"newUnackSequence" with linespoints pointtype 2 title set_title("Tx First unack seq",id)  
 # sprintf("%s/%sTxHighest.csv", node, prefix) using x_axis:"newHighestSequence" with linespoints pointtype 1 title "Max seq sent ever"

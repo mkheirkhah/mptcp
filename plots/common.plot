@@ -13,6 +13,8 @@ set linetype 2 lw 2 pt 1 lc rgb "green"
 # Among available (pdfcairo, png, X11 )
 # if using png, set output eg set output "/tmp/myGraph.png"
 
+print("==== New plot")
+
 # TODO needs to set datafile
 if (!exists("term")) {
 	term='png'
@@ -27,11 +29,21 @@ if (!exists("output")) {
 
 if (!exists("nb_of_subflows")) {
 	print("Missing parameter 'nb_of_subflows', setting it to -1")
-	nb_of_subflows=-1
-	# output='output.png'
-	# exit gnuplot
+	nb_of_subflows=1
+	filename(suffix,id) = sprintf("%s/%s%s", node, prefix, suffix)
+	set_title(prefix,id) = sprintf("%s", prefix)
 }
 
+# if (nb_of_subflows < 0) {
+# 	# print("Print in monomode")
+# 	filename(suffix,id) = sprintf("%s/%s%s", node, prefix, suffix)
+# 	set_title(prefix,id) = sprintf("%s", prefix)
+# }
+else {
+	# print("Print in multimode")
+	filename(suffix,id) = sprintf("%s/%s%d_%s", node, prefix, id, suffix)	
+	set_title(prefix,id) = sprintf("%s for sf %d", prefix, id)
+}
 
 
 if (!exists("node")) {
@@ -45,14 +57,6 @@ if (!exists("prefix")) {
 
 
 
-if (nb_of_subflows < 0) {
-	print("Print in monomode")
-	filename(suffix,id) = sprintf("%s/%s%s", node, prefix, suffix)
-}
-else {
-	print("Print in multimode")
-	filename(suffix,id) = sprintf("%s/%s%d_%s", node, prefix, id, suffix)	
-}
 
 
 # set terminal term

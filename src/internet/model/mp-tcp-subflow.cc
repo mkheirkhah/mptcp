@@ -428,7 +428,7 @@ MpTcpSubflow::SendMapping(Ptr<Packet> p, MpTcpMapping& mapping)
       //! add succeeded
       NS_LOG_DEBUG(mapping << "Mapped to SSN=" << savedTail);
       mapping.MapToSSN( savedTail );
-      NS_ASSERT_MSG(m_TxMappings.AddMapping( mapping  ) >= 0, "2 mappings overlap");
+      NS_ASSERT_MSG(m_TxMappings.AddMapping( mapping  ) == true, "2 mappings overlap");
 
       // Submit the data to lower layers
       NS_LOG_LOGIC ("txBufSize=" << m_txBuffer.Size () << " state " << TcpStateName[m_state]);

@@ -767,7 +767,7 @@ TcpOptionMpTcpDSS::Print(std::ostream& os) const
   //Flags [" << GetFlags() << "]";
   if(GetFlags() & DataAckPresent)
   {
-    os << "Acknowledges [" << GetDataAck() << "] ";
+    os << "DACK=" << GetDataAck();
     if(GetFlags() & DataAckOf8Bytes){
       os << "(8bytes DACK)";
     }
@@ -782,18 +782,21 @@ TcpOptionMpTcpDSS::Print(std::ostream& os) const
 //  && !(DataFinMappingOnly()) )
   {
 
-      if(IsInfiniteMapping()) {
+      if(IsInfiniteMapping())
+      {
         os << " Infinite Mapping";
       }
-      else if(GetFlags() & DataFin) {
+      else if(GetFlags() & DataFin)
+      {
         //!
         os << "Has datafin for seq [" << GetDataFinDSN() << "]";
       }
 
       //! TODO GenerateMapping
       // GetMapping()
-      os << " DSN:" << m_dsn << " length=" << m_dataLevelLength;
-      if(GetFlags() & DSNOfEightBytes) {
+      os << "Embedded mapping DSN=" << m_dsn << " length=" << m_dataLevelLength;
+      if(GetFlags() & DSNOfEightBytes)
+      {
         os << "(8bytes mapping)";
       }
   }
