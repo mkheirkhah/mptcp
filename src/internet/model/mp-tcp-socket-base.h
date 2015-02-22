@@ -150,6 +150,8 @@ public:
   virtual uint32_t
   BytesInFlight();  // Return total bytes in flight of a subflow
 
+  void
+  DumpRxBuffers(Ptr<MpTcpSubflow> sf) const;
   /**
   ONLY TEMPORARY
   Used to export a whole range of statistics to csv files (filenames hardcoded).

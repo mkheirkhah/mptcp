@@ -178,7 +178,21 @@ TcpRxBuffer::Add (Ptr<Packet> p, TcpHeader const& tcph)
   return Add (p, tcph.GetSequenceNumber () );
 }
 
+void
+TcpRxBuffer::Dump() const
+{
+  NS_LOG_UNCOND("=== Dumping content of RxBuffer");
+  NS_LOG_UNCOND("=== nextRxSeq=" << m_nextRxSeq << " Occupancy=" << m_size);
+  std::map<SequenceNumber32, Ptr<Packet> >::const_iterator i = m_data.begin ();
+  for( ; i != m_data.end (); ++i)
+    {
+      NS_LOG_UNCOND( "head:" << i->first << " of size:" << i->second->GetSize());
 
+
+    }
+
+  NS_LOG_UNCOND("=== End of dump");
+}
 
 bool
 TcpRxBuffer::Add (Ptr<Packet> p, SequenceNumber32 const& _headSeq)
@@ -199,6 +213,7 @@ TcpRxBuffer::Add (Ptr<Packet> p, SequenceNumber32 const& _headSeq)
   if (m_data.size ())
     {
       SequenceNumber32 maxSeq = m_data.begin ()->first + SequenceNumber32 (m_maxBuffer);
+      NS_LOG_DEBUG("maxSeqWeCanAccept=" << maxSeq);
       if (maxSeq < tailSeq) {
         NS_LOG_DEBUG("Packet too big to fit into buffer. Trimming tailSeq=" << tailSeq << " to " << maxSeq);
         tailSeq = maxSeq;
@@ -214,8 +229,10 @@ TcpRxBuffer::Add (Ptr<Packet> p, SequenceNumber32 const& _headSeq)
   while (i != m_data.end () && i->first <= tailSeq)
     {
       SequenceNumber32 lastByteSeq = i->first + SequenceNumber32 (i->second->GetSize ());
+
       if (lastByteSeq > headSeq)
         {
+          NS_LOG_DEBUG("lastByteSeq=" <<  lastByteSeq << " > headSeq=" << headSeq);
           if (i->first > headSeq && lastByteSeq < tailSeq)
             { // Rare case: Existing packet is embedded fully in the new packet
               m_size -= i->second->GetSize ();
@@ -224,10 +241,12 @@ TcpRxBuffer::Add (Ptr<Packet> p, SequenceNumber32 const& _headSeq)
             }
           if (i->first <= headSeq)
             { // Incoming head is overlapped
+              NS_LOG_DEBUG("Overriding headSeq=" << headSeq << " to " << lastByteSeq );
               headSeq = lastByteSeq;
             }
           if (lastByteSeq >= tailSeq)
             { // Incoming tail is overlapped
+              NS_LOG_DEBUG("tailSeq reset to " << i->first);
               tailSeq = i->first;
             }
         }
@@ -236,7 +255,7 @@ TcpRxBuffer::Add (Ptr<Packet> p, SequenceNumber32 const& _headSeq)
   // We now know how much we are going to store, trim the packet
   if (headSeq >= tailSeq)
     {
-      NS_LOG_LOGIC ("->Nothing to buffer");
+      NS_LOG_LOGIC ("headSeq=" << headSeq << " tailSeq=" << tailSeq << "->Nothing to buffer");
       return false; // Nothing to buffer anyway
     }
   else

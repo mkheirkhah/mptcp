@@ -789,12 +789,12 @@ TcpOptionMpTcpDSS::Print(std::ostream& os) const
       else if(GetFlags() & DataFin)
       {
         //!
-        os << "Has datafin for seq [" << GetDataFinDSN() << "]";
+        os << " Has datafin for seq [" << GetDataFinDSN() << "]";
       }
 
       //! TODO GenerateMapping
       // GetMapping()
-      os << "Embedded mapping DSN=" << m_dsn << " length=" << m_dataLevelLength;
+      os << " Embedded mapping DSN=" << m_dsn << " length=" << m_dataLevelLength;
       if(GetFlags() & DSNOfEightBytes)
       {
         os << "(8bytes mapping)";

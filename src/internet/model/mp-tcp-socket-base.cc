@@ -887,7 +887,16 @@ MpTcpSocketBase::OnSubflowClosed(Ptr<MpTcpSubflow> subflow, bool reset)
 
 }
 
+void
+MpTcpSocketBase::DumpRxBuffers(Ptr<MpTcpSubflow> sf) const
+{
+  NS_LOG_INFO("=> Dumping meta RxBuffer ");
+  m_rxBuffer.Dump();
 
+  // TODO parcourir les sous flots
+  NS_LOG_INFO("=> Dumping Rx Buffer of subflow " << sf);
+  sf->m_rxBuffer.Dump();
+}
 
 //Ptr<Socket> sock
 //SequenceNumber32 dataSeq,
@@ -903,6 +912,8 @@ void
 MpTcpSocketBase::OnSubflowRecv(Ptr<MpTcpSubflow> sf)
 {
   NS_LOG_FUNCTION(this << "Received data from subflow=" << sf);
+  NS_LOG_INFO("=> Dumping meta RxBuffer before extraction");
+  DumpRxBuffers(sf);
 
 //  NS_ASSERT(IsConnected());
 
@@ -938,16 +949,24 @@ MpTcpSocketBase::OnSubflowRecv(Ptr<MpTcpSubflow> sf)
     // Notify app to receive if necessary
     NS_LOG_DEBUG( "Before adding to metaRx: RxBufferHead=" << m_rxBuffer.HeadSequence() << " NextRxSequence=" << m_rxBuffer.NextRxSequence());
 
-    if(!m_rxBuffer.Add(p, dsn)) {
-      NS_LOG_WARN("Data might have been lost");
+    if(!m_rxBuffer.Add(p, dsn))
+    {
+
+      NS_FATAL_ERROR("Data might have been lost");
     }
+
 //    NS_ASSERT_MSG(m_rxBuffer.Add(p, dsn), "Data got LOST");
 //    NS_ASSERT_MSG(m_rxBuffer.Add(p, dsn), "Data got LOST");
     NS_LOG_DEBUG( "After adding to metaRx: RxBufferHead=" << m_rxBuffer.HeadSequence() << " NextRxSequence=" << m_rxBuffer.NextRxSequence());
   }
 
   // TODO should restablish delayed acks ?
+  NS_LOG_UNCOND("=> Dumping RxBuffers after extraction");
 
+
+//  NS_LOG_INFO("=> After extraction Dumping Rx Buffer of subflow " << sf);
+  DumpRxBuffers(sf);
+//  sf->m_rxBuffer.Dump();
 
   if (expectedDSN < m_rxBuffer.NextRxSequence())
     {
@@ -2073,10 +2092,14 @@ MpTcpSocketBase::DoRetransmit()
     }
   // Retransmit a data packet: Call SendDataPacket
   NS_LOG_LOGIC ("TcpSocketBase " << this << " retxing seq " << FirstUnackedSeq ());
-  NS_FATAL_ERROR("TODO later, but for the tests only, it should not be necesssary ?! Check for anything suspicious");
 
-  m_nextTxSequence = FirstUnackedSeq();
-  SendPendingData(true);
+  m_rxBuffer.Dump();
+  NS_FATAL_ERROR("TODO later, but for the tests only, it should not be necesssary ?! Check for anything suspicious");
+//
+//  m_nextTxSequence = FirstUnackedSeq();
+//  SendPendingData(true);
+//
+
   // normally here m_nextTxSequence has been set to firstUna
 //  uint32_t sz = SendDataPacket(, m_segmentSize, true);
 //  // In case of RTO, advance m_nextTxSequence

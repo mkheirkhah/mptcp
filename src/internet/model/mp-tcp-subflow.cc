@@ -420,7 +420,8 @@ MpTcpSubflow::SendMapping(Ptr<Packet> p, MpTcpMapping& mapping)
       // Store the packet into Tx buffer
       if (!m_txBuffer.Add(p))
         { // TxBuffer overflow, send failed
-          NS_LOG_INFO("TX buffer overflow");
+          NS_LOG_WARN("TX buffer overflow");
+
           m_errno = ERROR_MSGSIZE;
           return -1;
         }
@@ -1959,7 +1960,7 @@ this is private
 Ptr<Packet>
 MpTcpSubflow::ExtractAtMostOneMapping(uint32_t maxSize, bool only_full_mapping, SequenceNumber32& headDSN)
 {
-  NS_LOG_DEBUG(this << "maxSize="<< maxSize);
+  NS_LOG_DEBUG(this << " maxSize="<< maxSize);
   MpTcpMapping mapping;
   Ptr<Packet> p = Create<Packet>();
 
@@ -1968,6 +1969,7 @@ MpTcpSubflow::ExtractAtMostOneMapping(uint32_t maxSize, bool only_full_mapping, 
     return p;
   }
 
+  // as in linux, we extract in order
   SequenceNumber32 headSSN = m_rxBuffer.HeadSequence();
 
 //  NS_LOG_LOGIC("Extracting from SSN [" << headSSN << "]");
@@ -2003,7 +2005,9 @@ MpTcpSubflow::ExtractAtMostOneMapping(uint32_t maxSize, bool only_full_mapping, 
   p = m_rxBuffer.Extract( maxSize );
 
 //  m_RxMappings.DiscardMappingsUpToDSN( headDSN);
-  m_RxMappings.DiscardMappingsUpToSN(headDSN, m_rxBuffer.NextRxSequence());
+  // Not included
+    m_RxMappings.DiscardMapping(mapping);
+//  m_RxMappings.DiscardMappingsUpToSN( mapping.TailDSN() + SequenceNumber32(1), mapping.TailSSN());
   return p;
 }
 
@@ -2084,12 +2088,13 @@ MpTcpSubflow::ReceivedData(Ptr<Packet> p, const TcpHeader& tcpHeader)
     { // Insert failed: No data or RX buffer full
       NS_LOG_WARN("Insert failed, No data (" << p->GetSize() << ") ?"
           // Size() returns the actual buffer occupancy
-          << "or RX buffer full (Available:" << m_rxBuffer.Available()
-          << " Occupancy=" << m_rxBuffer.Size()
-          << " Maxbuffsize=" << m_rxBuffer.MaxBufferSize() << ")"
-          << " or already buffered"
+//          << "or RX buffer full (Available:" << m_rxBuffer.Available()
+//          << " Occupancy=" << m_rxBuffer.Size()
+//          << " OOOSize=" << m_rxBuffer.OutOfOrder ()
+//          << " Maxbuffsize=" << m_rxBuffer.MaxBufferSize() << ")"
+//          << " or already buffered"
           );
-
+      m_rxBuffer.Dump();
 
 //      dss->SetDataAck( GetMeta()->m_rxBuffer.NextRxSequence().GetValue() );
       // TODO rather use a goto

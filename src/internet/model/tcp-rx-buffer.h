@@ -131,6 +131,9 @@ public:
    */
   bool Finished (void);
 
+  void
+  Dump() const;
+
   /**
    * Insert a packet into the buffer and update the availBytes counter to
    * reflect the number of bytes ready to send to the application. This
