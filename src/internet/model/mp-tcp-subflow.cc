@@ -1998,15 +1998,34 @@ MpTcpSubflow::ExtractAtMostOneMapping(uint32_t maxSize, bool only_full_mapping, 
       return p;
     }
 
-    //
-    maxSize = std::min(maxSize, (uint32_t)mapping.GetLength());
+
   }
 
+  // Extract at most one mapping
+  maxSize = std::min(maxSize, (uint32_t)mapping.GetLength());
+
+  NS_LOG_DEBUG("Extracting at most " << maxSize << " bytes ");
   p = m_rxBuffer.Extract( maxSize );
 
 //  m_RxMappings.DiscardMappingsUpToDSN( headDSN);
   // Not included
+
+  // TODO seulement supprimer ce que l'on a extrait !
+  SequenceNumber32 extractedTail = headSSN + p->GetSize() - 1;
+
+  NS_LOG_DEBUG("ExtractedTail=" << extractedTail << " to compare with " << mapping.TailSSN());
+
+  NS_ASSERT_MSG( extractedTail <= mapping.TailSSN(), "Can not extract more than the size of the mapping");
+
+  if(extractedTail < mapping.TailSSN() )
+  {
+    NS_ASSERT_MSG(!only_full_mapping, "The only extracted size possible should be the one of the mapping");
+    // only if data extracted covers full mapping we can remove the mapping
+
+  }
+  else {
     m_RxMappings.DiscardMapping(mapping);
+  }
 //  m_RxMappings.DiscardMappingsUpToSN( mapping.TailDSN() + SequenceNumber32(1), mapping.TailSSN());
   return p;
 }

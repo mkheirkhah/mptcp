@@ -705,13 +705,14 @@ public:
     // 4) server write size, and 5) server read size
     // with units of bytes
 //    AddTestCase (new MpTcpMultihomedTestCase (13, 200, 200, 200, 200, false), TestCase::QUICK);
-    AddTestCase (new MpTcpMultihomedTestCase (13, 1, 1, 1, 1, false), TestCase::QUICK);
+//    AddTestCase (new MpTcpMultihomedTestCase (13, 1, 1, 1, 1, false), TestCase::QUICK);
 //    AddTestCase (new MpTcpMultihomedTestCase (100000, 100, 50, 100, 20, false), TestCase::QUICK);
 
 // here it's a test where I lower streamsize to see where it starts failing.
 // 2100 is ok, 2200 fails
 //    AddTestCase (new MpTcpMultihomedTestCase (5000, 100, 50, 100, 20, false), TestCase::EXTENSIVE);
-//    AddTestCase (new MpTcpMultihomedTestCase (5000, 100, 50, 100, 20, false), TestCase::QUICK);
+//    AddTestCase (new MpTcpMultihomedTestCase (10000, 100, 50, 100, 50, false), TestCase::QUICK);
+    AddTestCase (new MpTcpMultihomedTestCase (10000, 100, 50, 100, 20, false), TestCase::QUICK);
 
 
     // Disable IPv6 tests; not supported yet

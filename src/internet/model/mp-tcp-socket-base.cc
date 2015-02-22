@@ -296,7 +296,7 @@ MpTcpSocketBase::GetNActiveSubflows() const
 
   //std::vector<MpTcpSubflow>::size_ uint8
 Ptr<MpTcpSubflow>
-MpTcpSocketBase::GetSubflow(uint8_t id)
+MpTcpSocketBase::GetSubflow(uint8_t id) const
 {
   NS_ASSERT_MSG(id < m_subflows[Established].size(), "Trying to get an unexisting subflow");
   return m_subflows[Established][id];
@@ -894,8 +894,13 @@ MpTcpSocketBase::DumpRxBuffers(Ptr<MpTcpSubflow> sf) const
   m_rxBuffer.Dump();
 
   // TODO parcourir les sous flots
-  NS_LOG_INFO("=> Dumping Rx Buffer of subflow " << sf);
-  sf->m_rxBuffer.Dump();
+
+  for(int i = 0; i < (int)GetNActiveSubflows(); ++i)
+  {
+    Ptr<MpTcpSubflow> sf = GetSubflow(i);
+    NS_LOG_INFO("=> Rx Buffer of subflow=" << sf);
+    sf->m_rxBuffer.Dump();
+  }
 }
 
 //Ptr<Socket> sock
@@ -934,7 +939,7 @@ MpTcpSocketBase::OnSubflowRecv(Ptr<MpTcpSubflow> sf)
     /* Todo tell if we stop to extract only between mapping boundaries or if
     Extract
     */
-    p = sf->ExtractAtMostOneMapping(canRead, false, dsn);
+    p = sf->ExtractAtMostOneMapping(canRead, true, dsn);
 
     if (p->GetSize() == 0)
     {
@@ -2093,7 +2098,10 @@ MpTcpSocketBase::DoRetransmit()
   // Retransmit a data packet: Call SendDataPacket
   NS_LOG_LOGIC ("TcpSocketBase " << this << " retxing seq " << FirstUnackedSeq ());
 
-  m_rxBuffer.Dump();
+//  m_rxBuffer.Dump();
+
+  DumpRxBuffers(0);
+
   NS_FATAL_ERROR("TODO later, but for the tests only, it should not be necesssary ?! Check for anything suspicious");
 //
 //  m_nextTxSequence = FirstUnackedSeq();

@@ -301,7 +301,7 @@ public:
   *
   * \return an established subflow
   */
-  Ptr<MpTcpSubflow> GetSubflow(uint8_t);
+  Ptr<MpTcpSubflow> GetSubflow(uint8_t) const;
 
   virtual void
   ClosingOnEmpty(TcpHeader& header);
