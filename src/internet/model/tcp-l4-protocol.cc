@@ -16,7 +16,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  * Author: Raj Bhattacharjea <raj.b@gatech.edu>
- * Modified: Morteza Kheirkhah <m.kheirkhah@sussex.ac.uk>, University of Sussex, UK.
+ * Modified: Morteza Kheirkhah <m.kheirkhah@sussex.ac.uk>
  */
 
 #include "ns3/assert.h"
