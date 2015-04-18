@@ -73,22 +73,6 @@ OptAddAddress::~OptAddAddress()
   addr = Ipv4Address::GetZero();
 }
 
-OptRemoveAddress::OptRemoveAddress(TcpOption_t oName, uint8_t aID)
-{
-  NS_LOG_FUNCTION(this << oName << aID);
-  optName = oName;
-  Length = 5;
-  addrID = aID;
-}
-
-OptRemoveAddress::~OptRemoveAddress()
-{
-  NS_LOG_FUNCTION_NOARGS();
-  optName = OPT_NONE;
-  Length = 0;
-  addrID = 0;
-}
-
 OptDataSeqMapping::OptDataSeqMapping(TcpOption_t oName, uint64_t dSeqNum, uint16_t dLevelLength, uint32_t sfSeqNum)
 {
   NS_LOG_FUNCTION(this << oName << dSeqNum << dLevelLength << sfSeqNum);
@@ -108,49 +92,4 @@ OptDataSeqMapping::~OptDataSeqMapping()
   dataLevelLength = 0;
   subflowSeqNumber = 0;
 }
-
-OptTimesTamp::OptTimesTamp(TcpOption_t oName, uint64_t tsval, uint64_t tsecr)
-{
-  NS_LOG_FUNCTION(this << oName << tsval << tsecr);
-  optName = oName;
-  Length = 17;
-  TSval = tsval;
-  TSecr = tsecr;
-}
-
-OptTimesTamp::~OptTimesTamp()
-{
-  NS_LOG_FUNCTION_NOARGS();
-  optName = OPT_NONE;
-  TSval = 0;
-  TSecr = 0;
-}
-
-OptDSACK::OptDSACK(TcpOption_t oName) :
-    blocks(0)
-{
-  optName = oName;
-}
-
-void
-OptDSACK::AddBlock(uint64_t leftEdge, uint64_t rightEdge)
-{
-  blocks.insert(blocks.end(), leftEdge);
-  blocks.insert(blocks.end(), rightEdge);
-}
-
-void
-OptDSACK::AddfstBlock(uint64_t leftEdge, uint64_t rightEdge)
-{
-  // We first insert the right edge in the beginning then the left edge to keep the order
-  blocks.insert(blocks.begin(), rightEdge);
-  blocks.insert(blocks.begin(), leftEdge);
-}
-
-OptDSACK::~OptDSACK()
-{
-  NS_LOG_FUNCTION_NOARGS();
-  blocks.clear();
-}
-
 }

@@ -58,9 +58,6 @@ public:
   bool AddOptJOIN(TcpOption_t optName, uint32_t RxToken, uint8_t addrID);   // Join Connection Option
   bool AddOptADDR(TcpOption_t optName, uint8_t addrID, Ipv4Address addr);// Add address Option
   bool AddOptDSN(TcpOption_t optName, uint64_t dSeqNum, uint16_t dLevelLength, uint32_t sfSeqNum); // Data Sequence Mapping Option
-  bool AddOptREMADR(TcpOption_t optName, uint8_t addrID);   // Remove address Option
-  bool AddOptTT(TcpOption_t optName, uint64_t tsval, uint64_t tsecr); // TCP TimesTamp Option
-  bool AddOptDSACK(TcpOption_t optName, OptDSACK *opt); // DSACK Option
   void SetOptionsLength(uint8_t length);
   void SetPaddingLength(uint8_t length);
   uint8_t GetOptionsLength() const;

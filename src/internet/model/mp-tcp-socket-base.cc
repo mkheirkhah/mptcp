@@ -316,10 +316,6 @@ MpTcpSocketBase::ReadOptions(uint8_t sFlowIdx, Ptr<Packet> pkt, const TcpHeader&
           remoteAddrs.insert(remoteAddrs.end(), addrInfo);
           TxAddr = true;
         }
-      else if (opt->optName == OPT_REMADR)
-        { // not implemented yet
-          NS_LOG_WARN(this << "ReadOption-> OPT_REMADR is not implemented yet");
-        }
       else if (opt->optName == OPT_DSN)
         { // not implemented yet
           NS_LOG_LOGIC(this << " ReadOption-> OPT_DSN -> we'll deal with it later on");
@@ -2190,27 +2186,6 @@ MpTcpSocketBase::SendEmptyPacket(uint8_t sFlowIdx, uint8_t flags)
   NS_LOG_INFO("("<< (int)sFlowIdx<<") SendEmptyPacket-> "<< header <<" Length: "<< (int)header.GetLength());
 }
 
-//void
-//MpTcpSocketBase::allocateSendingBuffer(uint32_t size)
-//{
-//  NS_LOG_FUNCTION(this << size);
-//  sendingBuffer = new DataBuffer(size);
-//}
-//
-//void
-//MpTcpSocketBase::allocateRecvingBuffer(uint32_t size)
-//{
-//  NS_LOG_FUNCTION(this << size);
-//  recvingBuffer = new DataBuffer(size);
-//}
-//
-//void
-//MpTcpSocketBase::SetunOrdBufMaxSize(uint32_t size)
-//{
-//  NS_LOG_FUNCTION_NOARGS();
-//  //unOrdMaxSize = size;
-//}
-
 void
 MpTcpSocketBase::SetSndBufSize(uint32_t size)
 {
@@ -2248,15 +2223,6 @@ MpTcpSocketBase::Recv(uint32_t size)
   return recvingBuffer.Retrieve(toRead);
 }
 
-
-//uint32_t
-//MpTcpSocketBase::Recv(uint8_t* buf, uint32_t size)
-//{
-//  NS_LOG_FUNCTION (this);
-//  //Null packet means no data to read, and an empty packet indicates EOF
-//  uint32_t toRead = std::min(recvingBuffer.PendingData(), size);
-//  return recvingBuffer.Retrieve(buf, toRead);
-//}
 
 void
 MpTcpSocketBase::ForwardUp(Ptr<Packet> p, Ipv4Header header, uint16_t port, Ptr<Ipv4Interface> interface)
