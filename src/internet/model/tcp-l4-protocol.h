@@ -16,7 +16,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  * Author: Raj Bhattacharjea <raj.b@gatech.edu>
- * Modified: Morteza Kheirkhah <m.kheirkhah@sussex.ac.uk>
+ * Modified: Morteza Kheirkhah <m.kheirkhah@sussex.ac.uk>, University of Sussex, UK.
  */
 
 #ifndef TCP_L4_PROTOCOL_H
@@ -222,7 +222,7 @@ public:
   // From IpL4Protocol
   virtual IpL4Protocol::DownTargetCallback GetDownTarget (void) const;
   virtual IpL4Protocol::DownTargetCallback6 GetDownTarget6 (void) const;
-
+  bool RemoveLocalToken(uint32_t);
 
 protected:
   virtual void DoDispose (void);
@@ -245,6 +245,8 @@ private:
 private:
   friend class TcpSocketBase;
   friend class MpTcpSocketBase;
+  friend class MMpTcpSocketBase;
+  friend class PacketScatterSocketBase;
   void SendPacket (Ptr<Packet>, const TcpHeader &,
                    Ipv4Address, Ipv4Address, Ptr<NetDevice> oif = 0);
   void SendPacket (Ptr<Packet>, const TcpHeader &,

@@ -226,7 +226,7 @@ public:
    */
   int64_t AssignStreams (int64_t stream);
 
-  uint32_t GetTupleValue(const Ipv4Header &header, Ptr<const Packet> ipPayload);
+  uint64_t GetTupleValue(const Ipv4Header &header, Ptr<const Packet> ipPayload);
 
 protected:
   void DoDispose (void);
@@ -264,7 +264,7 @@ private:
 
   //Ptr<Ipv4Route> LookupGlobal (Ipv4Address dest, Ptr<NetDevice> oif = 0);
   Ptr<Ipv4Route> LookupGlobal (const Ipv4Header &header, Ptr<const Packet> ipPayload, Ptr<NetDevice> oif = 0);
-
+  Hasher hasher;
   HostRoutes m_hostRoutes;             //!< Routes to hosts
   NetworkRoutes m_networkRoutes;       //!< Routes to networks
   ASExternalRoutes m_ASexternalRoutes; //!< External routes imported

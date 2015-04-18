@@ -32,6 +32,8 @@
 #include "udp-header.h"
 #include "tcp-header.h"
 #include "ns3/node.h"
+//#include "ns3/hash.h"
+//#include <functional>
 
 NS_LOG_COMPONENT_DEFINE ("Ipv4GlobalRouting");
 
@@ -74,6 +76,9 @@ Ipv4GlobalRouting::Ipv4GlobalRouting ()
   NS_LOG_FUNCTION (this);
 
   m_rand = CreateObject<UniformRandomVariable> ();
+  //Hasher hasher = Hasher(Create<Hash::Function::Fnv1a> ());
+  Hasher hasher = Hasher();
+  //uint32_t hash = Hasher.GetHash32 (data);
 }
 
 Ipv4GlobalRouting::~Ipv4GlobalRouting ()
@@ -145,11 +150,14 @@ Ipv4GlobalRouting::AddASExternalRouteTo (Ipv4Address network,
   m_ASexternalRoutes.push_back (route);
 }
 
-uint32_t
+uint64_t
 Ipv4GlobalRouting::GetTupleValue(const Ipv4Header &header, Ptr<const Packet> ipPayload)
 {
   NS_LOG_FUNCTION(header);
-  uint32_t fiveTuple = header.GetSource().Get()
+  Ptr<Node> node = m_ipv4->GetObject<Node>();
+  uint32_t node_id = node->GetId();
+
+  uint64_t fiveTuple = header.GetSource().Get()
                      + header.GetDestination().Get()
                      + header.GetProtocol();
 
@@ -179,18 +187,47 @@ Ipv4GlobalRouting::GetTupleValue(const Ipv4Header &header, Ptr<const Packet> ipP
           << (int)header.GetProtocol() << " , "
           << (int)tcpHeader.GetSourcePort () << " , "
           << (int)tcpHeader.GetDestinationPort ());
-      fiveTuple += tcpHeader.GetSourcePort();
-      fiveTuple += tcpHeader.GetDestinationPort();
+      fiveTuple += (uint32_t)tcpHeader.GetSourcePort();
+      fiveTuple += (uint32_t)tcpHeader.GetDestinationPort();
       break;
     }
   default:
     {
-      NS_FATAL_ERROR("Udp or Tcp header not found");
+      NS_FATAL_ERROR("Udp or Tcp header not found " << (int) header.GetProtocol());
       break;
     }
     }
-  NS_LOG_DEBUG("FiveTuple() -> HashedValue: " <<  fiveTuple);
-  return fiveTuple;
+  //NS_LOG_DEBUG("FiveTuple() -> HashedValue: " <<  fiveTuple);
+  hasher.clear();
+
+  TcpHeader tcpHeader;
+  ipPayload->PeekHeader(tcpHeader);
+
+//  char *buffer_to_hash = new char[12];
+//  uint32_t src_ip_to_hash = header.GetSource().Get();
+//  uint32_t dst_ip_to_hash = header.GetDestination().Get();
+//  uint16_t src_port_to_hash = tcpHeader.GetSourcePort();
+//  uint16_t dst_port_to_hash = tcpHeader.GetDestinationPort();
+//  memcpy(buffer_to_hash, &src_ip_to_hash,sizeof(uint32_t));
+//  memcpy(buffer_to_hash + sizeof(uint32_t), &dst_ip_to_hash,sizeof(uint32_t));
+//  memcpy(buffer_to_hash + sizeof(uint32_t) + sizeof(uint32_t), &src_port_to_hash,sizeof(uint16_t));
+//  memcpy(buffer_to_hash + sizeof(uint32_t) + sizeof(uint32_t) + sizeof(uint16_t), &dst_port_to_hash,sizeof(uint16_t));
+//  std::hash<std::string> str_hash;
+
+  //uint64_t hash = hasher.GetHash64 ((const char *)buffer_to_hash, 12);
+//  delete buffer_to_hash;
+
+  ostringstream oss;
+  //oss << tcpHeader.GetDestinationPort() << tcpHeader.GetSourcePort() << header.GetSource() << header.GetDestination() << header.GetTtl();
+  oss << tcpHeader.GetDestinationPort() << tcpHeader.GetSourcePort() << header.GetSource() << header.GetDestination() << node_id;
+//  oss << fiveTuple;
+  std::string data = oss.str();
+  uint32_t hash = hasher.GetHash64(data);
+//  NS_LOG_INFO("Hash fro Hasher is: " << hash << " fiveTuple:" << fiveTuple << " Data: " << data);
+  oss.str("");
+  return hash;
+//  return fiveTuple;
+//  return tcpHeader.GetSourcePort();
 }
 
 //Ptr<Ipv4Route>
@@ -198,6 +235,7 @@ Ipv4GlobalRouting::GetTupleValue(const Ipv4Header &header, Ptr<const Packet> ipP
 Ptr<Ipv4Route>
 Ipv4GlobalRouting::LookupGlobal(const Ipv4Header &header, Ptr<const Packet> ipPayload, Ptr<NetDevice> oif)
 {
+
   NS_LOG_FUNCTION (this << header.GetDestination() << oif);
   NS_LOG_LOGIC ("Looking for route for destination " << header.GetDestination());
   Ptr<Ipv4Route> rtentry = 0;
@@ -281,15 +319,28 @@ Ipv4GlobalRouting::LookupGlobal(const Ipv4Header &header, Ptr<const Packet> ipPa
       uint32_t selectIndex;
       if (m_randomEcmpRouting)
         {
+          NS_FATAL_ERROR("At the moment this should not be run");
           selectIndex = m_rand->GetInteger(0, allRoutes.size() - 1);
         }
       else if (m_flowEcmpRouting && allRoutes.size() > 1)
         {
 
-           selectIndex = GetTupleValue(header, ipPayload) % allRoutes.size();
-           Ipv4RoutingTableEntry* route = allRoutes.at (selectIndex);
-           Ptr<NetDevice> NIC = m_ipv4->GetNetDevice(route->GetInterface());
-           NS_LOG_DEBUG("Node("<< NIC->GetNode()->GetId() << ") LookupGlobal() -> selectIndex for ECMP is " << selectIndex);
+          selectIndex = (GetTupleValue(header, ipPayload) % (allRoutes.size()));
+
+//          Ipv4RoutingTableEntry* route = allRoutes.at(selectIndex);
+//          Ptr<NetDevice> NIC = m_ipv4->GetNetDevice(route->GetInterface());
+          //Ptr<Node> node = m_ipv4->GetObject("ns3::Node");
+//          if (NIC->GetNode()->GetId() > 4 && NIC->GetNode()->GetId() <= 11)
+//            {
+//              for (uint32_t i = 0; i < allRoutes.size(); i++)
+//                {
+//                  Ipv4RoutingTableEntry* route = allRoutes.at(i);
+//                  NS_LOG_UNCOND(route->GetGateway ());
+//                }
+              //NS_LOG_UNCOND("");
+//            }
+//          if (NIC->GetNode()->GetId() == 4/* && NIC->GetNode()->GetId() <= 11*/)
+//            NS_LOG_UNCOND("Node("<< NIC->GetNode()->GetId() << ") LookupGlobal() -> selectIndex for ECMP is " << selectIndex << " AllRoute: " << allRoutes.size() <<" FiveTuple:" << GetTupleValue(header, ipPayload));
         }
       else
         {

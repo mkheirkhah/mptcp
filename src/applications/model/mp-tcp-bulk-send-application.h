@@ -116,7 +116,7 @@ private:
    * \brief Send data until the L4 transmission buffer is full.
    */
   void SendData ();
-
+public:
   Ptr<MpTcpSocketBase> m_socket;
   Address         m_peer;         //!< Peer address
   bool            m_connected;    //!< True if connected
@@ -124,8 +124,14 @@ private:
   uint32_t        m_maxBytes;     //!< Limit total number of bytes sent
   uint32_t        m_totBytes;     //!< Total bytes sent so far
   TypeId          m_tid;          //!< The type of protocol to use.
-  uint8_t         *m_data;        /// Application Buffer
-  uint32_t        m_bufferSize;   /// Application buffer size
+// uint8_t       *m_data;         // Application Buffer
+// uint32_t       m_bufferSize;   // Application buffer size
+  uint32_t        m_dupack;
+  uint32_t        m_flowId;
+  uint32_t        m_subflows;
+  uint32_t        m_simTime;
+  std::string     m_flowType;
+  std::string     m_outputFileName;
   TracedCallback<Ptr<const Packet> > m_txTrace; // Traced Callback: sent packets
 
 private:
@@ -143,6 +149,8 @@ private:
    * \brief Send more data as soon as some has been transmitted.
    */
   void DataSend (Ptr<Socket>, uint32_t); // for socket's SetSendCallback
+  void HandlePeerError (Ptr<Socket> socket);
+  void HandlePeerClose (Ptr<Socket> socket);
 };
 
 } // namespace ns3

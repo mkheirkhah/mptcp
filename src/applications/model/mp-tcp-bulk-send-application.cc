@@ -32,6 +32,7 @@
 #include "ns3/trace-source-accessor.h"
 #include "ns3/tcp-socket-factory.h"
 #include "mp-tcp-bulk-send-application.h"
+#include "ns3/string.h"
 
 NS_LOG_COMPONENT_DEFINE ("MpTcpBulkSendApplication");
 
@@ -47,13 +48,13 @@ MpTcpBulkSendApplication::GetTypeId (void)
     .SetParent<Application> ()
     .AddConstructor<MpTcpBulkSendApplication> ()
     .AddAttribute ("SendSize", "The amount of data to send each time from application buffer to socket buffer.",
-                   UintegerValue (512),
+                   UintegerValue (140000), //512
                    MakeUintegerAccessor (&MpTcpBulkSendApplication::m_sendSize),
                    MakeUintegerChecker<uint32_t> (1))
-    .AddAttribute ("BufferSize", "The size of the application buffer.",
-                    UintegerValue(1000000),
-                    MakeUintegerAccessor(&MpTcpBulkSendApplication::m_bufferSize),
-                    MakeUintegerChecker<uint32_t>(1))
+//    .AddAttribute ("BufferSize", "The size of the application buffer.",
+//                    UintegerValue(10),
+//                    MakeUintegerAccessor(&MpTcpBulkSendApplication::m_bufferSize),
+//                    MakeUintegerChecker<uint32_t>(1))
     .AddAttribute ("Remote", "The address of the destination",
                    AddressValue (),
                    MakeAddressAccessor (&MpTcpBulkSendApplication::m_peer),
@@ -63,9 +64,39 @@ MpTcpBulkSendApplication::GetTypeId (void)
                    "Once these bytes are sent, "
                    "no data  is sent again. The value zero means "
                    "that there is no limit.",
-                   UintegerValue (1000000), // 1 MB default of data to send
+                   UintegerValue (0), // 1 MB default of data to send
                    MakeUintegerAccessor (&MpTcpBulkSendApplication::m_maxBytes),
                    MakeUintegerChecker<uint32_t> ())
+    .AddAttribute("FlowId",
+                  "Unique Id for each flow installed per node",
+                  UintegerValue(0),
+                  MakeUintegerAccessor (&MpTcpBulkSendApplication::m_flowId),
+                  MakeUintegerChecker<uint32_t> ())
+    .AddAttribute("MaxSubflows",
+                  "Number of MPTCP subflows",
+                  UintegerValue(8),
+                  MakeUintegerAccessor (&MpTcpBulkSendApplication::m_subflows),
+                  MakeUintegerChecker<uint32_t> ())
+    .AddAttribute("SimTime",
+                  "Simulation Time for this application it should be smaller than stop time",
+                   UintegerValue(20),
+                   MakeUintegerAccessor(&MpTcpBulkSendApplication::m_simTime),
+                   MakeUintegerChecker<uint32_t>())
+    .AddAttribute("DupAck",
+                 "Dupack threshold -- used only for MMPTCP and PacketScatter",
+                  UintegerValue(0),
+                  MakeUintegerAccessor(&MpTcpBulkSendApplication::m_dupack),
+                  MakeUintegerChecker<uint32_t>())
+    .AddAttribute("FlowType",
+                  "The Type of the Flow: Large or Short ",
+                  StringValue("Large"),
+                  MakeStringAccessor(&MpTcpBulkSendApplication::m_flowType),
+                  MakeStringChecker())
+    .AddAttribute("OutputFileName",
+                  "Output file name",
+                  StringValue("NULL"),
+                  MakeStringAccessor(&MpTcpBulkSendApplication::m_outputFileName),
+                  MakeStringChecker())
     .AddAttribute ("Protocol", "The type of protocol to use.",
                    TypeIdValue (TcpSocketFactory::GetTypeId ()),
                    MakeTypeIdAccessor (&MpTcpBulkSendApplication::m_tid),
@@ -83,22 +114,24 @@ MpTcpBulkSendApplication::MpTcpBulkSendApplication ()
     m_totBytes (0)
 {
   NS_LOG_FUNCTION (this);
-  m_data = new uint8_t[m_bufferSize];
+//  m_data = new uint8_t[m_bufferSize];
+  //memset(m_data, 0, m_sendSize*2);
 }
 
 MpTcpBulkSendApplication::~MpTcpBulkSendApplication ()
 {
   NS_LOG_FUNCTION (this);
-  delete [] m_data;
-  m_data = 0;
+//  delete [] m_data;
+//  m_data = 0;
 }
 
 void
 MpTcpBulkSendApplication::SetBuffer(uint32_t buffSize){
   NS_LOG_FUNCTION_NOARGS();
-  delete [] m_data;
-  m_data = 0;
-  m_data = new uint8_t[buffSize];
+//  delete [] m_data;
+//  m_data = 0;
+//  m_data = new uint8_t[buffSize];
+  //memset(m_data, 0, m_bufferSize);
 }
 
 void
@@ -128,18 +161,28 @@ MpTcpBulkSendApplication::DoDispose (void)
 void MpTcpBulkSendApplication::StartApplication (void) // Called at time specified by Start
 {
   NS_LOG_FUNCTION (this);
-  NS_LOG_DEBUG("Node: " << GetNode()->GetId()<< "Remote: " << m_peer << " MaxBytes: " << m_maxBytes  << " SendSize: " << m_sendSize);
+  //NS_LOG_UNCOND(Simulator::Now().GetSeconds() << " StartApplication -> Node-FlowId: {" << GetNode()->GetId() <<"-" << m_flowId<< "} MaxBytes: " << m_maxBytes << " F-Type: " << m_flowType << " S-Time: " << m_simTime);
   // Create the socket if not already
   if (!m_socket)
     {
-      m_socket = CreateObject<MpTcpSocketBase>(GetNode()); //m_socket = Socket::CreateSocket (GetNode (), m_tid);
+      //m_socket = CreateObject<MpTcpSocketBase>(GetNode()); //m_socket = Socket::CreateSocket (GetNode (), m_tid);
+      m_socket = DynamicCast<MpTcpSocketBase>(Socket::CreateSocket (GetNode (), m_tid));
       m_socket->Bind();
+      //m_socket->SetMaxSubFlowNumber(m_subflows);
+      m_socket->SetFlowType(m_flowType);
+      m_socket->SetOutputFileName(m_outputFileName);
       int result = m_socket->Connect(m_peer);
       if (result == 0)
         {
+          m_socket->SetFlowId(m_flowId);
+          m_socket->SetDupAckThresh(m_dupack);
           m_socket->SetConnectCallback(MakeCallback(&MpTcpBulkSendApplication::ConnectionSucceeded, this),
               MakeCallback(&MpTcpBulkSendApplication::ConnectionFailed, this));
           m_socket->SetDataSentCallback(MakeCallback(&MpTcpBulkSendApplication::DataSend, this));
+          m_socket->SetCloseCallbacks (
+            MakeCallback (&MpTcpBulkSendApplication::HandlePeerClose, this),
+            MakeCallback (&MpTcpBulkSendApplication::HandlePeerError, this));
+
           //m_socket->SetSendCallback(MakeCallback(&MpTcpBulkSendApplication::DataSend, this));
         }
       else
@@ -156,6 +199,7 @@ void MpTcpBulkSendApplication::StartApplication (void) // Called at time specifi
 void MpTcpBulkSendApplication::StopApplication (void) // Called at time specified by Stop
 {
   NS_LOG_FUNCTION (this);
+  NS_LOG_UNCOND(Simulator::Now().GetSeconds() << " ["<<m_node->GetId() << "] Application STOP");
 
   if (m_socket != 0)
     {
@@ -168,28 +212,54 @@ void MpTcpBulkSendApplication::StopApplication (void) // Called at time specifie
     }
 }
 
+void
+MpTcpBulkSendApplication::HandlePeerClose (Ptr<Socket> socket)
+{
+  //StopApplication();
+  NS_LOG_UNCOND("*** ["<< m_node->GetId() << "] HandlePeerError is called -> connection is false");
+  m_connected = false;
+  NS_LOG_FUNCTION (this << socket);
+}
+
+void
+MpTcpBulkSendApplication::HandlePeerError (Ptr<Socket> socket)
+{
+  //StopApplication();
+  NS_LOG_UNCOND("*** ["<< m_node->GetId() << "] HandlePeerError is called -> connection is false");
+  m_connected = false;
+  NS_LOG_FUNCTION (this << socket);
+}
+
 // Private helpers
 void MpTcpBulkSendApplication::SendData (void)
 {
   NS_LOG_FUNCTION (this);
   NS_LOG_DEBUG("m_totBytes: " << m_totBytes << " maxByte: " << m_maxBytes << " GetTxAvailable: " << m_socket->GetTxAvailable() << " SendSize: " << m_sendSize);
 
-  while (m_totBytes < m_maxBytes && m_socket->GetTxAvailable())
+  //while (m_totBytes < m_maxBytes && m_socket->GetTxAvailable())
+  while ((m_maxBytes == 0 && m_socket->GetTxAvailable()) || (m_totBytes < m_maxBytes && m_socket->GetTxAvailable()))
     { // Time to send more new data into MPTCP socket buffer
       uint32_t toSend = m_sendSize;
-
+      if (m_maxBytes > 0)
+        {
           uint32_t tmp = std::min(m_sendSize, m_maxBytes - m_totBytes);
           toSend = std::min(tmp, m_socket->GetTxAvailable());
-
-      int actual = m_socket->FillBuffer(&m_data[m_totBytes], toSend);
-      m_totBytes += actual;
-      NS_LOG_DEBUG("toSend: " << toSend << " actual: " << actual << " totalByte: " << m_totBytes);
-      m_socket->SendBufferedData();
+        }
+      else
+        {
+          toSend = std::min(m_sendSize, m_socket->GetTxAvailable());
+        }
+          //toSend = std::min(toSend, m_bufferSize);
+          //int actual = m_socket->FillBuffer(&m_data[toSend], toSend); // TODO Change m_totalBytes to toSend
+          int actual = m_socket->FillBuffer(toSend); // TODO Change m_totalBytes to toSend
+          m_totBytes += actual;
+          NS_LOG_DEBUG("toSend: " << toSend << " actual: " << actual << " totalByte: " << m_totBytes);
+          m_socket->SendBufferedData();
     }
   if (m_totBytes == m_maxBytes && m_connected)
     {
       m_socket->Close();
-      //m_connected = false;
+      m_connected = false;
     }
 }
 

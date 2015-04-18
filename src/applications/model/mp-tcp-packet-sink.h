@@ -67,7 +67,7 @@ private:
   uint32_t   m_totalRx;      // Total bytes received
   TypeId     m_tid;          // Protocol TypeId
   uint32_t   size;
-  uint8_t    *buf;
+  //uint8_t    *buf;
   TracedCallback<Ptr<const Packet>, const Address &> m_rxTrace;
 };
 

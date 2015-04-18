@@ -100,8 +100,9 @@ MpTcpPacketSink::StartApplication()    // Called at time specified by Start
   if (!m_socket)
     {
       size = 2000;
-      buf = new uint8_t[size];
-      m_socket = CreateObject<MpTcpSocketBase>(GetNode()); //m_socket = Socket::CreateSocket (GetNode(), m_tid);
+      //buf = new uint8_t[size];
+      //m_socket = CreateObject<MpTcpSocketBase>(GetNode());
+      m_socket = DynamicCast<MpTcpSocketBase>(Socket::CreateSocket (GetNode (), m_tid));
       m_socket->Bind(m_local);
       m_socket->Listen();
       NS_LOG_LOGIC("StartApplication -> MptcpPacketSink got an listening socket " << m_socket << " binded to addrs:port  " << InetSocketAddress::ConvertFrom(m_local).GetIpv4() << ":" << InetSocketAddress::ConvertFrom(m_local).GetPort());
@@ -140,8 +141,9 @@ void
 MpTcpPacketSink::HandleRead(Ptr<Socket> socket)
 {
   NS_LOG_FUNCTION (this << m_socket);
-
-  uint32_t dataAmount = m_socket->Recv(buf, size);
+  Ptr<MpTcpSocketBase> mpSocket = DynamicCast<MpTcpSocketBase>(socket);
+  uint32_t dataAmount = mpSocket->Recv(size);
+  //uint32_t dataAmount = m_socket->Recv(buf, size);
   m_totalRx += dataAmount;
   NS_LOG_INFO ("MpTcpPacketSink:HandleRead() -> Received " << dataAmount << " bytes total Rx " << m_totalRx);
 }
@@ -150,11 +152,23 @@ void
 MpTcpPacketSink::HandlePeerClose(Ptr<Socket> socket)
 {
   NS_LOG_FUNCTION(this << socket);
+//  list<Ptr<Socket> >::iterator it = std::find(m_socketList.begin(), m_socketList.end(), socket);
+//  if (it != m_socketList.end())
+//    {
+//      m_socketList.erase(it);
+//      NS_LOG_UNCOND("A Socket has been Removed with Normal callback");
+//    }
 }
 
 void
 MpTcpPacketSink::HandlePeerError(Ptr<Socket> socket)
 {
+//  list<Ptr<Socket> >::iterator it = std::find(m_socketList.begin(), m_socketList.end(), socket);
+//  if (it != m_socketList.end())
+//    {
+//      m_socketList.erase(it);
+//      NS_LOG_UNCOND("A Socket has been Removed with Error callback");
+//    }
   NS_LOG_FUNCTION(this << socket);
 }
 
@@ -163,6 +177,8 @@ MpTcpPacketSink::HandleAccept(Ptr<Socket> s, const Address& from)
 {
   NS_LOG_FUNCTION (this << s << from);
   s->SetRecvCallback(MakeCallback(&MpTcpPacketSink::HandleRead, this));
+//  s->SetCloseCallbacks(MakeCallback(&MpTcpPacketSink::HandlePeerClose, this),
+//      MakeCallback(&MpTcpPacketSink::HandlePeerError, this));
   m_socketList.push_back(s);
   NS_LOG_INFO("MptcpPacketSink got an new connection. SocketList: " << m_socketList.size());
 }

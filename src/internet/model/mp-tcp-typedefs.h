@@ -34,10 +34,15 @@ typedef enum
 
 typedef enum
 {
-  Uncoupled_TCPs,       // 0
-  Linked_Increases,     // 1
-  RTT_Compensator,      // 2
-  Fully_Coupled         // 3
+  Uncoupled_TCPs,         // 0
+  Linked_Increases,       // 1
+  RTT_Compensator,        // 2
+  Fully_Coupled,          // 3
+  COUPLED_SCALABLE_TCP,   // 4
+  UNCOUPLED,              // 5
+  COUPLED_EPSILON,        // 6
+  COUPLED_INC,            // 7
+  COUPLED_FULLY           // 8
 } CongestionCtrl_t;
 
 typedef enum
@@ -52,29 +57,12 @@ typedef enum
   NdiffPorts
 } PathManager_t;
 
-//typedef enum
-//{
-//  NoPR_Algo,
-//} PacketReorder_t;
-
-//typedef enum
-//{
-//  Slow_Start,
-//  Congestion_Avoidance,
-//} Phase_t;
-
-//typedef enum
-//{
-//  NO_ACTION,
-//  ADDR_TX,
-//  INIT_SUBFLOWS
-//} MpActions_t;
 
 class DSNMapping
 {
 public:
   DSNMapping();
-  DSNMapping(uint8_t sFlowIdx, uint64_t dSeqNum, uint16_t dLvlLen, uint32_t sflowSeqNum, uint32_t ack, Ptr<Packet> pkt);
+  DSNMapping(uint8_t sFlowIdx, uint64_t dSeqNum, uint16_t dLvlLen, uint32_t sflowSeqNum, uint32_t ack/*, Ptr<Packet> pkt*/);
   //DSNMapping (const DSNMapping &res);
   virtual ~DSNMapping();
   bool operator <(const DSNMapping& rhs) const;
@@ -84,7 +72,7 @@ public:
   uint32_t acknowledgement;
   uint32_t dupAckCount;
   uint8_t subflowIndex;
-  uint8_t *packet;
+  //uint8_t *packet;
 };
 
 class MpTcpAddressInfo
@@ -105,14 +93,18 @@ public:
   ~DataBuffer();
   queue<uint8_t> buffer;
   uint32_t bufMaxSize;
-  uint32_t Add(uint8_t* buf, uint32_t size);
-  uint32_t Retrieve(uint8_t* buf, uint32_t size);
+  //uint32_t Add(uint8_t* buf, uint32_t size);
+  uint32_t Add(uint32_t size);
+  //uint32_t Retrieve(uint8_t* buf, uint32_t size);
+  uint32_t Retrieve(uint32_t size);
   Ptr<Packet> CreatePacket(uint32_t size);
   uint32_t ReadPacket(Ptr<Packet> pkt, uint32_t dataLen);
   bool Empty();
   bool Full();
+  bool ClearBuffer();
   uint32_t PendingData();
   uint32_t FreeSpaceSize();
+  void SetBufferSize(uint32_t size);
 };
 
 } //namespace ns3

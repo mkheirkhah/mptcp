@@ -1,21 +1,8 @@
-/* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 /*
- * Copyright (c) <2013-2015> University Of Sussex
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation;
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *
- * Author: Morteza Kheirkhah <m.kheirkhah@sussex.ac.uk>
+ * MultiPath-TCP (MPTCP) implementation.
+ * Programmed by Morteza Kheirkhah from University of Sussex.
+ * Some codes here are modeled from ns3::TCPNewReno implementation.
+ * Email: m.kheirkhah@sussex.ac.uk
  */
 #include <iostream>
 #include "ns3/mp-tcp-typedefs.h"
@@ -76,6 +63,8 @@ MpTcpSubFlow::MpTcpSubFlow() :
   PktCount = 0;
   m_recover = SequenceNumber32(0);
   m_gotFin = false;
+  AccumulativeAck = false;
+  m_limitedTxCount = 0;
 }
 
 MpTcpSubFlow::~MpTcpSubFlow()
@@ -115,14 +104,17 @@ MpTcpSubFlow::CwndTracer(uint32_t oldval, uint32_t newval)
 {
   //NS_LOG_UNCOND("Subflow "<< routeId <<": Moving cwnd from " << oldval << " to " << newval);
   cwndTracer.push_back(make_pair(Simulator::Now().GetSeconds(), newval));
+  sstTracer.push_back(make_pair(Simulator::Now().GetSeconds(), ssthresh));
+  rttTracer.push_back(make_pair(Simulator::Now().GetSeconds(), rtt->GetCurrentEstimate().GetMilliSeconds()));
+  rtoTracer.push_back(make_pair(Simulator::Now().GetSeconds(), rtt->RetransmitTimeout().GetMilliSeconds()));
 }
 
 void
-MpTcpSubFlow::AddDSNMapping(uint8_t sFlowIdx, uint64_t dSeqNum, uint16_t dLvlLen, uint32_t sflowSeqNum, uint32_t ack,
-    Ptr<Packet> pkt)
+MpTcpSubFlow::AddDSNMapping(uint8_t sFlowIdx, uint64_t dSeqNum, uint16_t dLvlLen, uint32_t sflowSeqNum, uint32_t ack/*,
+    Ptr<Packet> pkt*/)
 {
   NS_LOG_FUNCTION_NOARGS();
-  mapDSN.push_back(new DSNMapping(sFlowIdx, dSeqNum, dLvlLen, sflowSeqNum, ack, pkt));
+  mapDSN.push_back(new DSNMapping(sFlowIdx, dSeqNum, dLvlLen, sflowSeqNum, ack/*, pkt*/));
 }
 
 void

@@ -1,264 +1,87 @@
-#define NS_LOG_APPEND_CONTEXT \
-  { std::clog << Simulator::Now ().GetSeconds ()<< "  ";}
+/* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
+/*
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation;
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *
+ * Author: Morteza Kheirkhah <m.kheirkhah@sussex.ac.uk>
+ */
 
-#include <iostream>
-#include <sstream>
+// Network topology
+//
+//       n0 ----------- n1
+// - Flow from n0 to n1 using MpTcpBulkSendApplication.
+
 #include <string>
-#include <vector>
+#include <fstream>
 #include "ns3/core-module.h"
+#include "ns3/point-to-point-module.h"
 #include "ns3/internet-module.h"
 #include "ns3/applications-module.h"
 #include "ns3/network-module.h"
-#include "ns3/mptcp-module.h"
-#include "ns3/point-to-point-module.h"
-#include "ns3/wifi-module.h"
-#include "ns3/mobility-module.h"
-#include "ns3/config-store.h"
-#include "ns3/file-config.h"
-#include "ns3/gtk-config-store.h"
-/* Multipath Network Topology
- lan 10.1.1.0
- ___________
- /           \
-   n1             n2
- \___________/
- lan 10.1.2.0
- */
+#include "ns3/packet-sink.h"
+
 using namespace ns3;
-NS_LOG_COMPONENT_DEFINE("mptcp");
 
-uint32_t LinkRate = 100000000;
-uint32_t Delay = 10;
-Time cDelay = MilliSeconds(Delay);
-int totalSubflow = 4;
-double LossRate = 0.0;
-static const uint32_t totalTxBytes = 10000000;
-static const uint32_t sendBufSize =  200000; //2000000;
-//static const uint32_t recvBufSize = 200000;
-static uint32_t currentTxBytes = 0;
-static const double simDuration = 1000.0;
-
-Ptr<Node> client;
-Ptr<Node> server;
-
-static const uint32_t writeSize = sendBufSize;
-uint8_t data[totalTxBytes];
-Ptr<MpTcpSocketBase> lSocket = 0;
-
-void
-StartFlow(Ptr<MpTcpSocketBase>, Ipv4Address, uint16_t);
-void
-WriteUntilBufferFull(Ptr<Socket>, unsigned int);
-void
-connectionSucceeded(Ptr<Socket>);
-void
-connectionFailed(Ptr<Socket>);
-void
-HandlePeerClose(Ptr<Socket>);
-void
-HandlePeerError(Ptr<Socket>);
-void
-CloseConnection(Ptr<Socket>);
-void
-SetupSocketParam(Ptr<MpTcpSocketBase>);
+NS_LOG_COMPONENT_DEFINE("MpTcpBulkSendExample");
 
 int
 main(int argc, char *argv[])
 {
+  LogComponentEnable("MpTcpSocketBase", LOG_INFO);
+
+  Config::SetDefault("ns3::Ipv4GlobalRouting::FlowEcmpRouting", BooleanValue(true));
   Config::SetDefault("ns3::TcpSocket::SegmentSize", UintegerValue(1400));
-//  Config::SetDefault("ns3::DropTailQueue::MaxPackets", UintegerValue(15));
-//  Config::SetDefault("ns3::RateErrorModel::ErrorUnit", StringValue("ERROR_UNIT_PACKET"));
-//  Config::SetDefault("ns3::RateErrorModel::ErrorRate", StringValue("100"));
+  Config::SetDefault("ns3::TcpSocket::DelAckCount", UintegerValue(0));
+  Config::SetDefault("ns3::DropTailQueue::Mode", StringValue("QUEUE_MODE_PACKETS"));
+  Config::SetDefault("ns3::DropTailQueue::MaxPackets", UintegerValue(100));
+  Config::SetDefault("ns3::TcpL4Protocol::SocketType", TypeIdValue(MpTcpSocketBase::GetTypeId()));
+  Config::SetDefault("ns3::MpTcpSocketBase::MaxSubflows", UintegerValue(8)); // Sink
+  //Config::SetDefault("ns3::MpTcpSocketBase::CongestionControl", StringValue("RTT_Compensator"));
+  //Config::SetDefault("ns3::MpTcpSocketBase::PathManagement", StringValue("NdiffPorts"));
 
-  LogComponentEnable("mptcp", LOG_LEVEL_LOGIC);
-//  LogComponentEnable("MpTcpSocketBase", LOG_INFO);
-//  LogComponentEnable("MpTcpTypeDefs", LOG_FUNCTION);
-//  LogComponentEnable("MpTcpSocketBase", LOG_DEBUG);
-//  LogComponentEnable("MpTcpSocketBase", LOG_LOGIC);
-//  LogComponentEnable("MpTcpL4Protocol", LOG_INFO);
-//  LogComponentEnable("Ipv4EndPointDemux", LOG_LEVEL_ALL);
-//  LogComponentEnable("MpTcpSocketBase", LOG_LEVEL_ALL);
-//  LogComponentEnable("MpTcpPacketSink", LOG_LEVEL_ALL);
-//  LogComponentEnable("MpTcpSubfLow", LOG_FUNCTION);
-
-  // Creation of the hosts
   NodeContainer nodes;
   nodes.Create(2);
 
-  client = nodes.Get(0);
-  server = nodes.Get(1);
+  PointToPointHelper pointToPoint;
+  pointToPoint.SetDeviceAttribute("DataRate", StringValue("100Mbps"));
+  pointToPoint.SetChannelAttribute("Delay", StringValue("1ms"));
 
-  InternetStackHelper stack;
-  //stack.SetTcp("ns3::MpTcpL4Prtocol");
-  stack.Install(nodes);
+  NetDeviceContainer devices;
+  devices = pointToPoint.Install(nodes);
 
-  vector<Ipv4InterfaceContainer> ipv4Ints;
+  InternetStackHelper internet;
+  internet.Install(nodes);
 
-  for (int i = 0; i < totalSubflow; i++)
-    { // Creation of the point to point link between hosts
-      PointToPointHelper p2plink;
-      p2plink.SetDeviceAttribute("DataRate", DataRateValue(DataRate(LinkRate)));
-      p2plink.SetChannelAttribute("Delay", TimeValue(cDelay));
+  Ipv4AddressHelper ipv4;
+  ipv4.SetBase("10.1.1.0", "255.255.255.0");
+  Ipv4InterfaceContainer i = ipv4.Assign(devices);
 
-      NetDeviceContainer netDevices;
-      netDevices = p2plink.Install(nodes);
+  uint16_t port = 9;
+  MpTcpPacketSinkHelper sink("ns3::TcpSocketFactory", InetSocketAddress(Ipv4Address::GetAny(), port));
+  ApplicationContainer sinkApps = sink.Install(nodes.Get(1));
+  sinkApps.Start(Seconds(0.0));
+  sinkApps.Stop(Seconds(10.0));
 
-      std::stringstream netAddr;
-      netAddr << "10.1." << (i + 1) << ".0";
-      string str = netAddr.str();
+  MpTcpBulkSendHelper source("ns3::TcpSocketFactory", InetSocketAddress(Ipv4Address(i.GetAddress(1)), port));
+  source.SetAttribute("MaxBytes", UintegerValue(0));
+  ApplicationContainer sourceApps = source.Install(nodes.Get(0));
+  sourceApps.Start(Seconds(0.0));
+  sourceApps.Stop(Seconds(10.0));
 
-      Ipv4AddressHelper ipv4addr;
-      ipv4addr.SetBase(str.c_str(), "255.255.255.0");
-      Ipv4InterfaceContainer interface = ipv4addr.Assign(netDevices);
-      ipv4Ints.insert(ipv4Ints.end(), interface);
-    }
-
-  // Configuration of the Client/Server application
-  uint32_t servPort = 5000;
-  ObjectFactory m_sf;
-  m_sf.SetTypeId("ns3::MpTcpPacketSink");
-//  m_sf.Set("Protocol", StringValue("ns3::TcpSocketFactory"));
-//  m_sf.Set("Local", AddressValue(InetSocketAddress(ipv4Ints[0].GetAddress(1), servPort)));
-  m_sf.Set("Local", AddressValue(InetSocketAddress(Ipv4Address::GetAny(), servPort)));
-  Ptr<Application> sapp = m_sf.Create<Application>();
-  server->AddApplication(sapp);
-  ApplicationContainer Apps;
-  Apps.Add(sapp);
-
-  Apps.Start(Seconds(0.0));
-  Apps.Stop(Seconds(simDuration));
-
-  //lSocket = new MpTcpSocketBase(client);
-  lSocket = CreateObject<MpTcpSocketBase>(client); //lSocket = new MpTcpSocketBase(client);
-  lSocket->SetCongestionCtrlAlgo(Uncoupled_TCPs);
-  lSocket->SetDataDistribAlgo(Round_Robin);
-  lSocket->Bind();
-
-  SetupSocketParam(lSocket);
-
-  Simulator::ScheduleNow(&StartFlow, lSocket, ipv4Ints[0].GetAddress(1), servPort);
-
-  /* Output ConfigStore to Xml format */
-  Config::SetDefault("ns3::ConfigStore::Filename", StringValue("MPTCP-attributes.xml"));
-  Config::SetDefault("ns3::ConfigStore::FileFormat", StringValue("Xml"));
-  Config::SetDefault("ns3::ConfigStore::Mode", StringValue("Save"));
-  ConfigStore outputConfig2;
-  outputConfig2.ConfigureDefaults();
-  outputConfig2.ConfigureAttributes();
-
-//  Ptr<RateErrorModel> em = CreateObject<RateErrorModel>();
-//  em->SetUnit(RateErrorModel::ERROR_UNIT_PACKET);
-//  em->SetRate(0.1); //Subflow1
-//  Ptr<NetDevice> server_2 = server->GetDevice(2);
-//  server_2->SetAttribute("ReceiveErrorModel", PointerValue(em));
-
-  // List ErrorModel
-//  std::list< uint32_t> list;
-//  list.push_back(50);
-//
-//  Ptr<ListErrorModel> em = CreateObject<ListErrorModel>();
-//  em->SetList(list);
-//  Ptr<NetDevice> _server = server->GetDevice(1);
-//  _server->SetAttribute("ReceiveErrorModel", PointerValue(em));
-
-  Simulator::Stop(Seconds(simDuration + 10.0));
+  NS_LOG_INFO ("Run Simulation.");
+  Simulator::Stop(Seconds(20.0));
   Simulator::Run();
   Simulator::Destroy();
-  NS_LOG_LOGIC("mptcp:: simulation ended");
-  return 0;
-}
+  NS_LOG_INFO ("Done.");
 
-void
-StartFlow(Ptr<MpTcpSocketBase> localSocket, Ipv4Address servAddress, uint16_t servPort)
-{
-  NS_LOG_FUNCTION_NOARGS();
-
-  int connectionState = lSocket->Connect(servAddress, servPort);
-  if (connectionState == 0)
-    {
-      lSocket->SetConnectCallback(MakeCallback(&connectionSucceeded), MakeCallback(&connectionFailed));
-      lSocket->SetDataSentCallback(MakeCallback(&WriteUntilBufferFull));
-      lSocket->SetCloseCallbacks(MakeCallback(&HandlePeerClose), MakeCallback(&HandlePeerError));
-    }
-  else
-    {
-      //localSocket->NotifyConnectionFailed();
-      NS_LOG_LOGIC("mptcp:: connection failed");
-    }
-}
-
-void
-SetupSocketParam(Ptr<MpTcpSocketBase> lSocket)
-{
-  lSocket->SetCongestionCtrlAlgo(Uncoupled_TCPs);
-  //lSocket->SetDataDistribAlgo(Round_Robin);
-  lSocket->SetMaxSubFlowNumber(11);
-  //lSocket->SetSourceAddress(Ipv4Address("10.1.1.1"));
-  lSocket->allocateSendingBuffer(sendBufSize);
-  //lSocket->allocateRecvingBuffer(recvBufSize);
-  lSocket->mod = 60;
-  lSocket->totalBytes = totalTxBytes;
-  lSocket->lostRate = LossRate;
-  lSocket->LinkCapacity = LinkRate;
-  lSocket->RTT = Delay * 2;
-  lSocket->TimeScale = -5.0;
-  lSocket->MSS = 1400; // Just for plot's info
-}
-
-void
-connectionSucceeded(Ptr<Socket> localSocket)
-{
-  NS_LOG_FUNCTION_NOARGS();
-  //NS_LOG_INFO("mptcp: Connection requeste succeed");
-  Simulator::Schedule(Seconds(1.0), &WriteUntilBufferFull, lSocket, 0);
-  Simulator::Schedule(Seconds(simDuration), &CloseConnection, lSocket);
-}
-
-void
-connectionFailed(Ptr<Socket> localSocket)
-{
-  NS_LOG_FUNCTION_NOARGS();NS_LOG_INFO("mptcp: Connection requeste failure");
-  lSocket->Close();
-}
-
-void
-HandlePeerClose(Ptr<Socket> localSocket)
-{
-  NS_LOG_FUNCTION_NOARGS(); //
-//  NS_LOG_INFO("mptcp: Connection closed by peer {HandlePeerClose}");
-  lSocket->Close();
-}
-
-void
-HandlePeerError(Ptr<Socket> localSocket)
-{
-  NS_LOG_FUNCTION_NOARGS();NS_LOG_INFO("mptcp: Connection closed by peer error");
-  lSocket->Close();
-}
-
-void
-CloseConnection(Ptr<Socket> localSocket)
-{
-  lSocket->Close();
-  NS_LOG_LOGIC("mptcp:: currentTxBytes = " << currentTxBytes);         //
-  NS_LOG_LOGIC("mptcp:: totalTxBytes   = " << totalTxBytes);           //
-  NS_LOG_LOGIC("mptcp:: connection to remote host has been closed");   //
-}
-
-void
-WriteUntilBufferFull(Ptr<Socket> localSocket, unsigned int txSpace)
-{
-  while (currentTxBytes < totalTxBytes && lSocket->GetTxAvailable() > 0)
-    {
-      uint32_t left = totalTxBytes - currentTxBytes;
-      uint32_t toWrite = std::min(writeSize, lSocket->GetTxAvailable());
-      toWrite = std::min(toWrite, left);
-      int amountBuffered = lSocket->FillBuffer(&data[currentTxBytes], toWrite);
-      currentTxBytes += amountBuffered;
-      lSocket->SendBufferedData();
-    }
-  if (currentTxBytes == totalTxBytes)
-    {
-      localSocket->Close();
-    }
 }
