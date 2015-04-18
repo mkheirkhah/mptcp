@@ -62,7 +62,7 @@ MpTcpSocketBase::GetTypeId(void)
 
       .AddAttribute("PathManagement",
                      "Mechanism for establishing new sub-flows",
-          EnumValue(NdiffPorts),
+          EnumValue(FullMesh),
           MakeEnumAccessor(&MpTcpSocketBase::SetPathManager),
           MakeEnumChecker(Default,"Default",
                           FullMesh, "FullMesh",
@@ -4194,30 +4194,4 @@ MpTcpSocketBase::GetEstSubflows()
   return c;
 }
 
-uint64_t
-MpTcpSocketBase::GetPathBandwidth(uint8_t idxPath)
-{
-  StringValue str;
-  Ptr<Ipv4L3Protocol> ipv4 = m_node->GetObject<Ipv4L3Protocol>();
-// interface 0 is the loopback interface
-  Ptr<Ipv4Interface> interface = ipv4->GetInterface(idxPath + 1);
-  Ipv4InterfaceAddress interfaceAddr = interface->GetAddress(0);
-// do not consider loopback addresses
-  if (interfaceAddr.GetLocal() == Ipv4Address::GetLoopback())
-    return 0.0;
-  Ptr<NetDevice> netDev = interface->GetDevice();
-
-  if (netDev->IsPointToPoint() == true)
-    {
-      netDev->GetAttribute(string("DataRate"), str);
-    }
-  else
-    {
-      Ptr<Channel> link = netDev->GetChannel();
-      link->GetAttribute(string("DataRate"), str);
-    }
-
-  DataRate bandwidth(str.Get());
-  return bandwidth.GetBitRate();
-}
 }//namespace ns3

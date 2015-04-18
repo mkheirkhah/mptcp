@@ -236,7 +236,6 @@ protected: // protected methods
 //  virtual void DoGenerateOutPutFile();
   virtual string GetTypeIdName();
   string TcpFlagPrinter(uint8_t);
-  uint64_t GetPathBandwidth(uint8_t idxPath);
 
 
   // Uniform Random Variable
