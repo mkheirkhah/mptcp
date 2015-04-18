@@ -1,4 +1,4 @@
-We have been working on developing MultiPath-TCP for a few years now, which closely conform to RFC 6824 and follows MPTCP Linux kernel desgin. 
+We have been working on developing MultiPath-TCP, which conform to RFC 6824 and closely follows MPTCP Linux kernel desgin. 
 
 The implementation is not complete yet, but the main functionalities of MPTCP can be simulated from our first released version. You are thus very wellcome to contribute to this code.
 
