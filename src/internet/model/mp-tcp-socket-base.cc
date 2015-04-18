@@ -1,7 +1,6 @@
 /*
  * MultiPath-TCP (MPTCP) implementation.
  * Programmed by Morteza Kheirkhah from University of Sussex.
- * Some codes here are modeled from ns3::TCPNewReno implementation.
  * Email: m.kheirkhah@sussex.ac.uk
  */
 #define NS_LOG_APPEND_CONTEXT \
@@ -62,7 +61,7 @@ MpTcpSocketBase::GetTypeId(void)
 
       .AddAttribute("PathManagement",
                      "Mechanism for establishing new sub-flows",
-          EnumValue(NdiffPorts),
+          EnumValue(FullMesh),
           MakeEnumAccessor(&MpTcpSocketBase::SetPathManager),
           MakeEnumChecker(Default,"Default",
                           FullMesh, "FullMesh",

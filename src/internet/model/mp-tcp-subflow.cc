@@ -1,7 +1,6 @@
 /*
  * MultiPath-TCP (MPTCP) implementation.
  * Programmed by Morteza Kheirkhah from University of Sussex.
- * Some codes here are modeled from ns3::TCPNewReno implementation.
  * Email: m.kheirkhah@sussex.ac.uk
  */
 #include <iostream>
