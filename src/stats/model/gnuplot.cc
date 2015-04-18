@@ -219,6 +219,9 @@ Gnuplot2dDataset::Data2d::PrintExpression (std::ostream &os,
     os << " title \"" << m_title << "\"";
 
   switch (m_style) {
+  case MKS:
+    os << " ";
+    break;
     case LINES:
       os << " with lines";
       break;

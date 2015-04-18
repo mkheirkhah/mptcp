@@ -37,7 +37,6 @@ TcpHeader::TcpHeader() :
     m_sourcePort(0), m_destinationPort(0), m_sequenceNumber(0), m_ackNumber(0), m_length(5), m_flags(0), m_windowSize(0xffff), m_urgentPointer(
         0), m_calcChecksum(false), m_goodChecksum(true), m_option(0), oLen(0), pLen(0), original(true)
 {
-
 }
 
 /*
@@ -313,12 +312,8 @@ TcpHeader::Print(std::ostream &os) const
       OptMultipathCapable *optMPC;
       //OptJoinConnection *optJOIN;
       //OptAddAddress *optADDR;
-      //OptRemoveAddress *optREMADR;
       //OptDataSeqMapping *optDSN;
-      //OptTimesTamp *optTT;
-
       //os << opt->optName;
-
       if (opt->optName == OPT_MPC)
         {
           os << "OPT_MPC(";
@@ -335,15 +330,6 @@ TcpHeader::Print(std::ostream &os) const
       else if (opt->optName == OPT_ADDR)
         {
           os << "OPT_ADDR";
-//          optADDR = (OptAddAddress *) opt;
-//          os << optADDR->addrID;
-//          optADDR->addr.Print(os);
-        }
-      else if (opt->optName == OPT_REMADR)
-        {
-          os << "OPT_REMADR";
-//          optREMADR = (OptRemoveAddress *) opt;
-//          os << optREMADR->addrID;
         }
       else if (opt->optName == OPT_DSN)
         {
@@ -352,22 +338,6 @@ TcpHeader::Print(std::ostream &os) const
           //os << optDSN->dataSeqNumber;
           //os << optDSN->dataLevelLength;
           //os << optDSN->subflowSeqNumber;
-        }
-      else if (opt->optName == OPT_TT)
-        {
-          os << "OPT_TT";
-//          optTT = (OptTimesTamp *) opt;
-//          os << optTT->TSval;
-//          os << optTT->TSecr;
-        }
-      else if (opt->optName == OPT_DSACK)
-        {
-          os << "OPT_DSACK";
-//          OptDSACK* optDSACK = (OptDSACK *) opt;
-//          os << optDSACK->blocks[0]; // left Edge  of the first block
-//          os << optDSACK->blocks[1]; // right Edge of the first block
-//          os << optDSACK->blocks[2]; // left Edge  of the second block
-//          os << optDSACK->blocks[3]; // right Edge of the second block
         }
       os << "}";
     }
@@ -433,9 +403,7 @@ TcpHeader::Serialize(Buffer::Iterator start) const
       OptMultipathCapable *optMPC;
       OptJoinConnection *optJOIN;
       OptAddAddress *optADDR;
-      OptRemoveAddress *optREMADR;
       OptDataSeqMapping *optDSN;
-      OptTimesTamp *optTT;
       i.WriteU8(TcpOptionToUint(opt->optName));
 
       if (opt->optName == OPT_MPC)
@@ -455,11 +423,6 @@ TcpHeader::Serialize(Buffer::Iterator start) const
           i.WriteU8(optADDR->addrID);
           i.WriteHtonU32(optADDR->addr.Get());
         }
-      else if (opt->optName == OPT_REMADR)
-        {
-          optREMADR = (OptRemoveAddress *) opt;
-          i.WriteU8(optREMADR->addrID);
-        }
       else if (opt->optName == OPT_DSN)
         {
           optDSN = (OptDataSeqMapping *) opt;
@@ -467,28 +430,11 @@ TcpHeader::Serialize(Buffer::Iterator start) const
           i.WriteHtonU16(optDSN->dataLevelLength);
           i.WriteHtonU32(optDSN->subflowSeqNumber);
         }
-      else if (opt->optName == OPT_TT) // Option TCP TimesTamp
-        {
-          optTT = (OptTimesTamp *) opt;
-          i.WriteU64(optTT->TSval);
-          i.WriteU64(optTT->TSecr);
-        }
-      else if (opt->optName == OPT_DSACK) // Option Duplicate SACK
-        {
-          OptDSACK *dsak = (OptDSACK *) opt;
-          i.WriteU64(dsak->blocks[0]);  // left Edge  of the first block
-          i.WriteU64(dsak->blocks[1]);  // right Edge  of the first block
-          i.WriteU64(dsak->blocks[2]);  // left Edge  of the second block
-          i.WriteU64(dsak->blocks[3]);  // right Edge  of the second block
-//          NS_LOG_LOGIC(
-//              "Serialize -> fstLeft (" << dsak->blocks[0] << ") fstRight (" << dsak->blocks[1] << ") sndLeft (" << dsak->blocks[2]
-//                  << ") sndRight (" << dsak->blocks[3] << ")");
-        }
     }
   for (int j = 0; j < (int) pLen; j++)
     i.WriteU8(255);
-  NS_LOG_INFO("MpTcpHeader::Serialize options length  olen = " << (int) oLen);
-  NS_LOG_INFO("MpTcpHeader::Serialize padding length  plen = " << (int) pLen);
+  NS_LOG_INFO("TcpHeader::Serialize options length  olen = " << (int) oLen);
+  NS_LOG_INFO("TcpHeader::Serialize padding length  plen = " << (int) pLen);
 }
 
 /*
@@ -528,8 +474,8 @@ TcpHeader::Deserialize(Buffer::Iterator start)
   Buffer::Iterator i = start;
   SetSourcePort(i.ReadNtohU16());
   SetDestinationPort(i.ReadNtohU16());
-  SetSequenceNumber(SequenceNumber32(i.ReadNtohU32()));   // Morteza Kheirkhah
-  SetAckNumber(SequenceNumber32(i.ReadNtohU32()));        // Morteza Kheirkhah
+  SetSequenceNumber(SequenceNumber32(i.ReadNtohU32()));
+  SetAckNumber(SequenceNumber32(i.ReadNtohU32()));
   uint16_t field = i.ReadNtohU16();
   SetFlags(field & 0x3F);
   hlen = (field >> 12);
@@ -549,12 +495,10 @@ TcpHeader::Deserialize(Buffer::Iterator start)
     }
 
   // handle options field
-//  NS_LOG_INFO("MpTcpHeader::Deserialize looking for options");
   while (!i.IsEnd() && hlen > 0)
     {
       TcpOptions *opt;
-      TcpOption_t kind = (TcpOption_t) i.ReadU8();
-      //TcpOption_t kind = UintToTcpOption(i.ReadU8());
+      TcpOption_t kind = (TcpOption_t) i.ReadU8(); //TcpOption_t kind = UintToTcpOption(i.ReadU8());
       if (kind == OPT_MPC)
         {
           opt = new OptMultipathCapable(kind, i.ReadNtohU32());
@@ -573,37 +517,11 @@ TcpHeader::Deserialize(Buffer::Iterator start)
           plen = (plen + 6) % 4;
           hlen -= 6;
         }
-      else if (kind == OPT_REMADR)
-        {
-          opt = new OptRemoveAddress(kind, i.ReadU8());
-          plen = (plen + 2) % 4;
-          hlen -= 2;
-        }
       else if (kind == OPT_DSN)
         {
           opt = new OptDataSeqMapping(kind, i.ReadU64(), i.ReadNtohU16(), i.ReadNtohU32());
           plen = (plen + 15) % 4;
           hlen -= 15;
-        }
-      else if (kind == OPT_TT)
-        {
-          opt = new OptTimesTamp(kind, i.ReadU64(), i.ReadU64());
-          plen = (plen + 17) % 4;
-          hlen -= 17;
-        }
-      else if (kind == OPT_DSACK)
-        {
-          OptDSACK *dsak = new OptDSACK(kind);
-          uint64_t fstLeft = i.ReadU64(), fstRight = i.ReadU64();
-          uint64_t sndLeft = i.ReadU64(), sndRight = i.ReadU64();
-          dsak->AddfstBlock(fstLeft, fstRight);
-          dsak->AddBlock(sndLeft, sndRight);
-//          NS_LOG_LOGIC(
-//              "Deserialize -> fstLeft (" << dsak->blocks[0] << ") fstRight (" << dsak->blocks[1] << ") sndLeft ("
-//                  << dsak->blocks[2] << ") sndRight (" << dsak->blocks[3] << ")");
-          opt = dsak;
-          plen = (plen + 33) % 4;
-          hlen -= 33;
         }
       else
         {
@@ -616,16 +534,12 @@ TcpHeader::Deserialize(Buffer::Iterator start)
 
     }
   //i.Next(plen);
-  NS_LOG_INFO("MpTcpHeader::Deserialize leaving this method plen" << plen);
+  NS_LOG_INFO("TcpHeader::Deserialize leaving this method plen" << plen);
 
   return GetSerializedSize();
 }
 
 //----------------------------------------
-//----------------------------------------
-//----------------------------------------
-//----------------------------------------
-
 void
 TcpHeader::SetOptionsLength(uint8_t length)
 {
@@ -666,10 +580,6 @@ TcpHeader::GetOptionsLength() const
         {
           length += 6;
         }
-      else if (opt->optName == OPT_REMADR)
-        {
-          length += 2;
-        }
       else if (opt->optName == OPT_DSN)
         {
           length += 15;
@@ -691,13 +601,6 @@ TcpHeader::GetPaddingLength() const
   return pLen;
 }
 
-//uint32_t
-//TcpHeader::GetSerializedSize(void) const
-//{
-////  NS_LOG_FUNCTION_NOARGS();
-//  return 4 * GetLength()/* + GetOptionsLength()*/;
-//}
-
 uint8_t
 TcpHeader::TcpOptionToUint(TcpOption_t opt) const
 {
@@ -710,194 +613,30 @@ TcpHeader::TcpOptionToUint(TcpOption_t opt) const
     i = 31;
   else if (opt == OPT_ADDR)
     i = 32;
-  else if (opt == OPT_REMADR)
-    i = 33;
   else if (opt == OPT_DSN)
     i = 34;
-  else if (opt == OPT_DSACK)
-    i = 5;
   else if (opt == OPT_NONE)
     i = 0;
-  else if (opt == OPT_TT)
-    i = 8; // IANA value is 8
   return i;
 }
 
 TcpOption_t
 TcpHeader::UintToTcpOption(uint8_t kind) const
 {
-  //NS_LOG_FUNCTION_NOARGS();
   TcpOption_t i = OPT_NONE;
-
   if (kind == 30)
     i = OPT_MPC;
   else if (kind == 31)
     i = OPT_JOIN;
   else if (kind == 32)
     i = OPT_ADDR;
-  else if (kind == 33)
-    i = OPT_REMADR;
   else if (kind == 34)
     i = OPT_DSN;
-  else if (kind == 5)
-    i = OPT_DSACK;
   else if (kind == 0)
     i = OPT_NONE;
-  else if (kind == 8)
-    i = OPT_TT; // IANA value is 8
-
   return i;
 }
 
-TcpOptions::TcpOptions(void) :
-    optName(OPT_NONE)
-{
-  //NS_LOG_FUNCTION_NOARGS();
-}
-
-TcpOptions::~TcpOptions(void)
-{
-  //NS_LOG_FUNCTION_NOARGS();
-  optName = OPT_NONE;
-}
-
-OptMultipathCapable::OptMultipathCapable(TcpOption_t oName, uint32_t TxToken)
-{
-  //NS_LOG_FUNCTION(this << oName << TxToken);
-  optName = oName;
-  Length = 5; // field "length" is not insert in the packet
-  senderToken = TxToken;
-}
-
-OptMultipathCapable::~OptMultipathCapable()
-{
-//  NS_LOG_FUNCTION_NOARGS();
-  optName = OPT_NONE;
-  Length = 0; // field "length" is not insert in the packet
-  senderToken = 0;
-}
-
-OptJoinConnection::OptJoinConnection(TcpOption_t oName, uint32_t RxToken, uint8_t aID)
-{
-  //NS_LOG_FUNCTION(this << oName << RxToken << aID);
-  optName = oName;
-  Length = 6;
-  receiverToken = RxToken;
-  addrID = aID;
-}
-
-OptJoinConnection::~OptJoinConnection()
-{
-  //NS_LOG_FUNCTION_NOARGS();
-  optName = OPT_NONE;
-  Length = 0;
-  receiverToken = 0;
-  addrID = 0;
-}
-
-OptAddAddress::OptAddAddress(TcpOption_t oName, uint8_t aID, Ipv4Address address)
-{
-  //NS_LOG_FUNCTION(this << oName << aID << address);
-  optName = oName;
-  Length = 6;
-  addrID = aID;
-  addr = address;
-}
-
-OptAddAddress::~OptAddAddress()
-{
-  //NS_LOG_FUNCTION_NOARGS();
-  optName = OPT_NONE;
-  Length = 0;
-  addrID = 0;
-  addr = Ipv4Address::GetZero();
-}
-
-OptRemoveAddress::OptRemoveAddress(TcpOption_t oName, uint8_t aID)
-{
-  //NS_LOG_FUNCTION(this << oName << aID);
-  optName = oName;
-  Length = 5;
-  addrID = aID;
-}
-
-OptRemoveAddress::~OptRemoveAddress()
-{
-  //NS_LOG_FUNCTION_NOARGS();
-  optName = OPT_NONE;
-  Length = 0;
-  addrID = 0;
-}
-
-OptDataSeqMapping::OptDataSeqMapping(TcpOption_t oName, uint64_t dSeqNum, uint16_t dLevelLength, uint32_t sfSeqNum)
-{
-  //NS_LOG_FUNCTION(this << oName << dSeqNum << dLevelLength << sfSeqNum);
-  optName = oName;
-  Length = 11;
-  dataSeqNumber = dSeqNum;
-  dataLevelLength = dLevelLength;
-  subflowSeqNumber = sfSeqNum;
-}
-
-OptDataSeqMapping::~OptDataSeqMapping()
-{
-  //NS_LOG_FUNCTION_NOARGS();
-  optName = OPT_NONE;
-  Length = 0;
-  dataSeqNumber = 0;
-  dataLevelLength = 0;
-  subflowSeqNumber = 0;
-}
-
-OptTimesTamp::OptTimesTamp(TcpOption_t oName, uint64_t tsval, uint64_t tsecr)
-{
-  //NS_LOG_FUNCTION(this << oName << tsval << tsecr);
-  optName = oName;
-  Length = 17;
-  TSval = tsval;
-  TSecr = tsecr;
-}
-
-OptTimesTamp::~OptTimesTamp()
-{
-//  NS_LOG_FUNCTION_NOARGS();
-  optName = OPT_NONE;
-  TSval = 0;
-  TSecr = 0;
-}
-
-OptDSACK::OptDSACK(TcpOption_t oName) :
-    blocks(0)
-{
-  optName = oName;
-}
-
-void
-OptDSACK::AddBlock(uint64_t leftEdge, uint64_t rightEdge)
-{
-  blocks.insert(blocks.end(), leftEdge);
-  blocks.insert(blocks.end(), rightEdge);
-}
-
-void
-OptDSACK::AddfstBlock(uint64_t leftEdge, uint64_t rightEdge)
-{
-  // we first insert the right edge in the begining then the left edge to keep the order
-  blocks.insert(blocks.begin(), rightEdge);
-  blocks.insert(blocks.begin(), leftEdge);
-}
-
-OptDSACK::~OptDSACK()
-{
-  //NS_LOG_FUNCTION_NOARGS();
-  blocks.clear();
-}
-
-// MpTcpHeader::MpTcpHeader() :
-// m_option(0), oLen(0), pLen(0), original(true)
-// {
-// NS_LOG_FUNCTION_NOARGS();
-// }
 
 TcpHeader::TcpHeader(const TcpHeader &res)
 {
@@ -953,14 +692,8 @@ TcpHeader::~TcpHeader()
         case OPT_ADDR:
           delete (OptAddAddress*) m_option[i];
           break;
-        case OPT_REMADR:
-          delete (OptRemoveAddress*) m_option[i];
-          break;
         case OPT_DSN:
           delete (OptDataSeqMapping*) m_option[i];
-          break;
-        case OPT_TT:
-          delete (OptTimesTamp*) m_option[i];
           break;
         default:
           break;
@@ -1014,61 +747,16 @@ TcpHeader::AddOptADDR(TcpOption_t optName, uint8_t addrID, Ipv4Address addr)
 }
 
 bool
-TcpHeader::AddOptREMADR(TcpOption_t optName, uint8_t addrID)
-{
-//  NS_LOG_FUNCTION(this);
-  if (optName == OPT_REMADR)
-    {
-      OptRemoveAddress* opt = new OptRemoveAddress(optName, addrID);
-
-      m_option.insert(m_option.end(), opt);
-      return true;
-    }
-  return false;
-}
-
-bool
 TcpHeader::AddOptDSN(TcpOption_t optName, uint64_t dSeqNum, uint16_t dLevelLength, uint32_t sfSeqNum)
 {
 //  NS_LOG_FUNCTION(this);
   if (optName == OPT_DSN)
     {
       OptDataSeqMapping* opt = new OptDataSeqMapping(optName, dSeqNum, dLevelLength, sfSeqNum);
-
       m_option.insert(m_option.end(), opt);
       return true;
     }
   return false;
 }
 
-bool
-TcpHeader::AddOptTT(TcpOption_t optName, uint64_t tsval, uint64_t tsecr)
-{
-//  NS_LOG_FUNCTION(this);
-  if (optName == OPT_TT)
-    {
-      OptTimesTamp* opt = new OptTimesTamp(optName, tsval, tsecr);
-
-      m_option.insert(m_option.end(), opt);
-      return true;
-    }
-  return false;
-}
-
-bool
-TcpHeader::AddOptDSACK(TcpOption_t optName, OptDSACK *ptrDSAK)
-{
-//  NS_LOG_FUNCTION(this);
-  if (optName == OPT_DSACK)
-    {
-      m_option.insert(m_option.end(), ptrDSAK);
-      return true;
-    }
-  return false;
-}
-//----------------------------------------
-//----------------------------------------
-//----------------------------------------
-//----------------------------------------
-//-----------------------------------------------------------------
 }// namespace ns3

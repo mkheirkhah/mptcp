@@ -1,5 +1,6 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 /*
+ * Copyright (c) 2014 University of Sussex, UK.
  * Copyright (c) 2008 INRIA
  *
  * This program is free software; you can redistribute it and/or modify
@@ -16,7 +17,9 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  * Author: Mathieu Lacage <mathieu.lacage@sophia.inria.fr>
+ * Modified by Morteza Kheirkhah <M.kheirkhah@sussex.ac.uk>
  */
+
 #ifndef MP_TCP_PACKET_SINK_HELPER_H
 #define MP_TCP_PACKET_SINK_HELPER_H
 
@@ -44,7 +47,7 @@ public:
    * \param address the address of the sink,
    *
    */
-  MpTcpPacketSinkHelper (std::string protocol, Address address/*, uint32_t algopr*/);
+  MpTcpPacketSinkHelper (std::string protocol, Address address);
 
   /**
    * Helper function used to set the underlying application attributes.

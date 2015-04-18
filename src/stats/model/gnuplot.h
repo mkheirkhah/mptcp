@@ -117,6 +117,7 @@ public:
    * The plotting style to use for this dataset.
    */
   enum Style {
+    MKS,
     LINES,
     POINTS,
     LINES_POINTS,

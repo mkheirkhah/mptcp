@@ -322,6 +322,20 @@ Ipv4L3Protocol::GetNInterfaces (void) const
   return m_interfaces.size ();
 }
 
+Ptr<Ipv4Interface>
+Ipv4L3Protocol::GetRealInterfaceForAddress (Ipv4Address address) const
+{
+  NS_LOG_FUNCTION(address);
+  for (Ipv4InterfaceList::const_iterator i = m_interfaces.begin (); i != m_interfaces.end(); i++)
+    {
+      for (uint32_t j = 0; j < (*i)->GetNAddresses(); j++){
+          if ((*i)->GetAddress(j).GetLocal() == address)
+            return (*i);
+      }
+    }
+  return 0;
+}
+
 int32_t 
 Ipv4L3Protocol::GetInterfaceForAddress (
   Ipv4Address address) const

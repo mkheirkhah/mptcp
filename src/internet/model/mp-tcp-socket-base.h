@@ -1,93 +1,103 @@
 /*
- * Multipath-TCP (MPTCP) implementation.
+ * MultiPath-TCP (MPTCP) implementation.
  * Programmed by Morteza Kheirkhah from University of Sussex.
- * Some codes here are retived from NS3::TCPNewReno implemntation and old version of MPTCP implememntation of NS3.6.
+ * Some codes here are modeled from ns3::TCPNewReno implementation.
+ * Email: m.kheirkhah@sussex.ac.uk
  */
-
 #ifndef MP_TCP_SOCKET_BASE_H
 #define MP_TCP_SOCKET_BASE_H
 
 #include "ns3/mp-tcp-typedefs.h"
 #include "ns3/tcp-socket-base.h"
-#include "ns3/Gnuplot.h"
-//#include "ns3/traced-value.h"     // Derived from mp-tcp-typedefs.h
-//#include "ns3/ipv4-address.h"     // Derived from mp-tcp-typedefs.h
-//#include "ns3/event-id.h"         // Derived from mp-tcp-typedefs.h
-//#include "ns3/sequence-number.h"  // Derived from mp-tcp-typedefs.h
-//#include "ns3/rtt-estimator.h"    // Derived from tcp-socket-based.h
-//#include "ns3/tcp-socket.h"       // Derived from tcp-socket-based.h
-//#include "ns3/ptr.h"              // Derived from tcp-socket-based.h
-//#include "ns3/callback.h"         // Derived from tcp-socket-based.h
-//#include <stdint.h>               // Derived from tcp-socket-based.h
-//#include <queue>                  // Derived from tcp-socket-based.h
-//#include <vector>                 // Derived from tcp-socket-based.h
-//#include <list>                   // Derived from tcp-socket-based.h
-//#include <map>                    // Derived from tcp-socket-based.h
-//#include "ns3/tcp-typedefs.h"     // obsolete
-//#include "ns3/pending-data.h"     // obsolete
-//#include "mp-tcp-l4-protocol.h"   // obsolete
+#include "ns3/gnuplot.h"
+#include "mp-tcp-subflow.h"
+#include "ns3/output-stream-wrapper.h"
 
+#define A 1
+#define B 2
+#define A_SCALE 512
 
 using namespace std;
-
 namespace ns3
 {
-
 class Ipv4EndPoint;
 class Node;
 class Packet;
-//class MpTcpL4Protocol;
 class TcpL4Protocol;
-
 
 class MpTcpSocketBase : public TcpSocketBase
 {
-public:
+public: // public methods
 
   static TypeId GetTypeId(void);
-  //MpTcpStateMachine *m_stateMachine;
-  /**
-   * Create an unbound MPTCP socket
-   */
   MpTcpSocketBase();
-  /**
-   * Create an bound MPTCP socket
-   */
   MpTcpSocketBase(Ptr<Node> node);
   virtual ~MpTcpSocketBase();
 
+  // Public interface for MPTCP
+  virtual int Bind();                         // Bind a socket by setting up endpoint in TcpL4Protocol
+  virtual int Bind(const Address &address);   // Bind a socket ... to specific add:port
+  virtual int Connect(const Address &address);
+  virtual int Connect(Ipv4Address servAddr, uint16_t servPort);
+  virtual int Listen(void);
+  virtual int Close(void);                    // Close by app: Kill socket upon tx buffer emptied
+  virtual int Close(uint8_t sFlowIdx);        // Closing subflow...
+  bool SendAllSubflowsFIN(void);
+  uint32_t GetTxAvailable();                  // Return available space in sending buffer to application
+  bool SendBufferedData();                    // This would called SendPendingData() - TcpTxBuffer API need to be used in future!
+  //int FillBuffer(uint8_t* buf, uint32_t size);// Fill sending buffer with data - TcpTxBuffer API need to be used in future!
+  int FillBuffer(uint32_t size);
+  //uint32_t Recv(uint8_t* buf, uint32_t size); // Receive data from receiveing buffer - TcpRxBuffe API need to be used in future!
+  uint32_t Recv(uint32_t size); // Receive data from receiveing buffer - TcpRxBuffe API need to be used in future!
 
-  //Public interface for MPTCP
-  virtual int Bind();                       // Bind a socket by setting up endpoint in TcpL4Protocol
-  virtual int Bind(const Address &address); // Bind a socket ... to specific add:port
-  virtual int Connect(Address &address);    // Setup endpoint and call ProcessAction() to connect
-  int Connect(Ipv4Address servAddr, uint16_t servPort);
-  virtual int Listen(void);           // Verify the socket is in a correct state and call ProcessAction() to listen
-  virtual int Close(void);            // Close by app: Kill socket upon tx buffer emptied
-  virtual int Close(uint8_t sFlowIdx);// Closing subflow...
-  virtual int DoClose(uint8_t sFlowIdx);  // Here the signal is sent to peer
-  void PeerClose(uint8_t sFlow, Ptr<Packet> p, const TcpHeader& tcpHeader);
-  void DoPeerClose(uint8_t sFlowIdx);
-  void LastAckTimeout(uint8_t sFlowIdx);
-  void TimeWait(uint8_t sFlowIdx);
-  void CancelAllTimers(uint8_t sFlowIdx);
-  void DeallocateEndPoint(uint8_t sFlowIdx);
-  void CancelAllSubflowTimers(void);
-  bool FindPacketFromUnOrdered(uint8_t sFlowIdx);
-  void DestroySubflowMapDSN(void);
-  void DestroyUnOrdered();
-  void CloseAndNotify(uint8_t sFlowIdx);
-  void SendRST(uint8_t sFlowIdx);
-  uint32_t Recv(uint8_t* buf, uint32_t size);
-  uint32_t GetTxAvailable();  // Available-to-read data size, i.e. value of m_rxAvailable
-  void getQueuePkt(Ipv4Address addr);
+  //void allocateSendingBuffer(uint32_t size);  // Can be removed now as SetSndBufSize() is implemented instead!
+  //void allocateRecvingBuffer(uint32_t size);  // Can be removed now as SetRcvBufSize() is implemented instead!
+  void SetMaxSubFlowNumber(uint8_t num);      // Max number of subflows a sender can initiate
+  uint8_t GetMaxSubFlowNumber();
+  void SetSourceAddress(Ipv4Address src);     // Explicitly specified the source IP address
+  Ipv4Address GetSourceAddress();
+  void SetFlowId(uint32_t);
+  void SetFlowType(string);
+  void SetOutputFileName(string);
+  virtual void SetDupAckThresh(uint32_t);
 
-  uint32_t AvailableWindow(uint8_t sFlowIdx); // Return unfilled portion of window
-  bool SendBufferedData();
-  int FillBuffer(uint8_t* buf, uint32_t size);
+  // Setter for congestion Control and data distribution algorithm
+  void SetCongestionCtrlAlgo(CongestionCtrl_t ccalgo);  // This would be used by attribute system for setting congestion control
+  void SetDataDistribAlgo(DataDistribAlgo_t ddalgo);    // Round Robin is only algorithms used.
+  void SetPathManager (PathManager_t);
 
 
-  // Evaluation containers
+public: // public variables
+  // Evaluation & plotting parameters and containers
+  double fLowStartTime;
+  int mod;
+  int MSS;
+  int LinkCapacity;
+  int totalBytes;
+  double RTT;
+  double lostRate;
+  double TimeScale;
+  // Only for plotting purpose
+  uint32_t pAck;
+  uint32_t FullAcks;
+  uint32_t TimeOuts;
+  uint32_t FastReTxs;
+  uint32_t FastRecoveries;
+  bool flowCompletionTime;
+  //uint64_t TxBytes;
+  uint32_t flowId;
+  string flowType;
+  string outputFileName;
+  double goodput;
+  bool m_largePlotting;
+  bool m_shortPlotting;
+  bool m_alphaPerAck;
+  uint32_t m_rGap;
+  bool m_shortFlowTCP;
+  //
+  GnuplotCollection gnu;
+  std::list<uint32_t> sampleList;
+
   vector<pair<double, double> > totalCWNDtrack;
   vector<pair<double, double> > reTxTrack;
   vector<pair<double, double> > timeOutTrack;
@@ -95,437 +105,204 @@ public:
   vector<pair<double, double> > FullAck;
   vector<pair<double, double> > DupAcks;
   vector<pair<double, double> > PacketDrop;
-//  vector<pair<double, double> > UnOrderedSize;
   vector<pair<double, double> > TxQueue;
-  std::list<uint32_t> sampleList;
-  //void SetMpTcp(Ptr<MpTcpL4Protocol> mptcp);
-  uint8_t GetMaxSubFlowNumber();
-  void SetMaxSubFlowNumber(uint8_t num);
-  //uint8_t GetMinSubFlowNumber();
-  //void SetMinSubFlowNumber(uint8_t num);
-  void SetSourceAddress(Ipv4Address src);
-  Ipv4Address GetSourceAddress();
 
-  // extended Socket API for Multipath support
-  bool isMultipath();
-  void AdvertiseAvailableAddresses();
-  bool InitiateSubflows();
-  uint8_t currentSublow;
 
-  void allocateSendingBuffer(uint32_t size);
-  void allocateRecvingBuffer(uint32_t size);
-  void SetunOrdBufMaxSize(uint32_t size);
+protected: // protected methods
+
+  friend class Tcp;
+
+  // Implementing some inherited methods from ns3::TcpSocket. No need to comment them!
   virtual void SetSndBufSize (uint32_t size);
   virtual uint32_t GetSndBufSize (void) const;
   virtual void SetRcvBufSize (uint32_t size);
   virtual uint32_t GetRcvBufSize (void) const;
-
-  double getPathDelay(uint8_t idxPath);
-  uint64_t getPathBandwidth(uint8_t idxPath);
-  double getConnectionEfficiency();
-  bool rejectPacket(double threshold);
-
-  //MpTcpSubFlow *GetSubflow(uint8_t sFlowIdx);
-  Ptr<MpTcpSubFlow> GetSubflow(uint8_t sFlowIdx);
-
-
-  uint32_t GetOutputInf(Ipv4Address addr);
-  void SetCongestionCtrlAlgo(CongestionCtrl_t ccalgo);
-  void SetDataDistribAlgo(DataDistribAlgo_t ddalgo);
-
-  // Generate RTT-CDF plot.
-  void GenerateRTTPlot();
-  void GenerateCWNDPlot();
-  void GenerateSendvsACK();
-  void GenerateRTT();
-  void GenerateCwndTracer();
-  std::string
-  GeneratePlotDetail();
-  void GeneratePktCount();
-  //Morteza Kheirkhah - Some pure virtual protected functions from TcpSocketBase
-  //.........................................................................
   virtual void SetSSThresh(uint32_t threshold);
   virtual uint32_t GetSSThresh(void) const;
   virtual void SetInitialCwnd(uint32_t cwnd);
   virtual uint32_t GetInitialCwnd(void) const;
-  virtual Ptr<TcpSocketBase> Fork(void);
-  virtual void DupAck(const TcpHeader& t, uint32_t count); // Received dupack
-  //..........................................................................
-  // Lost modelling
-  double LossProbablity;
-  uint32_t counter;
-  EventId timeOut;
-  void HeartBeat();
-  void generatePlots();
+  virtual void SetSegSize(uint32_t size);
+  virtual uint32_t GetSegSize(void) const;
 
-  // Evaluation parameter (public variable)
-  int mod;
-  int LinkCapacity;
-  int totalBytes;
-  double lostRate;
-  double RTT;
-  double TimeScale;
-  int MSS;
-  std::string PrintCC(uint32_t cc);
-  GnuplotCollection gnu;
-  uint32_t pAck;
-
-protected:
-  virtual void
-  SetSegSize(uint32_t size);
-  virtual uint32_t
-  GetSegSize(void) const;
-
-  // Helper function
-  uint32_t SendDataPacket (uint8_t sFlowIdx, uint32_t pktSize, bool withAck);      // Send a data packet
-  //.................................................................................................
-  int SetupEndpoint (void);        // Configure m_endpoint for local addr for given remote addr (NEW)
-  virtual void EstimateRtt (uint8_t sFlowIdx, const TcpHeader&); // RTT accounting
-  virtual void EstimateRtt (const TcpHeader&);
-  virtual bool ReadOptions (uint8_t sFlowIdx, Ptr<Packet> pkt, const TcpHeader&); // Read option from incoming packets
-  virtual bool ReadOptions (Ptr<Packet> pkt, const TcpHeader&);
+  // MPTCP connection and subflow set up
+  int  SetupCallback(void);  // Setup SetRxCallback & SetRxCallback call back for a host
+  int  SetupEndpoint (void); // Configure local address for given remote address in a host - it query a routing protocol to find a source
   void CompleteFork(Ptr<Packet> p, const TcpHeader& h, const Address& fromAddress, const Address& toAddress);
-  //.................................................................................................
+  void AdvertiseAvailableAddresses(); // Advertise all addresses to the peer, including the already established address.
+  bool InitiateSubflows();            // Initiate new subflows when FullMesh mode is active
+  bool InitiateSingleSubflows(uint16_t); // Initiate new subflows when nDiffPorts is active
+  virtual void InitiateMultipleSubflows();
+  // Transfer operations
+  void ForwardUp(Ptr<Packet> p, Ipv4Header header, uint16_t port, Ptr<Ipv4Interface> interface);
+  virtual void DoForwardUp(Ptr<Packet> p, Ipv4Header header, uint16_t port, Ptr<Ipv4Interface> interface);
+  virtual bool SendPendingData(uint8_t sFlowId = -1);
+  void SendEmptyPacket(uint8_t sFlowId, uint8_t flags);
+  void SendRST(uint8_t sFlowIdx);
+  virtual int SendDataPacket (uint8_t sFlowIdx, uint32_t pktSize, bool withAck);
+  // Connection closing operations
+  virtual int DoClose(uint8_t sFlowIdx);
+  bool CloseMultipathConnection();      // Close MPTCP connection is possible
+  void PeerClose(uint8_t sFlow, Ptr<Packet> p, const TcpHeader& tcpHeader);
+  void DoPeerClose(uint8_t sFlowIdx);
+  void CloseAndNotify(uint8_t sFlowIdx);
+  void CloseAndNotifyAllSubflows();
+  void Destroy(void);
+  void DestroySubflowMapDSN(void);
+  void DestroyUnOrdered();
+  void CancelAllTimers(uint8_t sFlowIdx);
+  void DeallocateEndPoint(uint8_t sFlowIdx);
+  void CancelAllSubflowTimers(void);
+  void TimeWait(uint8_t sFlowIdx);
+
   // State transition functions
-  void ProcessEstablished (uint8_t sFlowIdx, Ptr<Packet>, const TcpHeader&); // Received a packet upon ESTABLISHED state
-  void ProcessListen  (uint8_t sFlowIdx, Ptr<Packet>, const TcpHeader&, const Address&, const Address&); // Process the newly received ACK
+  void ProcessEstablished (uint8_t sFlowIdx, Ptr<Packet>, const TcpHeader&);
+  void ProcessListen  (uint8_t sFlowIdx, Ptr<Packet>, const TcpHeader&, const Address&, const Address&);
   void ProcessListen  (Ptr<Packet>, const TcpHeader&, const Address&, const Address&);
-  void ProcessSynSent (uint8_t sFlowIdx, Ptr<Packet>, const TcpHeader&);     // Received a packet upon SYN_SENT
-  void ProcessSynRcvd (uint8_t sFlowIdx, Ptr<Packet>, const TcpHeader&, const Address&, const Address&); // Received a packet upon SYN_RCVD
-  void ProcessWait    (uint8_t sFlowIdx, Ptr<Packet>, const TcpHeader&);      // Received a packet upon CLOSE_WAIT, FIN_WAIT_1, FIN_WAIT_2
-  void ProcessClosing (uint8_t sFlowIdx, Ptr<Packet>, const TcpHeader&);      // Received a packet upon CLOSING
-  void ProcessLastAck (uint8_t sFlowIdx, Ptr<Packet>, const TcpHeader&);      // Received a packet upon LAST_ACK
-  //.................................................................................................
-  // Manage data tx/rx
+  virtual void ProcessSynSent (uint8_t sFlowIdx, Ptr<Packet>, const TcpHeader&);
+  void ProcessSynRcvd (uint8_t sFlowIdx, Ptr<Packet>, const TcpHeader&, const Address&, const Address&);
+  void ProcessWait    (uint8_t sFlowIdx, Ptr<Packet>, const TcpHeader&);
+  void ProcessClosing (uint8_t sFlowIdx, Ptr<Packet>, const TcpHeader&);
+  void ProcessLastAck (uint8_t sFlowIdx, Ptr<Packet>, const TcpHeader&);
+  uint8_t ProcessOption(TcpOptions *opt);
+
+  // Window Management
+  virtual uint32_t BytesInFlight(uint8_t sFlowIdx);  // Return total bytes in flight of a subflow
+  uint16_t AdvertisedWindowSize();
+  uint32_t AvailableWindow(uint8_t sFlowIdx);
+
+  // Manage data Tx/Rx
+  virtual Ptr<TcpSocketBase> Fork(void);
   virtual void ReceivedAck (uint8_t sFlowIdx, Ptr<Packet>, const TcpHeader&); // Received an ACK packet
   virtual void ReceivedData (uint8_t sFlowIdx, Ptr<Packet>, const TcpHeader&); // Recv of a data, put into buffer, call L7 to get it if necessary
-  void DoRetransmit (uint8_t sFlowIdx); // Retransmit the oldest packet
-  void DoRetransmit (uint8_t sFlowIdx, DSNMapping* ptrDSN); // Retransmit the oldest packet
+  virtual void EstimateRtt (uint8_t sFlowIdx, const TcpHeader&);
+  virtual void EstimateRtt (const TcpHeader&);
+  virtual bool ReadOptions (uint8_t sFlowIdx, Ptr<Packet> pkt, const TcpHeader&); // Read option from incoming packets
+  virtual bool ReadOptions (Ptr<Packet> pkt, const TcpHeader&); // Read option from incoming packets (Listening Socket only)
+  virtual void DupAck(const TcpHeader& t, uint32_t count);  // Not in operation, it's pure virtual function from TcpSocketBase
+  virtual void DupAck(uint8_t sFlowIdx, DSNMapping * ptrDSN);       // Congestion control algorithms -> loss recovery
+  virtual void NewACK(uint8_t sFlowIdx, const TcpHeader&, TcpOptions* opt);
+  void NewAckNewReno(uint8_t sFlowIdx, const TcpHeader&, TcpOptions* opt);
+  virtual void DoRetransmit (uint8_t sFlowIdx);
+  virtual void DoRetransmit (uint8_t sFlowIdx, DSNMapping* ptrDSN);
+  void SetReTxTimeout(uint8_t sFlowIdx);
+  void ReTxTimeout(uint8_t sFlowIdx);
+  virtual void Retransmit(uint8_t sFlowIdx);
+  void LastAckTimeout(uint8_t sFlowIdx);
   void DiscardUpTo(uint8_t sFlowIdx, uint32_t ack);
 
-  //Actions_t ProcessHeaderOptions(uint8_t sFlowIdx, Ptr<Packet> pkt, uint32_t *dataLen, TcpHeader mptcpHeader);
+  // Re-ordering buffer
   bool StoreUnOrderedData(DSNMapping *ptr);
   void ReadUnOrderedData();
-  void ProcessMultipathState();
-  void OpenCWND(uint8_t sFlowIdx, uint32_t ackedBytes);
-  void calculate_alpha();
-  void calculateTotalCWND();
-  void calculateSmoothedCWND(uint8_t sFlowIdx);
-  void reduceCWND(uint8_t sFlowIdx, DSNMapping* ptrDSN);
+  bool FindPacketFromUnOrdered(uint8_t sFlowIdx);
+
+  // Congestion control
+  virtual void OpenCWND(uint8_t sFlowIdx, uint32_t ackedBytes);
+  void ReduceCWND(uint8_t sFlowIdx, DSNMapping* ptrDSN);
+  virtual void calculateAlpha();
+  virtual void calculateTotalCWND();
+  uint32_t compute_total_window();
+  uint32_t compute_a_scaled();
+  double compute_alfa();
+  void window_changed();
+
+  // Helper functions -> main operations
+  uint8_t LookupByAddrs(Ipv4Address src, Ipv4Address dst); // Called by Forwardup() to find the right subflow for incoing packet
+  virtual int LookupSubflow(Ipv4Address src, uint32_t sPort, Ipv4Address dst , uint32_t dPort); // LookupBy4-Tuple
+
+  virtual uint8_t getSubflowToUse();  // Called by SendPendingData() to get a subflow based on round robin algorithm
+  bool IsThereRoute(Ipv4Address src, Ipv4Address dst);     // Called by InitiateSubflow & LookupByAddrs and Connect to check whether there is route between a pair of addresses.
+  bool IsLocalAddress(Ipv4Address addr);
+  bool IsRemoteAddress(Ipv4Address addr);
+  Ptr<NetDevice> FindOutputNetDevice(Ipv4Address);         // Find Netdevice object of specific IP address.
   DSNMapping* getAckedSegment(uint8_t sFlowIdx, uint32_t ack);
-  DSNMapping* getAckedSegment(uint64_t lEdge, uint64_t rEdge);
-  DSNMapping* getSegmentOfACK(uint8_t sFlowIdx, uint32_t ack); // Morteza
-  double getGlobalThroughput();
-  uint8_t getSubflowToUse();
+  DSNMapping* getSegmentOfACK(uint8_t sFlowIdx, uint32_t ack);
+  void SendAccumulativeAck(uint8_t sFlowIdx);
+  // Helper functions -> evaluation and debugging
+  void PrintIpv4AddressFromIpv4Interface(Ptr<Ipv4Interface>, int32_t);
+  std::string PrintCC(uint32_t cc);
+  void getQueuePkt(Ipv4Address addr);
 
-  int SetupCallback(void); // Common part of the two Bind(), i.e. set calback and rememebering local add:port
 
-  Ptr<Node>             m_node;
-  Ipv4EndPoint*         m_endPoint;
-  //Ptr<MpTcpL4Protocol>  m_mptcp;
-  Ptr<TcpL4Protocol>  m_mptcp;
-  Ipv4Address           m_localAddress;
-  uint16_t              m_localPort;
-  Ipv4Address           m_remoteAddress;
-  uint16_t              m_remotePort;
+  // Helper functions -> plotting
+  std::string GeneratePlotDetail();
+  void GenerateCWNDPlot();
+  void GenerateSendvsACK();
+  void GenerateRTT();
+  void GenerateCwndTracer();
+  void GeneratePktCount();
+  void GeneratePlots();
+  void IsLastAck();
+  virtual void GeneratePlotsOutput();
+//  virtual void DoGenerateOutPutFile();
+  virtual string GetTypeIdName();
+  string TcpFlagPrinter(uint8_t);
+  uint64_t GetPathBandwidth(uint8_t idxPath);
 
-  // Multipath related variables
-  //uint8_t MaxSubFlowNumber;
-  uint8_t maxSubflows;
-  //uint8_t MinSubFlowNumber;
-  MpStates_t mpState;
+
+  // Uniform Random Variable
+  uint16_t GetRandom16();
+  uint32_t GetRandom32();
+  uint32_t GetRandom(uint32_t, uint32_t);
+  double drand();
+  uint32_t GetEstSubflows();
+
+protected: // protected variables
+
+  // MPTCP connection parameters
+  //Ptr<Node>          m_node;
+  //Ipv4EndPoint*      m_endPoint;
+  //Ptr<TcpL4Protocol> m_mptcp;
+  Ipv4Address        m_localAddress;
+  Ipv4Address        m_remoteAddress;
+  uint16_t           m_localPort;
+  uint16_t           m_remotePort;
+  uint8_t            currentSublow;
+
+  // MultiPath related parameters
   MpStates_t mpSendState;
   MpStates_t mpRecvState;
   bool mpEnabled;
-  bool addrAdvertised;
   bool mpTokenRegister;
-  //vector<MpTcpSubFlow *> subflows;
+  bool addrAdvertised;
+  uint32_t localToken;
+  uint32_t remoteToken;
+  uint32_t unOrdMaxSize;
+  uint8_t  maxSubflows;
+  uint8_t  lastUsedsFlowIdx;
+
+  // MPTCP containers
   vector<Ptr<MpTcpSubFlow> > subflows;
   vector<MpTcpAddressInfo *> localAddrs;
   vector<MpTcpAddressInfo *> remoteAddrs;
-  map<Ipv4Address, uint32_t> sfInitSeqNb;
-  list<DSNMapping *> unOrdered;    // buffer that hold the out of sequence received packet
-  uint32_t unOrdMaxSize; // maximum size of the buf that hold temporary the out of sequence data
+  list<DSNMapping *> unOrdered;  // buffer that hold the out of sequence received packet
 
-  // add list to store received part of not lost data
-  uint8_t lastUsedsFlowIdx;
-//  double totalCwnd;
-  uint32_t totalCwnd;
-  double meanTotalCwnd;
+  // Congestion control
   double alpha;
+  uint32_t a;
+  double _e;
 
-  CongestionCtrl_t AlgoCC;         // Algorithm for Congestion Control
-  DataDistribAlgo_t distribAlgo;    // Algorithm for Data Distribution
-
-  // Multipath tockens
-  uint32_t localToken;
-  uint32_t remoteToken;
-
-  DataBuffer *sendingBuffer;
-  DataBuffer *recvingBuffer;
-
-  // Rx buffer state
-  uint32_t m_rxAvailable; // amount of data available for reading through Recv
-  uint32_t m_rxBufSize;   // size in bytes of the data in the rx buf
-  // note that these two are not the same: rxAvailbale is the number of
-  // contiguous sequenced bytes that can be read, rxBufSize is the TOTAL size
-  // including out of sequence data, such that m_rxAvailable <= m_rxBufSize
-
-
-  //.........................................................................
-
-//private:
-protected:
-  friend class Tcp;
-  bool client;
-  bool server;
-  int Binding();
-  void ForwardUp(Ptr<Packet> p, Ipv4Header header, uint16_t port, Ptr<Ipv4Interface> interface);
-  void Destroy(void);
-  void SendEmptyPacket(uint8_t sFlowId, uint8_t flags);
-  void SendAcknowledge(uint8_t sFlowId, uint8_t flags, TcpOptions *opt);
-  bool SendPendingData(uint8_t sFlowId = -1);
-  bool LookupDSNMapping();
-  //bool ProcessAction(uint8_t sFlowIdx, Actions_t a);
-  //bool ProcessAction(uint8_t sFlowIdx, TcpHeader mptcpHeader, Ptr<Packet> pkt, uint32_t dataLen, Actions_t a);
-  //Actions_t ProcessEvent(uint8_t sFlowId, Events_t e);
-  uint8_t ProcessOption(TcpOptions *opt);
-  void SetReTxTimeout(uint8_t sFlowIdx);
-  void ReTxTimeout(uint8_t sFlowIdx);
-  void Retransmit(uint8_t sFlowIdx);
-//  void Retransmit(uint8_t sFlowIdx, DSNMapping* ptrDSN);
-  bool IsDuplicatedAck(uint8_t sFlowIdx, TcpHeader l4Header, TcpOptions *opt);
-  void DupAck(uint8_t sFlowIdx, DSNMapping * ptrDSN);
-  void NewACK(uint8_t sFlowIdx, const TcpHeader&, TcpOptions* opt);
-  void NewAckNewReno(uint8_t sFlowIdx, const TcpHeader&, TcpOptions* opt);
-  uint8_t LookupByAddrs(Ipv4Address src, Ipv4Address dst);
-  void DetectLocalAddresses();
-  uint32_t getL3MTU(Ipv4Address addr);
-  uint64_t getBandwidth(Ipv4Address addr);
-
-  //methods for window management
-  //virtual uint32_t BytesInFlight();  // Return total bytes in flight
-  virtual uint32_t BytesInFlight(uint8_t sFlowIdx);  // Return total bytes in flight of a subflow
-  virtual bool IsThereRoute(Ipv4Address src, Ipv4Address dst);
-  virtual bool IsLocalAddress(Ipv4Address addr);
-  virtual bool CloseMultipathConnection();
-  uint16_t AdvertisedWindowSize();
+  uint32_t totalCwnd;
+  CongestionCtrl_t AlgoCC;       // Algorithm for Congestion Control
+  DataDistribAlgo_t distribAlgo; // Algorithm for Data Distribution
+  PathManager_t pathManager;        // Mechanism for subflow establishement
 
   // Window management variables
-  //uint32_t m_rxWindowSize;               //Flow control window
-  uint32_t m_ssThresh;                   //Slow Start Threshold
-  uint32_t m_initialCWnd;                //Initial cWnd value
-  uint32_t remoteRecvWnd;                //Flow control window at remote side
-  //TracedValue<uint32_t> m_rWnd;        //< Flow control window at remote side
-  uint32_t segmentSize;
+  uint32_t m_ssThresh;           // Slow start threshold
+  uint32_t m_initialCWnd;        // Initial congestion window value
+  uint32_t remoteRecvWnd;        // Flow control window at remote side
+  uint32_t segmentSize;          // Segment size
+  uint64_t nextTxSequence;       // Next expected sequence number to send in connection level
+  uint64_t nextRxSequence;       // Next expected sequence number to receive in connection level
 
-//  Ptr<MpTcpSocketBase> Copy();
+  // Buffer management
+  DataBuffer sendingBuffer;
+  DataBuffer recvingBuffer;
 
-  uint64_t nextTxSequence;       // sequence number used by the multipath capable sender
-  uint32_t unAckedDataCount;     // Number of outstanding bytes
-  uint64_t nextRxSequence;
+  bool client;
+  bool server;
 
-
-  // we need this map because when an ACK is received all segments with lower sequence number are droped from the temporary buffer
-//  map<uint64_t, uint32_t> retransSeg; // Retransmitted_Segment (data_Seq_Number, data_length)
-//  map<uint64_t, uint8_t> ackedSeg;   // Acked_Segment (data_Seq_Number, number_of_ack)
-//  bool useFastRecovery;
 };
 
 }   //namespace ns3
 
 #endif /* MP_TCP_SOCKET_BASE_H */
-
-
-
-// TotalWindow
-//    {
-//      Gnuplot2dDataset dataSet;
-//      dataSet.SetStyle(Gnuplot2dDataset::LINES);
-//      std::stringstream title;
-//      title << "totalcwnd";
-//      dataSet.SetTitle(title.str());
-//
-//      vector<pair<double, double> >::iterator it = totalCWNDtrack.begin();
-//
-//      while (it != totalCWNDtrack.end())
-//        {
-//          dataSet.Add(it->first, it->second / 536);
-//          it++;
-//        }
-//      rttGraph.AddDataset(dataSet);
-//    }
-//  if (m_MMPTCP)
-//    {
-//      // TotalCWND
-//  Gnuplot2dDataset dataSet;
-//  dataSet.SetStyle(Gnuplot2dDataset::LINES);
-//  std::stringstream title;
-//  title << "totalcwnd";
-//  dataSet.SetTitle(title.str());
-//
-//  vector<pair<double, double> >::iterator it = totalCWNDtrack.begin();
-//
-//  while (it != totalCWNDtrack.end())
-//    {
-//      dataSet.Add(it->first, it->second);
-//      it++;
-//    }
-//  rttGraph.AddDataset(dataSet);
-//  TxQueue
-//        {
-//          Gnuplot2dDataset dataSet;
-//          dataSet.SetStyle(Gnuplot2dDataset::DOTS);
-//          std::stringstream title;
-//          title << "TxQueue";
-//          dataSet.SetTitle(title.str());
-//
-//          vector<pair<double, double> >::iterator it = TxQueue.begin();
-//
-//          while (it != TxQueue.end())
-//            {
-//              dataSet.Add(it->first, it->second);
-//              it++;
-//            }
-//          rttGraph.AddDataset(dataSet);
-//        }
-//    }
-/*
- // SlowStart
- for (uint16_t idx = 0; idx < subflows.size(); idx++)
- {
- MpTcpSubFlow * sFlow = subflows[idx];
-
- Gnuplot2dDataset dataSet;
- dataSet.SetStyle(Gnuplot2dDataset::LINES);
-
- std::stringstream title;
- title << "SS " << idx;
-
- dataSet.SetTitle(title.str());
-
- vector<pair<double, double> >::iterator it = sFlow->_ss.begin();
-
- while (it != sFlow->_ss.end())
- {
- dataSet.Add(it->first, it->second);
- it++;
- }
- rttGraph.AddDataset(dataSet);
- }
-
- // Congestion Avoidance
- for (uint16_t idx = 0; idx < subflows.size(); idx++)
- {
- MpTcpSubFlow * sFlow = subflows[idx];
-
- Gnuplot2dDataset dataSet;
- dataSet.SetStyle(Gnuplot2dDataset::LINES);
-
- std::stringstream title;
- title << "CA " << idx;
-
- dataSet.SetTitle(title.str());
-
- vector<pair<double, double> >::iterator it = sFlow->_ca.begin();
-
- while (it != sFlow->_ca.end())
- {
- dataSet.Add(it->first, it->second);
- it++;
- }
- rttGraph.AddDataset(dataSet);
- }
-
- // Fast Recovery - FullACK
- for (uint16_t idx = 0; idx < subflows.size(); idx++)
- {
- MpTcpSubFlow * sFlow = subflows[idx];
-
- Gnuplot2dDataset dataSet;
- dataSet.SetStyle(Gnuplot2dDataset::POINTS);
-
- std::stringstream title;
- title << "F-ack " << idx;
-
- dataSet.SetTitle(title.str());
-
- vector<pair<double, double> >::iterator it = sFlow->_FR_FA.begin();
-
- while (it != sFlow->_FR_FA.end())
- {
- dataSet.Add(it->first, it->second);
- it++;
- }
- rttGraph.AddDataset(dataSet);
- }
-
- // Fast Recovery - PartialACK
- for (uint16_t idx = 0; idx < subflows.size(); idx++)
- {
- MpTcpSubFlow * sFlow = subflows[idx];
-
- Gnuplot2dDataset dataSet;
- dataSet.SetStyle(Gnuplot2dDataset::POINTS);
-
- std::stringstream title;
- title << "P-ack " << idx;
-
- dataSet.SetTitle(title.str());
-
- vector<pair<double, double> >::iterator it = sFlow->_FR_PA.begin();
-
- while (it != sFlow->_FR_PA.end())
- {
- dataSet.Add(it->first, it->second);
- it++;
- }
- rttGraph.AddDataset(dataSet);
- }
- // Fast Retransmission
- for (uint16_t idx = 0; idx < subflows.size(); idx++)
- {
- MpTcpSubFlow * sFlow = subflows[idx];
-
- Gnuplot2dDataset dataSet;
- dataSet.SetStyle(Gnuplot2dDataset::POINTS);
-
- std::stringstream title;
- title << "F-ReTx " << idx;
-
- dataSet.SetTitle(title.str());
-
- vector<pair<double, double> >::iterator it = sFlow->_FReTx.begin();
-
- while (it != sFlow->_FReTx.end())
- {
- dataSet.Add(it->first, it->second);
- it++;
- }
- rttGraph.AddDataset(dataSet);
- }
- */
-/*
- // TimeOut
- for (uint16_t idx = 0; idx < subflows.size(); idx++)
- {
- MpTcpSubFlow * sFlow = subflows[idx];
-
- Gnuplot2dDataset dataSet;
- dataSet.SetStyle(Gnuplot2dDataset::POINTS);
-
- std::stringstream title;
- title << "TimeOut " << idx;
-
- dataSet.SetTitle(title.str());
-
- vector<pair<double, double> >::iterator it = sFlow->_TimeOut.begin();
-
- while (it != sFlow->_TimeOut.end())
- {
- dataSet.Add(it->first, it->second);
- it++;
- }
- rttGraph.AddDataset(dataSet);
- }
- */
