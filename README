@@ -3,4 +3,4 @@ We have been working on developing MultiPath-TCP, which conform to RFC 6824 and 
 The implementation is not complete yet, but the main functionalities of MPTCP can be simulated from our first released version. You are thus very wellcome to contribute to this code.
 
 A brief description of the MPTCP model can be found in our recent short paper, which was presented at the WNS3 2014, with the following link:
-http://www.sussex.ac.uk/Users/mk382/mptcp-wns3-2014.pdf
+https://arxiv.org/submit/1387694/view
