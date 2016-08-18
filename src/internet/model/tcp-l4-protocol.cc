@@ -350,8 +350,8 @@ TcpL4Protocol::Receive(Ptr<Packet> packet, Ipv4Header const &ipHeader, Ptr<Ipv4I
   packet->PeekHeader(tcpHeader);
   NS_LOG_INFO("AFTER PEEKHEADER " << packet->GetSize());
 
-  Ipv4Address source = ipHeader.GetSource();
-  Ipv4Address destination = ipHeader.GetDestination();
+  // ipv4Address source = ipHeader.GetSource();
+  // Ipv4Address destination = ipHeader.GetDestination();
   uint16_t srcPort = tcpHeader.GetSourcePort();
   //uint16_t dstPort = tcpHeader.GetDestinationPort();
   NS_LOG_INFO(this << "TcpL4Protocol:Receive    -> "<< tcpHeader);

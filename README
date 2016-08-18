@@ -1,5 +1,0 @@
-We have developed a model for MultiPath-TCP (MPTCP), which conform to RFC 6824 and closely follows the MPTCP Linux kernel desgin. 
-
-A brief description of our model can be found in our recent short paper, which was presented at the WNS3-2014 workshop, with the following link: http://arxiv.org/abs/1510.07721
-
-This code can be cited by refering to the above short paper.

@@ -294,7 +294,7 @@ def configure(conf):
     conf.load('cflags', tooldir=['waf-tools'])
     conf.load('command', tooldir=['waf-tools'])
     conf.load('gnu_dirs')
-
+    conf.load('clang_compilation_database', tooldir=['waf-tools'])
     env = conf.env
 
     if Options.options.enable_gcov:
