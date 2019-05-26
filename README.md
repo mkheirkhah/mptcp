@@ -13,8 +13,10 @@ Fully Coupled.
 
 Our recent works on multipath TCP that have been built on top of this
 code are as follows: 
-* [MMPTCP](https://ieeexplore.ieee.org/abstract/document/7524530) (IEEE INFOCOM 2016)
-* [AMP](https://arxiv.org/abs/1707.00322) (IFIP Networking 2019).
+* [MMPTCP](https://ieeexplore.ieee.org/abstract/document/7524530)
+  (IEEE INFOCOM 2016) - </b>Best in Session Presentation Award</b>
+* [AMP](https://ieeexplore.ieee.org/document/8816848) (IFIP Networking 2019) -
+  </b>Best Paper Candidate</b>
 
 # Installations
 We have tested this code on Mac (with llvm-gcc42 and python 2.7.3-11)
